@@ -1,0 +1,9 @@
+﻿#Allowed IPs entered as 
+#172.24.100.1
+#172.24.100.*
+#172.24.*.*
+#172.*.*.*
+
+#The following line allows all IPs
+#*.*.*.*
+#1.1.1.1
