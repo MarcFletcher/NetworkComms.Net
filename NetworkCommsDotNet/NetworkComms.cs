@@ -770,7 +770,7 @@ namespace NetworkCommsDotNet
                     //The bonus here is if the delegate has not been added we continue quite happily
                     globalIncomingPacketHandlers[packetTypeStr].Remove(toCompareDelegate);
 
-                    WriteToLog("Removed a single packetHandler for '" + packetTypeStr + "' packetType.");
+                    //WriteToLog("Removed a single packetHandler for '" + packetTypeStr + "' packetType.");
 
                     if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
                     {
@@ -780,10 +780,10 @@ namespace NetworkCommsDotNet
                         if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                             globalIncomingPacketUnwrappers.Remove(packetTypeStr);
 
-                        WriteToLog("No handlers remain for '" + packetTypeStr + "' packetType.");
+                        WriteToLog("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
                     }
                     else
-                        WriteToLog("Handlers remain for '" + packetTypeStr + "' packetType.");
+                        WriteToLog("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
                 }
             }
         }

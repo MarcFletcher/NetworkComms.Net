@@ -1134,7 +1134,6 @@ namespace NetworkCommsDotNet
 
                     //This is a really bad place to put a garbage collection
                     //We don't want the CPU to JUST be trying to garbage collect
-                    //Do any final cleanup after calling the packet handler
                     //GC.Collect();
                 }
             }
