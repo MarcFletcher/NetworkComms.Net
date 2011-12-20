@@ -108,14 +108,19 @@ namespace NetworkCommsDotNet
                             if (ipAddressStr.Contains(preferredIPPRefix[j]))
                             {
                                 //We only choose this match if it beats our previous index
-                                if (j < bestIndexMatch) localIP = ipAddressStr;
+                                if (j < bestIndexMatch)
+                                {
+                                    bestIndexMatch = j;
+                                    localIP = ipAddressStr;
+                                }
 
                                 //If we have a match to index 0 then we are done
                                 if (j == 0) return localIP;
                             }
-                            else if (ipAddressStr.Split('.')[0] == "192")
+                            //If we have not yet matched anything from the preferred prefix list we can try common private ranges as well
+                            else if (ipAddressStr.Split('.')[0] == "192" && bestIndexMatch == int.MaxValue)
                                 localIP = ipAddressStr;
-                            else if (ipAddressStr.Split('.')[0] == "10")
+                            else if (ipAddressStr.Split('.')[0] == "10" && bestIndexMatch == int.MaxValue)
                                 localIP = ipAddressStr;
                         }
                     }
