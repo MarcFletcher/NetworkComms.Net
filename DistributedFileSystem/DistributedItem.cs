@@ -77,8 +77,8 @@ namespace DistributedFileSystem
             this.ItemBytes = itemBytes;
             this.ItemBuildCompleted = DateTime.Now;
 
-            //Calculate the exactChunkSize if we split everything up into 256 pieces
-            double exactChunkSize = (double)itemBytes.Length / 256.0;
+            //Calculate the exactChunkSize if we split everything up into 255 pieces
+            double exactChunkSize = (double)itemBytes.Length / 255.0;
 
             //If the item is too small we just use the minimumChunkSize
             //If we need something larger than MinChunkSizeInBytes we select appropriately
