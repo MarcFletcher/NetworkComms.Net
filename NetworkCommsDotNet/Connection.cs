@@ -1358,15 +1358,19 @@ logger.Debug("... confirmation packet received.");
         /// <returns>True if the connection is active, false otherwise.</returns>
         public bool CheckConnectionAliveState(int aliveRespondTimeout)
         {
+            DateTime startTime=DateTime.Now;
+
             try
             {
                 bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
                 return returnValue;
             }
             catch (Exception ex)
             {
                 //If the remote client does not respond or we throw any exception we connection is dead to us.
-                NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")");
+                Console.WriteLine("Ping failure in {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                //NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")");
                 CloseConnection(true, 4);
                 return false;
             }

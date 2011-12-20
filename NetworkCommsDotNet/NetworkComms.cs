@@ -111,8 +111,12 @@ namespace NetworkCommsDotNet
                                 if (j < bestIndexMatch) localIP = ipAddressStr;
 
                                 //If we have a match to index 0 then we are done
-                                if (j==0) return localIP;
+                                if (j == 0) return localIP;
                             }
+                            else if (ipAddressStr.Split('.')[0] == "192")
+                                localIP = ipAddressStr;
+                            else if (ipAddressStr.Split('.')[0] == "10")
+                                localIP = ipAddressStr;
                         }
                     }
 
@@ -437,7 +441,7 @@ namespace NetworkCommsDotNet
         #region Timeouts
         internal static int connectionEstablishTimeoutMS = 30000;
         internal static int packetConfirmationTimeoutMS = 5000;
-        internal static int connectionAliveTestTimeoutMS = 5000;
+        internal static int connectionAliveTestTimeoutMS = 10000;
 
         /// <summary>
         /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established

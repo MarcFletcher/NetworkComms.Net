@@ -75,6 +75,7 @@ namespace ExamplesConsole
             catch (Exception ex)
             {
                 NetworkCommsDotNet.NetworkComms.LogError(ex, "ExampleError");
+                NetworkCommsDotNet.NetworkComms.ShutdownComms();
                 Console.WriteLine(ex.ToString());
             }
 

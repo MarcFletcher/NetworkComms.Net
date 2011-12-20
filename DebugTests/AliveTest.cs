@@ -20,12 +20,13 @@ namespace DebugTests
         public void Go()
         {
             //Write out all comms logging
-            NetworkComms.WriteLineToLogMethod = new NetworkComms.WriteLineToLogDelegate((message) => { Console.WriteLine(" -- " + message); });
+            //NetworkComms.WriteLineToLogMethod = new NetworkComms.WriteLineToLogDelegate((message) => { Console.WriteLine(" -- " + message); });
+
+            //NetworkComms.PreferredIPPrefix = new string[] { "192.168.56" };
 
             NetworkComms.AppendIncomingPacketHandler<string>("Message", (header, conectionId, message) => 
             { 
                 Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP.ToString() + " saying '" + message  +"'.");
-                Thread.Sleep(20000);
                 NetworkComms.SendObject("MessageReturn", conectionId, false, "Got your message!");
             });
 
@@ -45,8 +46,15 @@ namespace DebugTests
                 if (message == "exit") break;
                 else if (message == "test")
                 {
+                    DateTime startTime = DateTime.Now;
+
+                    while ((DateTime.Now - startTime).TotalMinutes < 2)
+                    {
+                        NetworkComms.CheckConnectionAliveStatus(false);
+                        Thread.Sleep(2000);
+                    }
+
                     Console.WriteLine("Checking all existing connections");
-                    NetworkComms.CheckConnectionAliveStatus(false);
                 }
                 else
                 {
@@ -55,7 +63,8 @@ namespace DebugTests
                     string userEnteredStr = Console.ReadLine(); string serverIP = userEnteredStr.Split(':')[0]; int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
 
                     //NetworkComms.SendObject("Message", serverIP, serverPort, false, message);
-                    Console.WriteLine(NetworkComms.SendRecieveObject<string>("Message", serverIP, serverPort, false, "MessageReturn", 300000, message));
+                    //Console.WriteLine(NetworkComms.SendRecieveObject<string>("Message", serverIP, serverPort, false, "MessageReturn", 300000, message));
+                    NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReplyComplete", serverIP, serverPort, false, "");
                 }
             }
 

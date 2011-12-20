@@ -9,8 +9,9 @@ namespace DebugTests
     {
         static void Main(string[] args)
         {
-            AliveTest test = new AliveTest();
-            test.Go();
+            //AliveTest test = new AliveTest();
+            //test.Go();
+            DFSTest.RunExample();
         }
     }
 }
