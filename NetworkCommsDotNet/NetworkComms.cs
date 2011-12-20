@@ -304,6 +304,11 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
+        #region High CPU Usage Tuning
+        //In times of high CPU usage we need to ensure that certain time critical functions of networkComms happen quickly
+        internal static ThreadPriority timeCriticalThreadPriority = ThreadPriority.AboveNormal;
+        #endregion
+
         #region Checksum Config
         /// <summary>
         /// Determines whether incoming data is checkSumed
@@ -441,7 +446,7 @@ namespace NetworkCommsDotNet
         #region Timeouts
         internal static int connectionEstablishTimeoutMS = 30000;
         internal static int packetConfirmationTimeoutMS = 5000;
-        internal static int connectionAliveTestTimeoutMS = 10000;
+        internal static int connectionAliveTestTimeoutMS = 5000;
 
         /// <summary>
         /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established
@@ -558,6 +563,7 @@ namespace NetworkCommsDotNet
                     OpenIncomingPorts();
 
                     newIncomingListenThread = new Thread(IncomingConnectionListenThread);
+                    newIncomingListenThread.Priority = timeCriticalThreadPriority;
                     newIncomingListenThread.Name = "NetworkCommsIncomingListen";
 
                     IsListening = true;

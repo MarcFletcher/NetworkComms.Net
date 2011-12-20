@@ -671,6 +671,7 @@ namespace NetworkCommsDotNet
                         if (incomingDataListenThread == null)
                         {
                             incomingDataListenThread = new Thread(IncomingDataSyncWorker);
+                            incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
                             incomingDataListenThread.Name = "IncomingDataListener";
                             incomingDataListenThread.Start();
                         }
@@ -771,6 +772,8 @@ namespace NetworkCommsDotNet
         /// <param name="ar"></param>
         private void IncomingPacketHandler(IAsyncResult ar)
         {
+            Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
+
             //int bytesRead;
             bool dataAvailable;
 
@@ -942,8 +945,12 @@ namespace NetworkCommsDotNet
 
                         NetworkComms.WriteToLog("Received '" + topPacketHeader.PacketType + "' packetType from " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + "), containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
-                        //We run the completion in a seperate task so that this thread can continue to receive incoming data
-                        Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
+                        if (!NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                            //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
+                            CompleteIncomingPacketWorker(completedData);
+                        else
+                            //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
+                            Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
 
                         //We clear the bytes we have just handed off
                         NetworkComms.WriteToLog("Removing " + packetHeaderSize + topPacketHeader.PayloadPacketSize + " bytes from incoming packet buffer.");
@@ -968,6 +975,11 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "commsError");
                 CloseConnection(true, 16);
             }
+        }
+
+        private void CompleteIncomingPacketWorkerReserved(object packetBytes)
+        {
+
         }
 
         /// <summary>
@@ -1363,14 +1375,14 @@ logger.Debug("... confirmation packet received.");
             try
             {
                 bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
+                //Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
                 return returnValue;
             }
             catch (Exception ex)
             {
                 //If the remote client does not respond or we throw any exception we connection is dead to us.
-                Console.WriteLine("Ping failure in {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
-                //NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")");
+                //Console.WriteLine("Ping failure in {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")");
                 CloseConnection(true, 4);
                 return false;
             }
