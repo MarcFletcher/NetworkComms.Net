@@ -945,7 +945,7 @@ namespace NetworkCommsDotNet
 
                         NetworkComms.WriteToLog("Received '" + topPacketHeader.PacketType + "' packetType from " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + "), containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
-                        if (!NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                        if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             CompleteIncomingPacketWorker(completedData);
                         else
