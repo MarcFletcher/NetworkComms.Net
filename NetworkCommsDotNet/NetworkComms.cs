@@ -603,6 +603,20 @@ namespace NetworkCommsDotNet
         static object errorLocker = new object();
 
         /// <summary>
+        /// Appends provided logString to end of fileName.txt
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="logString"></param>
+        public static void AppendStringToLogFile(string fileName, string logString)
+        {
+            lock (errorLocker)
+            {
+                using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
+                    sw.WriteLine(logString);
+            }
+        }
+
+        /// <summary>
         /// Logs provided exception to a file to assist troubleshooting.
         /// </summary>
         public static string LogError(Exception ex, string fileAppendStr, string optionalCommentStr = "")

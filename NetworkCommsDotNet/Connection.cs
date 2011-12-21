@@ -977,11 +977,6 @@ namespace NetworkCommsDotNet
             }
         }
 
-        private void CompleteIncomingPacketWorkerReserved(object packetBytes)
-        {
-
-        }
-
         /// <summary>
         /// Once we have received all incoming data we can handle it further.
         /// </summary>
@@ -1372,19 +1367,37 @@ logger.Debug("... confirmation packet received.");
         {
             DateTime startTime=DateTime.Now;
 
-            try
+            if (ConnectionInfo == null)
             {
-                bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                //Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
-                return returnValue;
-            }
-            catch (Exception ex)
-            {
-                //If the remote client does not respond or we throw any exception we connection is dead to us.
-                //Console.WriteLine("Ping failure in {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
-                NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")");
-                CloseConnection(true, 4);
+                //If the connection is not established then we will give it 2 times the connection timeout before we close it here
+                if ((DateTime.Now - tcpConnectionCreationTime).Milliseconds * 2 > NetworkComms.connectionEstablishTimeoutMS)
+                {
+                    NetworkComms.LogError(new NullReferenceException("ConnectionInfo is null."), "NullConnectionInfo (" + ConnectionId.ToString() + ")", "Client - " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " failed after " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    CloseConnection(false, -1);
+                }
+
                 return false;
+            }
+            else
+            {
+                try
+                {
+                    bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    //Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
+                    NetworkComms.AppendStringToLogFile("ConnectionCheckSuccess", ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " (" + ConnectionId.ToString() + ") took " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    return returnValue;
+                }
+                catch (ExpectedReturnTimeoutException ex)
+                {
+                    NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")", "Client - " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " failed after " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    CloseConnection(true, 18);
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    CloseConnection(true, 4);
+                    return false;
+                }
             }
         }
     }
