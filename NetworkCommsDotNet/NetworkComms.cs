@@ -1006,6 +1006,52 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns the current network usage as a percentage between 0 and 1. Calculates both outgoing and incoming usage and returns the larger of the two.
+        /// </summary>
+        /// <param name="numMillisecsToAverage">Number of millisconds over which to take an average. Use atleast 100ms to get a sensible value.</param>
+        /// <returns></returns>
+        public static double CurrentNetworkLoad(int numMillisecsToAverage)
+        {
+            //Get the right interface
+            NetworkInterface[] allInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+            NetworkInterface interfaceToUse = null;
+
+            for (int i = 0; i < allInterfaces.Length; i++)
+            {
+                if (allInterfaces[i].GetIPProperties().UnicastAddresses.Count > 0)
+                {
+                    if ((from current in allInterfaces[i].GetIPProperties().UnicastAddresses
+                     where current.Address.AddressFamily == AddressFamily.InterNetwork
+                     select current.Address).First().ToString() == LocalIP)
+                    {
+                        interfaceToUse = allInterfaces[i];
+                        break;
+                    }
+                }
+            }
+
+            //We need to make sure we have managed to get an adaptor
+            if (interfaceToUse==null) throw new CommunicationException("Unable to locate correct network adaptor.");
+
+            //Get the usage over numMillisecsToAverage
+            DateTime startTime = DateTime.Now;
+            IPv4InterfaceStatistics startingStats = interfaceToUse.GetIPv4Statistics();
+            Thread.Sleep(numMillisecsToAverage);
+            IPv4InterfaceStatistics endingStats = interfaceToUse.GetIPv4Statistics();
+            DateTime endTime = DateTime.Now;
+
+            //Calculate both the out and in usage
+            decimal outUsage = (decimal)(endingStats.BytesSent - startingStats.BytesSent) / ((decimal)(interfaceToUse.Speed * (endTime-startTime).TotalMilliseconds) / 8000);
+            decimal inUsage = (decimal)(endingStats.BytesReceived - startingStats.BytesReceived) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
+
+            //Take the maximum value
+            double returnValue = (double)Math.Max(outUsage, inUsage);
+
+            //Limit to one
+            return (returnValue > 1 ? 1 : returnValue);
+        }
+
+        /// <summary>
         /// Converts a connectionId into connectionInfo if a connection with the corresponding id exists
         /// </summary>
         /// <param name="connectionId"></param>

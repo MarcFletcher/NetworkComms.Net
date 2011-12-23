@@ -147,10 +147,10 @@ namespace DebugTests
                     }
                     else if (pressedKey.Key == ConsoleKey.T)
                     {
-                        for (int e = 0; e < 20; e++)
+                        for (int e = 0; e < 10; e++)
                         {
-                            NetworkComms.CheckConnectionAliveStatus();
-                            Thread.Sleep(10);
+                            Console.WriteLine(NetworkComms.CurrentNetworkLoad(100));
+                            Thread.Sleep(100);
                         }
                     }
 
