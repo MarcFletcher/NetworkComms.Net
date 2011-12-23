@@ -74,6 +74,9 @@ namespace NetworkCommsDotNet
         ManualResetEvent connectionEstablishWait = new ManualResetEvent(false);
         bool serverSide;
 
+        DateTime lastIncomingTrafficTime;
+        object lastIncomingTrafficTimeLocker = new object();
+
         /// <summary>
         /// The packet builder for this connection
         /// </summary>
@@ -108,6 +111,15 @@ namespace NetworkCommsDotNet
                     throw new CommunicationException("Attempted to access connectionId when connectionInfo was null.");
                 else
                     return ConnectionInfo.NetworkIdentifier;
+            }
+        }
+
+        public DateTime LastIncomingTrafficTime
+        {
+            get 
+            { 
+                lock (lastIncomingTrafficTimeLocker) 
+                    return lastIncomingTrafficTime; 
             }
         }
         #endregion
@@ -989,6 +1001,9 @@ namespace NetworkCommsDotNet
                 logger.Debug("... packet hand off task started.");
 #endif
 
+                lock (lastIncomingTrafficTimeLocker)
+                    lastIncomingTrafficTime = DateTime.Now;
+
                 //Idiot check
                 if (packetBytes == null) throw new NullReferenceException("Provided object packetBytes should really not be null.");
 
@@ -1365,14 +1380,14 @@ logger.Debug("... confirmation packet received.");
         /// <returns>True if the connection is active, false otherwise.</returns>
         public bool CheckConnectionAliveState(int aliveRespondTimeout)
         {
-            DateTime startTime=DateTime.Now;
+            //DateTime startTime=DateTime.Now;
 
             if (ConnectionInfo == null)
             {
-                //If the connection is not established then we will give it 2 times the connection timeout before we close it here
+                //If the connection is not yet established we will give it 2 times the connection timeout before we close it here
                 if ((DateTime.Now - tcpConnectionCreationTime).Milliseconds * 2 > NetworkComms.connectionEstablishTimeoutMS)
                 {
-                    NetworkComms.LogError(new NullReferenceException("ConnectionInfo is null."), "NullConnectionInfo (" + ConnectionId.ToString() + ")", "Client - " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " failed after " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    //NetworkComms.LogError(new NullReferenceException("ConnectionInfo is null."), "NullConnectionInfo (" + ConnectionId.ToString() + ")", "Client - " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " failed after " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
                     CloseConnection(false, -1);
                 }
 
@@ -1384,14 +1399,8 @@ logger.Debug("... confirmation packet received.");
                 {
                     bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
                     //Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
-                    NetworkComms.AppendStringToLogFile("ConnectionCheckSuccess", ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " (" + ConnectionId.ToString() + ") took " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    //NetworkComms.AppendStringToLogFile("ConnectionCheckSuccess", ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " (" + ConnectionId.ToString() + ") took " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
                     return returnValue;
-                }
-                catch (ExpectedReturnTimeoutException ex)
-                {
-                    NetworkComms.LogError(ex, "ConnectionCheckFail (" + ConnectionId.ToString() + ")", "Client - " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " failed after " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
-                    CloseConnection(true, 18);
-                    return false;
                 }
                 catch (Exception ex)
                 {

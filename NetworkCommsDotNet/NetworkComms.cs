@@ -655,7 +655,8 @@ namespace NetworkCommsDotNet
         /// Checks all current connections to make sure they are active. If any problems occur the connection will be closed.
         /// </summary>
         /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time depends on total number of connections.</param>
-        public static void CheckConnectionAliveStatus(bool returnImmediately = false)
+        /// <param name="lastTrafficTimePassSeconds">Will not test connections whom have a lastSeen time within provided number of seconds</param>
+        public static void CheckConnectionAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
         {
             //Loop through all connections and test the alive state
             List<Connection> dictCopy;
@@ -667,7 +668,11 @@ namespace NetworkCommsDotNet
             for (int i = 0; i < dictCopy.Count; i++)
             {
                 int innerIndex = i;
-                connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() => { dictCopy[innerIndex].CheckConnectionAliveState(connectionAliveTestTimeoutMS); })));
+                connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() => 
+                { 
+                    if ((DateTime.Now-dictCopy[innerIndex].LastIncomingTrafficTime).TotalSeconds > lastTrafficTimePassSeconds)
+                        dictCopy[innerIndex].CheckConnectionAliveState(connectionAliveTestTimeoutMS); 
+                })));
             }
 
             if (!returnImmediately)
@@ -1825,6 +1830,10 @@ namespace NetworkCommsDotNet
                     {
                         //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
                     }
+                    catch (ConnectionSetupException)
+                    {
+                        //If we are the server end and we did not pick the incoming connection up then tooo bad!
+                    }
                     catch (Exception ex)
                     {
                         LogError(ex, "CommsSetupError");
@@ -1922,8 +1931,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If there was an exception we need to close the connection
-                if (connection != null)
-                    connection.CloseConnection(true, 17);
+                if (connection != null) connection.CloseConnection(true, 17);
 
                 throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + ") from (" + LocalIP + "). Destination may not be listening. " + ex.ToString());
             }
