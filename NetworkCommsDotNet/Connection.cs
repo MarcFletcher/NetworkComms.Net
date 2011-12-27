@@ -1001,8 +1001,10 @@ namespace NetworkCommsDotNet
                 logger.Debug("... packet hand off task started.");
 #endif
 
-                lock (lastIncomingTrafficTimeLocker)
-                    lastIncomingTrafficTime = DateTime.Now;
+                lock (lastIncomingTrafficTimeLocker) lastIncomingTrafficTime = DateTime.Now;
+
+                //Check for a shutdown connection
+                if (connectionShutdown) return;
 
                 //Idiot check
                 if (packetBytes == null) throw new NullReferenceException("Provided object packetBytes should really not be null.");
@@ -1104,55 +1106,39 @@ namespace NetworkCommsDotNet
                             //but hey, we live in a crazy world!
                             if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
                             {
-                                //////////////////////////////////////////////////////////////////////////////
-                                //It might be possible to do something cleverer here, such as closing the old 
-                                //connection and assuming the new one is better. The reason we are just going to kill
-                                //everything is that this situation is better avoided in the first place and we are using
-                                //the exception thrown here as a way of improving potentially more complex failure scenarios.
-                                /////////////////////////////////////////////////////////////////////////////
+                                //We will now close the existing connection
+                                NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
 
-                                //Older method throws an exception and closes old connection
-                                if (false)
+                                if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
                                 {
-                                    //If we have a key clash we force a connectionSetupException
                                     connectionSetupException = true;
-
-                                    //Set a debug string so that we can possibly work out what happened
-                                    connectionSetupExceptionStr = "Connection already exists with the identifier " + ConnectionInfo.NetworkIdentifier + ". New connection from " + ConnectionInfo.ClientIP + ":" + ConnectionInfo.ClientPort + ". Existing connection from " + NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionInfo.ClientIP + ":" + NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionInfo.ClientPort + " closed and throwing connectionSetupException.";
-
-                                    //We close the connection we do have with the matching identifier
-                                    //If this was a genuine connection, well sorry, but they will have to reconnect :p
-                                    NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
+                                    connectionSetupExceptionStr = "Connection already exists with the identifier " + ConnectionInfo.NetworkIdentifier + ". New connection from " + ConnectionInfo.ClientIP + ":" + ConnectionInfo.ClientPort + ". Clear up did not work so throwing exception.";
                                 }
                                 else
                                 {
-                                    //We will now close the existing connection
-                                    NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
+                                    if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key Present - 1");
 
-                                    if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
-                                    {
-                                        connectionSetupException = true;
-                                        connectionSetupExceptionStr = "Connection already exists with the identifier " + ConnectionInfo.NetworkIdentifier + ". New connection from " + ConnectionInfo.ClientIP + ":" + ConnectionInfo.ClientPort + ". Clear up did not work so throwing exception.";
-                                    }
-                                    else
-                                    {
-                                        //Record the new connection
-                                        NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
+                                    //Record the new connection
+                                    NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
-                                        //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
-                                        //This will happen if we are establishing the connection at the server end
-                                        if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
-                                        {
-                                            NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
-                                            ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
-                                            NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
-                                        }
+                                    //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
+                                    //This will happen if we are establishing the connection at the server end
+                                    if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
+                                    {
+                                        NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
+                                        ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+
+                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key Present - 2");
+
+                                        NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                     }
                                 }
                             }
                             else
                             {
                                 //Record the new connection
+                                if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key Present - 3");
+
                                 NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
                                 //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
@@ -1160,7 +1146,25 @@ namespace NetworkCommsDotNet
                                 if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
                                 {
                                     NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
-                                    ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+                                    IPEndPoint newConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+
+                                    //If we have a clash here I would be interested to find out where the existing connection points!!
+                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint))
+                                    {
+                                        string errorString = "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). \n";
+                                        errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). \n";
+                                        errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). \n";
+                                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". \n";
+
+                                        bool connectionAlive = NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000);
+
+                                        errorString += "Existing endpoint " + (connectionAlive ? "responded to alive test" : "did not respond to alive test") + ". \n";
+                                        errorString += "Existing endpoint is " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown");
+
+                                        throw new ArgumentException(errorString);
+                                    }
+
+                                    ConnectionEndPoint = newConnectionEndPoint;
                                     NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                 }
                             }
@@ -1196,11 +1200,17 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 2);
             }
+            catch (ArgumentException ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                NetworkComms.LogError(ex, "DictError");
+                CloseConnection(true, 18);
+            }
             catch (Exception ex)
             {
                 //If anything goes wrong here all we can really do is log the exception
                 NetworkComms.LogError(ex, "CommsError");
-                CloseConnection(true,3);
+                CloseConnection(true, 3);
             }
         }
 
