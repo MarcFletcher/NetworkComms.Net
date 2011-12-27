@@ -877,6 +877,8 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 15);
             }
+
+            Thread.CurrentThread.Priority = ThreadPriority.Normal;
         }
 
         /// <summary>
@@ -1109,6 +1111,7 @@ namespace NetworkCommsDotNet
                                 //We will now close the existing connection
                                 NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
 
+                                //The existing entry should now be gone, if not it's time for a reall exception.
                                 if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
                                 {
                                     connectionSetupException = true;
@@ -1116,8 +1119,6 @@ namespace NetworkCommsDotNet
                                 }
                                 else
                                 {
-                                    if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key Present - 1");
-
                                     //Record the new connection
                                     NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
@@ -1125,11 +1126,25 @@ namespace NetworkCommsDotNet
                                     //This will happen if we are establishing the connection at the server end
                                     if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
                                     {
+                                        //Remove our current entry
                                         NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
-                                        ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+                                        IPEndPoint newConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
 
-                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key Present - 2");
+                                        //If we have an existing entry at the new end point and it passes a connection alive test then we throw a real exception 
+                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint) && NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000))
+                                        {
+                                            string errorString = "Existing live connection at provided end point for this connection. ";
+                                            errorString += "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
+                                            errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). ";
+                                            errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). ";
+                                            errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
+                                            errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
 
+                                            throw new Exception(errorString);
+                                        }
+
+                                        //If we made it this far we can add our new endPoint to the dictionary
+                                        ConnectionEndPoint = newConnectionEndPoint;
                                         NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                     }
                                 }
@@ -1137,33 +1152,30 @@ namespace NetworkCommsDotNet
                             else
                             {
                                 //Record the new connection
-                                if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key Present - 3");
-
                                 NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
                                 //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
                                 //This will happen if we are establishing the connection at the server end
                                 if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
                                 {
+                                    //Remove our current entry
                                     NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
                                     IPEndPoint newConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
 
-                                    //If we have a clash here I would be interested to find out where the existing connection points!!
-                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint))
+                                    //If we have an existing entry at the new end point and it passes a connection alive test then we throw a real exception 
+                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint) && NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000))
                                     {
-                                        string errorString = "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). \n";
-                                        errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). \n";
-                                        errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). \n";
-                                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". \n";
+                                        string errorString = "Existing live connection at provided end point for this connection. ";
+                                        errorString += "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
+                                        errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). ";
+                                        errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). ";
+                                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
+                                        errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
 
-                                        bool connectionAlive = NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000);
-
-                                        errorString += "Existing endpoint " + (connectionAlive ? "responded to alive test" : "did not respond to alive test") + ". \n";
-                                        errorString += "Existing endpoint is " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown");
-
-                                        throw new ArgumentException(errorString);
+                                        throw new Exception(errorString);
                                     }
 
+                                    //If we made it this far we can add our new endPoint to the dictionary
                                     ConnectionEndPoint = newConnectionEndPoint;
                                     NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                 }
@@ -1199,12 +1211,6 @@ namespace NetworkCommsDotNet
             catch (CommunicationException)
             {
                 CloseConnection(true, 2);
-            }
-            catch (ArgumentException ex)
-            {
-                //If anything goes wrong here all we can really do is log the exception
-                NetworkComms.LogError(ex, "DictError");
-                CloseConnection(true, 18);
             }
             catch (Exception ex)
             {
