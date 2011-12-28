@@ -58,9 +58,9 @@ namespace DistributedFileSystem
 
         internal static bool DFSShutdownRequested { get; private set; }
 
-        private static Dictionary<string, List<int>> setupPortHandOutDict = new Dictionary<string, List<int>>();
+        //private static Dictionary<string, List<int>> setupPortHandOutDict = new Dictionary<string, List<int>>();
         private static int maxHandOutPeerPort = 9700;
-        private static int minHandOutPeerPort = 9400;
+        private static int minHandOutPeerPort = 9600;
 
 #if logging
         internal static readonly ILog logger = LogManager.GetLogger(typeof(NetworkComms));
@@ -118,6 +118,8 @@ namespace DistributedFileSystem
                 //We need to shutdown comms otherwise we can't change the comms port
                 NetworkComms.ShutdownComms();
                 NetworkComms.CommsPort = newCommsPort;
+
+                Console.WriteLine(" ... data server suggested DFS listening port of {0}", newCommsPort);
             }
             catch (CommsException)
             {
@@ -136,8 +138,6 @@ namespace DistributedFileSystem
         {
             try
             {
-                Console.WriteLine(" ... initialising DFS on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort);
-
                 //Load the allowed ip addresses
                 LoadAllowedDisallowedPeerIPs();
 
@@ -165,6 +165,8 @@ namespace DistributedFileSystem
 
                 NetworkComms.IgnoreUnknownPacketTypes = true;
                 NetworkComms.StartListening();
+
+                Console.WriteLine(" ... initialised DFS on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort);
             }
             catch (Exception e)
             {
@@ -450,15 +452,6 @@ namespace DistributedFileSystem
                         //Remove peer from any items
                         foreach (var item in swarmedItemsDict)
                             item.Value.RemovePeer(disconnectedConnectionIdentifier);
-
-                        //Keep track of used ports
-                        ConnectionInfo peerConnectionInfo = NetworkComms.ConnectionIdToConnectionInfo(disconnectedConnectionIdentifier);
-                        if (setupPortHandOutDict.ContainsKey(peerConnectionInfo.ClientIP))
-                        {
-                            setupPortHandOutDict[peerConnectionInfo.ClientIP].Remove(peerConnectionInfo.ClientPort);
-                            if (setupPortHandOutDict[peerConnectionInfo.ClientIP].Count == 0)
-                                setupPortHandOutDict.Remove(peerConnectionInfo.ClientIP);
-                        }
                     }
 
 #if logging
@@ -489,25 +482,19 @@ namespace DistributedFileSystem
                 lock (globalDFSLocker)
                 {
                     //For each item we go through all the peers to see if we already have an existing peer with that ip address
-                    if (setupPortHandOutDict.ContainsKey(peerConnInfo.ClientIP))
+                    for (int i = maxHandOutPeerPort; i > 0; i--)
                     {
-                        for (int i = maxHandOutPeerPort; i > 0; i--)
+                        if (!NetworkComms.ConnectionExists(peerConnInfo.ClientIP, i))
                         {
-                            if (!setupPortHandOutDict[peerConnInfo.ClientIP].Contains(i))
-                            {
-                                portToReturn = i;
-                                setupPortHandOutDict[peerConnInfo.ClientIP].Add(portToReturn);
-                                break;
-                            }
+                            portToReturn = i;
+                            break;
                         }
                     }
-                    else
-                        setupPortHandOutDict.Add(peerConnInfo.ClientIP, new List<int>() { portToReturn });
 
                     if (portToReturn < minHandOutPeerPort)
                         throw new Exception("Unable to choose an appropriate port to return. Consider increasing available range. Attempted to assign port " + portToReturn +
-                            " to " + sourceConnectionId + " at " + peerConnInfo.ClientIP + ". Starting at port " + maxHandOutPeerPort + " with " + setupPortHandOutDict[peerConnInfo.ClientIP].Count +
-                            " ports assigned.");
+                            " to " + sourceConnectionId + " at " + peerConnInfo.ClientIP + ". Starting at port " + maxHandOutPeerPort + ". " +
+                            NetworkComms.TotalNumConnections(peerConnInfo.ClientIP) + " total existing connections from IP.");
                 }
 
                 //Return the select port

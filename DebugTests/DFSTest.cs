@@ -147,11 +147,7 @@ namespace DebugTests
                     }
                     else if (pressedKey.Key == ConsoleKey.T)
                     {
-                        for (int e = 0; e < 10; e++)
-                        {
-                            Console.WriteLine(NetworkComms.CurrentNetworkLoad(100));
-                            Thread.Sleep(100);
-                        }
+                        Console.WriteLine(NetworkComms.TotalNumConnections(NetworkComms.LocalIP));
                     }
 
                     #endregion

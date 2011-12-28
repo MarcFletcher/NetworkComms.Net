@@ -669,7 +669,11 @@ namespace NetworkCommsDotNet
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
                 if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
-                    throw new Exception("allTCPConnectionsByEndPoint must contain a reference to this connection to start a listener.");
+                {
+                    //throw new Exception("allTCPConnectionsByEndPoint must contain a reference to this connection to start a listener.");
+                    CloseConnection(true, 18);
+                    return;
+                }
             }
 
             lock (packetSendLocker)

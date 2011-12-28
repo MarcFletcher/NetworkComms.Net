@@ -1006,6 +1006,25 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns true if a connection already exists with the provided ip and port number
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="portNumber"></param>
+        /// <returns></returns>
+        public static bool ConnectionExists(string ipAddress, int portNumber)
+        {
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), portNumber);
+
+            lock (globalDictAndDelegateLocker)
+            {
+                if (allConnectionsByEndPoint.ContainsKey(endPoint))
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// Returns the current network usage as a percentage between 0 and 1. Calculates both outgoing and incoming usage and returns the larger of the two.
         /// </summary>
         /// <param name="numMillisecsToAverage">Number of millisconds over which to take an average. Use atleast 100ms to get a sensible value.</param>
@@ -1880,9 +1899,15 @@ namespace NetworkCommsDotNet
                     {
                         //If we are the server end and we did not pick the incoming connection up then tooo bad!
                     }
+                    catch (SocketException)
+                    {
+                        //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+                    }
                     catch (Exception ex)
                     {
-                        LogError(ex, "CommsSetupError");
+                        //For some odd reason SocketExceptions don't always get caught above, so another check
+                        if (ex.GetType() != typeof(SocketException))
+                            LogError(ex, "CommsSetupError");
                     }
                 } while (!endListen);
             }
