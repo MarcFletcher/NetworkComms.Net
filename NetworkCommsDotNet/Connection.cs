@@ -971,7 +971,7 @@ namespace NetworkCommsDotNet
                             Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
 
                         //We clear the bytes we have just handed off
-                        NetworkComms.WriteToLog("Removing " + packetHeaderSize + topPacketHeader.PayloadPacketSize + " bytes from incoming packet buffer.");
+                        NetworkComms.WriteToLog("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
                         packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
 
                         //Reset the expected bytes to 0 so that the next check starts from scratch

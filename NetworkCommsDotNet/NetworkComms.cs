@@ -609,10 +609,17 @@ namespace NetworkCommsDotNet
         /// <param name="logString"></param>
         public static void AppendStringToLogFile(string fileName, string logString)
         {
-            lock (errorLocker)
+            try
             {
-                using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
-                    sw.WriteLine(logString);
+                lock (errorLocker)
+                {
+                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
+                        sw.WriteLine(logString);
+                }
+            }
+            catch (Exception)
+            {
+                //If an error happens here, such as if the file is locked then we lucked out.
             }
         }
 
@@ -626,25 +633,33 @@ namespace NetworkCommsDotNet
             lock (errorLocker)
             {
                 fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
-                using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
+
+                try
                 {
-                    if (optionalCommentStr != "")
+                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
                     {
-                        sw.WriteLine("Comment: " + optionalCommentStr);
-                        sw.WriteLine("");
+                        if (optionalCommentStr != "")
+                        {
+                            sw.WriteLine("Comment: " + optionalCommentStr);
+                            sw.WriteLine("");
+                        }
+
+                        if (ex.GetBaseException() != null)
+                            sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
+
+                        if (ex.InnerException != null)
+                            sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
+
+                        if (ex.StackTrace != null)
+                        {
+                            sw.WriteLine("");
+                            sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
+                        }
                     }
-
-                    if (ex.GetBaseException() != null)
-                        sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                    if (ex.InnerException != null)
-                        sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
-
-                    if (ex.StackTrace != null)
-                    {
-                        sw.WriteLine("");
-                        sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
-                    }
+                }
+                catch (Exception)
+                {
+                    //This should never really happen, but just incase.
                 }
             }
 
