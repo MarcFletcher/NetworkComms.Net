@@ -36,19 +36,19 @@ namespace NetworkCommsDotNet
 
             //We can gain performance if we are just sending a byte array directly
             bool pureBytesInPayload = false;
-            if (packetObject is byte[])
-            {
-                this.packetData = packetObject as byte[];
-                pureBytesInPayload = true;
-            }
-            else
-            {
+            //if (packetObject is byte[] && compressor is NullCompressor)
+            //{
+            //    this.packetData = packetObject as byte[];
+            //    pureBytesInPayload = true;
+            //}
+            //else
+            //{
                 IThreadSafeSerialise packetObjectInt = packetObject as IThreadSafeSerialise;
                 if (packetObjectInt != null)
                     this.packetData = packetObjectInt.ThreadSafeSerialise();
                 else
                     this.packetData = serializer.SerialiseDataObject(packetObject, compressor);
-            }
+            //}
 
             //We only calculate the md5 if we are going to use it
             long dataHashValue = 0;
