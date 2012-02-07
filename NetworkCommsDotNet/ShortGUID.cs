@@ -148,7 +148,12 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static ShortGuid NewGuid()
         {
-            return new ShortGuid(Guid.NewGuid());
+            //In order to prevent the same machine creating the same guid within the same tick we loop by process id
+            Guid resultGuid = Guid.NewGuid();
+            for (int i = 0; i < System.Diagnostics.Process.GetCurrentProcess().Id; i++)
+                resultGuid = Guid.NewGuid();
+
+            return new ShortGuid(resultGuid);
         }
         #endregion
 

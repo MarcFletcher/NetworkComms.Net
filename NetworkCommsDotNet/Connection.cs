@@ -1106,11 +1106,16 @@ namespace NetworkCommsDotNet
                             //Set the connection info
                             this.ConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
 
+                            if (this.ConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
+                            {
+                                connectionSetupException = true;
+                                connectionSetupExceptionStr = "Remote peer has matching network idendifier, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special scenarios make this probable.";
+                            }
                             //We need to check for a possible GUID clash
                             //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
                             //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
                             //but hey, we live in a crazy world!
-                            if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
+                            else if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
                             {
                                 //We will now close the existing connection
                                 NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
