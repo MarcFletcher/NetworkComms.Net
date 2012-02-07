@@ -454,7 +454,9 @@ namespace DistributedFileSystem
                             item.Value.RemovePeer(disconnectedConnectionIdentifier);
 
                         ConnectionInfo peerConnInfo = NetworkComms.ConnectionIdToConnectionInfo(disconnectedConnectionIdentifier);
-                        setupPortHandOutDict[peerConnInfo.ClientIP].Remove(peerConnInfo.ClientPort);
+
+                        if (setupPortHandOutDict.ContainsKey(peerConnInfo.ClientIP))
+                            setupPortHandOutDict[peerConnInfo.ClientIP].Remove(peerConnInfo.ClientPort);
                     }
 
 #if logging
@@ -492,6 +494,8 @@ namespace DistributedFileSystem
                         if (!NetworkComms.ConnectionExists(peerConnInfo.ClientIP, i))
                         {
                             //This later check will make sure we don't hand the same port out in quick succession
+                            if (!setupPortHandOutDict.ContainsKey(peerConnInfo.ClientIP)) setupPortHandOutDict.Add(peerConnInfo.ClientIP, new List<int>());
+
                             if (!setupPortHandOutDict[peerConnInfo.ClientIP].Contains(i))
                             {
                                 setupPortHandOutDict[peerConnInfo.ClientIP].Add(i);
