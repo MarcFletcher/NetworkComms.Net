@@ -58,7 +58,7 @@ namespace DistributedFileSystem
 
         internal static bool DFSShutdownRequested { get; private set; }
 
-        //private static Dictionary<string, List<int>> setupPortHandOutDict = new Dictionary<string, List<int>>();
+        private static Dictionary<string, List<int>> setupPortHandOutDict = new Dictionary<string, List<int>>();
         private static int maxHandOutPeerPort = 9700;
         private static int minHandOutPeerPort = 9600;
 
@@ -452,6 +452,9 @@ namespace DistributedFileSystem
                         //Remove peer from any items
                         foreach (var item in swarmedItemsDict)
                             item.Value.RemovePeer(disconnectedConnectionIdentifier);
+
+                        ConnectionInfo peerConnInfo = NetworkComms.ConnectionIdToConnectionInfo(disconnectedConnectionIdentifier);
+                        setupPortHandOutDict[peerConnInfo.ClientIP].Remove(peerConnInfo.ClientPort);
                     }
 
 #if logging
@@ -484,11 +487,26 @@ namespace DistributedFileSystem
                     //For each item we go through all the peers to see if we already have an existing peer with that ip address
                     for (int i = maxHandOutPeerPort; i > 0; i--)
                     {
+                        //This first 'if' alone is NOT sufficient to decide a port number
+                        //i.e. we may end up returning this port number to several peers at the same time if neither quickly reconnects
                         if (!NetworkComms.ConnectionExists(peerConnInfo.ClientIP, i))
                         {
-                            portToReturn = i;
-                            break;
+                            //This later check will make sure we don't hand the same port out in quick succession
+                            if (!setupPortHandOutDict[peerConnInfo.ClientIP].Contains(i))
+                            {
+                                setupPortHandOutDict[peerConnInfo.ClientIP].Add(i);
+                                portToReturn = i;
+                                break;
+                            }
                         }
+                    }
+
+                    //We only contain a list of the last half ports to be handed out
+                    if (setupPortHandOutDict[peerConnInfo.ClientIP].Count > (maxHandOutPeerPort - minHandOutPeerPort)/2)
+                    {
+                        setupPortHandOutDict[peerConnInfo.ClientIP] = (from current in setupPortHandOutDict[peerConnInfo.ClientIP].Select((item, index) => new { index, item }) 
+                                                where current.index > (maxHandOutPeerPort - minHandOutPeerPort) / 2 
+                                                select current.item).ToList();
                     }
 
                     if (portToReturn < minHandOutPeerPort)
@@ -497,7 +515,7 @@ namespace DistributedFileSystem
                             NetworkComms.TotalNumConnections(peerConnInfo.ClientIP) + " total existing connections from IP.");
                 }
 
-                //Return the select port
+                //Return the selected port
                 NetworkComms.SendObject("DFS_Setup", sourceConnectionId, false, portToReturn);
             }
             catch (CommsException e)
