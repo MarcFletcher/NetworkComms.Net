@@ -29,7 +29,7 @@ namespace NetworkCommsDotNet
         PacketHeader packetHeader;
         byte[] packetData;
 
-        public Packet(string packetTypeStr, bool recieveConfirmationRequired, object packetObject, ISerialize serializer, ICompress compressor)
+        public Packet(string packetTypeStr, bool receiveConfirmationRequired, object packetObject, ISerialize serializer, ICompress compressor)
         {
             if (packetTypeStr == null)
                 throw new ArgumentNullException("packetTypeStr should never be null.");
@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet
             if (NetworkComms.EnablePacketCheckSumValidation)
                 dataHashValue = Adler32.GenerateCheckSum(packetData);
 
-            this.packetHeader = new PacketHeader(packetTypeStr, recieveConfirmationRequired, dataHashValue, packetData.Length, pureBytesInPayload);
+            this.packetHeader = new PacketHeader(packetTypeStr, receiveConfirmationRequired, dataHashValue, packetData.Length, pureBytesInPayload);
 #if logging
                 logger.Debug("... creating comms packet. Total packet size is " + FBPSerialiser.SerialiseDataObject(packetHeader).Length + packetData.Length + " bytes. PacketObject data size is " + packetData.Length + " bytes");
 #endif

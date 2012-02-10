@@ -113,7 +113,7 @@ namespace DistributedFileSystem
             try
             {
                 //Contact server here
-                int newCommsPort = NetworkComms.SendRecieveObject<int>("DFS_Setup", startupServerIP, startupServerPort, false, "DFS_Setup", 30000, 0);
+                int newCommsPort = NetworkComms.SendReceiveObject<int>("DFS_Setup", startupServerIP, startupServerPort, false, "DFS_Setup", 30000, 0);
 
                 //We need to shutdown comms otherwise we can't change the comms port
                 NetworkComms.ShutdownComms();
@@ -613,7 +613,7 @@ namespace DistributedFileSystem
             {
                 //A peer has requested a specific chunk of data, we will only provide it if we are not already providing it to someone else
 
-                //Console.WriteLine("... ({0}) recieved request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
+                //Console.WriteLine("... ({0}) received request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
 #if logging
                 logger.Debug("IncomingChunkInterestRequest triggered by " + sourceConnectionId + " for item " + incomingRequest.ItemMD5 + ", chunkIndex " + incomingRequest.ChunkIndex + ".");
 #endif

@@ -57,7 +57,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A timout has occured while waiting for the expected return type. Thrown by SendRecieveObject.
+    /// A timout has occured while waiting for the expected return type. Thrown by SendReceiveObject.
     /// </summary>
     public class ExpectedReturnTimeoutException : CommsException
     {

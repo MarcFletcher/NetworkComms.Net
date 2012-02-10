@@ -24,7 +24,7 @@ using ProtoBuf;
 namespace ExamplesConsole
 {
     /// <summary>
-    /// Advanced test demonstrates how to send and recieve more complicated objects.  
+    /// Advanced test demonstrates how to send and receive more complicated objects.  
     /// Note that arrays of primitive types are serialised differently from arrays  
     /// of non-primitives. This is done to achieve better performance and lower memory usage                                                                                                      
     /// </summary>
@@ -50,12 +50,14 @@ namespace ExamplesConsole
             NetworkComms.DefaultSerializer = SelectSerializer();
             NetworkComms.DefaultCompressor = SelectCompressor();
 
-            //Add a packet handler for dealing with incoming connections.  Fuction will be called when a packet is recieved with the specified type.  We also here specify the type of object
-            //we are expecting to recieve.  In this case we expect an int[] for packet type ArrayTestPacketInt
+            SelectListeningPort();
+
+            //Add a packet handler for dealing with incoming connections.  Fuction will be called when a packet is received with the specified type.  We also here specify the type of object
+            //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
             NetworkComms.AppendIncomingPacketHandler<int[]>("ArrayInt",
                 (header, conectionId, array) =>
                 {
-                    Console.WriteLine("\nRecieved integer array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                    Console.WriteLine("\nReceived integer array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
 
                     for (int i = 0; i < array.Length; i++)
                         Console.WriteLine(i.ToString() + " - " + array[i].ToString());
@@ -65,7 +67,7 @@ namespace ExamplesConsole
             NetworkComms.AppendIncomingPacketHandler<string[]>("ArrayString",
                 (header, conectionId, array) =>
                 {
-                    Console.WriteLine("\nRecieved string array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                    Console.WriteLine("\nReceived string array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
 
                     for (int i = 0; i < array.Length; i++)
                         Console.WriteLine(i.ToString() + " - " + array[i]);
@@ -77,7 +79,7 @@ namespace ExamplesConsole
                 NetworkComms.AppendIncomingPacketHandler<ProtobufCustomObject>("CustomObject",
                                 (header, conectionId, customObject) =>
                                 {
-                                    Console.WriteLine("\nRecieved custom protobuf object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                                    Console.WriteLine("\nReceived custom protobuf object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
@@ -86,7 +88,7 @@ namespace ExamplesConsole
                 NetworkComms.AppendIncomingPacketHandler<BinaryFormatterCustomObject>("CustomObject",
                                 (header, conectionId, customObject) =>
                                 {
-                                    Console.WriteLine("\nRecieved custom binary formatter object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                                    Console.WriteLine("\nReceived custom binary formatter object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
@@ -162,7 +164,6 @@ namespace ExamplesConsole
             //                End of interesting stuff                       //
             //***************************************************************//
         }
-
         #region Customisation Methods
 
         private static void SelectLogging()
@@ -224,7 +225,7 @@ namespace ExamplesConsole
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedCompressor);
-                if (parseSucces && selectedCompressor <= 4) break;
+                if (parseSucces && selectedCompressor <= 4 && selectedCompressor > 0) break;
                 Console.WriteLine("Invalid compressor choice. Please try again.");
             }
 
@@ -253,6 +254,40 @@ namespace ExamplesConsole
         }
 
         /// <summary>
+        /// Allows to choose a custom listen port
+        /// </summary>
+        private static void SelectListeningPort()
+        {
+            Console.WriteLine("Would you like to specify a custom local listen port?:\n1 - Yes\n2 - No\n");
+
+            int selectedOption;
+            while (true)
+            {
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
+                if (parseSucces && selectedOption <= 2 && selectedOption > 0) break;
+                Console.WriteLine("Invalid choice. Please try again.");
+            }
+
+            if (selectedOption == 1)
+            {
+                Console.WriteLine(" ... selected custom local listen port. Please enter your chosen port number:");
+                int selectedPort;
+
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadLine(), out selectedPort);
+                    if (parseSucces && selectedPort > 0) break;
+                    Console.WriteLine("Invalid choice. Please try again.");
+                }
+
+                NetworkComms.CommsPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + NetworkComms.CommsPort + " has been set.\n");
+            }
+            else
+                Console.WriteLine(" ... default listen port number "+NetworkComms.CommsPort+" of will be used.\n");
+        }
+
+        /// <summary>
         /// Base method for creating an object to send
         /// </summary>
         private static void CreateSendObject()
@@ -265,21 +300,21 @@ namespace ExamplesConsole
             else
                 Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
 
-            int selectedSendMode;
+            int selectedObjectType;
             while (true)
             {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedSendMode);
-                if (parseSucces && selectedSendMode <= 4) break;
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedObjectType);
+                if (parseSucces && selectedObjectType <= 2 && selectedObjectType > 0) break;
                 Console.WriteLine("Invalid send choice. Please try again.");
             }
 
-            if (selectedSendMode == 1)
+            if (selectedObjectType == 1)
             {
                 Console.WriteLine(" ... selected array of primitives.\n");
                 toSendType = typeof(Array);
                 toSendObject = CreateArray();
             }
-            else if (selectedSendMode == 2)
+            else if (selectedObjectType == 2)
             {
                 Console.WriteLine(" ... selected custom object.\n");
                 toSendType = typeof(object);

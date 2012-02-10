@@ -34,7 +34,7 @@ namespace NetworkCommsDotNet
         [ProtoMember(2)]
         string packetTypeStr;
         [ProtoMember(3)]
-        bool recieveConfirmationRequired;
+        bool receiveConfirmationRequired;
         [ProtoMember(4)]
         long checkSumHash;
         [ProtoMember(5)]
@@ -48,10 +48,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         private PacketHeader() { }
 
-        public PacketHeader(string packetTypeStr, bool recieveConfirmationRequired, long checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
+        public PacketHeader(string packetTypeStr, bool receiveConfirmationRequired, long checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
         {
             this.packetTypeStr = packetTypeStr;
-            this.recieveConfirmationRequired = recieveConfirmationRequired;
+            this.receiveConfirmationRequired = receiveConfirmationRequired;
             this.checkSumHash = checkSumHash;
             this.payloadPacketSize = payloadPacketSize;
             this.pureBytesInPayload = pureBytesInPayload;
@@ -69,7 +69,7 @@ namespace NetworkCommsDotNet
                 {
                     payloadPacketSize = tempObject.PayloadPacketSize;
                     packetTypeStr = tempObject.PacketType;
-                    recieveConfirmationRequired = tempObject.RecieveConfirmationRequired;
+                    receiveConfirmationRequired = tempObject.ReceiveConfirmationRequired;
                     checkSumHash = tempObject.CheckSumHash;
                     pureBytesInPayload = tempObject.PureBytesInPayload;
                     packetCreationTime = tempObject.PacketCreationTime;
@@ -92,9 +92,9 @@ namespace NetworkCommsDotNet
             get { return packetTypeStr; }
         }
 
-        public bool RecieveConfirmationRequired
+        public bool ReceiveConfirmationRequired
         {
-            get { return recieveConfirmationRequired; }
+            get { return receiveConfirmationRequired; }
         }
 
         public long CheckSumHash

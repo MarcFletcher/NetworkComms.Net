@@ -275,21 +275,21 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send and receive buffer sizes
         /// </summary>
-        internal static int recieveBufferSizeBytes = 256000;
+        internal static int receiveBufferSizeBytes = 256000;
         internal static int sendBufferSizeBytes = 256000;
 
         /// <summary>
-        /// Recieve data buffer size. Default is 256KB. CAUTION: Changing the default value can lead to severe performance degredation.
+        /// Receive data buffer size. Default is 256KB. CAUTION: Changing the default value can lead to severe performance degredation.
         /// </summary>
-        public static int RecieveBufferSizeBytes
+        public static int ReceiveBufferSizeBytes
         {
-            get { return recieveBufferSizeBytes; }
+            get { return receiveBufferSizeBytes; }
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change recieveBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
+                    throw new ConnectionSetupException("Unable to change receiveBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
 
-                recieveBufferSizeBytes = value;
+                receiveBufferSizeBytes = value;
             }
         }
 
@@ -321,7 +321,7 @@ namespace NetworkCommsDotNet
         internal static bool enablePacketCheckSumValidation = false;
 
         /// <summary>
-        /// Set to true to enable checksum validation during all recieves. Default is false, relying on the basic TCP checksum alone.
+        /// Set to true to enable checksum validation during all receives. Default is false, relying on the basic TCP checksum alone.
         /// </summary>
         public static bool EnablePacketCheckSumValidation
         {
@@ -335,7 +335,7 @@ namespace NetworkCommsDotNet
         internal static int checkSumMismatchSentPacketCacheMaxByteLimit = 153750;
 
         /// <summary>
-        /// Set to true to enable checksum validation during all recieves. Default 150KB.
+        /// Set to true to enable checksum validation during all receives. Default 150KB.
         /// </summary>
         public static int CheckSumMismatchSentPacketCacheMaxByteLimit
         {
@@ -1424,7 +1424,7 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
-        #region SendRecieveObjectDefault
+        #region SendReceiveObjectDefault
 
         /// <summary>
         /// Send the provided object to the specified destination on the default comms port, setting the connectionId, and wait for the return object. Uses the network comms default compressor and serializer
@@ -1438,7 +1438,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">Object to send</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
 
 #if logging
@@ -1448,7 +1448,7 @@ namespace NetworkCommsDotNet
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
         /// <summary>
@@ -1464,7 +1464,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">Object to send</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
 
 #if logging
@@ -1474,7 +1474,7 @@ namespace NetworkCommsDotNet
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
         /// <summary>
@@ -1488,7 +1488,7 @@ namespace NetworkCommsDotNet
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
 
 #if logging
@@ -1496,7 +1496,7 @@ namespace NetworkCommsDotNet
 #endif
 
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
         /// <summary>
@@ -1511,7 +1511,7 @@ namespace NetworkCommsDotNet
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
 
 #if logging
@@ -1519,7 +1519,7 @@ namespace NetworkCommsDotNet
 #endif
 
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
         /// <summary>
@@ -1533,13 +1533,13 @@ namespace NetworkCommsDotNet
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, connectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, null, null, null, null);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, connectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, null, null, null, null);
         }
 
-        #endregion SendRecieveObjectDefault
-        #region SendRecieveObjectSpecific
+        #endregion SendReceiveObjectDefault
+        #region SendReceiveObjectSpecific
         /// <summary>
         /// Send the provided object to the specified destination on the default comms port, setting the connectionId, and wait for the return object. Uses the provided compressors and serializers
         /// </summary>
@@ -1556,7 +1556,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
 
 #if logging
@@ -1566,7 +1566,7 @@ namespace NetworkCommsDotNet
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
         /// <summary>
@@ -1586,7 +1586,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
 
 #if logging
@@ -1596,7 +1596,7 @@ namespace NetworkCommsDotNet
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
         /// <summary>
@@ -1614,7 +1614,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
 
 #if logging
@@ -1622,7 +1622,7 @@ namespace NetworkCommsDotNet
 #endif
 
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
         /// <summary>
@@ -1641,7 +1641,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
 
 #if logging
@@ -1649,7 +1649,7 @@ namespace NetworkCommsDotNet
 #endif
 
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
-            return SendRecieveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
         /// <summary>
@@ -1667,7 +1667,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendRecieveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
 
 #if logging
@@ -1681,8 +1681,8 @@ namespace NetworkCommsDotNet
             bool remotePeerDisconnectedDuringWait = false;
             AutoResetEvent returnWaitSignal = new AutoResetEvent(false);
 
-            #region SendRecieveDelegate
-            PacketHandlerCallBackDelegate<returnObjectType> SendRecieveDelegate = (packetHeader, sourceConnectionId, incomingObject) =>
+            #region SendReceiveDelegate
+            PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnectionId, incomingObject) =>
             {
                 if (sourceConnectionId == connectionId)
                 {
@@ -1704,7 +1704,7 @@ namespace NetworkCommsDotNet
             #endregion
 
             targetConnection.AppendConnectionSpecificShutdownHandler(SendReceiveShutDownDelegate);
-            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendRecieveDelegate, serializerIncoming, compressorIncoming, false);
+            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, serializerIncoming, compressorIncoming, false);
 
             if (serializerOutgoing == null) serializerOutgoing = DefaultSerializer;
             if (compressorOutgoing == null) compressorOutgoing = DefaultCompressor;
@@ -1717,11 +1717,11 @@ namespace NetworkCommsDotNet
             //We wait for the return data here
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
             {
-                RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendRecieveDelegate);
+                RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
                 throw new ExpectedReturnTimeoutException("Timeout occurred waiting for response packet.");
             }
 
-            RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendRecieveDelegate);
+            RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
             targetConnection.RemoveConnectionSpecificShutdownHandler(SendReceiveShutDownDelegate);
 
             if (remotePeerDisconnectedDuringWait)
@@ -1730,7 +1730,7 @@ namespace NetworkCommsDotNet
                 return returnObject;
         }
         
-        #endregion SendRecieveObjectSpecific
+        #endregion SendReceiveObjectSpecific
 
         #endregion Public Usage Methods
 

@@ -402,7 +402,7 @@ namespace NetworkCommsDotNet
             this.ConnectionEndPoint = connectionEndPoint;
             this.serverSide = serverSide;
             this.packetBuilder = new ConnectionPacketBuilder();
-            this.dataBuffer = new byte[NetworkComms.recieveBufferSizeBytes];
+            this.dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
         }
 
         /// <summary>
@@ -426,7 +426,7 @@ namespace NetworkCommsDotNet
                 this.tcpClient = sourceClient;
                 this.tcpClientNetworkStream = tcpClient.GetStream();
 
-                this.tcpClient.ReceiveBufferSize = NetworkComms.recieveBufferSizeBytes;
+                this.tcpClient.ReceiveBufferSize = NetworkComms.receiveBufferSizeBytes;
                 this.tcpClient.SendBufferSize = NetworkComms.sendBufferSizeBytes;
 
                 //This disables the 'nagle alogrithm'
@@ -507,11 +507,16 @@ namespace NetworkCommsDotNet
                 CloseConnection(true,5);
                 throw new ConnectionSetupException(e.ToString());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true,6);
-                throw;
+                CloseConnection(true, 6);
+
+                //For some odd reason not all SocketExceptions get caught above, so another check here
+                if (ex.GetType() == typeof(SocketException))
+                    throw new ConnectionSetupException(ex.ToString());
+                else
+                    throw;
             }
         }
 
@@ -723,7 +728,7 @@ namespace NetworkCommsDotNet
                         dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
                     else
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.recieveBufferSizeBytes];
+                        dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length
@@ -822,7 +827,7 @@ namespace NetworkCommsDotNet
                                 dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
                             else
                                 //If we have nothing to reuse we allocate a new buffer
-                                dataBuffer = new byte[NetworkComms.recieveBufferSizeBytes];
+                                dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
 
                             totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
@@ -855,7 +860,7 @@ namespace NetworkCommsDotNet
                         else
                         {
                             //If we have nothing to reuse we allocate a new buffer
-                            dataBuffer = new byte[NetworkComms.recieveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
                             totalBytesRead = 0;
                         }
 
@@ -1050,7 +1055,7 @@ namespace NetworkCommsDotNet
                 }
 
                 //Remote end may have requested packet receive confirmation so we send that now
-                if (packetHeader.RecieveConfirmationRequired)
+                if (packetHeader.ReceiveConfirmationRequired)
                 {
 #if logging
                     logger.Debug("... sending confirmation packet.");
@@ -1101,7 +1106,7 @@ namespace NetworkCommsDotNet
                         else
                         {
                             //We should never be trying to handshake an established connection
-                            if (this.ConnectionInfo != null) throw new ConnectionSetupException("Recieved connectionsetup packet after connection had already been configured.");
+                            if (this.ConnectionInfo != null) throw new ConnectionSetupException("Received connectionsetup packet after connection had already been configured.");
 
                             //Set the connection info
                             this.ConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
@@ -1277,7 +1282,7 @@ namespace NetworkCommsDotNet
                 try
                 {
                     //Add the confirmation handler if required
-                    if (packet.PacketHeader.RecieveConfirmationRequired)
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
                     {
                         NetworkComms.AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, false);
                         AppendConnectionSpecificShutdownHandler(ConfirmationShutDownDelegate);
@@ -1326,7 +1331,7 @@ logger.Debug("... " + bytesToSend.Length + " bytes written to netstream.");
                     #endregion
 
                     //If we required receive confirmation we now wait for that confirmation
-                    if (packet.PacketHeader.RecieveConfirmationRequired)
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
                     {
 #if logging
 logger.Debug("... waiting for confirmation packet.");
@@ -1354,7 +1359,7 @@ logger.Debug("... confirmation packet received.");
                 }
                 finally
                 {
-                    if (packet.PacketHeader.RecieveConfirmationRequired)
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
                     {
                         //Cleanup our delegates
                         NetworkComms.RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate);
@@ -1422,7 +1427,7 @@ logger.Debug("... confirmation packet received.");
             {
                 try
                 {
-                    bool returnValue = NetworkComms.SendRecieveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    bool returnValue = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
                     //Console.WriteLine("Ping success in {0}ms", (DateTime.Now-startTime).TotalMilliseconds);
                     //NetworkComms.AppendStringToLogFile("ConnectionCheckSuccess", ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " (" + ConnectionId.ToString() + ") took " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
                     return returnValue;

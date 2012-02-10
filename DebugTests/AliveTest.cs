@@ -63,7 +63,7 @@ namespace DebugTests
                     string userEnteredStr = Console.ReadLine(); string serverIP = userEnteredStr.Split(':')[0]; int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
 
                     //NetworkComms.SendObject("Message", serverIP, serverPort, false, message);
-                    //Console.WriteLine(NetworkComms.SendRecieveObject<string>("Message", serverIP, serverPort, false, "MessageReturn", 300000, message));
+                    //Console.WriteLine(NetworkComms.SendReceiveObject<string>("Message", serverIP, serverPort, false, "MessageReturn", 300000, message));
                     NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReplyComplete", serverIP, serverPort, false, "");
                 }
             }

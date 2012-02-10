@@ -74,7 +74,7 @@ namespace SerializerBase
         }
 
         /// <summary>
-        /// Deserializes data object held as compressed bytes in recievedObjectBytes using compressor and BinaryFormatter
+        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor and BinaryFormatter
         /// </summary>
         /// <typeparam name="T">Type parameter of the resultant object</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
