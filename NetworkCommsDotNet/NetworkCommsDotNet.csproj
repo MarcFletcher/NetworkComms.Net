@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Common.Logging">
+      <HintPath>..\Common.Logging.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net">
       <HintPath>..\SerializerBase\Protobuf\protobuf-net.dll</HintPath>
     </Reference>

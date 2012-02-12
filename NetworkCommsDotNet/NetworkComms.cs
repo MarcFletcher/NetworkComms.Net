@@ -27,6 +27,8 @@ using System.Collections;
 using System.Net.NetworkInformation;
 using QuickLZCompressor;
 using SharpZipLibCompressor;
+using Common.Logging;
+using System.Collections.Specialized;
 
 namespace NetworkCommsDotNet
 {
@@ -482,33 +484,26 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Logging
-#if logging
-        private static readonly ILog logger = LogManager.GetLogger(typeof(NetworkComms));
-        private static volatile bool loggerConfigured = false;
-#endif
+        internal static bool loggingEnabled = false;
+        internal static ILog logger = LogManager.GetCurrentClassLogger();
 
-        /// <summary>
-        /// Delegate method for writing out network comms log information
-        /// </summary>
-        /// <param name="textToWrite">The text to write to the log</param>
-        public delegate void WriteLineToLogDelegate(string textToWrite);
-
-        /// <summary>
-        /// Internal pointer to a provided writeLineToLog delegate.
-        /// </summary>
-        static WriteLineToLogDelegate writeLineToLogMethod = null;
-
-        /// <summary>
-        /// A locker for writing to log to ensure thread safety
-        /// </summary>
-        static object logWriteLocker = new object();
-
-        /// <summary>
-        /// Set a network comms WriteLineToLogMethod delegate
-        /// </summary>
-        public static WriteLineToLogDelegate WriteLineToLogMethod
+        public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
         {
-            set { writeLineToLogMethod = value; }
+            lock (globalDictAndDelegateLocker)
+            {
+                loggingEnabled = true;
+                Common.Logging.LogManager.Adapter = loggingAdaptor;
+                logger = LogManager.GetCurrentClassLogger();
+            }
+        }
+
+        public static void DisableLogging()
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                loggingEnabled = false;
+                Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
+            }
         }
         #endregion
 
@@ -556,10 +551,6 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-#if logging
-                ConfigureLogger();
-#endif
-
                 InitialiseComms();
 
                 //We only start a new thread if we are currently not listening and endListen is false
@@ -583,18 +574,28 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static void CloseAllConnections()
         {
-            //Console.WriteLine("Entering CloseConnections.");
-
             //We need to create a copy because we need to avoid a collection modifed error and possible deadlocks from within closeConnection
             Dictionary<IPEndPoint, Connection> dictCopy;
             lock (globalDictAndDelegateLocker)
-                //dictCopy = allConnectionsByEndPoint.ToDictionary(dict => dict.Key, dict => dict.Value);
                 dictCopy = new Dictionary<IPEndPoint, Connection>(allConnectionsByEndPoint);
 
             //Any connections created after the above line will not be closed, a subsequent call to shutdown will get those.
-            //Console.WriteLine("Closing {0} connections.", dictCopy.Count);
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Closing all connections, currently " + dictCopy.Count + " are active.");
+
             foreach (Connection client in dictCopy.Values)
                 client.CloseConnection(false, -3);
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... all connections have been closed.");
+        }
+
+        /// <summary>
+        /// Closes the specified connection. Any global or connection specific shutdown delegates will be executed.
+        /// </summary>
+        /// <param name="connectionId"></param>
+        public static void CloseConnection(ShortGuid connectionId)
+        {
+            Connection targetConnection = CheckForConnection(connectionId);
+            targetConnection.CloseConnection(false, -1);
         }
 
         /// <summary>
@@ -632,6 +633,8 @@ namespace NetworkCommsDotNet
 
             lock (errorLocker)
             {
+                if (loggingEnabled) logger.Fatal(fileAppendStr + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex); 
+
                 fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
 
                 try
@@ -709,7 +712,7 @@ namespace NetworkCommsDotNet
                 else
                     globalConnectionShutdownDelegates += connectionShutdownDelegate;
 
-                WriteToLog("Added global connection shutdown delegate.");
+                if (loggingEnabled) logger.Info("Added global connection shutdown delegate.");
             }
         }
 
@@ -722,12 +725,17 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 globalConnectionShutdownDelegates -= connectionShutdownDelegate;
-                WriteToLog("Removed global shutdown delegate.");
+
+                if (loggingEnabled) logger.Info("Removed global shutdown delegate.");
 
                 if (globalConnectionShutdownDelegates == null)
-                    WriteToLog("No handlers remain for shutdown connections.");
+                {
+                    if (loggingEnabled) logger.Info("No handlers remain for shutdown connections.");
+                }
                 else
-                    WriteToLog("Handlers remain for shutdown connections.");
+                {
+                    if (loggingEnabled) logger.Info("Handlers remain for shutdown connections.");
+                }
             }
         }
 
@@ -780,7 +788,7 @@ namespace NetworkCommsDotNet
                 else
                     globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
 
-                WriteToLog("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
+                if (loggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
 
                 //Start listening if we have not already.
                 if (enableAutoListen)
@@ -819,8 +827,6 @@ namespace NetworkCommsDotNet
                     //The bonus here is if the delegate has not been added we continue quite happily
                     globalIncomingPacketHandlers[packetTypeStr].Remove(toCompareDelegate);
 
-                    //WriteToLog("Removed a single packetHandler for '" + packetTypeStr + "' packetType.");
-
                     if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
                     {
                         globalIncomingPacketHandlers.Remove(packetTypeStr);
@@ -829,10 +835,10 @@ namespace NetworkCommsDotNet
                         if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                             globalIncomingPacketUnwrappers.Remove(packetTypeStr);
 
-                        WriteToLog("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
+                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
                     }
                     else
-                        WriteToLog("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
+                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
                 }
             }
         }
@@ -849,7 +855,8 @@ namespace NetworkCommsDotNet
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
                     globalIncomingPacketHandlers.Remove(packetTypeStr);
-                    WriteToLog("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
+
+                    if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
                 }
             }
         }
@@ -862,7 +869,8 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
-                WriteToLog("Removed all incoming packetHandlers for all packetTypes");
+
+                if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
             }
         }
 
@@ -912,9 +920,7 @@ namespace NetworkCommsDotNet
                     throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
                 //Pass the data onto the handler and move on.
-#if logging
-                        logger.Debug("... passing completed data packet to selected handler.");
-#endif
+                if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handler.");
 
                 //We decide which serializer and compressor to use
                 if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
@@ -991,7 +997,7 @@ namespace NetworkCommsDotNet
                     CloseAllConnections();
                 }
 
-                WriteToLog("Network comms has shutdown");
+                if (loggingEnabled) logger.Info("Network comms has shutdown");
             }
             catch (CommsException)
             {
@@ -1145,23 +1151,11 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1175,23 +1169,11 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1203,21 +1185,9 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1230,21 +1200,9 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1256,21 +1214,9 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(connectionId);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         #endregion SendObjectDefault
@@ -1287,23 +1233,11 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1319,23 +1253,11 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1349,21 +1271,9 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1378,21 +1288,9 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
 
         /// <summary>
@@ -1406,21 +1304,9 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-#if logging
-            ConfigureLogger();
-#endif
-
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
             Connection targetConnection = CheckForConnection(connectionId);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
-
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
         }
         #endregion
 
@@ -1440,11 +1326,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
@@ -1466,11 +1347,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
@@ -1490,11 +1366,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
@@ -1513,11 +1384,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
@@ -1558,11 +1424,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
@@ -1588,11 +1449,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
@@ -1616,11 +1472,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
@@ -1643,11 +1494,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
@@ -1669,11 +1515,6 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-
-#if logging
-            ConfigureLogger();
-#endif
-
             Connection targetConnection = CheckForConnection(connectionId);
 
             returnObjectType returnObject = default(returnObjectType);
@@ -1710,9 +1551,7 @@ namespace NetworkCommsDotNet
             if (compressorOutgoing == null) compressorOutgoing = DefaultCompressor;
 
             Packet sendPacket = new Packet(sendingPacketTypeStr, receiveConfirmationRequired, sendObject, serializerOutgoing, compressorOutgoing);
-            //Console.WriteLine("... starting send {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
             targetConnection.SendPacket(sendPacket);
-            //Console.WriteLine("... send complete {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
 
             //We wait for the return data here
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
@@ -1736,33 +1575,6 @@ namespace NetworkCommsDotNet
 
         #region Private Setup, Connection and Shutdown
 
-#if logging
-        private static void ConfigureLogger()
-        {
-            lock (globalLocker)
-            {
-                if (!loggerConfigured)
-                {
-                    loggerConfigured = true;
-                    //If we are logging configure the logger
-                    ILoggerRepository repository = LogManager.GetRepository(Assembly.GetCallingAssembly());
-                    IBasicRepositoryConfigurator configurableRepository = repository as IBasicRepositoryConfigurator;
-
-                    PatternLayout layout = new PatternLayout();
-                    layout.ConversionPattern = "%timestamp% - %level% [%thread%] - %message%newline";
-                    layout.ActivateOptions();
-
-                    FileAppender appender = new FileAppender();
-                    appender.Layout = layout;
-                    appender.File = "commsLog.txt";
-                    appender.AppendToFile = false;
-                    appender.ActivateOptions();
-                    configurableRepository.Configure(appender);
-                }
-            }
-        }
-#endif
-
         /// <summary>
         /// Initialise comms items on startup
         /// </summary>
@@ -1773,6 +1585,7 @@ namespace NetworkCommsDotNet
                 if (!commsInitialised)
                 {
                     commsInitialised = true;
+                    if (loggingEnabled) logger.Info("networkComms.net has been initialised");
                 }
             }
         }
@@ -1829,21 +1642,24 @@ namespace NetworkCommsDotNet
         /// <param name="compressor"></param>
         internal static void SendObject(string packetTypeStr, Connection targetConnection, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-#if logging
-            ConfigureLogger();
-#endif
+            if (loggingEnabled)
+            {
+                if (targetConnection.ConnectionInfo!=null)
+                    logger.Debug("Starting send of " + packetTypeStr + " packetType to " + targetConnection.ConnectionInfo.ClientIP + ":" + targetConnection.ConnectionInfo.ClientPort + ".");
+                else
+                    logger.Debug("Starting send of " + packetTypeStr + " packetType to " + targetConnection.RemoteClientIP + ".");
+            }
 
-#if logging
-            logger.Debug("Start send of " + packetTypeStr + " packetTypeStr.");
-#endif
-
-            //Connection targetConnection = CheckForConnection(destinationIPAddress);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
 
-#if logging
-            logger.Debug("Completed send of " + packetTypeStr + " packetTypeStr.");
-#endif
+            if (loggingEnabled)
+            {
+                if (targetConnection.ConnectionInfo != null)
+                    logger.Debug("Completed send of " + packetTypeStr + " packetType to " + targetConnection.ConnectionInfo.ClientIP + ":" + targetConnection.ConnectionInfo.ClientPort + ".");
+                else
+                    logger.Debug("Completed send of " + packetTypeStr + " packetType to " + targetConnection.RemoteClientIP + ".");
+            }
         }
 
         /// <summary>
@@ -1851,8 +1667,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void IncomingConnectionListenThread()
         {
-            WriteToLog("Network comms is now accepting connections.");
-            //LogError(new Exception(""), "CommsStartup", "This is just a notice that comms has started up. No exception really occured.");
+            if (loggingEnabled) logger.Info("networkComms.net is now waiting for new connections.");
 
             try
             {
@@ -1961,6 +1776,8 @@ namespace NetworkCommsDotNet
                 //Need to jump commsInitialised otherwise we won't be able to change the port
                 CommsPort = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
             }
+
+            if (loggingEnabled) logger.Info("networkComms.net has opened port "+CommsPort+".");
         }
 
         /// <summary>
@@ -1969,6 +1786,8 @@ namespace NetworkCommsDotNet
         /// <param name="targetIPAddress"></param>
         private static Connection CheckForConnection(string targetIPAddress, int commsPort)
         {
+            if (loggingEnabled) logger.Trace("Checking for connection to " + targetIPAddress + ":" + commsPort);
+
             Connection connection = null;
             try
             {
@@ -1999,10 +1818,13 @@ namespace NetworkCommsDotNet
 
                 if (newConnectionEstablish)
                 {
+                    if (loggingEnabled) logger.Trace(" ... establishing a new connection");
                     TcpClient targetClient = new TcpClient();
                     targetClient.Connect(targetIPAddress, commsPort);
                     connection.EstablishConnection(targetClient);
                 }
+                else
+                    if (loggingEnabled) logger.Trace(" ... using an existing connection");
 
                 if (!connection.WaitForConnectionEstablish(connectionEstablishTimeoutMS))
                 {
@@ -2037,26 +1859,6 @@ namespace NetworkCommsDotNet
                     throw new InvalidConnectionIdException("Unable to locate a connection with the provided id - " + connectionId + ".");
             }
         }
-
-        /// <summary>
-        /// Internal wrapper for writing strings to log targets
-        /// </summary>
-        /// <param name="lineToWrite"></param>
-        internal static void WriteToLog(string lineToWrite)
-        {
-            try
-            {
-                if (writeLineToLogMethod != null)
-                    lock (logWriteLocker)
-                        writeLineToLogMethod(lineToWrite);
-            }
-            catch (Exception)
-            {
-                writeLineToLogMethod = null;
-            }
-
-        }
-
         #endregion Private Setup, Connection and Shutdown
     }
 }

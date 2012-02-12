@@ -56,9 +56,8 @@ namespace NetworkCommsDotNet
                 dataHashValue = Adler32.GenerateCheckSum(packetData);
 
             this.packetHeader = new PacketHeader(packetTypeStr, receiveConfirmationRequired, dataHashValue, packetData.Length, pureBytesInPayload);
-#if logging
-                logger.Debug("... creating comms packet. Total packet size is " + FBPSerialiser.SerialiseDataObject(packetHeader).Length + packetData.Length + " bytes. PacketObject data size is " + packetData.Length + " bytes");
-#endif
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }
 
         /// <summary>

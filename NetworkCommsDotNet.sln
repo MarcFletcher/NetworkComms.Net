@@ -13,8 +13,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpZipLibCompressor", "Sh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipLZMACompressor", "SevenZipLZMACompressor\SevenZipLZMACompressor.csproj", "{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "License", "License", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
 	ProjectSection(SolutionItems) = preProject
+		ChangeLog.txt = ChangeLog.txt
 		COPYING.txt = COPYING.txt
 	EndProjectSection
 EndProject

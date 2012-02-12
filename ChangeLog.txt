@@ -1,0 +1,12 @@
+Version 1.1 - Released 17/2/12
+
+- Bug fixes which occur very rarely (<0.1%) during VERY high loads (1000+ connections)
+- All logging is now performed via the Common.Logging 2.0 interface to offer a little more versatility. Fatal errors will still output independant error files as well
+- Spelling correction to SendReceive<> methods
+- Added public access to NetworkComms.CloseConnection(ConnectionId)
+- Added local listen port selection to AdvancedSend example
+- Minor improvements to distributed file system (DFS) example
+
+Version 1.0 - Released 2011
+
+- Base release of networkComms.net.

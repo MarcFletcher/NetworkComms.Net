@@ -20,6 +20,7 @@ using System.Text;
 using SerializerBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
+using System.Collections.Specialized;
 
 namespace ExamplesConsole
 {
@@ -173,7 +174,15 @@ namespace ExamplesConsole
             var loggingEnableKey = Console.ReadKey(true);
 
             if (loggingEnableKey.Key == ConsoleKey.Y)
-                NetworkComms.WriteLineToLogMethod = LogMethod;
+            {
+                NameValueCollection properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                properties["showLogName"] = "false";
+                properties["level"] = "All";
+
+                NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
+                Console.WriteLine(" ... logging enabled with ALL output directed to console.");
+            }
         }
 
         /// <summary>
@@ -258,7 +267,7 @@ namespace ExamplesConsole
         /// </summary>
         private static void SelectListeningPort()
         {
-            Console.WriteLine("Would you like to specify a custom local listen port?:\n1 - Yes\n2 - No\n");
+            Console.WriteLine("Would you like to specify a custom local listen port?:\n1 - No\n2 - Yes\n");
 
             int selectedOption;
             while (true)
@@ -268,7 +277,7 @@ namespace ExamplesConsole
                 Console.WriteLine("Invalid choice. Please try again.");
             }
 
-            if (selectedOption == 1)
+            if (selectedOption == 2)
             {
                 Console.WriteLine(" ... selected custom local listen port. Please enter your chosen port number:");
                 int selectedPort;
