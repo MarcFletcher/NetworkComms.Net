@@ -1736,7 +1736,7 @@ namespace NetworkCommsDotNet
                     catch (Exception ex)
                     {
                         //For some odd reason SocketExceptions don't always get caught above, so another check
-                        if (ex.GetType() != typeof(SocketException))
+                        if (ex.GetBaseException().GetType() != typeof(SocketException))
                             LogError(ex, "CommsSetupError");
                     }
                 } while (!endListen);

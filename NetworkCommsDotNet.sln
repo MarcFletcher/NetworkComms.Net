@@ -16,6 +16,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
+		Common.Logging.dll = Common.Logging.dll
 		COPYING.txt = COPYING.txt
 	EndProjectSection
 EndProject

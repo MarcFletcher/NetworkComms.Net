@@ -1042,7 +1042,7 @@ namespace NetworkCommsDotNet
                 //Remote end may have requested packet receive confirmation so we send that now
                 if (packetHeader.ReceiveConfirmationRequired)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested recieve confirmation packet.");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
 
                     Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), false, packetHeader.CheckSumHash, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
                     SendPacket(returnPacket);
