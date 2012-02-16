@@ -24,8 +24,11 @@ namespace NetworkCommsDotNet
             public List<RPCArgumentBase> args;
             [ProtoMember(3, DynamicType = true)]
             public RPCArgumentBase result;
+            [ProtoMember(4)]
+            public string Exception;
+        
         }
-
+        
         /// <summary>
         /// Cheeky base class used in order to allow us to send an array of objects using Protobuf-net
         /// </summary>
@@ -140,12 +143,15 @@ namespace NetworkCommsDotNet
                     foreach (var method in typeof(T).GetMethods())
                     {
                         //Get the method arguements and implement as a public virtual method that we will override
-                        var args = method.GetParameters();
+                        var args = method.GetParameters(); 
                         var methodImpl = type.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, Array.ConvertAll(args, arg => arg.ParameterType));
                         type.DefineMethodOverride(methodImpl, method);
 
                         //Get the ILGenerator for the method
                         il = methodImpl.GetILGenerator();
+                        il.Emit(OpCodes.Ldarg_0);
+                        //il.Emit(OpCodes.Ldc_I4, 5);
+
 
                         //Create a local array to store the parameters
                         LocalBuilder array = il.DeclareLocal(typeof(object[]));
@@ -155,6 +161,33 @@ namespace NetworkCommsDotNet
                         il.Emit(OpCodes.Newarr, typeof(object));
                         il.Emit(OpCodes.Stloc, array);
 
+                        LocalBuilder objRef = il.DeclareLocal(typeof(object));
+
+                        //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
+                        for (int i = 0; i < args.Length; i++)
+                        {
+                            il.Emit(OpCodes.Ldarg, i + 1);
+
+                            if (args[i].ParameterType.IsByRef)
+                            {
+                                il.Emit(OpCodes.Ldind_Ref);
+
+                                if (args[i].ParameterType.GetElementType().IsValueType)
+                                    il.Emit(OpCodes.Box, args[i].ParameterType.GetElementType());
+                            }
+
+                            if (args[i].ParameterType.IsValueType)
+                                il.Emit(OpCodes.Box, args[i].ParameterType);
+                            
+                            il.Emit(OpCodes.Castclass, typeof(object));
+                            il.Emit(OpCodes.Stloc, objRef);
+                            
+                            il.Emit(OpCodes.Ldloc, array);
+                            il.Emit(OpCodes.Ldc_I4_S, i);
+                            il.Emit(OpCodes.Ldloc, objRef);
+                            il.Emit(OpCodes.Stelem_Ref);
+                        }
+
                         //Store connection information for the remote call as arguments                    
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Ldfld, serverConnectionID);
@@ -163,30 +196,44 @@ namespace NetworkCommsDotNet
 
                         //Store the method name of the remote call as an arguement
                         il.Emit(OpCodes.Ldstr, method.Name);
+                        
+                        ////Get a handle on the send method
+                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
 
-                        //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
-                        for (int i = 0; i < args.Length; i++)
-                        {
-                            il.Emit(OpCodes.Ldloc, array);
-                            il.Emit(OpCodes.Ldc_I4_S, i);
-
-                            il.Emit(OpCodes.Ldarg, i + 1);
-
-                            if (args[i].ParameterType.IsValueType)
-                                il.Emit(OpCodes.Box, args[i].ParameterType);
-
-                            il.Emit(OpCodes.Castclass, typeof(object));
-                            il.Emit(OpCodes.Stelem_Ref, typeof(object));
-                        }
-
-                        //Get a handle on the send method
-                        MethodInfo testMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
-
-                        //Load the array pointer as an arguement
+                        ////Load the array pointer as an arguement
                         il.Emit(OpCodes.Ldloc, array);
 
-                        //Run the send method which will push the return value onto the execution stack
-                        il.Emit(OpCodes.Call, testMethod);
+                        ////Run the send method which will push the return value onto the execution stack
+                        il.Emit(OpCodes.Call, remoteCallMethod);
+
+                        //If the return type is a value type we need to unbox
+                        if (method.ReturnType.IsValueType && method.ReturnType != typeof(void))
+                            il.Emit(OpCodes.Unbox_Any, method.ReturnType);
+
+                        //If any ref or out paramters were defined we need to set their values
+                        for (int i = 0; i < args.Length; i++)
+                        {
+                            if (args[i].ParameterType.IsByRef)
+                            {
+                                //Get the address from the method argument to put the resultant value
+                                il.Emit(OpCodes.Ldarg, i + 1);
+
+                                //Load the boxed untyped result from the object[] we created
+                                il.Emit(OpCodes.Ldloc, array);
+                                il.Emit(OpCodes.Ldc_I4_S, i);
+                                il.Emit(OpCodes.Ldelem, typeof(object));
+                                
+                                //Cast back to the definitive type 
+                                il.Emit(OpCodes.Castclass, args[i].ParameterType.GetElementType());
+
+                                //Unbox if necessary
+                                if (args[i].ParameterType.GetElementType().IsValueType)
+                                    il.Emit(OpCodes.Unbox_Any, args[i].ParameterType.GetElementType());
+
+                                //Store the result
+                                il.Emit(OpCodes.Stobj, args[i].ParameterType.GetElementType());
+                            }
+                        }
 
                         //Return
                         il.Emit(OpCodes.Ret);
@@ -211,6 +258,12 @@ namespace NetworkCommsDotNet
 
                 wrapper = NetworkComms.SendReceiveObject<RemoteCallWrapper>(connectionName, connectionID, false, connectionName, 1000, wrapper);
 
+                if (wrapper.Exception != null)
+                    throw new Exception(wrapper.Exception);
+
+                for (int i = 0; i < args.Length; i++)
+                    args[i] = wrapper.args[i].UntypedValue;
+
                 if (wrapper.result != null)
                     return wrapper.result.UntypedValue;
                 else
@@ -234,7 +287,25 @@ namespace NetworkCommsDotNet
                     NetworkComms.AppendIncomingPacketHandler<RemoteCallWrapper>(handlerName, (headerInner, connectionIDInner, wrapper) =>
                     {
                         MethodInfo funcRef = typeof(T).GetMethod(wrapper.name);
-                        wrapper.result = RPCArgumentBase.CreateDynamic(funcRef.Invoke(instance, (from arg in wrapper.args select arg.UntypedValue).ToArray()));
+
+                        object[] args = null;
+
+                        if (wrapper.args == null)
+                            args = new object[0];
+                        else
+                            args = (from arg in wrapper.args select arg.UntypedValue).ToArray();
+
+                        try
+                        {
+                            wrapper.result = RPCArgumentBase.CreateDynamic(funcRef.Invoke(instance, args));
+                            wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
+                        }
+                        catch (Exception e)
+                        {
+                            wrapper.result = null;
+                            wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + e.ToString() + "\n\nEND SERVER SIDE EXCEPTION\n\n";
+                        }
+
                         NetworkComms.SendObject(handlerName, connectionIDInner, false, wrapper);
                     });
 
