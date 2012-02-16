@@ -27,6 +27,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Common.Logging.dll</HintPath>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.404, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SerializerBase\Protobuf\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -41,6 +45,7 @@
     <Compile Include="DFSTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RemoteProcedureCalls.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">

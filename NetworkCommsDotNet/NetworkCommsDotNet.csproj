@@ -54,6 +54,7 @@
     <Compile Include="NetworkComms.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketHeader.cs" />
+    <Compile Include="RemoteProcedureCalls.cs" />
     <Compile Include="ReservedPacketType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShortGUID.cs" />
