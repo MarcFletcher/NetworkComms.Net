@@ -31,8 +31,8 @@ namespace NetworkCommsDotNet
 
         public Packet(string packetTypeStr, bool receiveConfirmationRequired, object packetObject, ISerialize serializer, ICompress compressor)
         {
-            if (packetTypeStr == null)
-                throw new ArgumentNullException("packetTypeStr should never be null.");
+            if (packetTypeStr == null || packetTypeStr == "")
+                throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
 
             //We can gain performance if we are just sending a byte array directly
             bool pureBytesInPayload = false;
