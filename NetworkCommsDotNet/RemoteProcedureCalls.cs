@@ -200,7 +200,7 @@ namespace NetworkCommsDotNet
                         il.Emit(OpCodes.Ldstr, method.Name);
                         
                         ////Get a handle on the send method
-                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
+                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
 
                         ////Load the array pointer as an arguement
                         il.Emit(OpCodes.Ldloc, array);
@@ -296,7 +296,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldstr, getMethod.Name);
 
                             ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
 
                             ////Load the array pointer as an arguement
                             il.Emit(OpCodes.Ldloc, array);
@@ -363,7 +363,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldstr, setMethod.Name);
 
                             ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
 
                             ////Load the array pointer as an arguement
                             il.Emit(OpCodes.Ldloc, array);
