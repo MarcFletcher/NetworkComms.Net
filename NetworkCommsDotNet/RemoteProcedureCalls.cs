@@ -142,6 +142,8 @@ namespace NetworkCommsDotNet
                     //Loop through each method in the interface
                     foreach (var method in typeof(T).GetMethods())
                     {
+                        #region Method
+
                         //Get the method arguements and implement as a public virtual method that we will override
                         var args = method.GetParameters(); 
                         var methodImpl = type.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, Array.ConvertAll(args, arg => arg.ParameterType));
@@ -237,7 +239,152 @@ namespace NetworkCommsDotNet
 
                         //Return
                         il.Emit(OpCodes.Ret);
+
+                        #endregion Method
                     }
+
+                    //Next we should implement remote properties
+                    foreach (var property in typeof(T).GetProperties())
+                    {
+                        var args = property.GetIndexParameters();
+                        var propImpl = type.DefineProperty(property.Name, property.Attributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+
+                        if (property.CanRead)
+                        {
+                            #region Property Get
+
+                            MethodAttributes getsetAttr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+
+                            var getMethod = type.DefineMethod("get_" + property.Name, getsetAttr, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                            il = getMethod.GetILGenerator();
+                            il.Emit(OpCodes.Ldarg_0);
+
+                            //Create a local array to store the parameters
+                            LocalBuilder array = il.DeclareLocal(typeof(object[]));
+
+                            //Allocate the array and store reference in local variable above
+                            il.Emit(OpCodes.Ldc_I4_S, args.Length);
+                            il.Emit(OpCodes.Newarr, typeof(object));
+                            il.Emit(OpCodes.Stloc, array);
+
+                            LocalBuilder objRef = il.DeclareLocal(typeof(object));
+
+                            //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                il.Emit(OpCodes.Ldarg, i + 1);
+
+                                if (args[i].ParameterType.IsValueType)
+                                    il.Emit(OpCodes.Box, args[i].ParameterType);
+
+                                il.Emit(OpCodes.Castclass, typeof(object));
+                                il.Emit(OpCodes.Stloc, objRef);
+
+                                il.Emit(OpCodes.Ldloc, array);
+                                il.Emit(OpCodes.Ldc_I4_S, i);
+                                il.Emit(OpCodes.Ldloc, objRef);
+                                il.Emit(OpCodes.Stelem_Ref);
+                            }
+
+                            //Store connection information for the remote call as arguments                    
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, serverConnectionID);
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, serverConnectionName);
+
+                            //Store the method name of the remote call as an arguement
+                            il.Emit(OpCodes.Ldstr, getMethod.Name);
+
+                            ////Get a handle on the send method
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+
+                            ////Load the array pointer as an arguement
+                            il.Emit(OpCodes.Ldloc, array);
+
+                            ////Run the send method which will push the return value onto the execution stack
+                            il.Emit(OpCodes.Call, remoteCallMethod);
+
+                            //If the return type is a value type we need to unbox
+                            if (getMethod.ReturnType.IsValueType)
+                                il.Emit(OpCodes.Unbox_Any, getMethod.ReturnType);
+
+                            //Return
+                            il.Emit(OpCodes.Ret);
+
+                            propImpl.SetGetMethod(getMethod);
+
+                            #endregion Property Get
+                        }
+
+                        if (property.CanWrite)
+                        {
+                            #region Property Set
+
+                            MethodAttributes getsetAttr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+
+                            var setMethod = type.DefineMethod("set_" + property.Name, getsetAttr, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                            il = setMethod.GetILGenerator();
+                            il.Emit(OpCodes.Ldarg_0);
+
+                            //Create a local array to store the parameters
+                            LocalBuilder array = il.DeclareLocal(typeof(object[]));
+
+                            //Allocate the array and store reference in local variable above
+                            il.Emit(OpCodes.Ldc_I4_S, args.Length);
+                            il.Emit(OpCodes.Newarr, typeof(object));
+                            il.Emit(OpCodes.Stloc, array);
+
+                            LocalBuilder objRef = il.DeclareLocal(typeof(object));
+
+                            //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                il.Emit(OpCodes.Ldarg, i + 1);
+
+                                if (args[i].ParameterType.IsValueType)
+                                    il.Emit(OpCodes.Box, args[i].ParameterType);
+
+                                il.Emit(OpCodes.Castclass, typeof(object));
+                                il.Emit(OpCodes.Stloc, objRef);
+
+                                il.Emit(OpCodes.Ldloc, array);
+                                il.Emit(OpCodes.Ldc_I4_S, i);
+                                il.Emit(OpCodes.Ldloc, objRef);
+                                il.Emit(OpCodes.Stelem_Ref);
+                            }
+
+                            //Store connection information for the remote call as arguments                    
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, serverConnectionID);
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, serverConnectionName);
+
+                            //Store the method name of the remote call as an arguement
+                            il.Emit(OpCodes.Ldstr, setMethod.Name);
+
+                            ////Get a handle on the send method
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+
+                            ////Load the array pointer as an arguement
+                            il.Emit(OpCodes.Ldloc, array);
+
+                            ////Run the send method which will push the return value onto the execution stack
+                            il.Emit(OpCodes.Call, remoteCallMethod);
+                            
+                            //Return
+                            il.Emit(OpCodes.Ret);
+
+                            propImpl.SetSetMethod(setMethod);
+
+                            #endregion Property Set
+                        }
+                    }
+
+                    foreach (var handler in typeof(T).GetEvents())
+                    {
+                        throw new InvalidOperationException("Events in the interface are not supported at this time");
+                    }
+
                     Cache<T>.Type = type.CreateType();
                 }
             }

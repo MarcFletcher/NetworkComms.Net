@@ -5,9 +5,8 @@ using System.Text;
 using ProtoBuf;
 using NetworkCommsDotNet;
 
-namespace DebugTests
+namespace ExamplesConsole
 {   
-
     public static class RPCExample
     {
         public interface ITest
@@ -21,7 +20,13 @@ namespace DebugTests
             void ThrowException();
 
             Test GetServerCopy();
-        }
+
+            double this[int index]
+            {
+                get;
+                set;
+            }
+        }        
 
         [ProtoContract]
         public class Test : ITest
@@ -30,7 +35,7 @@ namespace DebugTests
 
             [ProtoMember(1)]
             double lastResult;
-
+            
             public double Mult(double a, double b)
             {
                 lastResult = a * b;
@@ -73,6 +78,19 @@ namespace DebugTests
             public override string ToString()
             {
                 return lastResult.ToString();
+            }
+
+            public double this[int index]
+            {
+                get
+                {
+                    return lastResult * index;
+                }
+
+                set
+                {
+                    lastResult = value * index;
+                }
             }
         }
 
@@ -117,8 +135,8 @@ namespace DebugTests
             }
             #endregion
 
-            //try
-            //{
+            try
+            {
                 var test = RemoteProcedureCalls.ProxyClassGenerator.Create<ITest>(serverIP, serverPort, "TestInstance1");
                 bool exit = false;
 
@@ -139,15 +157,15 @@ namespace DebugTests
                             break;                            
                     }
                 }
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine(e.ToString());
-            //}
-            //finally
-            //{
-            //    NetworkComms.ShutdownComms();
-            //}
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+            finally
+            {
+                NetworkComms.ShutdownComms();
+            }
         }
 
         static object DoMath(ITest proxy)
@@ -162,7 +180,7 @@ namespace DebugTests
                     Console.WriteLine("Please enter first number");
                     if (!double.TryParse(Console.ReadLine(), out a)) break;
                     Console.WriteLine("Please enter second number");
-                    if (!double.TryParse(Console.ReadLine(), out b)) break;
+                    if (!double.TryParse(Console.ReadLine(), out b)) break;                                        
                     return proxy.Mult(a, b);
                     break;                    
                 case "2":

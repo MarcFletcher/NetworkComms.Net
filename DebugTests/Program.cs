@@ -370,9 +370,6 @@ namespace DebugTests
 
         static void Main(string[] args)
         {
-            RPCExample.RunExample();
-            return;
-
             //AliveTest test = new AliveTest();
             //test.Go();
             //DFSTest.RunExample();

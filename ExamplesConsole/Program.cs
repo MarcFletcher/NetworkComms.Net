@@ -33,10 +33,11 @@ namespace ExamplesConsole
             Console.WriteLine("Please enter an example number:");
 
             //Print out the available examples
-            int totalNumberOfExamples = 3;
+            int totalNumberOfExamples = 4;
             Console.WriteLine("1 - Basic - Message Send (Only 15 lines!)");
             Console.WriteLine("2 - Advanced - Object Send");
             Console.WriteLine("3 - Advanced - Distributed File System");
+            Console.WriteLine("4 - Advanced - Remote Procedure Call");
 
             //Get the user choice
             Console.WriteLine("");
@@ -65,6 +66,9 @@ namespace ExamplesConsole
                         break;
                     case 3:
                         DFSTest.RunExample();
+                        break;
+                    case 4:
+                        RPCExample.RunExample();
                         break;
                     default:
                         Console.WriteLine("Selected an invalid example number. Please restart and try again.");
