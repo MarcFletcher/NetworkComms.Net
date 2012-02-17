@@ -200,7 +200,7 @@ namespace NetworkCommsDotNet
                         il.Emit(OpCodes.Ldstr, method.Name);
                         
                         ////Get a handle on the send method
-                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
 
                         ////Load the array pointer as an arguement
                         il.Emit(OpCodes.Ldloc, array);
@@ -296,7 +296,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldstr, getMethod.Name);
 
                             ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
 
                             ////Load the array pointer as an arguement
                             il.Emit(OpCodes.Ldloc, array);
@@ -363,7 +363,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldstr, setMethod.Name);
 
                             ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient", BindingFlags.NonPublic | BindingFlags.Static);
 
                             ////Load the array pointer as an arguement
                             il.Emit(OpCodes.Ldloc, array);
@@ -418,7 +418,12 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public static void RegisterTypeForRemoteCall<T, I>() where T : I, new()
+        /// <summary>
+        /// Registers an Object type for remote calling through a supplied interface
+        /// </summary>
+        /// <typeparam name="T">The object type to use for remote calls. Must implement interface I</typeparam>
+        /// <typeparam name="I">The interface that will be remoted</typeparam>
+        public static void RegisterTypeForRemoteCall<T, I>(bool enableAutoListen = true) where T : I, new()
         {
             if (!typeof(I).IsInterface)
                 throw new InvalidOperationException(typeof(I).Name
