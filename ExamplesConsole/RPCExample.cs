@@ -90,7 +90,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a * b;
 
-                    Console.WriteLine("Client requested RPC of Multiply. {0}*{1}={3}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Multiply. {0}*{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -98,7 +98,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a + b;
 
-                    Console.WriteLine("Client requested RPC of Add. {0}+{1}={3}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Add. {0}+{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -106,7 +106,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a - b;
 
-                    Console.WriteLine("Client requested RPC of Subtract. {0}-{1}={3}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Subtract. {0}-{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -114,7 +114,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a / b;
 
-                    Console.WriteLine("Client requested RPC of Divide. {0}/{1}={3}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Divide. {0}/{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -225,7 +225,7 @@ namespace ExamplesConsole
                         //If the user has typed exit then we leave our loop and end the example
                         if (message == "Y")
                             //We pass our remoteObject to our local method DoMath to request further user input
-                            Console.WriteLine(DoMath(remoteObject).ToString());
+                            Console.WriteLine("Result: " + DoMath(remoteObject).ToString());
                         else
                             break;
                     }
