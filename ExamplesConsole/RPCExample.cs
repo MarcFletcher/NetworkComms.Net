@@ -215,24 +215,19 @@ namespace ExamplesConsole
                 {
                     //Setup the remote object at the server end with an object name of "TestInstance1"
                     var remoteObject = RemoteProcedureCalls.ProxyClassGenerator.Create<IMath>(serverIP, serverPort, "TestInstance1");
-                    
-                    bool exit = false;
-                    while (!exit)
-                    {
-                        Console.WriteLine("Would you like to perform some maths? (Y/N)?");
 
-                        switch (Console.ReadLine().ToUpper())
-                        {
-                            case "Y":
-                                Console.WriteLine(DoMath(remoteObject).ToString());
-                                break;
-                            case "N":
-                                exit = true;
-                                break;
-                            default:
-                                Console.WriteLine("Input error please try again");
-                                break;
-                        }
+                    while (true)
+                    {
+                        //Request a message to send somewhere
+                        Console.WriteLine("\nPlease press y to perform some remote math. Any other key will quit the example:");
+                        string message = Console.ReadKey(true).KeyChar.ToString().ToUpper();
+
+                        //If the user has typed exit then we leave our loop and end the example
+                        if (message == "Y")
+                            //We pass our remoteObject to our local method DoMath to request further user input
+                            Console.WriteLine(DoMath(remoteObject).ToString());
+                        else
+                            break;
                     }
                 }
                 catch (Exception e)
@@ -261,31 +256,35 @@ namespace ExamplesConsole
                 switch (selectedOperation)
                 {
                     case 1:
-                        Console.WriteLine("Please enter first number");
+                        Console.WriteLine("You have select to Multiply two numbers.");
+                        Console.WriteLine("Please enter first number:");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number");
+                        Console.WriteLine("Please enter second number:");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Multiply(a, b);
                     case 2:
-                        Console.WriteLine("Please enter first number");
+                        Console.WriteLine("You have select to Add two numbers.");
+                        Console.WriteLine("Please enter first number:");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number");
+                        Console.WriteLine("Please enter second number:");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Add(a, b);
                     case 3:
-                        Console.WriteLine("Please enter first number");
+                        Console.WriteLine("You have select to Subtract two numbers.");
+                        Console.WriteLine("Please enter first number:");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number");
+                        Console.WriteLine("Please enter second number:");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Subtract(a, b);
                     case 4:
-                        Console.WriteLine("Please enter first number");
+                        Console.WriteLine("You have select to Divide two numbers.");
+                        Console.WriteLine("Please enter first number:");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number");
+                        Console.WriteLine("Please enter second number:");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Divide(a, b);
                     case 5:
-                        Console.WriteLine("Please enter string");
+                        Console.WriteLine("Please enter string. This will be sent to the server and 'echoed' back:");
                         return remoteObject.Echo(Console.ReadLine());
                     case 6:
                         return remoteObject.GetServerObjectCopy();
@@ -301,8 +300,7 @@ namespace ExamplesConsole
                         return null;
                 }
 
-                Console.WriteLine("Input error please try again.\n");
-                return DoMath(remoteObject);
+                throw new Exception("How have you managed to get execution to this point? It should not be possible!");
             }
         }
     }
