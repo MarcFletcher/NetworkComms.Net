@@ -517,7 +517,7 @@ namespace NetworkCommsDotNet
                 CloseConnection(true, 6);
 
                 //For some odd reason not all SocketExceptions get caught above, so another check here
-                if (ex.GetType() == typeof(SocketException))
+                if (ex.GetBaseException().GetType() == typeof(SocketException))
                     throw new ConnectionSetupException(ex.ToString());
                 else
                     throw;
@@ -1096,6 +1096,7 @@ namespace NetworkCommsDotNet
                             {
                                 connectionSetupException = true;
                                 connectionSetupExceptionStr = "Remote peer has matching network idendifier, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special scenarios make this probable.";
+
                             }
                             //We need to check for a possible GUID clash
                             //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
@@ -1114,6 +1115,8 @@ namespace NetworkCommsDotNet
                                 }
                                 else
                                 {
+                                    if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier)) throw new Exception("Key clash position 1");
+
                                     //Record the new connection
                                     NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
@@ -1140,12 +1143,15 @@ namespace NetworkCommsDotNet
 
                                         //If we made it this far we can add our new endPoint to the dictionary
                                         ConnectionEndPoint = newConnectionEndPoint;
+
+                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key clash position 2");
                                         NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                     }
                                 }
                             }
                             else
                             {
+                                if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key clash position 3");
                                 //Record the new connection
                                 NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
 
@@ -1172,6 +1178,8 @@ namespace NetworkCommsDotNet
 
                                     //If we made it this far we can add our new endPoint to the dictionary
                                     ConnectionEndPoint = newConnectionEndPoint;
+
+                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key clash position 4");
                                     NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
                                 }
                             }

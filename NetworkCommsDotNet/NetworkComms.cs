@@ -1737,7 +1737,13 @@ namespace NetworkCommsDotNet
                     {
                         //For some odd reason SocketExceptions don't always get caught above, so another check
                         if (ex.GetBaseException().GetType() != typeof(SocketException))
-                            LogError(ex, "CommsSetupError");
+                        {
+                            //Can we catch the socketException by looking at the string error text?
+                            if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
+                                LogError(ex, "CommsSetupError_SE");
+                            else
+                                LogError(ex, "CommsSetupError");
+                        }
                     }
                 } while (!endListen);
             }

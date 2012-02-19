@@ -11,7 +11,7 @@ namespace ExamplesConsole
     {
         public static void RunExample()
         {
-            Console.WriteLine("Please select run mode\nServer - 1\nClient - 2\n");
+            Console.WriteLine("Please select run mode:\nServer - 1\nClient - 2\n");
             IExampleInstance exampleToRun;
 
             //Select the desired mode, client or server.
@@ -90,7 +90,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a * b;
 
-                    Console.WriteLine("Client requested RPC of Multiply. {0}*{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Multiply. {0}*{1}={2}.", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -98,7 +98,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a + b;
 
-                    Console.WriteLine("Client requested RPC of Add. {0}+{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Add. {0}+{1}={2}.", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -106,7 +106,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a - b;
 
-                    Console.WriteLine("Client requested RPC of Subtract. {0}-{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Subtract. {0}-{1}={2}.", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -114,7 +114,7 @@ namespace ExamplesConsole
                 {
                     lastResult = a / b;
 
-                    Console.WriteLine("Client requested RPC of Divide. {0}/{1}={2}", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
+                    Console.WriteLine("Client requested RPC of Divide. {0}/{1}={2}.", a.ToString("0.###"), b.ToString("0.###"), lastResult.ToString("0.###"));
                     return lastResult;
                 }
 
@@ -169,7 +169,7 @@ namespace ExamplesConsole
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
-                Console.WriteLine("Press any key then enter to quit");
+                Console.WriteLine("Press any key then enter to quit.\n");
                 Console.ReadLine();
 
                 //When we are done we must close down comms
@@ -193,7 +193,7 @@ namespace ExamplesConsole
                 //Expecting user to enter ip address as 192.168.0.1:4000
                 string serverIP; int serverPort;
                 #region Parse Destination
-                Console.WriteLine("\nPlease enter the destination IP address and port, e.g. '192.168.0.1:4000':");
+                Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:4000':");
                 while (true)
                 {
                     try
@@ -213,13 +213,20 @@ namespace ExamplesConsole
 
                 try
                 {
-                    //Setup the remote object at the server end with an object name of "TestInstance1"
-                    var remoteObject = RemoteProcedureCalls.ProxyClassGenerator.Create<IMath>(serverIP, serverPort, "TestInstance1");
+                    //We would really like to create a local instance of MathClass, but the client does not have a 
+                    //reference to MathClass (defined server side only):
+                    //
+                    //IMath remoteObject = new MathClass();
+                    //
+                    //This example is all about RPC, so we create the instance remotely instead, as follows ...
+
+                    //Setup the remote object at the server end with a remote object name of "TestInstance1"
+                    IMath remoteObject = RemoteProcedureCalls.ProxyClassGenerator.Create<IMath>(serverIP, serverPort, "TestInstance1");
 
                     while (true)
                     {
                         //Request a message to send somewhere
-                        Console.WriteLine("\nPlease press y to perform some remote math. Any other key will quit the example:");
+                        Console.WriteLine("\nPlease press 'Y' key to perform some remote math. Any other key will quit the example.");
                         string message = Console.ReadKey(true).KeyChar.ToString().ToUpper();
 
                         //If the user has typed exit then we leave our loop and end the example
@@ -256,31 +263,31 @@ namespace ExamplesConsole
                 switch (selectedOperation)
                 {
                     case 1:
-                        Console.WriteLine("You have select to Multiply two numbers.");
-                        Console.WriteLine("Please enter first number:");
+                        Console.WriteLine("You selected to Multiply two numbers.");
+                        Console.Write("Please enter first number: ");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number:");
+                        Console.Write("Please enter second number: ");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Multiply(a, b);
                     case 2:
-                        Console.WriteLine("You have select to Add two numbers.");
-                        Console.WriteLine("Please enter first number:");
+                        Console.WriteLine("You selected to Add two numbers.");
+                        Console.Write("Please enter first number: ");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number:");
+                        Console.Write("Please enter second number: ");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Add(a, b);
                     case 3:
-                        Console.WriteLine("You have select to Subtract two numbers.");
-                        Console.WriteLine("Please enter first number:");
+                        Console.WriteLine("You selected to Subtract two numbers.");
+                        Console.Write("Please enter first number: ");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number:");
+                        Console.Write("Please enter second number: ");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Subtract(a, b);
                     case 4:
-                        Console.WriteLine("You have select to Divide two numbers.");
-                        Console.WriteLine("Please enter first number:");
+                        Console.WriteLine("You selected to Divide two numbers.");
+                        Console.Write("Please enter first number: ");
                         if (!double.TryParse(Console.ReadLine(), out a)) break;
-                        Console.WriteLine("Please enter second number:");
+                        Console.Write("Please enter second number: ");
                         if (!double.TryParse(Console.ReadLine(), out b)) break;
                         return remoteObject.Divide(a, b);
                     case 5:
