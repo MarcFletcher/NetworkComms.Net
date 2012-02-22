@@ -72,7 +72,6 @@ namespace NetworkCommsDotNet
             this.ClientPort = localPort;
         }
 
-
         #region IEqualityComparer<ConnectionInfo> Members
 
         public bool Equals(ConnectionInfo x, ConnectionInfo y)

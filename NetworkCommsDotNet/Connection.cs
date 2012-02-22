@@ -26,9 +26,9 @@ using System.Threading.Tasks;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A connection represents each established tcp connection between two peers.
+    /// A TCPConnection represents each established tcp connection between two peers.
     /// </summary>
-    class Connection
+    class TCPConnection
     {
         /// <summary>
         /// The TcpClient corresponding to this connection.
@@ -396,7 +396,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
         /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        public Connection(bool serverSide, IPEndPoint connectionEndPoint)
+        public TCPConnection(bool serverSide, IPEndPoint connectionEndPoint)
         {
             this.tcpConnectionCreationTime = DateTime.Now;
             this.ConnectionEndPoint = connectionEndPoint;
@@ -474,7 +474,6 @@ namespace NetworkCommsDotNet
                     if (connectionSetupException)
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ClientSide. " + connectionSetupExceptionStr);
-
                         throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                     }
                 }
@@ -501,9 +500,12 @@ namespace NetworkCommsDotNet
                 connectionEstablishWait.Set();
 
                 //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
-                //We have left the nagle algorithm disabled because we want the high performance when using small packets
-                //this.tcpClient.NoDelay = false;
-                //this.tcpClient.Client.NoDelay = false;
+                //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
+                if (NetworkComms.EnableNagleAlgorithmForEstablishedConnections)
+                {
+                    this.tcpClient.NoDelay = false;
+                    this.tcpClient.Client.NoDelay = false;
+                }
             }
             catch (SocketException e)
             {
@@ -1050,145 +1052,11 @@ namespace NetworkCommsDotNet
 
                 //We can now pass the data onto the correct delegate
                 //First we have to check for our reserved packet types
+                //The following large sections have been factored out to make reading and debugging a little easier
                 if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
-                {
-                    //If we have been asked to resend a packet then we just go through the list and resend it.
-                    OldSentPacket packetToReSend;
-                    lock (sentPacketsLocker)
-                    {
-                        long checkSumRequested = NetworkComms.internalFixedSerializer.DeserialiseDataObject<long>(packetDataSection, NetworkComms.internalFixedCompressor);
-
-                        if (sentPackets.ContainsKey(checkSumRequested))
-                            packetToReSend = sentPackets[checkSumRequested];
-                        else
-                            throw new CheckSumException("There was no packet sent with a matching check sum");
-                    }
-
-                    //If we have already tried resending the packet 10 times something has gone horribly wrong
-                    if (packetToReSend.sendCount > 10) throw new CheckSumException("Packet sent resulted in a catastropic checksum check exception.");
-
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... resending packet due to MD5 mismatch.");
-
-                    //Increment send count and then resend
-                    packetToReSend.sendCount++;
-                    SendPacket(packetToReSend.packet);
-                }
+                    CheckSumFailResendHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
-                {
-                    //If we are in the process of handshaking a connection we need to do some other cool stuff.
-                    lock (NetworkComms.globalDictAndDelegateLocker)
-                    {
-                        //If we no longer have the original endPoint reference then the connection must have been closed already
-                        if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
-                        {
-                            connectionSetupException = true;
-                            connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port;
-                        }
-                        else
-                        {
-                            //We should never be trying to handshake an established connection
-                            if (this.ConnectionInfo != null) throw new ConnectionSetupException("Received connectionsetup packet after connection had already been configured.");
-
-                            //Set the connection info
-                            this.ConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
-
-                            if (this.ConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
-                            {
-                                connectionSetupException = true;
-                                connectionSetupExceptionStr = "Remote peer has matching network idendifier, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special scenarios make this probable.";
-
-                            }
-                            //We need to check for a possible GUID clash
-                            //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
-                            //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
-                            //but hey, we live in a crazy world!
-                            else if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
-                            {
-                                //We will now close the existing connection
-                                NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].CloseConnection(true, 1);
-
-                                //The existing entry should now be gone, if not it's time for a reall exception.
-                                if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
-                                {
-                                    connectionSetupException = true;
-                                    connectionSetupExceptionStr = "Connection already exists with the identifier " + ConnectionInfo.NetworkIdentifier + ". New connection from " + ConnectionInfo.ClientIP + ":" + ConnectionInfo.ClientPort + ". Clear up did not work so throwing exception.";
-                                }
-                                else
-                                {
-                                    if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier)) throw new Exception("Key clash position 1");
-
-                                    //Record the new connection
-                                    NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
-
-                                    //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
-                                    //This will happen if we are establishing the connection at the server end
-                                    if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
-                                    {
-                                        //Remove our current entry
-                                        NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
-                                        IPEndPoint newConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
-
-                                        //If we have an existing entry at the new end point and it passes a connection alive test then we throw a real exception 
-                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint) && NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000))
-                                        {
-                                            string errorString = "Existing live connection at provided end point for this connection. ";
-                                            errorString += "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
-                                            errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). ";
-                                            errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). ";
-                                            errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
-                                            errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
-
-                                            throw new Exception(errorString);
-                                        }
-
-                                        //If we made it this far we can add our new endPoint to the dictionary
-                                        ConnectionEndPoint = newConnectionEndPoint;
-
-                                        if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key clash position 2");
-                                        NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier)) throw new Exception("Key clash position 3");
-                                //Record the new connection
-                                NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
-
-                                //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
-                                //This will happen if we are establishing the connection at the server end
-                                if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
-                                {
-                                    //Remove our current entry
-                                    NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
-                                    IPEndPoint newConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
-
-                                    //If we have an existing entry at the new end point and it passes a connection alive test then we throw a real exception 
-                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(newConnectionEndPoint) && NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].CheckConnectionAliveState(1000))
-                                    {
-                                        string errorString = "Existing live connection at provided end point for this connection. ";
-                                        errorString += "This connection old info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
-                                        errorString += "This connection new info (" + ConnectionInfo.NetworkIdentifier + ", " + newConnectionEndPoint.Address + ":" + newConnectionEndPoint.Port + "). ";
-                                        errorString += "Existing endpoint info (" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionInfo.NetworkIdentifier + ", " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Address + ":" + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].ConnectionEndPoint.Port + "). ";
-                                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
-                                        errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[newConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
-
-                                        throw new Exception(errorString);
-                                    }
-
-                                    //If we made it this far we can add our new endPoint to the dictionary
-                                    ConnectionEndPoint = newConnectionEndPoint;
-
-                                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint)) throw new Exception("Key clash position 4");
-                                    NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
-                                }
-                            }
-                        }
-                    }
-
-                    //Trigger any setup waits
-                    connectionSetupWait.Set();
-                }
+                    ConnectionSetupHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket) && (NetworkComms.internalFixedSerializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.internalFixedCompressor)) == false)
                 {
                     //If we have received a ping packet from the originating source we reply with true
@@ -1222,6 +1090,173 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 3);
             }
+        }
+
+        /// <summary>
+        /// Handle an incoming ConnectionSetup packet type
+        /// </summary>
+        /// <param name="packetDataSection"></param>
+        private void ConnectionSetupHandler(byte[] packetDataSection)
+        {
+            //We should never be trying to handshake an established connection
+            if (this.ConnectionInfo != null) throw new ConnectionSetupException("Received connectionsetup packet after connection had already been configured.");
+            this.ConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
+
+            //We use the following bool to track a possible existing connection which needs closing
+            bool possibleExistingConnectionWithPeer_ByIdentifier=false;
+            bool possibleExistingConnectionWithPeer_ByEndPoint=false;
+            TCPConnection existingConnection = null;
+
+            //We first try to establish everything within this lock in one go
+            //If we can't quite complete the establish we have to come out of the lock at try to sort the problem
+            bool connectionEstablishedSuccess = ConnectionSetupHandlerInner(ref possibleExistingConnectionWithPeer_ByIdentifier, ref possibleExistingConnectionWithPeer_ByEndPoint, ref existingConnection);
+
+            //If we were not succesfull at establishing the connection we need to sort it out!
+            if (!connectionEstablishedSuccess && !connectionSetupException)
+            {
+                if (existingConnection == null)
+                    throw new Exception("Connection establish issues and existingConnection was left as null.");
+
+                if (possibleExistingConnectionWithPeer_ByIdentifier)
+                {
+                    //If we have a clash on identifier we always assume it is an old connection by the same client
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection detected from peer with identifier " + ConnectionInfo.NetworkIdentifier + ". Closing existing connection in favour of new one.");
+                    existingConnection.CloseConnection(true, 1);
+                }
+                else if (possibleExistingConnectionWithPeer_ByEndPoint)
+                {
+                    //If we have a clash by endPoint we test the existing connection
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection detected from provided endpoint, " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + ". Testing existing connection.");
+                    if (existingConnection.CheckConnectionAliveState(1000))
+                    {
+                        //If the existing connection comes back as alive we throw a real exception and refuse to establish this one
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("Existing connection detected from provided endpoint, " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + ". Existing connection sucesfully responded to connection check.");
+
+                        string errorString = "Existing live connection at provided end point for this connection. ";
+                        errorString += "End Point Info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
+                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
+                        errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
+
+                        throw new Exception(errorString);
+                    }
+                }
+
+                //If we have made it this far we need to make sure we still have an entry in the endPoint dictioanry for 'this'
+                lock (NetworkComms.globalDictAndDelegateLocker)
+                {
+                    if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
+                        NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
+                }
+
+                //Once we have tried to sort the problem we can try to finish the establish one last time
+                connectionEstablishedSuccess = ConnectionSetupHandlerInner(ref possibleExistingConnectionWithPeer_ByIdentifier, ref possibleExistingConnectionWithPeer_ByEndPoint, ref existingConnection);
+
+                //If we still failed then that's it for this establish
+                if (!connectionEstablishedSuccess && !connectionSetupException)
+                {
+                    connectionSetupException = true;
+                    connectionSetupExceptionStr = "Attempted to establish conneciton with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port + ", but due to an existing connection this was not possible.";
+                }
+            }
+
+            //Trigger any setup waits
+            connectionSetupWait.Set();
+        }
+
+        /// <summary>
+        /// Attempts to complete the connection establish with a minimum of locking to prevent possible deadlocking
+        /// </summary>
+        /// <param name="possibleExistingConnectionWithPeer_ByIdentifier"></param>
+        /// <param name="possibleExistingConnectionWithPeer_ByEndPoint"></param>
+        /// <returns></returns>
+        private bool ConnectionSetupHandlerInner(ref bool possibleExistingConnectionWithPeer_ByIdentifier, ref bool possibleExistingConnectionWithPeer_ByEndPoint, ref TCPConnection existingConnection)
+        {
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
+                if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
+                {
+                    connectionSetupException = true;
+                    connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port;
+                }
+                else
+                {
+                    //We need to check for a possible GUID clash
+                    //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
+                    //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
+                    //but hey, we live in a crazy world!
+                    if (this.ConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
+                    {
+                        connectionSetupException = true;
+                        connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";
+                    }
+                    else if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
+                    {
+                        possibleExistingConnectionWithPeer_ByIdentifier = true;
+                        existingConnection = NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier];
+                    }
+                    else
+                    {
+                        //Record the new connection
+                        NetworkComms.allConnectionsById.Add(this.ConnectionInfo.NetworkIdentifier, this);
+
+                        //If the recorded endPoint port does not match the latest connectionInfo object then we should correct it
+                        //This will happen if we are establishing the connection at the server end and have a client which is also listening on a specific port
+                        if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
+                        {
+                            //Remove the entry for 'this' before we change our local ConnectionEndPoint
+                            NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
+                            ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+
+                            if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
+                            {
+                                //If we have an existing entry at the new end point we unroll the changes made in this method and set the necessary boolean
+                                NetworkComms.allConnectionsById.Remove(this.ConnectionInfo.NetworkIdentifier);
+                                possibleExistingConnectionWithPeer_ByEndPoint = true;
+                                existingConnection = NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint];
+                            }
+                            else
+                            {
+                                //Readd to the endPoint dict using the updated ConnectionEndPoint
+                                NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
+                                return true;
+                            }
+                        }
+                        else
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Handle an incoming CheckSumFailResend packet type
+        /// </summary>
+        /// <param name="packetDataSection"></param>
+        private void CheckSumFailResendHandler(byte[] packetDataSection)
+        {
+            //If we have been asked to resend a packet then we just go through the list and resend it.
+            OldSentPacket packetToReSend;
+            lock (sentPacketsLocker)
+            {
+                long checkSumRequested = NetworkComms.internalFixedSerializer.DeserialiseDataObject<long>(packetDataSection, NetworkComms.internalFixedCompressor);
+
+                if (sentPackets.ContainsKey(checkSumRequested))
+                    packetToReSend = sentPackets[checkSumRequested];
+                else
+                    throw new CheckSumException("There was no packet sent with a matching check sum");
+            }
+
+            //If we have already tried resending the packet 10 times something has gone horribly wrong
+            if (packetToReSend.sendCount > 10) throw new CheckSumException("Packet sent resulted in a catastropic checksum check exception.");
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... resending packet due to MD5 mismatch.");
+
+            //Increment send count and then resend
+            packetToReSend.sendCount++;
+            SendPacket(packetToReSend.packet);
         }
 
         /// <summary>

@@ -195,6 +195,31 @@ namespace NetworkCommsDotNet
             }
         }
 
+        static bool enableNagleAlgorithmForEstablishedConnections = false;
+
+        /// <summary>
+        /// By default networkComms.net disables all usage of the nagle algorithm. If you wish it to be used for established connections set this property to true.
+        /// </summary>
+        public static bool EnableNagleAlgorithmForEstablishedConnections
+        {
+            get { return enableNagleAlgorithmForEstablishedConnections; }
+            set
+            {
+                //Need a quick check to see if we are already listening before trying to change the comms port.
+                lock (globalDictAndDelegateLocker)
+                {
+                    //If we are trying to set the port to it's current value then nothing needs to happen.
+                    if (value != enableNagleAlgorithmForEstablishedConnections)
+                    {
+                        if (isListening)
+                            throw new ConnectionSetupException("Unable to set EnableNagleAlgorithmForEstablishedConnections once already listening. Shutdown comms, set and restart.");
+
+                        enableNagleAlgorithmForEstablishedConnections = value;
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// The local identifier of this instance of network comms
         /// </summary>
@@ -234,12 +259,12 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Primary connection dictionary stored by network indentifier
         /// </summary>
-        internal static Dictionary<ShortGuid, Connection> allConnectionsById = new Dictionary<ShortGuid, Connection>();
+        internal static Dictionary<ShortGuid, TCPConnection> allConnectionsById = new Dictionary<ShortGuid, TCPConnection>();
 
         /// <summary>
         /// Secondary connection dictionary stored by ip end point. Allows for quick cross referencing.
         /// </summary>
-        internal static Dictionary<IPEndPoint, Connection> allConnectionsByEndPoint = new Dictionary<IPEndPoint, Connection>();
+        internal static Dictionary<IPEndPoint, TCPConnection> allConnectionsByEndPoint = new Dictionary<IPEndPoint, TCPConnection>();
 
         /// <summary>
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
@@ -575,14 +600,14 @@ namespace NetworkCommsDotNet
         public static void CloseAllConnections()
         {
             //We need to create a copy because we need to avoid a collection modifed error and possible deadlocks from within closeConnection
-            Dictionary<IPEndPoint, Connection> dictCopy;
+            Dictionary<IPEndPoint, TCPConnection> dictCopy;
             lock (globalDictAndDelegateLocker)
-                dictCopy = new Dictionary<IPEndPoint, Connection>(allConnectionsByEndPoint);
+                dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint);
 
             //Any connections created after the above line will not be closed, a subsequent call to shutdown will get those.
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Closing all connections, currently " + dictCopy.Count + " are active.");
 
-            foreach (Connection client in dictCopy.Values)
+            foreach (TCPConnection client in dictCopy.Values)
                 client.CloseConnection(false, -3);
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... all connections have been closed.");
@@ -594,7 +619,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId"></param>
         public static void CloseConnection(ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(connectionId);
+            TCPConnection targetConnection = CheckForConnection(connectionId);
             targetConnection.CloseConnection(false, -1);
         }
 
@@ -677,9 +702,9 @@ namespace NetworkCommsDotNet
         public static void CheckConnectionAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
         {
             //Loop through all connections and test the alive state
-            List<Connection> dictCopy;
+            List<TCPConnection> dictCopy;
             lock (globalDictAndDelegateLocker)
-                dictCopy = new Dictionary<IPEndPoint, Connection>(allConnectionsByEndPoint).Values.ToList();
+                dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint).Values.ToList();
 
             List<Task> connectionCheckTasks = new List<Task>();
 
@@ -1151,7 +1176,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1169,7 +1194,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1185,7 +1210,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1200,7 +1225,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1214,7 +1239,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject)
         {
-            Connection targetConnection = CheckForConnection(connectionId);
+            TCPConnection targetConnection = CheckForConnection(connectionId);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1233,7 +1258,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
@@ -1253,7 +1278,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1271,7 +1296,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1288,7 +1313,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1304,7 +1329,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            Connection targetConnection = CheckForConnection(connectionId);
+            TCPConnection targetConnection = CheckForConnection(connectionId);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1326,7 +1351,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
@@ -1347,7 +1372,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
@@ -1366,7 +1391,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
@@ -1384,7 +1409,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
@@ -1424,7 +1449,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
@@ -1449,7 +1474,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
@@ -1472,7 +1497,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
@@ -1494,7 +1519,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-            Connection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
@@ -1515,7 +1540,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-            Connection targetConnection = CheckForConnection(connectionId);
+            TCPConnection targetConnection = CheckForConnection(connectionId);
 
             returnObjectType returnObject = default(returnObjectType);
 
@@ -1640,7 +1665,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject"></param>
         /// <param name="serializer"></param>
         /// <param name="compressor"></param>
-        internal static void SendObject(string packetTypeStr, Connection targetConnection, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
+        internal static void SendObject(string packetTypeStr, TCPConnection targetConnection, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
             if (loggingEnabled)
             {
@@ -1682,11 +1707,11 @@ namespace NetworkCommsDotNet
 
                             //Build the endPoint object based on available information at the current moment
                             IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[1]));
-                            Connection newConnection = new Connection(true, endPoint);
+                            TCPConnection newConnection = new TCPConnection(true, endPoint);
 
                             //Once we have the connection we want to check if we already have an existing one
                             //If we already have a connection with this remote end point we close it
-                            Connection existingConnection = null;
+                            TCPConnection existingConnection = null;
                             lock (globalDictAndDelegateLocker)
                             {
                                 if (allConnectionsByEndPoint.ContainsKey(endPoint))
@@ -1790,11 +1815,11 @@ namespace NetworkCommsDotNet
         /// Checks for a connection and if it does not exist creates a new one
         /// </summary>
         /// <param name="targetIPAddress"></param>
-        private static Connection CheckForConnection(string targetIPAddress, int commsPort)
+        private static TCPConnection CheckForConnection(string targetIPAddress, int commsPort)
         {
             if (loggingEnabled) logger.Trace("Checking for connection to " + targetIPAddress + ":" + commsPort);
 
-            Connection connection = null;
+            TCPConnection connection = null;
             try
             {
                 if (commsShutdown)
@@ -1816,7 +1841,7 @@ namespace NetworkCommsDotNet
                         connection = allConnectionsByEndPoint[endPoint];
                     else
                     {
-                        connection = new Connection(false, endPoint);
+                        connection = new TCPConnection(false, endPoint);
                         allConnectionsByEndPoint.Add(endPoint, connection);
                         newConnectionEstablish = true;
                     }
@@ -1855,7 +1880,7 @@ namespace NetworkCommsDotNet
         /// Returns the connection object assocaited with the provided connectionId
         /// </summary>
         /// <param name="targetIPAddress"></param>
-        private static Connection CheckForConnection(ShortGuid connectionId)
+        private static TCPConnection CheckForConnection(ShortGuid connectionId)
         {
             lock (globalDictAndDelegateLocker)
             {
