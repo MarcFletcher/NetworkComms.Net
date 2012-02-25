@@ -241,6 +241,11 @@ namespace NetworkCommsDotNet
         internal static volatile bool isListening = false;
 
         /// <summary>
+        /// An internal random number object for any randomisation requirements
+        /// </summary>
+        internal static Random randomGen = new Random();
+
+        /// <summary>
         /// Returns true if network comms is currently accepting new incoming connections
         /// </summary>
         public static bool IsListening
@@ -270,6 +275,35 @@ namespace NetworkCommsDotNet
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
         /// </summary>
         internal static Dictionary<ShortGuid, ConnectionInfo> oldConnectionIdToConnectionInfo = new Dictionary<ShortGuid, ConnectionInfo>();
+
+        /// <summary>
+        /// The interval between keep alive polls of all serverside connections
+        /// </summary>
+        internal static int connectionKeepAlivePollIntervalSecs = 1;
+
+        private static Thread connectionKeepAlivePollThread;
+
+        /// <summary>
+        /// The last time serverside connections were polled
+        /// </summary>
+        internal static DateTime lastConnectionKeepAlivePoll;
+
+        /// <summary>
+        /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive
+        /// </summary>
+        public static int ConnectionKeepAlivePollIntervalSecs
+        {
+            get 
+            {
+                lock (globalDictAndDelegateLocker)
+                    return connectionKeepAlivePollIntervalSecs; 
+            }
+            set
+            {
+                lock (globalDictAndDelegateLocker)
+                    connectionKeepAlivePollIntervalSecs = value;
+            }
+        }
         #endregion
 
         #region Incoming Data and Connection Config
@@ -478,7 +512,7 @@ namespace NetworkCommsDotNet
         #region Timeouts
         internal static int connectionEstablishTimeoutMS = 30000;
         internal static int packetConfirmationTimeoutMS = 5000;
-        internal static int connectionAliveTestTimeoutMS = 5000;
+        internal static int connectionAliveTestTimeoutMS = 1000;
 
         /// <summary>
         /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established
@@ -512,6 +546,18 @@ namespace NetworkCommsDotNet
         internal static bool loggingEnabled = false;
         internal static ILog logger = LogManager.GetCurrentClassLogger();
 
+        /// <summary>
+        /// Access the networkComms logger externally. Allows logging from external sources
+        /// </summary>
+        public static ILog Logger
+        {
+            get { return logger; }
+        }
+
+        /// <summary>
+        /// Enable logging in networkComms using the provided logging adaptor
+        /// </summary>
+        /// <param name="loggingAdaptor"></param>
         public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
         {
             lock (globalDictAndDelegateLocker)
@@ -522,6 +568,9 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        /// Disable logging in networkComms
+        /// </summary>
         public static void DisableLogging()
         {
             lock (globalDictAndDelegateLocker)
@@ -697,8 +746,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Checks all current connections to make sure they are active. If any problems occur the connection will be closed.
         /// </summary>
-        /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time depends on total number of connections.</param>
-        /// <param name="lastTrafficTimePassSeconds">Will not test connections whom have a lastSeen time within provided number of seconds</param>
+        /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time is proportional to total number of connections.</param>
+        /// <param name="lastTrafficTimePassSeconds">Will not test connections which have a lastSeen time within provided number of seconds</param>
         public static void CheckConnectionAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
         {
             //Loop through all connections and test the alive state
@@ -712,14 +761,13 @@ namespace NetworkCommsDotNet
             {
                 int innerIndex = i;
                 connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() => 
-                { 
-                    if ((DateTime.Now-dictCopy[innerIndex].LastIncomingTrafficTime).TotalSeconds > lastTrafficTimePassSeconds)
+                {
+                    if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > lastTrafficTimePassSeconds)
                         dictCopy[innerIndex].CheckConnectionAliveState(connectionAliveTestTimeoutMS); 
                 })));
             }
 
-            if (!returnImmediately)
-                Task.WaitAll(connectionCheckTasks.ToArray());
+            if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
         }
         #endregion
 
@@ -944,9 +992,6 @@ namespace NetworkCommsDotNet
                 if (handlersCopy.Count == 0)
                     throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
-                //Pass the data onto the handler and move on.
-                if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handler.");
-
                 //We decide which serializer and compressor to use
                 if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
                 {
@@ -961,6 +1006,9 @@ namespace NetworkCommsDotNet
 
                 //Deserialise the object only once
                 object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, serializer, compressor);
+
+                //Pass the data onto the handler and move on.
+                if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
 
                 //Pass the object to all necessary delgates
                 //We need to use a copy because we may modify the original delegate list during processing
@@ -988,6 +1036,10 @@ namespace NetworkCommsDotNet
 
                 try
                 {
+                    //We need to wait for the polling thread to close here
+                    if (connectionKeepAlivePollThread != null && (connectionKeepAlivePollThread.ThreadState == System.Threading.ThreadState.Running || connectionKeepAlivePollThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin))
+                        connectionKeepAlivePollThread.Join(PacketConfirmationTimeoutMS);
+
                     lock (globalDictAndDelegateLocker)
                     {
                         //We need to make sure everything has shutdown before this method returns
@@ -1609,6 +1661,10 @@ namespace NetworkCommsDotNet
             {
                 if (!commsInitialised)
                 {
+                    connectionKeepAlivePollThread = new Thread(AllConnectionKeepAlivePollThread);
+                    connectionKeepAlivePollThread.Name = "AllConnectionKeepAlivePoll";
+                    connectionKeepAlivePollThread.Start();
+
                     commsInitialised = true;
                     if (loggingEnabled) logger.Info("networkComms.net has been initialised");
                 }
@@ -1667,24 +1723,8 @@ namespace NetworkCommsDotNet
         /// <param name="compressor"></param>
         internal static void SendObject(string packetTypeStr, TCPConnection targetConnection, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            if (loggingEnabled)
-            {
-                if (targetConnection.ConnectionInfo!=null)
-                    logger.Debug("Starting send of " + packetTypeStr + " packetType to " + targetConnection.ConnectionInfo.ClientIP + ":" + targetConnection.ConnectionInfo.ClientPort + ".");
-                else
-                    logger.Debug("Starting send of " + packetTypeStr + " packetType to " + targetConnection.RemoteClientIP + ".");
-            }
-
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
-
-            if (loggingEnabled)
-            {
-                if (targetConnection.ConnectionInfo != null)
-                    logger.Debug("Completed send of " + packetTypeStr + " packetType to " + targetConnection.ConnectionInfo.ClientIP + ":" + targetConnection.ConnectionInfo.ClientPort + ".");
-                else
-                    logger.Debug("Completed send of " + packetTypeStr + " packetType to " + targetConnection.RemoteClientIP + ".");
-            }
         }
 
         /// <summary>
@@ -1692,6 +1732,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void IncomingConnectionListenThread()
         {
+            lock (globalDictAndDelegateLocker) lastConnectionKeepAlivePoll = DateTime.Now;
+
             if (loggingEnabled) logger.Info("networkComms.net is now waiting for new connections.");
 
             try
@@ -1702,7 +1744,7 @@ namespace NetworkCommsDotNet
                     {
                         if (tcpListener.Pending() && !commsShutdown)
                         {
-                            //Pick up the new conneciton
+                            //Pick up the new connection
                             TcpClient newClient = tcpListener.AcceptTcpClient();
 
                             //Build the endPoint object based on available information at the current moment
@@ -1726,6 +1768,7 @@ namespace NetworkCommsDotNet
                             //In the commented GAP another thread may have established a new outgoing connection
                             //If we have then there is no need to finish establishing this one
                             bool establishNewConnection = false;
+
                             //GAP END
                             lock (globalDictAndDelegateLocker)
                             {
@@ -1740,7 +1783,9 @@ namespace NetworkCommsDotNet
                             if (establishNewConnection) newConnection.EstablishConnection(newClient);
                         }
                         else
-                            Thread.Sleep(500);
+                        {
+                            Thread.Sleep(200);
+                        }
                     }
                     catch (ConfirmationTimeoutException)
                     {
@@ -1783,7 +1828,78 @@ namespace NetworkCommsDotNet
                 isListening = false;
             }
 
-            //LogError(new Exception(""), "CommsShutdown", "This is just a notice that comms has shutdown. No exception really occured.");
+            if (loggingEnabled) logger.Info("networkComms.net is no longer accepting new connections.");
+        }
+
+        private static void AllConnectionKeepAlivePollThread()
+        {
+            try
+            {
+                if (loggingEnabled) logger.Debug("Connection keep alive polling thread has started.");
+                DateTime lastPollCheck = DateTime.Now;
+
+                do
+                {
+                    //We have a short sleep here so that we can exit the thread fairly quickly if we need too
+                    Thread.Sleep(100);
+
+                    //Any connections which we have not seen in the last poll interval get tested using a null packet
+                    //With a ConnectionKeepAlivePollIntervalSecs of 10 seconds this will check every 2 seconds for a possible poll
+                    if ((DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs / 5.0)
+                    {
+                        lastPollCheck = DateTime.Now;
+                        AllConnectionsKeepAlivePoll();
+                    }
+
+                } while (!commsShutdown);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "KeepAlivePollError");
+            }
+        }
+
+        /// <summary>
+        /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
+        /// </summary>
+        /// <param name="returnImmediately"></param>
+        private static void AllConnectionsKeepAlivePoll(bool returnImmediately = false)
+        {
+            if (ConnectionKeepAlivePollIntervalSecs < int.MaxValue)
+            {
+                //Loop through all connections and test the alive state
+                List<TCPConnection> dictCopy;
+                lock (globalDictAndDelegateLocker)
+                    dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint).Values.ToList();
+
+                List<Task> connectionCheckTasks = new List<Task>();
+
+                for (int i = 0; i < dictCopy.Count; i++)
+                {
+                    int innerIndex = i;
+
+                    connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() =>
+                    {
+                        //If the connection is server side we poll preferentially
+                        if (dictCopy[innerIndex].ServerSide)
+                        {
+                            //We check the last incoming traffic time
+                            //In scenarios where the client is sending us lots of data there is no need to poll
+                            if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
+                                dictCopy[innerIndex].SendNullPacket();
+                        }
+                        else
+                        {
+                            //If we are client side we wait upto an additional 3 seconds to do the poll
+                            //This means the server will probably beat us
+                            if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble()*2.0))
+                                dictCopy[innerIndex].SendNullPacket();
+                        }
+                    })));
+                }
+
+                if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
+            }
         }
 
         /// <summary>

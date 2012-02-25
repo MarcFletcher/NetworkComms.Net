@@ -28,25 +28,8 @@ namespace NetworkCommsDotNet
         #region Reserved
         Confirmation,
         CheckSumFailResend,
-        PingPacket,
+        AliveTestPacket,
         ConnectionSetup,
-        #endregion
-
-        /// <summary>
-        /// Distributed File System (DFS) packetTypeStrs. Removing/modifying these will prevent the distributed file system from working
-        /// </summary>
-        #region DFS
-        //DFS_Setup, //Send be client to server to request setup information (for now its comms listening port)
-        //DFS_RequestLocalItemBuild, //Build a swarm item locally mofo
-
-        //DFS_ChunkAvailabilityInterestRequest, //Im interested in a chunk pleae
-        //DFS_ChunkAvailabilityInterestReply, //Here is the chunk you requested or a reply saying try another chunk
-        //DFS_ChunkAvailabilityInterestReplyComplete, //Thank-you for the chunk, I have it now
-
-        //DFS_ChunkAvailabilityRequest, //Please tell me what chunks you have available
-        //DFS_PeerChunkAvailabilityUpdate, // Remote peer now has an available chunk
-
-        //DFS_ItemRemovedLocallyUpdate, //Informs swarm peers client no longer has item
         #endregion
     }
 }

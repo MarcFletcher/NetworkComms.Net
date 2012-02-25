@@ -21,6 +21,7 @@ using SerializerBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
+using Common.Logging.Log4Net;
 
 namespace ExamplesConsole
 {
@@ -175,13 +176,28 @@ namespace ExamplesConsole
 
             if (loggingEnableKey.Key == ConsoleKey.Y)
             {
-                NameValueCollection properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                properties["showLogName"] = "false";
-                properties["level"] = "All";
+                //////////////////////////////////////////////////////////////////////
+                /////////////// VERY SIMPLE CONOLSE ONLY LOGGER AVAILABLE ////////////
+                //////////////////////////////////////////////////////////////////////
+                //NameValueCollection properties = new NameValueCollection();
+                //properties["showDateTime"] = "true";
+                //properties["showLogName"] = "false";
+                //properties["level"] = "All";
+                //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
-                NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
-                Console.WriteLine(" ... logging enabled with ALL output directed to console.");
+                //////////////////////////////////////////////////////////////////////
+                //// THE FOLLOWING LOGGER USES THE MUCH MORE VERSATILE LOG4NET////////
+                //// Requires the prescense of Common.Logging.Log4Net.dll & log4net.dll 
+                //////////////////////////////////////////////////////////////////////
+                NameValueCollection properties = new NameValueCollection();
+                properties["configType"] = "FILE";
+                properties["configFile"] = "log4net.config";
+                NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+
+                Console.WriteLine(" ... logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
+
+                //We can write to our logger from an external program as well
+                NetworkComms.Logger.Info("networkComms.net logging enabled");
             }
         }
 

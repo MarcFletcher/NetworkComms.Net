@@ -27,7 +27,7 @@ namespace DebugTests
             NetworkComms.AppendIncomingPacketHandler<string>("Message", (header, conectionId, message) => 
             { 
                 Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP.ToString() + " saying '" + message  +"'.");
-                NetworkComms.SendObject("MessageReturn", conectionId, false, "Got your message!");
+                //NetworkComms.SendObject("MessageReturn", conectionId, false, "Got your message!");
             });
 
             NetworkComms.AppendGlobalConnectionCloseHandler((connectionId) =>
@@ -39,32 +39,44 @@ namespace DebugTests
  
             while (true)
             {
-                Console.WriteLine("\nPlease enter your message and press enter, 'exit' to quit, 'test' to test connections:");
+                Console.WriteLine("\nPlease enter 'server', 'client' or 'exit' to quit:");
                 string message = Console.ReadLine();
 
                 //If the user has typed exit then we leave our loop and end the example
                 if (message == "exit") break;
-                else if (message == "test")
+                else if (message == "server")
                 {
-                    DateTime startTime = DateTime.Now;
-
-                    while ((DateTime.Now - startTime).TotalMinutes < 2)
+                    while (true)
                     {
-                        NetworkComms.CheckConnectionAliveStatus(false);
-                        Thread.Sleep(2000);
+                        //If we are the server we just twiddle our thumbs for ever
+                        Thread.Sleep(5000);
                     }
-
-                    Console.WriteLine("Checking all existing connections");
                 }
                 else
                 {
-                    Console.WriteLine("Please enter the destination IP address and port, e.g 192.168.0.1:4000:");
-
+                    Console.WriteLine("Please enter the server IP address and port, e.g 192.168.0.1:4000:");
                     string userEnteredStr = Console.ReadLine(); string serverIP = userEnteredStr.Split(':')[0]; int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
 
-                    //NetworkComms.SendObject("Message", serverIP, serverPort, false, message);
-                    //Console.WriteLine(NetworkComms.SendReceiveObject<string>("Message", serverIP, serverPort, false, "MessageReturn", 300000, message));
-                    NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReplyComplete", serverIP, serverPort, false, "");
+                    DateTime lastMessageTime = DateTime.Now.AddDays(-1);
+
+                    while (true)
+                    {
+                        try
+                        {
+                            //Every 10 minutes the client sends a little string
+                            if ((DateTime.Now - lastMessageTime).TotalMinutes > 10)
+                            {
+                                NetworkComms.SendObject("Message", serverIP, serverPort, false, "Hello server!");
+                                lastMessageTime = DateTime.Now;
+                            }
+                            else
+                                Thread.Sleep(5000);
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "ClientError");
+                        }
+                    }
                 }
             }
 

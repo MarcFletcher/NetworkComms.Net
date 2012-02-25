@@ -72,10 +72,10 @@ namespace NetworkCommsDotNet
         bool connectionEstablished = false;
         volatile bool connectionShutdown = false;
         ManualResetEvent connectionEstablishWait = new ManualResetEvent(false);
-        bool serverSide;
+        public bool ServerSide { get; private set; }
 
-        DateTime lastIncomingTrafficTime;
-        object lastIncomingTrafficTimeLocker = new object();
+        DateTime lastTrafficTime;
+        object lastTrafficTimeLocker = new object();
 
         /// <summary>
         /// The packet builder for this connection
@@ -93,7 +93,7 @@ namespace NetworkCommsDotNet
         int totalBytesRead;
 
         #region Get & Set
-        public TcpClient TcPClient
+        public TcpClient TCPClient
         {
             get { return tcpClient; }
         }
@@ -114,12 +114,17 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public DateTime LastIncomingTrafficTime
+        public DateTime LastTrafficTime
         {
             get 
             { 
-                lock (lastIncomingTrafficTimeLocker) 
-                    return lastIncomingTrafficTime; 
+                lock (lastTrafficTimeLocker) 
+                    return lastTrafficTime; 
+            }
+            private set
+            {
+                lock (lastTrafficTimeLocker)
+                    lastTrafficTime = value; 
             }
         }
         #endregion
@@ -400,7 +405,7 @@ namespace NetworkCommsDotNet
         {
             this.tcpConnectionCreationTime = DateTime.Now;
             this.ConnectionEndPoint = connectionEndPoint;
-            this.serverSide = serverSide;
+            this.ServerSide = serverSide;
             this.packetBuilder = new ConnectionPacketBuilder();
             this.dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
         }
@@ -426,6 +431,12 @@ namespace NetworkCommsDotNet
                 //Ensure that we do not already have a connection from this client
                 this.tcpClient = sourceClient;
                 this.tcpClientNetworkStream = tcpClient.GetStream();
+                
+                //When we tell the socket/client to close we want it to do so immediately
+                //this.tcpClient.LingerState = new LingerOption(false, 0);
+
+                //We need to set the keep alive option otherwise the connection will just die at some random time should we not be using it
+                //this.tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
                 this.tcpClient.ReceiveBufferSize = NetworkComms.receiveBufferSizeBytes;
                 this.tcpClient.SendBufferSize = NetworkComms.sendBufferSizeBytes;
@@ -442,7 +453,7 @@ namespace NetworkCommsDotNet
 
                 //If we are server side and we have just received an incoming connection we need to return a conneciton id
                 //This id will be used in all future connections from this machine
-                if (serverSide)
+                if (ServerSide)
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("New connection detected from " + RemoteClientIP + ", waiting for client connId.");
 
@@ -534,13 +545,9 @@ namespace NetworkCommsDotNet
         public void CloseConnection(bool closeDueToError, int callLocation = 0)
         {
             if (closeDueToError)
-            {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " due to error [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
-            }
             else
-            {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
-            }
 
             try
             {
@@ -577,7 +584,9 @@ namespace NetworkCommsDotNet
                 //Try to close the tcpClient
                 try
                 {
+                    tcpClient.Client.Disconnect(false);
                     tcpClient.Client.Close();
+                    tcpClient.Client.Dispose();
                 }
                 catch (Exception)
                 {
@@ -745,8 +754,17 @@ namespace NetworkCommsDotNet
                     //If we read any data it gets handed off to the packetBuilder
                     if (totalBytesRead > 0)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-                        packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                        //If we have read a single byte which is 0 and we are not expecting other data
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
+                        {
+                            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
+                            LastTrafficTime = DateTime.Now;
+                        }
+                        else
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+                            packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                        }
                     }
                     else if (totalBytesRead == 0 && (!dataAvailable || connectionShutdown))
                     {
@@ -810,34 +828,52 @@ namespace NetworkCommsDotNet
 
                     if (totalBytesRead > 0)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-
-                        //If there is more data to get then add it to the packets lists;
-                        packetBuilder.AddPacket(totalBytesRead, dataBuffer);
-
-                        //If we have more data we might as well continue reading syncronously
-                        while (dataAvailable)
+                        //If we have read a single byte which is 0 and we are not expecting other data
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                         {
-                            int bufferOffset = 0;
+                            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
+                            LastTrafficTime = DateTime.Now;
+                        }
+                        else
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
 
-                            //We need a buffer for our incoming data
-                            //First we try to reuse a previous buffer
-                            if (packetBuilder.CurrentPacketCount() > 0 && packetBuilder.NumUnusedBytesMostRecentPacket() > 0)
-                                dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
-                            else
-                                //If we have nothing to reuse we allocate a new buffer
-                                dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+                            //If there is more data to get then add it to the packets lists;
+                            packetBuilder.AddPacket(totalBytesRead, dataBuffer);
 
-                            totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
-
-                            if (totalBytesRead > 0)
+                            //If we have more data we might as well continue reading syncronously
+                            while (dataAvailable)
                             {
-                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-                                packetBuilder.AddPacket(totalBytesRead, dataBuffer);
-                                dataAvailable = netStream.DataAvailable;
+                                int bufferOffset = 0;
+
+                                //We need a buffer for our incoming data
+                                //First we try to reuse a previous buffer
+                                if (packetBuilder.CurrentPacketCount() > 0 && packetBuilder.NumUnusedBytesMostRecentPacket() > 0)
+                                    dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
+                                else
+                                    //If we have nothing to reuse we allocate a new buffer
+                                    dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+
+                                totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
+
+                                if (totalBytesRead > 0)
+                                {
+                                    //If we have read a single byte which is 0 and we are not expecting other data
+                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
+                                    {
+                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 2");
+                                        LastTrafficTime = DateTime.Now;
+                                    }
+                                    else
+                                    {
+                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+                                        packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                                        dataAvailable = netStream.DataAvailable;
+                                    }
+                                }
+                                else
+                                    break;
                             }
-                            else
-                                break;
                         }
                     }
 
@@ -904,6 +940,22 @@ namespace NetworkCommsDotNet
                 int loopCounter = 0;
                 while (true)
                 {
+                    //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
+                    if (packetBuilder.FirstByte() == 0)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff(), loop index - " + loopCounter);
+                        LastTrafficTime = DateTime.Now;
+
+                        packetBuilder.ClearNTopBytes(1);
+
+                        //Reset the expected bytes to 0 so that the next check starts from scratch
+                        packetBuilder.TotalBytesExpected = 0;
+
+                        //If we have run out of data completely then we can return immediately
+                        if (packetBuilder.TotalBytesRead == 0)
+                            return;
+                    }
+
                     //First determine the expected size of a header packet
                     int packetHeaderSize = packetBuilder.FirstByte() + 1;
 
@@ -950,24 +1002,28 @@ namespace NetworkCommsDotNet
                         //We may have too much data if we are sending high quantities and the packets have been concatenated
                         //no problem!!
 
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching packet hand off task. ");
-
                         //Build the necessary task input data
                         object[] completedData = new object[2];
                         completedData[0] = topPacketHeader;
                         completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
 
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received '" + topPacketHeader.PacketType + "' packetType from " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + "), containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + RemoteClientIP + (ConnectionInfo == null ? "" :  " (" +ConnectionInfo.NetworkIdentifier.ToString() + ")") + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
                         if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. loop index - " + loopCounter);
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             CompleteIncomingPacketWorker(completedData);
+                        }
                         else
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching handler hand off task for packet of type '" + topPacketHeader.PacketType + "'. loop index - " + loopCounter);
                             //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
                             Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
+                        }
 
                         //We clear the bytes we have just handed off
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
                         packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
 
                         //Reset the expected bytes to 0 so that the next check starts from scratch
@@ -1001,7 +1057,7 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... packet hand off task started.");
 
-                lock (lastIncomingTrafficTimeLocker) lastIncomingTrafficTime = DateTime.Now;
+                LastTrafficTime = DateTime.Now;
 
                 //Check for a shutdown connection
                 if (connectionShutdown) return;
@@ -1057,22 +1113,23 @@ namespace NetworkCommsDotNet
                     CheckSumFailResendHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     ConnectionSetupHandler(packetDataSection);
-                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket) && (NetworkComms.internalFixedSerializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.internalFixedCompressor)) == false)
+                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && (NetworkComms.internalFixedSerializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.internalFixedCompressor)) == false)
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), false, true, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), false, true, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
                     SendPacket(returnPacket);
                 }
+
+                //We allow users to add their own custom handlers for reserved packet types here
                 //else
                 if (true)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering packet handlers for " + packetHeader.PacketType + " packetType from " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port);
 
                     //Idiot check
                     if (RemoteClientIP == null || this.ConnectionInfo == null)
                         throw new CommunicationException("RemoteClientIP or ConnectionInfo is null. Probably due to connection closure.");
 
-                    //We have received a non reserved packet type so we hand off to custom delegates.
                     NetworkComms.TriggerPacketHandler(packetHeader, this.ConnectionInfo.NetworkIdentifier, packetDataSection);
 
                     //This is a really bad place to put a garbage collection, comment left in so that it does'nt get added again at some later date
@@ -1121,7 +1178,15 @@ namespace NetworkCommsDotNet
                 {
                     //If we have a clash on identifier we always assume it is an old connection by the same client
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection detected from peer with identifier " + ConnectionInfo.NetworkIdentifier + ". Closing existing connection in favour of new one.");
-                    existingConnection.CloseConnection(true, 1);
+
+                    //Tested and this is not the problem
+                    if (existingConnection.tcpClientNetworkStream == this.tcpClientNetworkStream || existingConnection.tcpClient == this.tcpClient)
+                    {
+                        connectionSetupException = true;
+                        connectionSetupExceptionStr = " ... existing connection shares networkStream or tcpClient object. Unable to continue with connection establish.";
+                    }
+                    else
+                        existingConnection.CloseConnection(true, 1);
                 }
                 else if (possibleExistingConnectionWithPeer_ByEndPoint)
                 {
@@ -1129,33 +1194,32 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection detected from provided endpoint, " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + ". Testing existing connection.");
                     if (existingConnection.CheckConnectionAliveState(1000))
                     {
-                        //If the existing connection comes back as alive we throw a real exception and refuse to establish this one
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("Existing connection detected from provided endpoint, " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + ". Existing connection sucesfully responded to connection check.");
-
-                        string errorString = "Existing live connection at provided end point for this connection. ";
-                        errorString += "End Point Info (" + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + "). ";
-                        errorString += "Existing endpoint last seen at " + NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint].LastIncomingTrafficTime.ToLongTimeString() + ". ";
-                        errorString += "Existing endpoint is recorded as " + (NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint].connectionShutdown ? "shutdown." : "not shutdown.");
-
-                        throw new Exception(errorString);
+                        //If the existing connection comes back as alive we don't allow this one to go any further
+                        //This might happen if two peers try to connect to each other at the same time
+                        connectionSetupException = true;
+                        connectionSetupExceptionStr = " ... existing live connection at provided end point for this connection, no need for a second. End Point - " + ConnectionInfo.NetworkIdentifier + ", " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + ". ";
                     }
                 }
 
-                //If we have made it this far we need to make sure we still have an entry in the endPoint dictioanry for 'this'
-                lock (NetworkComms.globalDictAndDelegateLocker)
+                //We only try again if we did not log an exception
+                if (!connectionSetupException)
                 {
-                    if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
-                        NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
-                }
+                    //If we have made it this far we need to make sure we still have an entry in the endPoint dictioanry for 'this'
+                    lock (NetworkComms.globalDictAndDelegateLocker)
+                    {
+                        if (!NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
+                            NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
+                    }
 
-                //Once we have tried to sort the problem we can try to finish the establish one last time
-                connectionEstablishedSuccess = ConnectionSetupHandlerInner(ref possibleExistingConnectionWithPeer_ByIdentifier, ref possibleExistingConnectionWithPeer_ByEndPoint, ref existingConnection);
+                    //Once we have tried to sort the problem we can try to finish the establish one last time
+                    connectionEstablishedSuccess = ConnectionSetupHandlerInner(ref possibleExistingConnectionWithPeer_ByIdentifier, ref possibleExistingConnectionWithPeer_ByEndPoint, ref existingConnection);
 
-                //If we still failed then that's it for this establish
-                if (!connectionEstablishedSuccess && !connectionSetupException)
-                {
-                    connectionSetupException = true;
-                    connectionSetupExceptionStr = "Attempted to establish conneciton with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port + ", but due to an existing connection this was not possible.";
+                    //If we still failed then that's it for this establish
+                    if (!connectionEstablishedSuccess && !connectionSetupException)
+                    {
+                        connectionSetupException = true;
+                        connectionSetupExceptionStr = "Attempted to establish conneciton with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port + ", but due to an existing connection this was not possible.";
+                    }
                 }
             }
 
@@ -1269,7 +1333,7 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public void SendPacket(Packet packet)
         {
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Starting packet send of " + packet.PacketHeader.PacketType + " packetType to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")" : ""));
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")" : ""));
 
             //Multiple threads may try to send packets at the same time so wait one at a time here
             lock (packetSendLocker)
@@ -1328,12 +1392,18 @@ namespace NetworkCommsDotNet
                     //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
                     byte[] headerBytes = packet.SerialiseHeader(NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + RemoteClientIP + " (" + (this.ConnectionInfo == null ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()) + "), containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " data bytes.");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + RemoteClientIP + " (" + (this.ConnectionInfo == null ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()) + "), containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
                     tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
                     tcpClientNetworkStream.Write(packet.PacketData, 0, packet.PacketData.Length);
 
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to netstream.");
+
+                    if (!TCPClient.Connected)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+                        throw new CommunicationException("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+                    }
 
                     #region sentPackets Cleanup
                     //If sent packets is greater than 40 we delete anything older than a minute
@@ -1367,8 +1437,15 @@ namespace NetworkCommsDotNet
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... confirmation packet received.");
                         }
                     }
+
+                    //Update the traffic time as late as possible incase there is a problem
+                    LastTrafficTime = DateTime.Now;
                 }
                 catch (ConfirmationTimeoutException)
+                {
+                    throw;
+                }
+                catch (CommunicationException)
                 {
                     throw;
                 }
@@ -1387,7 +1464,33 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed packet send of " + packet.PacketHeader.PacketType + " packetType to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")" : ""));
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")" : ""));
+        }
+
+        /// <summary>
+        /// Send a null packet (1 byte long) to this connection. Helps keep the connection alive but also bandwidth usage to absolute minimum. If an exception is thrown the connection will be closed.
+        /// </summary>
+        public void SendNullPacket()
+        {
+            try
+            {
+                //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
+                lock (packetSendLocker)
+                {
+                    //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")." : "."));
+
+                    //Send a single 0 byte
+                    tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+
+                    //Update the traffic time after we have written to netStream
+                    LastTrafficTime = DateTime.Now;
+                }
+            }
+            catch (Exception)
+            {
+                CloseConnection(true, 19);
+                //throw new CommunicationException(ex.ToString());
+            }
         }
 
         /// <summary>
@@ -1431,19 +1534,21 @@ namespace NetworkCommsDotNet
 
             if (ConnectionInfo == null)
             {
-                //If the connection is not yet established we will give it 2 times the connection timeout before we close it here
-                if ((DateTime.Now - tcpConnectionCreationTime).Milliseconds * 2 > NetworkComms.connectionEstablishTimeoutMS)
+                if ((DateTime.Now - tcpConnectionCreationTime).Milliseconds > NetworkComms.connectionEstablishTimeoutMS)
+                {
                     CloseConnection(false, -1);
-
-                return false;
+                    return false;
+                }
+                else
+                    return true;
             }
             else
             {
                 try
                 {
-                    bool returnValue = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.PingPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    bool returnValue = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("ConnectionAliveTest success, response in " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
                   
                     return returnValue;
                 }

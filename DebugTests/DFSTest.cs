@@ -57,7 +57,7 @@ namespace DebugTests
                 //Fill a byte[] with random data
                 DateTime startTime = DateTime.Now;
                 Random randGen = new Random();
-                byte[] someRandomData = new byte[numberMegsToCreate*1024*1024];
+                byte[] someRandomData = new byte[numberMegsToCreate * 1024 * 1024];
                 randGen.NextBytes(someRandomData);
 
                 Console.WriteLine("\n ... succesfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
@@ -145,11 +145,6 @@ namespace DebugTests
                         Console.WriteLine("Closing host.");
                         break;
                     }
-                    else if (pressedKey.Key == ConsoleKey.T)
-                    {
-                        Console.WriteLine(NetworkComms.TotalNumConnections(NetworkComms.LocalIP));
-                    }
-
                     #endregion
                 }
                 #endregion
@@ -201,9 +196,11 @@ namespace DebugTests
 
                         if (!shutDown)
                         {
-                            Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
-                            var shutdownKey = Console.ReadKey(true).Key;
-                            if (shutdownKey != ConsoleKey.R) shutDown = true;
+                            //Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
+                            //var shutdownKey = Console.ReadKey(true).Key;
+                            //if (shutdownKey != ConsoleKey.R) shutDown = true;
+
+                            Thread.Sleep(3000);
 
                             if (!shutDown)
                             {
@@ -236,7 +233,7 @@ namespace DebugTests
 
                 NetworkComms.AppendIncomingPacketHandler("BigDataRequestResponse", ReplyDelegate, false);
                 NetworkComms.AppendIncomingPacketHandler("ClientCommand", ShutdownDelegate, false);
-                
+
                 Console.WriteLine("\nListening for connections on " + NetworkComms.LocalIP + ":" + NetworkComms.CommsPort + " (" + NetworkComms.NetworkNodeIdentifier + ").\n");
                 Console.WriteLine(" ... initiating item build ...");
 
