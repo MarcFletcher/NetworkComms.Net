@@ -279,7 +279,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The interval between keep alive polls of all serverside connections
         /// </summary>
-        internal static int connectionKeepAlivePollIntervalSecs = 1;
+        internal static int connectionKeepAlivePollIntervalSecs = 10;
 
         private static Thread connectionKeepAlivePollThread;
 
@@ -968,52 +968,74 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">Override compressor</param>
         public static void TriggerPacketHandler(PacketHeader packetHeader, ShortGuid sourceConnectionId, byte[] incomingObjectBytes, ISerialize serializer, ICompress compressor)
         {
-            //We take a copy of the handlers list incase it is modified outside of the lock
-            List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
-            lock (globalDictAndDelegateLocker)
-                if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
-                    handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(globalIncomingPacketHandlers[packetHeader.PacketType]);
-
-            if (handlersCopy == null && !IgnoreUnknownPacketTypes)
+            try
             {
-                //We may get here if we have not added any custom delegates for reserved packet types
-                if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
-                    //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
-                    LogError(new UnexpectedPacketTypeException("The received packetTypeStr, " + packetHeader.PacketType + ", has no configured handler and network comms is not set to ignore unkown packet type. Use NetworkComms.IgnoreUnknownPacketTypes as an optional work around."), "CommsPacketError");
+                //We take a copy of the handlers list incase it is modified outside of the lock
+                List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
+                lock (globalDictAndDelegateLocker)
+                    if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
+                        handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(globalIncomingPacketHandlers[packetHeader.PacketType]);
 
-                return;
-            }
-            else if (handlersCopy == null && IgnoreUnknownPacketTypes)
-                //If we have received and unknown packet type and we are choosing to ignore them we just finish here
-                return;
-            else
-            {
-                //Idiot check
-                if (handlersCopy.Count == 0)
-                    throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                //We decide which serializer and compressor to use
-                if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                if (handlersCopy == null && !IgnoreUnknownPacketTypes)
                 {
-                    if (serializer==null) serializer = globalIncomingPacketUnwrappers[packetHeader.PacketType].Serializer;
-                    if (compressor==null) compressor = globalIncomingPacketUnwrappers[packetHeader.PacketType].Compressor;
+                    //We may get here if we have not added any custom delegates for reserved packet types
+                    if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
+                    {
+                        //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
+                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerError_" + packetHeader.PacketType);
+                    }
+
+                    return;
                 }
+                else if (handlersCopy == null && IgnoreUnknownPacketTypes)
+                    //If we have received and unknown packet type and we are choosing to ignore them we just finish here
+                    return;
                 else
                 {
-                    if (serializer == null) serializer = DefaultSerializer;
-                    if (compressor == null) compressor = DefaultCompressor;
+                    //Idiot check
+                    if (handlersCopy.Count == 0)
+                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
+
+                    //We decide which serializer and compressor to use
+                    if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                    {
+                        if (serializer == null) serializer = globalIncomingPacketUnwrappers[packetHeader.PacketType].Serializer;
+                        if (compressor == null) compressor = globalIncomingPacketUnwrappers[packetHeader.PacketType].Compressor;
+                    }
+                    else
+                    {
+                        if (serializer == null) serializer = DefaultSerializer;
+                        if (compressor == null) compressor = DefaultCompressor;
+                    }
+
+                    //Deserialise the object only once
+                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, serializer, compressor);
+
+                    //Pass the data onto the handler and move on.
+                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
+
+                    //Pass the object to all necessary delgates
+                    //We need to use a copy because we may modify the original delegate list during processing
+                    foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
+                    {
+                        try
+                        {
+                            wrapper.Process(packetHeader, sourceConnectionId, returnObject);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
+                        }
+                    }
                 }
-
-                //Deserialise the object only once
-                object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, serializer, compressor);
-
-                //Pass the data onto the handler and move on.
-                if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
-
-                //Pass the object to all necessary delgates
-                //We need to use a copy because we may modify the original delegate list during processing
-                foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
-                    wrapper.Process(packetHeader, sourceConnectionId, returnObject);
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
             }
         }
         #endregion

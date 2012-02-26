@@ -27,14 +27,11 @@ namespace DebugTests
             NameValueCollection properties = new NameValueCollection();
             properties["configType"] = "FILE";
             properties["configFile"] = "log4net.config";
-
             NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
-            DFSTest.RunExample();
-            //AliveTest test = new AliveTest();
-            //test.Go();
-
             //BasicSend.RunExample();
+            //AliveTest.RunExample();
+            DFSTest.RunExample();
         }
     }
 }

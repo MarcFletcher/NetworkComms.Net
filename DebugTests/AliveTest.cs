@@ -10,14 +10,9 @@ namespace DebugTests
     /// <summary>
     /// Used to test the usage of NetworkComms.CheckConnectionAliveStatus()
     /// </summary>
-    class AliveTest
+    static class AliveTest
     {
-        public AliveTest()
-        {
-
-        }
-
-        public void Go()
+        public static void RunExample()
         {
             //Write out all comms logging
             //NetworkComms.WriteLineToLogMethod = new NetworkComms.WriteLineToLogDelegate((message) => { Console.WriteLine(" -- " + message); });

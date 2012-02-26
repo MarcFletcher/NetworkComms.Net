@@ -754,11 +754,12 @@ namespace NetworkCommsDotNet
                     //If we read any data it gets handed off to the packetBuilder
                     if (totalBytesRead > 0)
                     {
+                        LastTrafficTime = DateTime.Now;
+
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                         {
                             //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
-                            LastTrafficTime = DateTime.Now;
                         }
                         else
                         {
@@ -828,11 +829,12 @@ namespace NetworkCommsDotNet
 
                     if (totalBytesRead > 0)
                     {
+                        LastTrafficTime = DateTime.Now;
+
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                         {
                             //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
-                            LastTrafficTime = DateTime.Now;
                         }
                         else
                         {
@@ -858,11 +860,13 @@ namespace NetworkCommsDotNet
 
                                 if (totalBytesRead > 0)
                                 {
+                                    LastTrafficTime = DateTime.Now;
+
                                     //If we have read a single byte which is 0 and we are not expecting other data
                                     if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                                     {
                                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 2");
-                                        LastTrafficTime = DateTime.Now;
+                                        //LastTrafficTime = DateTime.Now;
                                     }
                                     else
                                     {
@@ -934,17 +938,18 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesRead + " total bytes.");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesRead + " bytes read.");
 
                 //Loop until we are finished with this packetBuilder
                 int loopCounter = 0;
                 while (true)
                 {
                     //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
+                    //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (packetBuilder.FirstByte() == 0)
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff(), loop index - " + loopCounter);
-                        LastTrafficTime = DateTime.Now;
+                        //LastTrafficTime = DateTime.Now;
 
                         packetBuilder.ClearNTopBytes(1);
 
@@ -952,89 +957,80 @@ namespace NetworkCommsDotNet
                         packetBuilder.TotalBytesExpected = 0;
 
                         //If we have run out of data completely then we can return immediately
-                        if (packetBuilder.TotalBytesRead == 0)
-                            return;
-                    }
-
-                    //First determine the expected size of a header packet
-                    int packetHeaderSize = packetBuilder.FirstByte() + 1;
-
-                    //Do we have enough data to build a header?
-                    if (packetBuilder.TotalBytesRead < packetHeaderSize)
-                    {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required.");
-
-                        //Set the expected number of bytes and then return
-                        packetBuilder.TotalBytesExpected = packetHeaderSize;
-                        return;
-                    }
-
-                    //We have enough for a header
-                    PacketHeader topPacketHeader;
-                    try
-                    {
-                        topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                    }
-                    catch (InvalidDataException)
-                    {
-                        //For now just rethrow this but later we might do something more clever
-                        throw;
-                    }
-
-                    //Idiot test
-                    if (topPacketHeader.PacketType == null)
-                        throw new SerialisationException("packetType value in packetHeader should never be null");
-
-                    //We can now use the header to establish if we have enough payload data
-                    //First case is when we have not yet received enough data
-                    if (packetBuilder.TotalBytesRead < packetHeaderSize + topPacketHeader.PayloadPacketSize)
-                    {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required.");
-
-                        //Set the expected number of bytes and then return
-                        packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
-                        return;
-                    }
-                    //Second case is we have enough data
-                    else if (packetBuilder.TotalBytesRead >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
-                    {
-                        //We can either have exactly the right amount or even more than we were expecting
-                        //We may have too much data if we are sending high quantities and the packets have been concatenated
-                        //no problem!!
-
-                        //Build the necessary task input data
-                        object[] completedData = new object[2];
-                        completedData[0] = topPacketHeader;
-                        completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
-
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + RemoteClientIP + (ConnectionInfo == null ? "" :  " (" +ConnectionInfo.NetworkIdentifier.ToString() + ")") + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
-
-                        if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
-                        {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. loop index - " + loopCounter);
-                            //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
-                            CompleteIncomingPacketWorker(completedData);
-                        }
-                        else
-                        {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching handler hand off task for packet of type '" + topPacketHeader.PacketType + "'. loop index - " + loopCounter);
-                            //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
-                            Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
-                        }
-
-                        //We clear the bytes we have just handed off
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
-                        packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
-
-                        //Reset the expected bytes to 0 so that the next check starts from scratch
-                        packetBuilder.TotalBytesExpected = 0;
-
-                        //If we have run out of data completely then we can return immediately
-                        if (packetBuilder.TotalBytesRead == 0)
-                            return;
+                        if (packetBuilder.TotalBytesRead == 0) return;
                     }
                     else
-                        throw new CommunicationException("This should be impossible!");
+                    {
+                        //First determine the expected size of a header packet
+                        int packetHeaderSize = packetBuilder.FirstByte() + 1;
+
+                        //Do we have enough data to build a header?
+                        if (packetBuilder.TotalBytesRead < packetHeaderSize)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet header.");
+
+                            //Set the expected number of bytes and then return
+                            packetBuilder.TotalBytesExpected = packetHeaderSize;
+                            return;
+                        }
+
+                        //We have enough for a header
+                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+
+                        //Idiot test
+                        if (topPacketHeader.PacketType == null)
+                            throw new SerialisationException("packetType value in packetHeader should never be null");
+
+                        //We can now use the header to establish if we have enough payload data
+                        //First case is when we have not yet received enough data
+                        if (packetBuilder.TotalBytesRead < packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet payload.");
+
+                            //Set the expected number of bytes and then return
+                            packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
+                            return;
+                        }
+                        //Second case is we have enough data
+                        else if (packetBuilder.TotalBytesRead >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        {
+                            //We can either have exactly the right amount or even more than we were expecting
+                            //We may have too much data if we are sending high quantities and the packets have been concatenated
+                            //no problem!!
+
+                            //Build the necessary task input data
+                            object[] completedData = new object[2];
+                            completedData[0] = topPacketHeader;
+                            completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
+
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + RemoteClientIP + (ConnectionInfo == null ? "" : " (" + ConnectionInfo.NetworkIdentifier.ToString() + ")") + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
+
+                            if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                            {
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
+                                //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
+                                CompleteIncomingPacketWorker(completedData);
+                            }
+                            else
+                            {
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching task to handle packet type '" + topPacketHeader.PacketType + "'. Loop index - " + loopCounter);
+                                //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
+                                Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
+                            }
+
+                            //We clear the bytes we have just handed off
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
+                            packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
+
+                            //Reset the expected bytes to 0 so that the next check starts from scratch
+                            packetBuilder.TotalBytesExpected = 0;
+
+                            //If we have run out of data completely then we can return immediately
+                            if (packetBuilder.TotalBytesRead == 0) return;
+                        }
+                        else
+                            throw new CommunicationException("This should be impossible!");
+                    }
 
                     loopCounter++;
                 }
@@ -1042,7 +1038,9 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //Any error, throw an exception.
-                NetworkComms.LogError(ex, "commsError");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A fatal exception occured in IncomingPacketHandleHandOff(), connection with " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " be closed. See log file for more information.");
+
+                NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 16);
             }
         }
@@ -1057,7 +1055,7 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... packet hand off task started.");
 
-                LastTrafficTime = DateTime.Now;
+                //LastTrafficTime = DateTime.Now;
 
                 //Check for a shutdown connection
                 if (connectionShutdown) return;
@@ -1139,11 +1137,14 @@ namespace NetworkCommsDotNet
             }
             catch (CommunicationException)
             {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " be closed.");
                 CloseConnection(true, 2);
             }
             catch (Exception ex)
             {
                 //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + " be closed. See log file for more information.");
+
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 3);
             }
