@@ -46,7 +46,6 @@ namespace QuickLZCompressor
         [DllImport("Dlls//quicklz150_64_1.dll", EntryPoint = "qlz_get_setting")]
         private static extern int qlz_get_setting_64(int setting);
 
-
         private byte[] state_compress;
         private byte[] state_decompress;
 
@@ -54,7 +53,12 @@ namespace QuickLZCompressor
 
         private static QuickLZ instance;
         private static object locker = new object();
-        
+
+        /// <summary>
+        /// Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.
+        /// </summary>
+        private static object compressDecompressLocker = new object();
+
         /// <summary>
         /// Singleton instance
         /// </summary>
@@ -156,20 +160,26 @@ namespace QuickLZCompressor
         /// <returns>Array of compressed data appended with size of uncompressed data</returns>
         public byte[] CompressDataStream(System.IO.Stream inStream)
         {
-            byte[] inBytes = new byte[inStream.Length];
-            inStream.Seek(0, 0);
-            inStream.Read(inBytes, 0, inBytes.Length);
+            /// <summary>
+            /// Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.
+            /// </summary>
+            lock (compressDecompressLocker)
+            {
+                byte[] inBytes = new byte[inStream.Length];
+                inStream.Seek(0, 0);
+                inStream.Read(inBytes, 0, inBytes.Length);
 
-            byte[] temp = new byte[inBytes.Length + 400];
-            int length = 0;
+                byte[] temp = new byte[inBytes.Length + 400];
+                int length = 0;
 
-            Compress(inBytes, temp, out length);
+                Compress(inBytes, temp, out length);
 
-            byte[] result = new byte[length + 8];
-            Buffer.BlockCopy(temp, 0, result, 0, length);
-            Buffer.BlockCopy(BitConverter.GetBytes((ulong)inStream.Length), 0, result, length, 8);
+                byte[] result = new byte[length + 8];
+                Buffer.BlockCopy(temp, 0, result, 0, length);
+                Buffer.BlockCopy(BitConverter.GetBytes((ulong)inStream.Length), 0, result, length, 8);
 
-            return result;
+                return result;
+            }
         }
 
         /// <summary>
@@ -179,8 +189,14 @@ namespace QuickLZCompressor
         /// <param name="outputStream">Stream to decompress into</param>
         public void DecompressToStream(byte[] inBytes, Stream outputStream)
         {
-            var temp = Decompress(inBytes);
-            outputStream.Write(temp, 0, temp.Length);
+            /// <summary>
+            /// Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.
+            /// </summary>
+            lock (compressDecompressLocker)
+            {
+                var temp = Decompress(inBytes);
+                outputStream.Write(temp, 0, temp.Length);
+            }
         }
 
         #endregion
