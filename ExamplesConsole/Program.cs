@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace ExamplesConsole
 {
@@ -26,6 +27,7 @@ namespace ExamplesConsole
         {
             Console.SetBufferSize(110, 200);
             Console.SetWindowSize(110, 25);
+            Thread.CurrentThread.Name = "MainThread";
 
             Console.WriteLine("Initiating networkComms.net examples.\n");
 
@@ -34,7 +36,7 @@ namespace ExamplesConsole
 
             //Print out the available examples
             int totalNumberOfExamples = 4;
-            Console.WriteLine("1 - Basic - Message Send (Only 15 lines!)");
+            Console.WriteLine("1 - Basic - Message Send (Only 11 lines!)");
             Console.WriteLine("2 - Advanced - Object Send");
             Console.WriteLine("3 - Advanced - Distributed File System");
             Console.WriteLine("4 - Advanced - Remote Procedure Call");
