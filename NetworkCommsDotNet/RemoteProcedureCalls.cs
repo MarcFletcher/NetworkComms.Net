@@ -70,6 +70,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static class ProxyClassGenerator
         {
+           
             /// <summary>
             /// Creates a remote proxy instance for the desired interface with the specified server and object identifier
             /// </summary>
@@ -100,6 +101,9 @@ namespace NetworkCommsDotNet
                 return (T)Activator.CreateInstance(Cache<T>.Type, connectionName, connectionId);
             }
 
+            //We use this to get the private method. Should be able to get it dynamically
+            private static string fullyQualifiedClassName = "NetworkCommsDotNet.RemoteProcedureCalls+ProxyClassGenerator, NetworkCommsDotNet, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null";
+
             /// <summary>
             /// Funky class used for dynamically creating the proxy
             /// </summary>
@@ -112,21 +116,28 @@ namespace NetworkCommsDotNet
                     //Make sure the type is an interface
                     if (!typeof(T).IsInterface)
                         throw new InvalidOperationException(typeof(T).Name + " is not an interface");
-
+                                        
                     //Create a new assembly dynamically
                     AssemblyName an = new AssemblyName("tmp_" + typeof(T).Name);
-                    var asm = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndSave);
+                    var asm = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndCollect);
                     string moduleName = Path.ChangeExtension(an.Name, "dll");
                     var module = asm.DefineDynamicModule(moduleName, false);
+                    
                     string ns = typeof(T).Namespace;
                     if (!string.IsNullOrEmpty(ns)) ns += ".";
 
                     //Define our new type implementing the desired interface
                     var type = module.DefineType(ns + "grp_" + typeof(T).Name, TypeAttributes.Class | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.NotPublic);
+                    
                     type.AddInterfaceImplementation(typeof(T));
 
                     var serverConnectionName = type.DefineField("ServerConnectionName", typeof(string), FieldAttributes.Private);
                     var serverConnectionID = type.DefineField("ServerConnectionID", typeof(ShortGuid), FieldAttributes.Private);
+                                        
+                    //Get the methods for the reflection invocation.  MOVE OUTSIDE THIS LOOP
+                    MethodInfo getTypeMethod = typeof(Type).GetMethod("GetType", new Type[] { typeof(string) });
+                    MethodInfo getgetMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string), typeof(BindingFlags) });
+                    MethodInfo invokeMethod = typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
 
                     //Give the type an empty constructor
                     var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(ShortGuid) });
@@ -138,7 +149,7 @@ namespace NetworkCommsDotNet
                     il.Emit(OpCodes.Ldarg_2);
                     il.Emit(OpCodes.Stfld, serverConnectionID);
                     il.Emit(OpCodes.Ret);
-
+                    
                     //Loop through each method in the interface
                     foreach (var method in typeof(T).GetMethods())
                     {
@@ -152,66 +163,107 @@ namespace NetworkCommsDotNet
                         //Get the ILGenerator for the method
                         il = methodImpl.GetILGenerator();
                         il.Emit(OpCodes.Ldarg_0);
-                        //il.Emit(OpCodes.Ldc_I4, 5);
-
-
+                                                
                         //Create a local array to store the parameters
                         LocalBuilder array = il.DeclareLocal(typeof(object[]));
-
+                        
                         //Allocate the array and store reference in local variable above
                         il.Emit(OpCodes.Ldc_I4_S, args.Length);
                         il.Emit(OpCodes.Newarr, typeof(object));
                         il.Emit(OpCodes.Stloc, array);
 
+                        //Temporary variable to help store casted objects
                         LocalBuilder objRef = il.DeclareLocal(typeof(object));
 
                         //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
                         for (int i = 0; i < args.Length; i++)
                         {
+                            //Load the ith arguement onto the stack
                             il.Emit(OpCodes.Ldarg, i + 1);
 
+                            //If the arguement was an out or ref parameter we need to do some additional work
                             if (args[i].ParameterType.IsByRef)
                             {
+                                //Load the arguement reference onto the stack
                                 il.Emit(OpCodes.Ldind_Ref);
 
+                                //Box the arguement if necessary (might not be needed judging by documentational of last call
                                 if (args[i].ParameterType.GetElementType().IsValueType)
                                     il.Emit(OpCodes.Box, args[i].ParameterType.GetElementType());
                             }
 
+                            //if the arguement was a value type we need to box it
                             if (args[i].ParameterType.IsValueType)
                                 il.Emit(OpCodes.Box, args[i].ParameterType);
                             
+                            //Next cast the arguement to object
                             il.Emit(OpCodes.Castclass, typeof(object));
                             il.Emit(OpCodes.Stloc, objRef);
                             
+                            //Store the arguement in the arguements array
                             il.Emit(OpCodes.Ldloc, array);
                             il.Emit(OpCodes.Ldc_I4_S, i);
                             il.Emit(OpCodes.Ldloc, objRef);
                             il.Emit(OpCodes.Stelem_Ref);
                         }
+                        
+                        //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
+                        LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
 
-                        //Store connection information for the remote call as arguments                    
+                        //Declare an array to hold the parameters for the reflection invocation
+                        LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
+                        il.Emit(OpCodes.Ldc_I4_S, 4);
+                        il.Emit(OpCodes.Newarr, typeof(object));
+                        il.Emit(OpCodes.Stloc, reflectionParamArray);
+
+                        //Load the connection id into first element of array for reflection invocation of method
+                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                        il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Ldfld, serverConnectionID);
+                        il.Emit(OpCodes.Box, serverConnectionID.FieldType);
+                        il.Emit(OpCodes.Stelem_Ref);
+
+                        //Load the connection ip into second element of array for reflection invocation of method
+                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                        il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Ldfld, serverConnectionName);
+                        il.Emit(OpCodes.Stelem_Ref);
 
-                        //Store the method name of the remote call as an arguement
+                        //Load the function name to call into third element of array for reflection invocation of method
+                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                        il.Emit(OpCodes.Ldc_I4_2);
                         il.Emit(OpCodes.Ldstr, method.Name);
-                        
-                        ////Get a handle on the send method
-                        MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
+                        il.Emit(OpCodes.Stelem_Ref);
 
-                        ////Load the array pointer as an arguement
+                        //Load the connection ip into fourth element of array for reflection invocation of method
+                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                        il.Emit(OpCodes.Ldc_I4_3);
                         il.Emit(OpCodes.Ldloc, array);
+                        il.Emit(OpCodes.Stelem_Ref);
+                        
+                        //The method we want to call is private and static so we need binding flags as such
+                        int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
 
-                        ////Run the send method which will push the return value onto the execution stack
-                        il.Emit(OpCodes.Call, remoteCallMethod);
+                        //Get the the type for this static class
+                        il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
+                        il.Emit(OpCodes.Call, getTypeMethod);
 
+                        //Get the RemoteCallClient method
+                        il.Emit(OpCodes.Ldstr, "RemoteCallClient");
+                        il.Emit(OpCodes.Ldc_I4, bindingFlags);
+                        il.Emit(OpCodes.Callvirt, getgetMethod);
+
+                        //Invoke the method using reflection
+                        il.Emit(OpCodes.Ldloc, zeroPtr);
+                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                        il.Emit(OpCodes.Callvirt, invokeMethod);
+                        
                         //If the return type is a value type we need to unbox
                         if (method.ReturnType.IsValueType && method.ReturnType != typeof(void))
                             il.Emit(OpCodes.Unbox_Any, method.ReturnType);
-
+                        
                         //If any ref or out paramters were defined we need to set their values
                         for (int i = 0; i < args.Length; i++)
                         {
@@ -286,23 +338,58 @@ namespace NetworkCommsDotNet
                                 il.Emit(OpCodes.Stelem_Ref);
                             }
 
-                            //Store connection information for the remote call as arguments                    
+                            //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
+                            LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
+
+                            //Declare an array to hold the parameters for the reflection invocation
+                            LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
+                            il.Emit(OpCodes.Ldc_I4_S, 4);
+                            il.Emit(OpCodes.Newarr, typeof(object));
+                            il.Emit(OpCodes.Stloc, reflectionParamArray);
+
+                            //Load the connection id into first element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_0);
                             il.Emit(OpCodes.Ldarg_0);
                             il.Emit(OpCodes.Ldfld, serverConnectionID);
+                            il.Emit(OpCodes.Box, serverConnectionID.FieldType);
+                            il.Emit(OpCodes.Stelem_Ref);
+
+                            //Load the connection ip into second element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_1);
                             il.Emit(OpCodes.Ldarg_0);
                             il.Emit(OpCodes.Ldfld, serverConnectionName);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            //Store the method name of the remote call as an arguement
+                            //Load the function name to call into third element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_2);
                             il.Emit(OpCodes.Ldstr, getMethod.Name);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
-
-                            ////Load the array pointer as an arguement
+                            //Load the connection ip into fourth element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_3);
                             il.Emit(OpCodes.Ldloc, array);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            ////Run the send method which will push the return value onto the execution stack
-                            il.Emit(OpCodes.Call, remoteCallMethod);
+                            //The method we want to call is private and static so we need binding flags as such
+                            int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
+
+                            //Get the the type for this static class
+                            il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
+                            il.Emit(OpCodes.Call, getTypeMethod);
+
+                            //Get the RemoteCallClient method
+                            il.Emit(OpCodes.Ldstr, "RemoteCallClient");
+                            il.Emit(OpCodes.Ldc_I4, bindingFlags);
+                            il.Emit(OpCodes.Callvirt, getgetMethod);
+
+                            //Invoke the method using reflection
+                            il.Emit(OpCodes.Ldloc, zeroPtr);
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Callvirt, invokeMethod);
 
                             //If the return type is a value type we need to unbox
                             if (getMethod.ReturnType.IsValueType)
@@ -353,23 +440,58 @@ namespace NetworkCommsDotNet
                                 il.Emit(OpCodes.Stelem_Ref);
                             }
 
-                            //Store connection information for the remote call as arguments                    
+                            //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
+                            LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
+
+                            //Declare an array to hold the parameters for the reflection invocation
+                            LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
+                            il.Emit(OpCodes.Ldc_I4_S, 4);
+                            il.Emit(OpCodes.Newarr, typeof(object));
+                            il.Emit(OpCodes.Stloc, reflectionParamArray);
+
+                            //Load the connection id into first element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_0);
                             il.Emit(OpCodes.Ldarg_0);
                             il.Emit(OpCodes.Ldfld, serverConnectionID);
+                            il.Emit(OpCodes.Box, serverConnectionID.FieldType);
+                            il.Emit(OpCodes.Stelem_Ref);
+
+                            //Load the connection ip into second element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_1);
                             il.Emit(OpCodes.Ldarg_0);
                             il.Emit(OpCodes.Ldfld, serverConnectionName);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            //Store the method name of the remote call as an arguement
+                            //Load the function name to call into third element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_2);
                             il.Emit(OpCodes.Ldstr, setMethod.Name);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            ////Get a handle on the send method
-                            MethodInfo remoteCallMethod = typeof(ProxyClassGenerator).GetMethod("RemoteCallClient");
-
-                            ////Load the array pointer as an arguement
+                            //Load the connection ip into fourth element of array for reflection invocation of method
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Ldc_I4_3);
                             il.Emit(OpCodes.Ldloc, array);
+                            il.Emit(OpCodes.Stelem_Ref);
 
-                            ////Run the send method which will push the return value onto the execution stack
-                            il.Emit(OpCodes.Call, remoteCallMethod);
+                            //The method we want to call is private and static so we need binding flags as such
+                            int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
+
+                            //Get the the type for this static class
+                            il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
+                            il.Emit(OpCodes.Call, getTypeMethod);
+
+                            //Get the RemoteCallClient method
+                            il.Emit(OpCodes.Ldstr, "RemoteCallClient");
+                            il.Emit(OpCodes.Ldc_I4, bindingFlags);
+                            il.Emit(OpCodes.Callvirt, getgetMethod);
+
+                            //Invoke the method using reflection
+                            il.Emit(OpCodes.Ldloc, zeroPtr);
+                            il.Emit(OpCodes.Ldloc, reflectionParamArray);
+                            il.Emit(OpCodes.Callvirt, invokeMethod);
                             
                             //Return
                             il.Emit(OpCodes.Ret);
@@ -388,16 +510,16 @@ namespace NetworkCommsDotNet
                     Cache<T>.Type = type.CreateType();
                 }
             }
-
+                        
             /// <summary>
-            /// NEEDS HIDING
+            /// Private method for simplifying the remote procedure call.  I don't want to write this in IL!!
             /// </summary>
             /// <param name="connectionID"></param>
             /// <param name="connectionName"></param>
             /// <param name="functionToCall"></param>
             /// <param name="args"></param>
             /// <returns></returns>
-            public static object RemoteCallClient(ShortGuid connectionID, string connectionName, string functionToCall, object[] args)
+            private static object RemoteCallClient(ShortGuid connectionID, string connectionName, string functionToCall, object[] args)
             {
                 RemoteCallWrapper wrapper = new RemoteCallWrapper();
                 wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
@@ -416,6 +538,8 @@ namespace NetworkCommsDotNet
                 else
                     return null;
             }
+
+            
         }
 
         /// <summary>
