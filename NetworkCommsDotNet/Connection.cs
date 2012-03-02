@@ -507,9 +507,6 @@ namespace NetworkCommsDotNet
                         throw new ConnectionSetupException("ConnectionId not located in connections dictionary on final check. Remote end must have disconnected during handshake.");
                 }
 
-                connectionEstablished = true;
-                connectionEstablishWait.Set();
-
                 //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
                 //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
                 if (NetworkComms.EnableNagleAlgorithmForEstablishedConnections)
@@ -517,6 +514,9 @@ namespace NetworkCommsDotNet
                     this.tcpClient.NoDelay = false;
                     this.tcpClient.Client.NoDelay = false;
                 }
+
+                connectionEstablished = true;
+                connectionEstablishWait.Set();
             }
             catch (SocketException e)
             {
@@ -1475,16 +1475,20 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
-                lock (packetSendLocker)
+                //Only once the connection has been established do we send null packets
+                if (connectionEstablished)
                 {
-                    //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")." : "."));
+                    //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
+                    lock (packetSendLocker)
+                    {
+                        //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")." : "."));
 
-                    //Send a single 0 byte
-                    tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+                        //Send a single 0 byte
+                        tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
 
-                    //Update the traffic time after we have written to netStream
-                    LastTrafficTime = DateTime.Now;
+                        //Update the traffic time after we have written to netStream
+                        LastTrafficTime = DateTime.Now;
+                    }
                 }
             }
             catch (Exception)
