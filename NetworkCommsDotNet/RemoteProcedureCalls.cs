@@ -1,4 +1,19 @@
-﻿using System;
+﻿//  Copyright 2011 Marc Fletcher, Matthew Dean
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -102,7 +117,7 @@ namespace NetworkCommsDotNet
             }
 
             //We use this to get the private method. Should be able to get it dynamically
-            private static string fullyQualifiedClassName = "NetworkCommsDotNet.RemoteProcedureCalls+ProxyClassGenerator, NetworkCommsDotNet, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null";
+            private static string fullyQualifiedClassName = typeof(ProxyClassGenerator).AssemblyQualifiedName;// "NetworkCommsDotNet.RemoteProcedureCalls+ProxyClassGenerator, NetworkCommsDotNet, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null";
 
             /// <summary>
             /// Funky class used for dynamically creating the proxy
@@ -149,7 +164,7 @@ namespace NetworkCommsDotNet
                     il.Emit(OpCodes.Ldarg_2);
                     il.Emit(OpCodes.Stfld, serverConnectionID);
                     il.Emit(OpCodes.Ret);
-                    
+                                        
                     //Loop through each method in the interface
                     foreach (var method in typeof(T).GetMethods())
                     {
@@ -397,7 +412,7 @@ namespace NetworkCommsDotNet
 
                             //Return
                             il.Emit(OpCodes.Ret);
-
+                            
                             propImpl.SetGetMethod(getMethod);
 
                             #endregion Property Get
@@ -504,7 +519,7 @@ namespace NetworkCommsDotNet
 
                     foreach (var handler in typeof(T).GetEvents())
                     {
-                        throw new InvalidOperationException("Events in the interface are not supported at this time");
+                        throw new InvalidOperationException(@"Events in interfaces are not supported at this time. If this is a desired feature please submit a request at http://bitbucket.org/MarcF/networkcomms.net");                                                
                     }
 
                     Cache<T>.Type = type.CreateType();
