@@ -77,6 +77,12 @@ namespace ExamplesConsole
                 get;
                 set;
             }
+
+            double LastResult
+            {
+                get;
+                set;
+            }
         }
 
         public interface IExampleInstance
@@ -169,6 +175,12 @@ namespace ExamplesConsole
                         Console.WriteLine("Client tested a set indexer.");
                         lastResult = value * index;
                     }
+                }
+
+                public double LastResult
+                {
+                    get { return lastResult; }
+                    set { lastResult = value; }
                 }
             }
 
@@ -264,13 +276,14 @@ namespace ExamplesConsole
 
             private static object DoMath(IMath remoteObject)
             {
-                Console.WriteLine("\nWhat operation would you like to perform?\nMultiply - 1\nAdd - 2\nSubtract - 3\nDivide - 4\nEcho - 5\nGet Server Instance of MathClass - 6\nThrow Exception Remotely - 7\n");
+                Console.WriteLine("\nWhat operation would you like to perform?\nMultiply - 1\nAdd - 2\nSubtract - 3\nDivide - 4\nEcho - 5\nGet Server Instance of MathClass - 6\nThrow Exception Remotely - 7\n" + 
+                    "Get last result using property - 8\nGet last result multiplied by an int using an indexer - 9\n");
 
                 int selectedOperation;
                 while (true)
                 {
                     bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOperation);
-                    if (parseSucces && selectedOperation <= 7 && selectedOperation > 0) break;
+                    if (parseSucces && selectedOperation <= 9 && selectedOperation > 0) break;
                     Console.WriteLine("Invalid operation choice. Please try again.");
                 }
 
@@ -320,9 +333,18 @@ namespace ExamplesConsole
                             return e.ToString();
                         }
                         return null;
+                    case 8:
+                        Console.WriteLine("Last result was.");
+                        return remoteObject.LastResult;
+                    case 9:
+                        int temp;
+                        Console.WriteLine("You selected to get the last result multiplied by an int via an indexer");
+                        Console.WriteLine("Please enter an integer to multiply by");
+                        if (!int.TryParse(Console.ReadLine(), out temp)) break;
+                        return remoteObject[temp];                        
                 }
 
-                throw new Exception("How have you managed to get execution to this point? It should not be possible!");
+                throw new Exception("How have you managed to get execution to this point? Maybe you entered something that was BAD");
             }
         }
     }
