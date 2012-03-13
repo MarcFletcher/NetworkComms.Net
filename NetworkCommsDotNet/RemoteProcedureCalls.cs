@@ -134,7 +134,7 @@ namespace NetworkCommsDotNet
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
-                string packetType = typeof(T).ToString() + "NEW-RPC-CONNECTION-BY-NAME";
+                string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
 
                 if (instanceId == String.Empty)
@@ -150,7 +150,7 @@ namespace NetworkCommsDotNet
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 var connectionId = default(ShortGuid);
-                string packetType = typeof(T).ToString() + "NEW-RPC-CONNECTION-BY-NAME";
+                string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, name, ref connectionId);
 
                 if (instanceId == String.Empty)
@@ -780,12 +780,12 @@ namespace NetworkCommsDotNet
                     if (!NamedRPCObjects.ContainsKey(instanceId))
                         NamedRPCObjects.Add(instanceId, new RPCStorageWrapper(instance, typeof(I)));
 
-                    if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION"))
+                    if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME"))
                     {
                         var del = new NetworkComms.PacketHandlerCallBackDelegate<string>(RetrieveNamedRPCHandler<T, I>);
 
-                        NetworkComms.AppendIncomingPacketHandler<string>(typeof(I).ToString() + "-NEW-RPC-CONNECTION", del);
-                        addedHandlers.Add(typeof(I).ToString() + "-NEW-RPC-CONNECTION", del);
+                        NetworkComms.AppendIncomingPacketHandler<string>(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", del);
+                        addedHandlers.Add(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", del);
 
                         if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-RPC-CALL"))
                         {

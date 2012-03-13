@@ -194,7 +194,9 @@ namespace ExamplesConsole
             {
                 //We register the implemention MathClass with the corresponding interface
                 //This method automatically enables networkComms to start acception connections, set enableAutoListen = false to prevent that
-                RemoteProcedureCalls.Server.RegisterTypeForRemoteCall<MathClass, IMath>();
+                //RemoteProcedureCalls.Server.RegisterTypeForRemoteCall<MathClass, IMath>();
+
+                RemoteProcedureCalls.Server.RegisterInstanceForRemoteCall<MathClass, IMath>(new MathClass(), "test");
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
@@ -250,9 +252,11 @@ namespace ExamplesConsole
                     //This example is all about RPC, so we create the instance remotely instead, as follows ...
 
                     //Setup the remote object at the server end with a remote object name of "TestInstance1"
-                    string instanceId = "CE-65-C9-6D-73-DE-4A-FE-64-AF-AD-F8-B0-D6-FF-1C-E5-D8-10-6D";
+                    string instanceId = "";
                     //IMath remoteObject = RemoteProcedureCalls.ProxyClassGenerator.CreateProxyToNewInstance<IMath>(serverIP, serverPort, "TestInstance1", out instanceId);
-                    IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToIDInstance<IMath>(serverIP, serverPort, ref instanceId);
+                    //IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToIDInstance<IMath>(serverIP, serverPort, ref instanceId);
+
+                    IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToNamedInstance<IMath>(serverIP, serverPort, "test", out instanceId);
 
                     while (true)
                     {

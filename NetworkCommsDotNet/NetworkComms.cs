@@ -1049,7 +1049,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static void ShutdownComms()
         {
-            OnCommsShutdown(null, new EventArgs());
+            if (OnCommsShutdown != null)
+                OnCommsShutdown(null, new EventArgs());
 
             //Signal everything we are shutting down
             commsShutdown = true;
