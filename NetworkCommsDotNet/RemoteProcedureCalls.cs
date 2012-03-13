@@ -97,14 +97,18 @@ namespace NetworkCommsDotNet
             /// <param name="connectionID">NetworkComms conneciton to use with server</param>
             /// <param name="name">The object identifier to use for this proxy</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToNewInstance<T>(ShortGuid connectionID, string name) where T : class
+            public static T CreateProxyToPrivateInstance<T>(ShortGuid connectionID, string name) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                var instanceId = NetworkComms.SendReceiveObject<int>(packetType, connectionID, false, packetType, 1000, name);
+                var instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
+
+                if (instanceId == String.Empty)
+                    throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
+
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionID);
             }
 
@@ -116,7 +120,7 @@ namespace NetworkCommsDotNet
             /// <param name="portNumber">The server side port to connect to</param>
             /// <param name="name">The object identifier to use for this proxy</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToNewInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
+            public static T CreateProxyToPrivateInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -125,10 +129,14 @@ namespace NetworkCommsDotNet
                 var connectionId = default(ShortGuid);
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, name, ref connectionId);
+
+                if (instanceId == String.Empty)
+                    throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
+
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
 
-            public static T CreateProxyToNamedInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
+            public static T CreateProxyToPublicNamedInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -138,12 +146,12 @@ namespace NetworkCommsDotNet
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
 
                 if (instanceId == String.Empty)
-                    throw new Exception();
+                    throw new RPCException("Named instance does not exist");
 
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionID);
             }
 
-            public static T CreateProxyToNamedInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
+            public static T CreateProxyToPublicNamedInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -154,12 +162,12 @@ namespace NetworkCommsDotNet
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, name, ref connectionId);
 
                 if (instanceId == String.Empty)
-                    throw new Exception();
+                    throw new RPCException("Named instance does not exist");
 
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
 
-            public static T CreateProxyToIDInstance<T>(ShortGuid connectionID, ref string instanceId) where T : class
+            public static T CreateProxyToIdInstance<T>(ShortGuid connectionID, ref string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -169,12 +177,12 @@ namespace NetworkCommsDotNet
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, instanceId);
 
                 if (instanceId == String.Empty)
-                    throw new Exception();
+                    throw new RPCException("Instance with given Id not found");
 
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionID);
             }
 
-            public static T CreateProxyToIDInstance<T>(string serverIP, int portNumber, ref string instanceId) where T : class
+            public static T CreateProxyToIdInstance<T>(string serverIP, int portNumber, ref string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -185,7 +193,7 @@ namespace NetworkCommsDotNet
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceId, ref connectionId);
 
                 if (instanceId == String.Empty)
-                    throw new Exception();
+                    throw new RPCException("Instance with given Id not found");
 
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
@@ -636,7 +644,7 @@ namespace NetworkCommsDotNet
                 wrapper = NetworkComms.SendReceiveObject<RemoteCallWrapper>(handlerType, connectionID, false, handlerType, 1000, wrapper);
 
                 if (wrapper.Exception != null)
-                    throw new Exception(wrapper.Exception);
+                    throw new RPCException(wrapper.Exception);
 
                 for (int i = 0; i < args.Length; i++)
                     args[i] = wrapper.args[i].UntypedValue;
@@ -742,7 +750,7 @@ namespace NetworkCommsDotNet
                 });
             }
             
-            public static void RegisterTypeForRemoteCall<T, I>(int timeout = int.MaxValue, bool enableAutoListen = true) where T : I, new()
+            public static void RegisterTypeForPrivateRemoteCall<T, I>(int timeout = int.MaxValue, bool enableAutoListen = true) where T : I, new()
             {
                 lock (locker)
                 {
@@ -762,12 +770,12 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        throw new Exception("Interface already has a type associated with it for new instance RPC");
+                        throw new RPCException("Interface already has a type associated with it for new instance RPC");
                     }
                 }
             }
 
-            public static void RegisterInstanceForRemoteCall<T, I>(T instance, string instanceName, bool enableAutoListen = true) where T : I
+            public static void RegisterInstanceForPublicRemoteCall<T, I>(T instance, string instanceName, bool enableAutoListen = true) where T : I
             {
                 lock (locker)
                 {

@@ -196,7 +196,7 @@ namespace ExamplesConsole
                 //This method automatically enables networkComms to start acception connections, set enableAutoListen = false to prevent that
                 //RemoteProcedureCalls.Server.RegisterTypeForRemoteCall<MathClass, IMath>();
 
-                RemoteProcedureCalls.Server.RegisterInstanceForRemoteCall<MathClass, IMath>(new MathClass(), "test");
+                RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(new MathClass(), "test");
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
@@ -253,11 +253,8 @@ namespace ExamplesConsole
 
                     //Setup the remote object at the server end with a remote object name of "TestInstance1"
                     string instanceId = "";
-                    //IMath remoteObject = RemoteProcedureCalls.ProxyClassGenerator.CreateProxyToNewInstance<IMath>(serverIP, serverPort, "TestInstance1", out instanceId);
-                    //IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToIDInstance<IMath>(serverIP, serverPort, ref instanceId);
-
-                    IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToNamedInstance<IMath>(serverIP, serverPort, "test", out instanceId);
-
+                    IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToPublicNamedInstance<IMath>(serverIP, serverPort, "test", out instanceId);
+                    
                     while (true)
                     {
                         //Request a message to send somewhere
@@ -267,11 +264,8 @@ namespace ExamplesConsole
                         //If the user has typed exit then we leave our loop and end the example
                         if (message == "Y")
                         {
-                            //We pass our remoteObject to our local method DoMath to request further user input
-                            Console.WriteLine("First copy says");
+                            //We pass our remoteObject to our local method DoMath to request further user input                            
                             Console.WriteLine("Result: " + DoMath(remoteObject).ToString());
-                            //Console.WriteLine("Second copy says");
-                            //Console.WriteLine("Result: " + DoMath(remoteCopy).ToString());
                         }
                         else
                             break;

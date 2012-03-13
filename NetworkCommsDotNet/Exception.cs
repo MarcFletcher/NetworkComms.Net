@@ -139,4 +139,16 @@ namespace NetworkCommsDotNet
 
         }
     }
+
+    /// <summary>
+    /// An error occured involving an RPC method.
+    /// </summary>
+    public class RPCException : CommsException
+    {
+        public RPCException(string msg)
+            : base(msg)
+        {
+
+        }
+    }
 }
