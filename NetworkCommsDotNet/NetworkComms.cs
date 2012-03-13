@@ -1041,11 +1041,16 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Information
+
+        public static event EventHandler<EventArgs> OnCommsShutdown;
+
         /// <summary>
         /// Shutdown all connections and clean up communciation objects. If any comms activity has taken place this should be called on application close
         /// </summary>
         public static void ShutdownComms()
         {
+            OnCommsShutdown(null, new EventArgs());
+
             //Signal everything we are shutting down
             commsShutdown = true;
             endListen = true;
