@@ -795,6 +795,14 @@ namespace NetworkCommsDotNet
                             addedHandlers.Add(typeof(I).ToString() + "-RPC-CALL", callDel);
                         }
                     }
+                    
+                    if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID"))
+                    {
+                        var del = new NetworkComms.PacketHandlerCallBackDelegate<string>(RetrieveByIDRPCHandler<T, I>);
+
+                        NetworkComms.AppendIncomingPacketHandler<string>(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", del);
+                        addedHandlers.Add(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", del);
+                    }
                 }
             }
 
@@ -812,9 +820,7 @@ namespace NetworkCommsDotNet
                         var del = new NetworkComms.PacketHandlerCallBackDelegate<string>(RetrieveByIDRPCHandler<T, I>);
 
                         NetworkComms.AppendIncomingPacketHandler<string>(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", del);
-                        addedHandlers.Add(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", del);
-
-                        Console.WriteLine("Added new rpc by id del");
+                        addedHandlers.Add(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", del);                        
                     }
 
                     if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-RPC-CALL"))
