@@ -31,6 +31,7 @@ namespace DebugTests
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
+            //DebugTest.Go();
             DFSTest.RunExample();
         }
     }
