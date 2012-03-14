@@ -1,3 +1,12 @@
+Version 1.2 - Released 14/3/12
+
+- Streamlined Remote Procedure Call (RPC) support added, including new RPC example.
+- Connection keep alive (nullPacket) to prevent high latency TCP connections being severed.
+- Improvements to error messages and exceptions so that they are more helpful.
+- Added a publicly accessible shutdown event delegate to networkComms.
+- Implemented full usage of log4net in examples. See log4net.config to change outputs.
+- General bug fixes
+
 Version 1.1 - Released 17/2/12
 
 - Bug fixes which occur very rarely (<0.1%) during VERY high loads (1000+ connections)
