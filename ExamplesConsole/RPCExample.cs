@@ -196,12 +196,16 @@ namespace ExamplesConsole
                 //This method automatically enables networkComms to start acception connections, set enableAutoListen = false to prevent that
                 //RemoteProcedureCalls.Server.RegisterTypeForRemoteCall<MathClass, IMath>();
 
-                RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(new MathClass(), "test");
+                var namedObject = new MathClass();
+
+                RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(namedObject, "test");
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
                 Console.WriteLine("Press any key then enter to quit.\n");
                 Console.ReadLine();
+
+                RemoteProcedureCalls.Server.RemovePublicRPCObject(namedObject);
 
                 //When we are done we must close down comms
                 NetworkComms.ShutdownComms();

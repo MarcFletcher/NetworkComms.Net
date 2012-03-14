@@ -27,6 +27,9 @@ using System.Threading;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side
+    /// </summary>
     public static class RemoteProcedureCalls
     {
         /// <summary>
@@ -85,26 +88,28 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Provides functions for managing proxy classes to remote objects
+        /// Provides functions for managing proxy classes to remote objects client side
         /// </summary>
         public static class Client
         {
 
             /// <summary>
-            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier
+            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
+            /// use the instance on the server unless they have the instanceId returned by this method
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="connectionID">NetworkComms conneciton to use with server</param>
+            /// <param name="connectionID">NetworkComms connection to use with server</param>
             /// <param name="name">The object identifier to use for this proxy</param>
+            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPrivateInstance<T>(ShortGuid connectionID, string name) where T : class
+            public static T CreateProxyToPrivateInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                var instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
+                instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
@@ -113,12 +118,14 @@ namespace NetworkCommsDotNet
             }
 
             /// <summary>
-            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier
+            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
+            /// use the instance on the server unless they have the instanceId returned by this method
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
             /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
             /// <param name="portNumber">The server side port to connect to</param>
             /// <param name="name">The object identifier to use for this proxy</param>
+            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
             public static T CreateProxyToPrivateInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
             {
@@ -136,6 +143,15 @@ namespace NetworkCommsDotNet
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
 
+            /// <summary>
+            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is public in sense that any client can use specified name to make 
+            /// calls on the same server side object 
+            /// </summary>
+            /// <typeparam name="T">The interface to use for the proxy</typeparam>
+
+            /// <param name="name">The name specified server side to identify object to create proxy to</param>
+            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
+            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
             public static T CreateProxyToPublicNamedInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
@@ -151,6 +167,16 @@ namespace NetworkCommsDotNet
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionID);
             }
 
+            /// <summary>
+            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is public in sense that any client can use specified name to make 
+            /// calls on the same server side object 
+            /// </summary>
+            /// <typeparam name="T">The interface to use for the proxy</typeparam>
+            /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
+            /// <param name="portNumber">The server side port to connect to</param>
+            /// <param name="name">The name specified server side to identify object to create proxy to</param>
+            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
+            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
             public static T CreateProxyToPublicNamedInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
@@ -167,7 +193,14 @@ namespace NetworkCommsDotNet
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
 
-            public static T CreateProxyToIdInstance<T>(ShortGuid connectionID, ref string instanceId) where T : class
+            /// <summary>
+            /// Creates a remote proxy to an object with a specific identifier implementing the supplied interface with the specified server
+            /// </summary>
+            /// <typeparam name="T">The interface to use for the proxy</typeparam>
+            /// <param name="connectionID">NetworkComms connection to use with server</param>
+            /// <param name="instanceId">Unique identifier for the instance on the server</param>
+            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
+            public static T CreateProxyToIdInstance<T>(ShortGuid connectionID, string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -182,7 +215,15 @@ namespace NetworkCommsDotNet
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionID);
             }
 
-            public static T CreateProxyToIdInstance<T>(string serverIP, int portNumber, ref string instanceId) where T : class
+            /// <summary>
+            /// Creates a remote proxy to an object with a specific identifier implementing the supplied interface with the specified server
+            /// </summary>
+            /// <typeparam name="T">The interface to use for the proxy</typeparam>
+            /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
+            /// <param name="portNumber">The server side port to connect to</param>
+            /// <param name="instanceId">Unique identifier for the instance on the server</param>
+            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
+            public static T CreateProxyToIdInstance<T>(string serverIP, int portNumber, string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -658,10 +699,19 @@ namespace NetworkCommsDotNet
 
         }
 
+        /// <summary>
+        /// Contains methods for managing objects server side which allow Remote Procedure Calls
+        /// </summary>
         public static class Server
         {
             private class RPCStorageWrapper
             {
+                public enum RPCObjectType
+                {
+                    Public,
+                    Private
+                }
+
                 private object obj;
 
                 public object RPCObject
@@ -676,13 +726,15 @@ namespace NetworkCommsDotNet
                 public Type InterfaceType { get; private set; }
                 public DateTime LastAccess { get; private set; }
                 public int TimeOut { get; private set; }
+                public RPCObjectType Type { get; private set; }
 
-                public RPCStorageWrapper(object RPCObject, Type interfaceType, int timeout = int.MaxValue)
+                public RPCStorageWrapper(object RPCObject, Type interfaceType, RPCObjectType Type, int timeout = int.MaxValue)
                 {
                     this.TimeOut = timeout;
                     this.obj = RPCObject;
                     this.LastAccess = DateTime.Now;
                     InterfaceType = interfaceType;
+                    this.Type = Type;
                 }
             }
 
@@ -691,7 +743,7 @@ namespace NetworkCommsDotNet
             static readonly int salt;
             static readonly System.Security.Cryptography.HashAlgorithm hash;
 
-            private static Dictionary<string, RPCStorageWrapper> NamedRPCObjects = new Dictionary<string, RPCStorageWrapper>();
+            private static Dictionary<string, RPCStorageWrapper> RPCObjects = new Dictionary<string, RPCStorageWrapper>();
             private static Dictionary<Type, int> timeoutByInterfaceType = new Dictionary<Type, int>();
             private static Dictionary<string, Delegate> addedHandlers = new Dictionary<string, Delegate>();
 
@@ -714,33 +766,19 @@ namespace NetworkCommsDotNet
 
                                 List<string> keysToRemove = new List<string>();
 
-                                foreach (var obj in NamedRPCObjects)
+                                foreach (var obj in RPCObjects)
                                 {
                                     if ((DateTime.Now - obj.Value.LastAccess).TotalMilliseconds > obj.Value.TimeOut)
                                         keysToRemove.Add(obj.Key);
                                 }
 
-                                var typesToRemoveHandlersFrom = (from val in NamedRPCObjects.Values
-                                                                 select val.InterfaceType).Distinct().Except(
-                                                                    (from key in NamedRPCObjects.Keys.Except(keysToRemove)
-                                                                     select NamedRPCObjects[key].InterfaceType));
-
-                                foreach (var type in typesToRemoveHandlersFrom)
-                                {
-                                    var toRemove = (from key in addedHandlers.Keys
-                                                    where key.StartsWith(type.ToString()) && !key.EndsWith("-NEW-INSTANCE-RPC-CONNECTION") && key.Contains("-RPC-")
-                                                    select key).ToArray();
-
-                                    foreach (var key in toRemove)
-                                        addedHandlers.Remove(key);
-                                }
-
-                                foreach (var key in keysToRemove)
-                                    NamedRPCObjects.Remove(key);
-
+                                RemoveRPCObjects(keysToRemove);
                             }
 
                         } while (!watcherWaitEvent.WaitOne(5000));
+
+                        ShutdownAllRPC();
+
                     }, TaskCreationOptions.LongRunning);
 
                 NetworkComms.OnCommsShutdown += new EventHandler<EventArgs>((sender, args) =>
@@ -749,7 +787,14 @@ namespace NetworkCommsDotNet
                     watcher.Wait();
                 });
             }
-            
+
+            /// <summary>
+            /// Registers a type for private RPC whereby each client generates it's own private instances on the server
+            /// </summary>
+            /// <typeparam name="T">The type of object to create new instances of for RPC.  Must implement I</typeparam>
+            /// <typeparam name="I">Interface that should be provided for RPC</typeparam>
+            /// <param name="timeout">If specified each RPC object created will be destroyed if it is unused for a time, in ms, specified by timeout</param>
+            /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
             public static void RegisterTypeForPrivateRemoteCall<T, I>(int timeout = int.MaxValue, bool enableAutoListen = true) where T : I, new()
             {
                 lock (locker)
@@ -775,6 +820,14 @@ namespace NetworkCommsDotNet
                 }
             }
 
+            /// <summary>
+            /// Registers a specfic object instance, with the supplied name, for RPC
+            /// </summary>
+            /// <typeparam name="T">The type of the object to register. Must implement I</typeparam>
+            /// <typeparam name="I">The interface to be provided for RPC</typeparam>
+            /// <param name="instance">Instance to register for RPC</param>
+            /// <param name="instanceName">Name of the instance to be used by clients for RPC</param>
+            /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
             public static void RegisterInstanceForPublicRemoteCall<T, I>(T instance, string instanceName, bool enableAutoListen = true) where T : I
             {
                 lock (locker)
@@ -785,8 +838,8 @@ namespace NetworkCommsDotNet
 
                     string instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
 
-                    if (!NamedRPCObjects.ContainsKey(instanceId))
-                        NamedRPCObjects.Add(instanceId, new RPCStorageWrapper(instance, typeof(I)));
+                    if (!RPCObjects.ContainsKey(instanceId))
+                        RPCObjects.Add(instanceId, new RPCStorageWrapper(instance, typeof(I), RPCStorageWrapper.RPCObjectType.Public));
 
                     if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME"))
                     {
@@ -814,14 +867,100 @@ namespace NetworkCommsDotNet
                 }
             }
 
+            /// <summary>
+            /// Removes all private RPC objects for the specified interface type.  Stops listenning for new RPC instance connections
+            /// </summary>
+            /// <typeparam name="T">Object type that implements the specified interface I</typeparam>
+            /// <typeparam name="I">Interface that is being implemented for RPC calls</typeparam>
+            public static void RemovePrivateRPCObjectType<T, I>() where T : I, new()
+            {
+                lock (locker)
+                {
+                    if (timeoutByInterfaceType.ContainsKey(typeof(I)))
+                        timeoutByInterfaceType.Remove(typeof(I));
+
+                    var keys = (from obj in RPCObjects
+                                where obj.Value.InterfaceType == typeof(I) && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Private
+                                select obj.Key).ToList();
+
+                    RemoveRPCObjects(keys);
+
+                    addedHandlers.Remove(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION");
+                }
+            }
+
+            /// <summary>
+            /// Disables RPC calls for the supplied named public object supplied
+            /// </summary>
+            /// <param name="instance">Instance to disable RPC for</param>
+            public static void RemovePublicRPCObject(object instance)
+            {
+                lock (locker)
+                {                    
+                    var keys = (from obj in RPCObjects
+                                where obj.Value.RPCObject == instance && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Public
+                                select obj.Key).ToList();
+
+                    RemoveRPCObjects(keys);
+                }
+            }
+
+            /// <summary>
+            /// Removes all public and private RPC objects and removes all related packet handlers from NetworkComms
+            /// </summary>
+            public static void ShutdownAllRPC()
+            {
+                lock (locker)
+                {
+                    RemoveRPCObjects(RPCObjects.Keys.ToList());
+
+                    var allRPCHandlersLeft = addedHandlers.Keys.ToList();
+
+                    foreach (var handlerName in allRPCHandlersLeft)
+                    {
+                        NetworkComms.RemoveIncomingPacketHandler(handlerName, addedHandlers[handlerName]);
+                        addedHandlers.Remove(handlerName);
+                    }
+                }
+            }
+
+            private static void RemoveRPCObjects(List<string> keysToRemove)
+            {
+                lock (locker)
+                {
+                    var typesToRemoveHandlersFrom = (from val in RPCObjects.Values
+                                                     select val.InterfaceType).Distinct().Except(
+                                                        (from key in RPCObjects.Keys.Except(keysToRemove)
+                                                         select RPCObjects[key].InterfaceType));
+
+                    foreach (var type in typesToRemoveHandlersFrom)
+                    {
+                        var toRemove = (from key in addedHandlers.Keys
+                                        where key.StartsWith(type.ToString()) && !key.EndsWith("-NEW-INSTANCE-RPC-CONNECTION") && key.Contains("-RPC-")
+                                        select key).ToArray();
+
+                        foreach (var key in toRemove)
+                        {
+                            NetworkComms.RemoveIncomingPacketHandler(key, addedHandlers[key]);
+                            addedHandlers.Remove(key);
+                        }
+                    }
+
+                    foreach (var key in keysToRemove)
+                        RPCObjects.Remove(key);
+                }
+            }
+
+            #region RPC Network comms handlers
+
             private static void NewInstanceRPCHandler<T, I>(PacketHeader header, ShortGuid connectionId, string instanceName) where T : I, new()
             {
                 lock (locker)
                 {
                     var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connectionId.ToString()).GetHashCode() ^ salt))));
 
-                    if (!NamedRPCObjects.ContainsKey(instanceId))
-                        NamedRPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), timeoutByInterfaceType[typeof(I)]));
+                    if (!RPCObjects.ContainsKey(instanceId))
+                        RPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]));
 
                     if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID"))
                     {
@@ -849,11 +988,11 @@ namespace NetworkCommsDotNet
                 {
                     string instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
 
-                    if (!NamedRPCObjects.ContainsKey(instanceId))
+                    if (!RPCObjects.ContainsKey(instanceId))
                         instanceId = String.Empty;
                     else
                     {
-                        var nothing = NamedRPCObjects[instanceId].RPCObject;
+                        var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
                     NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", connectionId, false, instanceId);
@@ -864,11 +1003,11 @@ namespace NetworkCommsDotNet
             {
                 lock (locker)
                 {
-                    if (!NamedRPCObjects.ContainsKey(instanceId))
+                    if (!RPCObjects.ContainsKey(instanceId) || RPCObjects[instanceId].InterfaceType != typeof(I))
                         instanceId = String.Empty;
                     else
                     {
-                        var nothing = NamedRPCObjects[instanceId].RPCObject;
+                        var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
                     NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", connectionId, false, instanceId);
@@ -884,7 +1023,7 @@ namespace NetworkCommsDotNet
                 {
                     lock (locker)
                     {
-                        instance = (I)(NamedRPCObjects[wrapper.instanceId].RPCObject);
+                        instance = (I)(RPCObjects[wrapper.instanceId].RPCObject);
                     }
                 }
                 catch (Exception)
@@ -916,6 +1055,8 @@ namespace NetworkCommsDotNet
                 NetworkComms.SendObject(header.PacketType, connectionId, false, wrapper);
 
             }
+
+            #endregion
         }
     }
 }

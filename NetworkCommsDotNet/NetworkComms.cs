@@ -467,6 +467,7 @@ namespace NetworkCommsDotNet
             object DeSerialize(byte[] incomingBytes, ISerialize serializer, ICompress compressor);
 
             void Process(PacketHeader packetHeader, ShortGuid sourceConnectionId, object obj);
+            bool EqualsDelegate(Delegate other);
         }
         class PacketTypeHandlerDelegateWrapper<T> : IPacketTypeHandlerDelegateWrapper
         {
@@ -493,6 +494,11 @@ namespace NetworkCommsDotNet
                     return true;
                 else
                     return false;
+            }
+
+            public bool EqualsDelegate(Delegate other)
+            {
+                return other == innerDelegate;
             }
         }
         #endregion
@@ -887,18 +893,30 @@ namespace NetworkCommsDotNet
         /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
         /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
-        public static void RemoveIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
+        public static void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
             lock (globalDictAndDelegateLocker)
             {
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
                     //Create the compare object
-                    PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
+                    //PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
 
                     //Remove any instances of this handler from the delegates
                     //The bonus here is if the delegate has not been added we continue quite happily
-                    globalIncomingPacketHandlers[packetTypeStr].Remove(toCompareDelegate);
+                    IPacketTypeHandlerDelegateWrapper toRemove = null;
+
+                    foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                        {
+                            toRemove = handler;
+                            break;
+                        }
+                    }
+
+                    if (toRemove != null)
+                        globalIncomingPacketHandlers[packetTypeStr].Remove(toRemove);
 
                     if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
                     {
