@@ -93,6 +93,9 @@ namespace ExamplesConsole
             }
         }
 
+        /// <summary>
+        /// An interface which can be used for the different server and client side implementations of the example
+        /// </summary>
         public interface IRPCExampleInstance
         {
             /// <summary>
@@ -177,7 +180,6 @@ namespace ExamplesConsole
                         Console.WriteLine("Client tested a get indexer.");
                         return lastResult * index;
                     }
-
                     set
                     {
                         Console.WriteLine("Client tested a set indexer.");
@@ -187,8 +189,15 @@ namespace ExamplesConsole
 
                 public double LastResult
                 {
-                    get { return lastResult; }
-                    set { lastResult = value; }
+                    get 
+                    {
+                        Console.WriteLine("Client requested last result. Last result was {0}.", lastResult);
+                        return lastResult; 
+                    }
+                    set 
+                    { 
+                        lastResult = value; 
+                    }
                 }
             }
 
@@ -278,7 +287,7 @@ namespace ExamplesConsole
                     //We need to select our remote object using one of the available access methods
                     string instanceId = ""; 
                     IMath remoteObject = SelectRemoteObject(serverIP, serverPort, out instanceId);
-                    Console.WriteLine("\nRemote object has been selected. instanceId= {0}", instanceId);
+                    Console.WriteLine("\nRemote object has been selected. RPC object instanceId: {0}", instanceId);
 
                     while (true)
                     {

@@ -233,7 +233,7 @@ namespace NetworkCommsDotNet
                 instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceId, ref connectionId);
 
                 if (instanceId == String.Empty)
-                    throw new RPCException("Instance with given Id not found");
+                    throw new RPCException("Instance with given instanceId not found by server.");
 
                 return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connectionId);
             }
