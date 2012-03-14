@@ -155,25 +155,8 @@ namespace ExamplesConsole
                 #region PeerMode
                 Console.WriteLine("\n ... peer mode selected.");
 
-                //Expecting user to enter ip address as 192.168.0.1:4000
-                Console.WriteLine("\nPlease enter the host IP address and port, e.g. '192.168.0.1:4000':");
-
                 string serverIP; int serverPort;
-                while (true)
-                {
-                    try
-                    {
-                        //Parse the provided information
-                        string userEnteredStr = Console.ReadLine();
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Unable to determine host IP address and port. Check format and try again:");
-                    }
-                }
+                ExampleHelper.GetServerDetails(out serverIP, out serverPort);
 
                 DFS.InitialiseDFS(serverIP, serverPort);
                 Console.WriteLine(" ... DFS has been initialised.");

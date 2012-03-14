@@ -23,13 +23,13 @@ using System.Collections.Specialized;
 using Common.Logging.Log4Net;
 
 namespace ExamplesConsole
-{   
+{
     public static class RPCExample
     {
         public static void RunExample()
         {
             Console.WriteLine("Please select run mode:\nServer - 1\nClient - 2\n");
-            IExampleInstance exampleToRun;
+            IRPCExampleInstance exampleToRun;
 
             //Select the desired mode, client or server.
             int selectedMode;
@@ -42,9 +42,15 @@ namespace ExamplesConsole
 
             //Prepare the necessary class
             if (selectedMode == 1)
+            {
+                Console.WriteLine("Server mode selected.\n");
                 exampleToRun = new ServerExampleInstance();
+            }
             else if (selectedMode == 2)
+            {
+                Console.WriteLine("Client mode selected.\n");
                 exampleToRun = new ClientExampleInstance();
+            }
             else
                 throw new Exception("Unable to determine correct mode. Please try again.");
 
@@ -87,7 +93,7 @@ namespace ExamplesConsole
             }
         }
 
-        public interface IExampleInstance
+        public interface IRPCExampleInstance
         {
             /// <summary>
             /// Run the example
@@ -99,7 +105,7 @@ namespace ExamplesConsole
         /// We are going to isolate the server and client example to demonstrate that the client never has to see 
         /// the implementation used for IMath
         /// </summary>
-        public class ServerExampleInstance : IExampleInstance
+        public class ServerExampleInstance : IRPCExampleInstance
         {
             [ProtoContract]
             private class MathClass : IMath
@@ -192,23 +198,54 @@ namespace ExamplesConsole
 
             public void Run()
             {
-                //We register the implemention MathClass with the corresponding interface
-                //This method automatically enables networkComms to start acception connections, set enableAutoListen = false to prevent that
-                //RemoteProcedureCalls.Server.RegisterTypeForRemoteCall<MathClass, IMath>();
-
-                var namedObject = new MathClass();
-
-                RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(namedObject, "test");
+                //Setup the RPC server side
+                SetupRPCUsage();
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
                 Console.WriteLine("Press any key then enter to quit.\n");
                 Console.ReadLine();
 
-                RemoteProcedureCalls.Server.RemovePublicRPCObject(namedObject);
-
                 //When we are done we must close down comms
+                //This will clear all server side RPC object, delegates, handlers etc
+                //As an alternative we could also use
+                //RemoteProcedureCalls.Server.RemovePublicRPCObject(object instanceName);
+                //RemoteProcedureCalls.Server.RemovePrivateRPCObjectType<T, I>();
+
                 NetworkComms.ShutdownComms();
+            }
+
+            /// <summary>
+            /// Configures the server side RPC features depending on desired usage mode
+            /// </summary>
+            private void SetupRPCUsage()
+            {
+                Console.WriteLine("What access method would you like to allow clients to use?\nPrivate client object instances - 1\nA single named, public, object instance - 2");
+                int selectedUsageMode;
+
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedUsageMode);
+                    if (parseSucces && selectedUsageMode <= 2 && selectedUsageMode > 0) break;
+                    Console.WriteLine("Invalid operation choice. Please try again.");
+                }
+
+                string instanceName;
+                switch (selectedUsageMode)
+                {
+                    case 1:
+                        Console.WriteLine("\nYou selected private client object instances.");
+                        RemoteProcedureCalls.Server.RegisterTypeForPrivateRemoteCall<MathClass, IMath>();
+                        Console.WriteLine("\nA type of {0} has been succesfully registered for RPC usage.\n",typeof(IMath));
+                        break;
+                    case 2:
+                        Console.WriteLine("\nYou selected a single named, public, object instance.");
+                        Console.Write("Please enter an identifying name for the public instance: ");
+                        instanceName = Console.ReadLine();
+                        RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(new MathClass(), instanceName);
+                        Console.WriteLine("\nServer object instance has been succesfully created.\n");
+                        break;
+                }
             }
         }
 
@@ -216,7 +253,7 @@ namespace ExamplesConsole
         ///  We are going to isolate the server and client example to demonstrate that the client never has to see 
         ///  the implementation used for IMath
         /// </summary>
-        public class ClientExampleInstance : IExampleInstance
+        public class ClientExampleInstance : IRPCExampleInstance
         {
             public ClientExampleInstance()
             {
@@ -227,24 +264,7 @@ namespace ExamplesConsole
             {
                 //Expecting user to enter ip address as 192.168.0.1:4000
                 string serverIP; int serverPort;
-                #region Parse Destination
-                Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:4000':");
-                while (true)
-                {
-                    try
-                    {
-                        //Parse the provided information
-                        string userEnteredStr = Console.ReadLine();
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Unable to determine host IP address and port. Check format and try again:");
-                    }
-                }
-                #endregion
+                ExampleHelper.GetServerDetails(out serverIP, out serverPort);
 
                 try
                 {
@@ -255,20 +275,21 @@ namespace ExamplesConsole
                     //
                     //This example is all about RPC, so we create the instance remotely instead, as follows ...
 
-                    //Setup the remote object at the server end with a remote object name of "TestInstance1"
-                    string instanceId = "";
-                    IMath remoteObject = RemoteProcedureCalls.Client.CreateProxyToPublicNamedInstance<IMath>(serverIP, serverPort, "test", out instanceId);
-                    
+                    //We need to select our remote object using one of the available access methods
+                    string instanceId = ""; 
+                    IMath remoteObject = SelectRemoteObject(serverIP, serverPort, out instanceId);
+                    Console.WriteLine("\nRemote object has been selected. instanceId= {0}", instanceId);
+
                     while (true)
                     {
-                        //Request a message to send somewhere
-                        Console.WriteLine("\nPlease press 'Y' key to perform some remote math. Any other key will quit the example.");
-                        string message = Console.ReadKey(true).KeyChar.ToString().ToUpper();
+                        //We can now perform RPC operations on our remote object
+                        Console.WriteLine("\nPlease press 'y' key to perform some remote math. Any other key will quit the example.");
+                        string message = Console.ReadKey(true).KeyChar.ToString().ToLower();
 
                         //If the user has typed exit then we leave our loop and end the example
-                        if (message == "Y")
+                        if (message == "y")
                         {
-                            //We pass our remoteObject to our local method DoMath to request further user input                            
+                            //We pass our remoteObject to our local method DoMath to keep this area of code clean                         
                             Console.WriteLine("Result: " + DoMath(remoteObject).ToString());
                         }
                         else
@@ -283,6 +304,54 @@ namespace ExamplesConsole
                 {
                     NetworkComms.ShutdownComms();
                 }
+            }
+
+            /// <summary>
+            /// Allows the user to select a remote object based on the different available access methods
+            /// </summary>
+            /// <param name="serverIP">The RPC server ip address</param>
+            /// <param name="serverPort">The RPC server port number</param>
+            /// <param name="instanceId">The instanceId of the linked object</param>
+            /// <returns>The remote RPC object</returns>
+            private IMath SelectRemoteObject(string serverIP, int serverPort, out string instanceId)
+            {
+                //We have three main different usage cases for the RPC functionality provided by networkComms.net
+                //Before we can demonstrate RPC features we need to select the remote object
+                //We select a remote object using one of three different access methods
+                //1. Create a private client specific instance
+                //2. Access a named server instance
+                //3. Access a private client specific instance via instanceId
+                Console.WriteLine("\nWhat access method would you like to use to a remote object?\nNew private client object instance - 1\nExisting named, public, server object instance - 2\nExisting private client object instance, using instanceId - 3");
+                int selectedUsageMode;
+
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedUsageMode);
+                    if (parseSucces && selectedUsageMode <= 3 && selectedUsageMode > 0) break;
+                    Console.WriteLine("Invalid operation choice. Please try again.");
+                }
+
+                string instanceName;
+                switch (selectedUsageMode)
+                {
+                    case 1:
+                        Console.WriteLine("\nYou selected to create a new private client object instance.");
+                        Console.Write("Please enter a name for your private object: ");
+                        instanceName = Console.ReadLine();
+                        return RemoteProcedureCalls.Client.CreateProxyToPrivateInstance<IMath>(serverIP, serverPort, instanceName, out instanceId);
+                    case 2:
+                        Console.WriteLine("\nYou selected to access an existing, named, public server object instance.");
+                        Console.Write("Please enter the name of the server object: ");
+                        instanceName = Console.ReadLine();
+                        return RemoteProcedureCalls.Client.CreateProxyToPublicNamedInstance<IMath>(serverIP, serverPort, instanceName, out instanceId);
+                    case 3:
+                        Console.WriteLine("\nYou selected to access an existing, private, client object instance using an instanceId.");
+                        Console.Write("Please enter the object instanceId: ");
+                        instanceId = Console.ReadLine();
+                        return RemoteProcedureCalls.Client.CreateProxyToIdInstance<IMath>(serverIP, serverPort, instanceId);
+                }
+
+                throw new Exception("It should be impossible to get here.");
             }
 
             private static object DoMath(IMath remoteObject)

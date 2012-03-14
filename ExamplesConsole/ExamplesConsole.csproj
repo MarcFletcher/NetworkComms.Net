@@ -83,6 +83,7 @@
     <Compile Include="AdvancedSend.cs" />
     <Compile Include="BasicSend.cs" />
     <Compile Include="DFSTest.cs" />
+    <Compile Include="ExampleHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RPCExample.cs" />

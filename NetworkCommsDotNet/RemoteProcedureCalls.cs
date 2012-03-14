@@ -92,24 +92,23 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static class Client
         {
-
             /// <summary>
             /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
             /// use the instance on the server unless they have the instanceId returned by this method
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
             /// <param name="connectionID">NetworkComms connection to use with server</param>
-            /// <param name="name">The object identifier to use for this proxy</param>
+            /// <param name="instanceName">The object identifier to use for this proxy</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPrivateInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
+            public static T CreateProxyToPrivateInstance<T>(ShortGuid connectionID, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
+                instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, instanceName);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
@@ -124,10 +123,10 @@ namespace NetworkCommsDotNet
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
             /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
             /// <param name="portNumber">The server side port to connect to</param>
-            /// <param name="name">The object identifier to use for this proxy</param>
+            /// <param name="instanceName">The object identifier to use for this proxy</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPrivateInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
+            public static T CreateProxyToPrivateInstance<T>(string serverIP, int portNumber, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -135,7 +134,7 @@ namespace NetworkCommsDotNet
 
                 var connectionId = default(ShortGuid);
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, name, ref connectionId);
+                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceName, ref connectionId);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
@@ -149,17 +148,17 @@ namespace NetworkCommsDotNet
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
 
-            /// <param name="name">The name specified server side to identify object to create proxy to</param>
+            /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPublicNamedInstance<T>(ShortGuid connectionID, string name, out string instanceId) where T : class
+            public static T CreateProxyToPublicNamedInstance<T>(ShortGuid connectionID, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, name);
+                instanceId = NetworkComms.SendReceiveObject<string>(packetType, connectionID, false, packetType, 1000, instanceName);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Named instance does not exist");
@@ -174,10 +173,10 @@ namespace NetworkCommsDotNet
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
             /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
             /// <param name="portNumber">The server side port to connect to</param>
-            /// <param name="name">The name specified server side to identify object to create proxy to</param>
+            /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPublicNamedInstance<T>(string serverIP, int portNumber, string name, out string instanceId) where T : class
+            public static T CreateProxyToPublicNamedInstance<T>(string serverIP, int portNumber, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
@@ -185,7 +184,7 @@ namespace NetworkCommsDotNet
 
                 var connectionId = default(ShortGuid);
                 string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, name, ref connectionId);
+                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceName, ref connectionId);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Named instance does not exist");
@@ -695,8 +694,6 @@ namespace NetworkCommsDotNet
                 else
                     return null;
             }
-
-
         }
 
         /// <summary>
@@ -892,13 +889,13 @@ namespace NetworkCommsDotNet
             /// <summary>
             /// Disables RPC calls for the supplied named public object supplied
             /// </summary>
-            /// <param name="instance">Instance to disable RPC for</param>
-            public static void RemovePublicRPCObject(object instance)
+            /// <param name="instanceName">Instance to disable RPC for</param>
+            public static void RemovePublicRPCObject(object instanceName)
             {
                 lock (locker)
                 {                    
                     var keys = (from obj in RPCObjects
-                                where obj.Value.RPCObject == instance && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Public
+                                where obj.Value.RPCObject == instanceName && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Public
                                 select obj.Key).ToList();
 
                     RemoveRPCObjects(keys);

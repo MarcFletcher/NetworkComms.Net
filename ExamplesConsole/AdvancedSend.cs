@@ -112,24 +112,7 @@ namespace ExamplesConsole
 
                 //Expecting user to enter ip address as 192.168.0.1:4000
                 string serverIP; int serverPort;
-                #region Parse Destination
-                Console.WriteLine("\nPlease enter the destination IP address and port, e.g. '192.168.0.1:4000':");
-                while (true)
-                {
-                    try
-                    {
-                        //Parse the provided information
-                        string userEnteredStr = Console.ReadLine();
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Unable to determine host IP address and port. Check format and try again:");
-                    }
-                }
-                #endregion
+                ExampleHelper.GetServerDetails(out serverIP, out serverPort);
 
                 //***************************************************************//
                 //              Start of interesting stuff                       //
