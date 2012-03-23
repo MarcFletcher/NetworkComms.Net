@@ -1236,6 +1236,23 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns an array of ConnectionInfo for every currently established connection
+        /// </summary>
+        /// <returns></returns>
+        public static ConnectionInfo[] AllEstablishedConnections()
+        {
+            List<ConnectionInfo> returnArray = new List<ConnectionInfo>();
+
+            lock (globalDictAndDelegateLocker)
+            {
+                foreach (var connection in allConnectionsById)
+                    returnArray.Add(connection.Value.ConnectionInfo);
+            }
+
+            return returnArray.ToArray();
+        }
+
+        /// <summary>
         /// Return the total current number of connections in network comms  
         /// </summary>
         /// <returns></returns>
