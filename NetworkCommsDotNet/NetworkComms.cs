@@ -95,44 +95,38 @@ namespace NetworkCommsDotNet
                     if (preferredIPPRefix == null || preferredIPPRefix.Length == 0)
                         throw new ConnectionSetupException("Unable to determine LocalIP address. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
 
-                    //Using host name, get the IP address list (we will have more than one for sure)
-                    IPHostEntry ipEntry = Dns.GetHostEntry(HostName);
-                    IPAddress[] addr = ipEntry.AddressList;
+                    //This is probably the most awesome linq expression ever
+                    //It loops through every known network adaptor and tries to pull out any 
+                    //ip addresses which match the provided prefixes
+                    //If multiple matches are found then we rank by prefix order at the end
+                    var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+                    localIP = (from current in interfaces
+                                where
+                                (from inside in current.GetIPProperties().UnicastAddresses
+                                where inside.Address.AddressFamily == AddressFamily.InterNetwork &&
+                                    preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
+                                select inside).Count() > 0
+                                select
+                                (
+                                from inside in current.GetIPProperties().UnicastAddresses
+                                where inside.Address.AddressFamily == AddressFamily.InterNetwork &&
+                                    preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
+                                select inside.Address.ToString()
+                                ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
+                                            {
+                                                //ip corresponds with the full ip address being passed in
+                                                for (int i = 0; i < preferredIPPRefix.Length; i++)
+                                                    if (ip.StartsWith(preferredIPPRefix[i])) return i;
 
-                    //We are going to look for a preffered ip
-                    int bestIndexMatch = int.MaxValue;
-                    for (int i = 0; i < addr.Length; i++)
-                    {
-                        string ipAddressStr = addr[i].ToString();
+                                                return int.MaxValue;
+                                            }).Where(ip => { return ip != ""; }).FirstOrDefault();
 
-                        for (int j = 0; j < preferredIPPRefix.Length; j++)
-                        {
-                            if (ipAddressStr.Contains(preferredIPPRefix[j]))
-                            {
-                                //We only choose this match if it beats our previous index
-                                if (j < bestIndexMatch)
-                                {
-                                    bestIndexMatch = j;
-                                    localIP = ipAddressStr;
-                                }
-
-                                //If we have a match to index 0 then we are done
-                                if (j == 0) return localIP;
-                            }
-                            //If we have not yet matched anything from the preferred prefix list we can try common private ranges as well
-                            else if (ipAddressStr.Split('.')[0] == "192" && bestIndexMatch == int.MaxValue)
-                                localIP = ipAddressStr;
-                            else if (ipAddressStr.Split('.')[0] == "10" && bestIndexMatch == int.MaxValue)
-                                localIP = ipAddressStr;
-                        }
-                    }
-
-                    //If we did not match index 0 preffered ip prefix but have something we will go with that.
+                    //If we managed to pull something out using our preferred prefixes then we use that
                     if (localIP != null) return localIP;
                     else
                     {
                         //If we still have nothing it may be we provided some prefixs which were not located
-                        //Try to auto detect as last attempt
+                        //Try to auto detect as last attempt. This is only going to succed in native .net.
                         localIP = AttemptBestIPAddressGuess();
                         if (localIP != null) return localIP;
                     }
@@ -165,6 +159,34 @@ namespace NetworkCommsDotNet
 
                 throw new ConnectionSetupException("Unable to confirm validity of provided IP.");
             }
+        }
+
+        /// <summary>
+        /// Custom comparer for v4 IPs. Used to determine localIP
+        /// </summary>
+        class IPComparer : IEqualityComparer<string>
+        {
+            // Products are equal if their names and product numbers are equal.
+            public bool Equals(string x, string y)
+            {
+                //Check whether the compared objects reference the same data.
+                if (Object.ReferenceEquals(x, y)) return true;
+
+                //Check whether any of the compared objects is null.
+                if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                    return false;
+
+                return (y.StartsWith(x) || x.StartsWith(y));
+            }
+
+            // If Equals() returns true for a pair of objects 
+            // then GetHashCode() must return the same value for these objects.
+
+            public int GetHashCode(string ipAddress)
+            {
+                return ipAddress.GetHashCode();
+            }
+
         }
 
         /// <summary>
@@ -1697,7 +1719,7 @@ namespace NetworkCommsDotNet
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
             {
                 RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
-                throw new ExpectedReturnTimeoutException("Timeout occurred waiting for response packet.");
+                throw new ExpectedReturnTimeoutException("Timeout occurred after " + returnPacketTimeOutMilliSeconds + "ms waiting for response packet of type '" + expectedReturnPacketTypeStr + "'.");
             }
 
             RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
@@ -2029,7 +2051,12 @@ namespace NetworkCommsDotNet
                 if (newConnectionEstablish)
                 {
                     if (loggingEnabled) logger.Trace(" ... establishing a new connection");
-                    TcpClient targetClient = new TcpClient();
+
+                    //We want to make sure we connect to our target from the chosen localIP
+                    IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(LocalIP), 0);
+                    TcpClient targetClient = new TcpClient(localEndPoint);
+
+                    //We now connect to our target
                     targetClient.Connect(targetIPAddress, commsPort);
                     connection.EstablishConnection(targetClient);
                 }
