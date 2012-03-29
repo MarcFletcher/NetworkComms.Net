@@ -301,7 +301,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The interval between keep alive polls of all serverside connections
         /// </summary>
-        internal static int connectionKeepAlivePollIntervalSecs = 10;
+        internal static int connectionKeepAlivePollIntervalSecs = 30;
 
         private static Thread connectionKeepAlivePollThread;
 
@@ -677,15 +677,44 @@ namespace NetworkCommsDotNet
         public static void CloseAllConnections()
         {
             //We need to create a copy because we need to avoid a collection modifed error and possible deadlocks from within closeConnection
+            //Dictionary<IPEndPoint, TCPConnection> dictCopy;
+            //lock (globalDictAndDelegateLocker)
+            //    dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint);
+
+            ////Any connections created after the above line will not be closed, a subsequent call to shutdown will get those.
+            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Closing all connections, currently " + dictCopy.Count + " are active.");
+
+            //foreach (TCPConnection client in dictCopy.Values)
+            //    client.CloseConnection(false, -3);
+
+            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... all connections have been closed.");
+            CloseAllConnections(new string[] { });
+        }
+
+        /// <summary>
+        /// Close all established connections with some provided exceptions.
+        /// </summary>
+        /// <param name="closeAllExceptTheseConnectionsByIP">If a connection has a matching ip address it wont be closed</param>
+        public static void CloseAllConnections(string[] closeAllExceptTheseConnectionsByIP)
+        {
+            //We need to create a copy because we need to avoid a collection modifed error and possible deadlocks from within closeConnection
             Dictionary<IPEndPoint, TCPConnection> dictCopy;
             lock (globalDictAndDelegateLocker)
                 dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint);
 
             //Any connections created after the above line will not be closed, a subsequent call to shutdown will get those.
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Closing all connections, currently " + dictCopy.Count + " are active.");
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Closing all connections (with "+closeAllExceptTheseConnectionsByIP.Length+" exceptions), currently " + dictCopy.Count + " are active.");
 
             foreach (TCPConnection client in dictCopy.Values)
-                client.CloseConnection(false, -3);
+            {
+                if (closeAllExceptTheseConnectionsByIP.Length > 0)
+                {
+                    if (!closeAllExceptTheseConnectionsByIP.Contains(client.RemoteClientIP))
+                        client.CloseConnection(false, -3);
+                }
+                else
+                    client.CloseConnection(false, -3);
+            }
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... all connections have been closed.");
         }
@@ -1104,14 +1133,10 @@ namespace NetworkCommsDotNet
 
                 try
                 {
-                    //We need to wait for the polling thread to close here
-                    if (connectionKeepAlivePollThread != null && (connectionKeepAlivePollThread.ThreadState == System.Threading.ThreadState.Running || connectionKeepAlivePollThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin))
-                        connectionKeepAlivePollThread.Join(PacketConfirmationTimeoutMS);
-
-                    lock (globalDictAndDelegateLocker)
-                    {
+                    //lock (globalDictAndDelegateLocker)
+                    //{
                         //We need to make sure everything has shutdown before this method returns
-                        if (isListening && newIncomingListenThread != null && (newIncomingListenThread.ThreadState == System.Threading.ThreadState.Running || newIncomingListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin))
+                        if (isListening && newIncomingListenThread != null)// && (newIncomingListenThread.ThreadState == System.Threading.ThreadState.Running || newIncomingListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin))
                         {
                             if (!newIncomingListenThread.Join(PacketConfirmationTimeoutMS))
                             {
@@ -1134,7 +1159,7 @@ namespace NetworkCommsDotNet
                                 }
                             }
                         }
-                    }
+                    //}
                 }
                 finally
                 {
@@ -1147,6 +1172,23 @@ namespace NetworkCommsDotNet
             catch (CommsException)
             {
 
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "CommsShutdownError");
+            }
+
+            //We need to wait for the polling thread to close here
+            try
+            {
+                if (connectionKeepAlivePollThread != null)
+                {
+                    if (!connectionKeepAlivePollThread.Join(PacketConfirmationTimeoutMS * 10))
+                    {
+                        connectionKeepAlivePollThread.Abort();
+                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread thread aborted.");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -1913,9 +1955,13 @@ namespace NetworkCommsDotNet
                 isListening = false;
             }
 
+            //newIncomingListenThread = null;
             if (loggingEnabled) logger.Info("networkComms.net is no longer accepting new connections.");
         }
 
+        /// <summary>
+        /// A thread that ensures all established connections are maintained
+        /// </summary>
         private static void AllConnectionKeepAlivePollThread()
         {
             try
@@ -1929,11 +1975,10 @@ namespace NetworkCommsDotNet
                     Thread.Sleep(100);
 
                     //Any connections which we have not seen in the last poll interval get tested using a null packet
-                    //With a ConnectionKeepAlivePollIntervalSecs of 10 seconds this will check every 2 seconds for a possible poll
-                    if ((DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs / 5.0)
+                    if ((DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs)
                     {
-                        lastPollCheck = DateTime.Now;
                         AllConnectionsKeepAlivePoll();
+                        lastPollCheck = DateTime.Now;
                     }
 
                 } while (!commsShutdown);
@@ -1941,6 +1986,38 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 LogError(ex, "KeepAlivePollError");
+            }
+
+            //connectionKeepAlivePollThread = null;
+        }
+
+        /// <summary>
+        /// Returns the threadState of the IncomingConnectionListenThread
+        /// </summary>
+        /// <returns></returns>
+        public static ThreadState IncomingConnectionListenThreadState()
+        {
+            lock(globalDictAndDelegateLocker)
+            {
+                if (newIncomingListenThread != null)
+                    return newIncomingListenThread.ThreadState;
+                else
+                    return ThreadState.Unstarted;
+            }
+        }
+
+        /// <summary>
+        /// Returns the threadState of the ConnectionKeepAlivePollThread
+        /// </summary>
+        /// <returns></returns>
+        public static ThreadState AllConnectionKeepAlivePollThreadState()
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                if (connectionKeepAlivePollThread != null)
+                    return connectionKeepAlivePollThread.ThreadState;
+                else
+                    return ThreadState.Unstarted;
             }
         }
 
@@ -1965,21 +2042,28 @@ namespace NetworkCommsDotNet
 
                     connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() =>
                     {
-                        //If the connection is server side we poll preferentially
-                        if (dictCopy[innerIndex].ServerSide)
+                        try
                         {
-                            //We check the last incoming traffic time
-                            //In scenarios where the client is sending us lots of data there is no need to poll
-                            if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
-                                dictCopy[innerIndex].SendNullPacket();
+                            //If the connection is server side we poll preferentially
+                            if (dictCopy[innerIndex] != null)
+                            {
+                                if (dictCopy[innerIndex].ServerSide)
+                                {
+                                    //We check the last incoming traffic time
+                                    //In scenarios where the client is sending us lots of data there is no need to poll
+                                    if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
+                                        dictCopy[innerIndex].SendNullPacket();
+                                }
+                                else
+                                {
+                                    //If we are client side we wait upto an additional 3 seconds to do the poll
+                                    //This means the server will probably beat us
+                                    if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
+                                        dictCopy[innerIndex].SendNullPacket();
+                                }
+                            }
                         }
-                        else
-                        {
-                            //If we are client side we wait upto an additional 3 seconds to do the poll
-                            //This means the server will probably beat us
-                            if ((DateTime.Now - dictCopy[innerIndex].LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble()*2.0))
-                                dictCopy[innerIndex].SendNullPacket();
-                        }
+                        catch (Exception) { }
                     })));
                 }
 

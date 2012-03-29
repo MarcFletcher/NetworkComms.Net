@@ -632,6 +632,31 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Closes established connections with completed peers as they are now redundant
+        /// </summary>
+        public void CloseConnectionToCompletedPeers(byte totalNumChunks)
+        {
+            Dictionary<string, PeerAvailabilityInfo> dictCopy;
+            lock (peerLocker)
+                dictCopy = new Dictionary<string, PeerAvailabilityInfo>(peerAvailabilityByNetworkIdentifierDict);
+
+            Parallel.ForEach(dictCopy, peer =>
+            {
+                try
+                {
+                    if (!peer.Value.SuperPeer && peer.Key != NetworkComms.NetworkNodeIdentifier)
+                    {
+                        if (peer.Value.PeerChunkFlags.AllFlagsSet(totalNumChunks))
+                        {
+                            NetworkComms.CloseConnection(peer.Key);
+                        }
+                    }
+                }
+                catch (Exception) { }
+            });
+        }
+
         private bool PeerContactAllowed(string peerIP, bool superPeer)
         {
             //We always allow super peers
@@ -696,19 +721,18 @@ namespace DistributedFileSystem
                         //We don't want to contact ourselves
                         if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
                         {
-
                             //For each peer that is not us we send our latest availability.
                             if (NetworkComms.ConnectionExists(peerIdentifier))
                                 NetworkComms.SendObject("DFS_ItemRemovedLocallyUpdate", peerIdentifier, false, itemCheckSum);
                             else
                                 NetworkComms.SendObject("DFS_ItemRemovedLocallyUpdate", clientIP, clientPort, false, itemCheckSum);
-
                         }
                     }
                     catch (CommsException)
                     {
                         RemovePeerFromSwarm(peerIdentifier);
                     }
+                    catch (KeyNotFoundException) { /*The peer has probably already disconnected*/ }
                     catch (Exception e)
                     {
                         RemovePeerFromSwarm(peerIdentifier);

@@ -162,6 +162,7 @@ namespace ExamplesConsole
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 bool shutDown = false;
+                bool buildComplete = true;
                 DateTime startTime = DateTime.Now;
 
                 int buildCount = 0;
@@ -176,29 +177,7 @@ namespace ExamplesConsole
 
                         double speed = (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds);
                         NetworkComms.SendObject("ClientInfo", connectionId, false, " ... build " + buildCount + " took " + (DateTime.Now - startTime).TotalSeconds.ToString("0.00") + " secs (" + speed.ToString("0.0") + " MB/s) using " + item.SwarmChunkAvailability.NumPeersInSwarm() + " peers. " + buildCount + " builds completed.");
-
-                        if (!shutDown)
-                        {
-                            Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
-                            var shutdownKey = Console.ReadKey(true).Key;
-                            if (shutdownKey != ConsoleKey.R) shutDown = true;
-
-                            if (!shutDown)
-                            {
-                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
-                                Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
-                                startTime = DateTime.Now;
-                                NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
-                            }
-                            else
-                                DFS.ShutdownDFS();
-                        }
-
-                        else
-                        {
-                            shutDown = true;
-                            DFS.ShutdownDFS();
-                        }
+                        buildComplete = true;
                     }
                     catch (Exception)
                     {
@@ -216,12 +195,43 @@ namespace ExamplesConsole
                 NetworkComms.AppendIncomingPacketHandler("ClientCommand", ShutdownDelegate, false);
                 
                 Console.WriteLine("\nListening for connections on " + NetworkComms.LocalIP + ":" + NetworkComms.CommsPort + " (" + NetworkComms.NetworkNodeIdentifier + ").\n");
-                Console.WriteLine(" ... initiating item build ...");
+                
 
                 startTime = DateTime.Now;
-                NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
+                //NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
 
-                while (!shutDown) Thread.Sleep(1000);
+                while (true)
+                {
+                    if (!shutDown && buildComplete)
+                    {
+                        Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
+                        var shutdownKey = Console.ReadKey(true).Key;
+                        if (shutdownKey != ConsoleKey.R) shutDown = true;
+
+                        if (!shutDown)
+                        {
+                            DistributedItem item = DFS.MostRecentlyCompletedItem();
+                            if (item != null)
+                            {
+                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
+                                Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
+                                startTime = DateTime.Now;
+                            }
+
+                            buildComplete = false;
+                            NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
+                            Console.WriteLine(" ... initiating item build ...");
+                        }
+                    }
+                    else if (shutDown)
+                    {
+                        shutDown = true;
+                        DFS.ShutdownDFS();
+                        break;
+                    }
+
+                    Thread.Sleep(250);
+                }
 
                 try
                 {

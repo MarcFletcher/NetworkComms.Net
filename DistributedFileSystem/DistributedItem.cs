@@ -477,6 +477,9 @@ namespace DistributedFileSystem
             SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
             ItemBuildCompleted = DateTime.Now;
 
+            //Close connections to other completed clients which are not a super peer
+            //SwarmChunkAvailability.CloseConnectionToCompletedPeers(TotalNumChunks);
+
             try { GC.Collect(); }
             catch (Exception) { }
         }
