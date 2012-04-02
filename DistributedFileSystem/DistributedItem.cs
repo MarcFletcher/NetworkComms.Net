@@ -31,8 +31,14 @@ namespace DistributedFileSystem
         public long ItemCheckSum { get; private set; }
         public byte TotalNumChunks { get; private set; }
         public int ChunkSizeInBytes { get; private set; }
-        byte[] ItemBytes { get; set; }
-        public int ItemBytesLength { get { return ItemBytes.Length; } }
+
+        //byte[] ItemBytes { get; set; }
+        /// <summary>
+        /// Originally we stored a single array but this creates considerable inefficienies when redistributing the data
+        /// We have now moved to keeping the data stored as seperate chunks
+        /// </summary>
+        byte[][] ItemByteArray { get; set; }
+        public int ItemBytesLength { get; private set; }
 
         public DateTime ItemBuildCompleted { get; private set; }
 
@@ -52,7 +58,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Tracks which chunks are currently being provided to other peers
         /// </summary>
-        private int CurrentChunkEnterCounter { get; set; }
+        //private int CurrentChunkEnterCounter { get; set; }
         object itemLocker = new object();
 
         public int TotalChunkEnterCount { get; private set; }
@@ -65,7 +71,7 @@ namespace DistributedFileSystem
 
         private void Constructor(byte[] itemBytes, ConnectionInfo seedConnectionInfo)
         {
-            CurrentChunkEnterCounter = 0;
+            //CurrentChunkEnterCounter = 0;
             TotalChunkEnterCount = 0;
             PushCount = 0;
 
@@ -73,8 +79,8 @@ namespace DistributedFileSystem
             //using (MD5 md5 = new MD5CryptoServiceProvider())
             //    ItemCheckSum = BitConverter.ToString(md5.ComputeHash(itemBytes)).Replace("-", "");
             ItemCheckSum = Adler32.GenerateCheckSum(itemBytes);
+            ItemBytesLength = itemBytes.Length;
 
-            this.ItemBytes = itemBytes;
             this.ItemBuildCompleted = DateTime.Now;
 
             //Calculate the exactChunkSize if we split everything up into 255 pieces
@@ -85,6 +91,16 @@ namespace DistributedFileSystem
             this.ChunkSizeInBytes = (exactChunkSize <= DFS.MinChunkSizeInBytes ? DFS.MinChunkSizeInBytes : (int)Math.Ceiling(exactChunkSize));
 
             this.TotalNumChunks = (byte)(Math.Ceiling((double)itemBytes.Length / (double)ChunkSizeInBytes));
+
+            //this.ItemBytes = itemBytes;
+            //Break the itemBytes into chunks
+            this.ItemByteArray = new byte[TotalNumChunks][];
+            for (int i = 0; i < TotalNumChunks; i++)
+            {
+                byte[] currentChunkArray = new byte[(i == TotalNumChunks - 1 ? itemBytes.Length - (i * ChunkSizeInBytes) : ChunkSizeInBytes)];
+                Buffer.BlockCopy(itemBytes, i * ChunkSizeInBytes, currentChunkArray, 0, currentChunkArray.Length);
+                ItemByteArray[i] = currentChunkArray;
+            }
 
             //Intialise the swarm availability
             SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, TotalNumChunks);
@@ -102,7 +118,10 @@ namespace DistributedFileSystem
             this.TotalNumChunks = assemblyConfig.TotalNumChunks;
             this.ChunkSizeInBytes = assemblyConfig.ChunkSizeInBytes;
             this.ItemCheckSum = assemblyConfig.ItemCheckSum;
-            this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
+            this.ItemBytesLength = assemblyConfig.TotalItemSizeInBytes;
+
+            //this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
+            this.ItemByteArray = new byte[TotalNumChunks][];
 
             this.SwarmChunkAvailability = NetworkComms.DefaultSerializer.DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes, NetworkComms.DefaultCompressor);
 
@@ -157,6 +176,7 @@ namespace DistributedFileSystem
                     itemBuildWait.Set();
                 }
             });
+
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionShutdownDuringBuild);
 
             //Loop until the local file is complete
@@ -551,7 +571,8 @@ namespace DistributedFileSystem
                         throw new Exception("Provided chunkindex (" + incomingReply.ChunkIndex + ") is greater than the total num of the chunks for this item (" + TotalNumChunks + ").");
 
                     //Copy the received bytes into the results array
-                    Buffer.BlockCopy(incomingReply.ChunkData, 0, ItemBytes, incomingReply.ChunkIndex * ChunkSizeInBytes, incomingReply.ChunkData.Length);
+                    //Buffer.BlockCopy(incomingReply.ChunkData, 0, ItemBytes, incomingReply.ChunkIndex * ChunkSizeInBytes, incomingReply.ChunkData.Length);
+                    this.ItemByteArray[incomingReply.ChunkIndex] = incomingReply.ChunkData;
 
                     //Record the chunk locally as available
                     SwarmChunkAvailability.RecordLocalChunkCompletion(incomingReply.ChunkIndex);
@@ -609,60 +630,60 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the a copy of the bytes corresponding to the requested chunkIndex. Returns null is chunk is correctly locked
+        /// Returns the a copy of the bytes corresponding to the requested chunkIndex. Returns null is chunk is highly popular.
         /// </summary>
         /// <param name="chunkIndex"></param>
         /// <returns></returns>
-        public byte[] EnterChunkBytes(byte chunkIndex)
+        public byte[] GetChunkBytes(byte chunkIndex)
         {
-            lock (itemLocker)
-            {
-                //We only provide the data if the chunk is not locked
-                if (CurrentChunkEnterCounter < DFS.NumTotalGlobalRequests)
-                    CurrentChunkEnterCounter++;
-                else
-                    return null;
-            }
+            //lock (itemLocker)
+            //{
+            //    //We only provide the data if the chunk is not locked
+            //    if (CurrentChunkEnterCounter < DFS.NumTotalGlobalRequests)
+            //        CurrentChunkEnterCounter++;
+            //    else
+            //        return null;
+            //}
 
             //If we have made it this far we are returning data
             if (SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkNodeIdentifier, chunkIndex))
             {
-                lock (itemLocker)
-                    TotalChunkEnterCount++;
+                lock (itemLocker) TotalChunkEnterCount++;
 
                 //Select the correct returnArray length
-                byte[] returnArray = new byte[(chunkIndex == TotalNumChunks - 1 ? ItemBytes.Length - (chunkIndex * ChunkSizeInBytes) : ChunkSizeInBytes)];
-                Buffer.BlockCopy(ItemBytes, chunkIndex * ChunkSizeInBytes, returnArray, 0, returnArray.Length);
+                //byte[] returnArray = new byte[(chunkIndex == TotalNumChunks - 1 ? ItemBytes.Length - (chunkIndex * ChunkSizeInBytes) : ChunkSizeInBytes)];
+                //Buffer.BlockCopy(ItemBytes, chunkIndex * ChunkSizeInBytes, returnArray, 0, returnArray.Length);
 
-                return returnArray;
+                return ItemByteArray[chunkIndex];
             }
             else
             {
-                lock (itemLocker)
-                    CurrentChunkEnterCounter--;
+                //lock (itemLocker)
+                //    CurrentChunkEnterCounter--;
 
-                return null;
+                //return null;
+                throw new Exception("Attempted to acces DFS chunk which was not available locally");
             }
         }
 
-        /// <summary>
-        /// Unlocks a chunk for further distribution
-        /// </summary>
-        /// <param name="chunkIndex"></param>
-        public void LeaveChunkBytes(byte chunkIndex)
-        {
-            lock (itemLocker)
-            {
-                CurrentChunkEnterCounter--;
+//        /// <summary>
+//        /// Unlocks a chunk for further distribution
+//        /// </summary>
+//        /// <param name="chunkIndex"></param>
+//        public void LeaveChunkBytes(byte chunkIndex)
+//        {
+//            lock (itemLocker)
+//            {
+//                CurrentChunkEnterCounter--;
 
-                //The normal strange situation catch
-                if (CurrentChunkEnterCounter < 0)
-                    CurrentChunkEnterCounter = 0;
-#if logging
-                DFS.logger.Debug("... left bytes for chunk " + chunkIndex + ". Chunk unlocked.");
-#endif
-            }
-        }
+//                //The normal strange situation catch
+//                if (CurrentChunkEnterCounter < 0)
+//                    CurrentChunkEnterCounter = 0;
+//#if logging
+//                DFS.logger.Debug("... left bytes for chunk " + chunkIndex + ". Chunk unlocked.");
+//#endif
+//            }
+//        }
 
         /// <summary>
         /// Updates the chunkflags for the provided peer
@@ -688,7 +709,13 @@ namespace DistributedFileSystem
             if (LocalItemComplete())
             {
                 if (LocalItemValid())
-                    return ItemBytes;
+                {
+                    byte[] returnArray = new byte[ItemBytesLength];
+                    for (int i = 0; i < TotalNumChunks; i++)
+                        Buffer.BlockCopy(ItemByteArray[i], 0, returnArray, i * ChunkSizeInBytes, ItemByteArray[i].Length);
+
+                    return returnArray;
+                }
                 else
                 {
                     ItemChunkCheckSums(true);
@@ -705,7 +732,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public bool LocalItemValid()
         {
-            if (ItemCheckSum == Adler32.GenerateCheckSum(ItemBytes))
+            if (ItemCheckSum == Adler32.GenerateCheckSum(ItemByteArray))
             //if (true)
             {
 #if logging
@@ -727,13 +754,13 @@ namespace DistributedFileSystem
 
             for (byte i = 0; i < TotalNumChunks; i++)
             {
-                byte[] testBytes = EnterChunkBytes(i);
+                byte[] testBytes = GetChunkBytes(i);
                 if (testBytes == null)
                     throw new Exception("Cant checksum a locked chunk.");
                 else
                     returnValues[i] = Adler32.GenerateCheckSum(testBytes);
 
-                LeaveChunkBytes(i);
+                //LeaveChunkBytes(i);
             }
 
             if (saveOut)

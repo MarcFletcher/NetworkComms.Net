@@ -45,7 +45,12 @@ namespace DistributedFileSystem
         //public const int NumConcurrentRequests = 1;
         public const int NumTotalGlobalRequests = 8;
 
-        public const int PeerBusyTimeoutMS = 250;
+        public const int PeerBusyTimeoutMS = 300;
+
+        /// <summary>
+        /// While the peer network load goes above this value it will always reply with a busy response 
+        /// </summary>
+        public const double PeerBusyNetworkLoadThreshold = 0.95;
 
         public const int ItemBuildTimeoutSecs = 300;
 
@@ -243,7 +248,7 @@ namespace DistributedFileSystem
                     if (swarmedItemsDict[item.ItemCheckSum].ItemBytesLength == item.ItemBytesLength)
                         return true;
                     else
-                        throw new Exception("Potential Md5 conflict detected in dfs.");
+                        throw new Exception("Potential Md5 conflict detected in DFS.");
                 }
 
                 return false;
@@ -362,6 +367,8 @@ namespace DistributedFileSystem
                     itemToDistribute.UpdateCachedPeerChunkFlags(requestOriginConnectionId, new ChunkFlags(0));
                     itemToDistribute.IncrementPushCount();
                 }
+
+                //We could contact other known super peers to see if they also have this file
 
                 //Send the config information to the client that wanted the file
                 NetworkComms.SendObject("DFS_RequestLocalItemBuild", requestOriginConnectionId, false, new ItemAssemblyConfig(itemToDistribute, completedPacketType));
@@ -576,6 +583,7 @@ namespace DistributedFileSystem
                 }
 
                 //Build the item from the swarm
+                //If the item is already complete this will return immediately
                 newItem.AssembleItem(ItemBuildTimeoutSecs);
 
 #if logging
@@ -645,16 +653,19 @@ namespace DistributedFileSystem
                     }
                     else
                     {
-                        //We try to enter the chunk here
-                        byte[] chunkData = selectedItem.EnterChunkBytes(incomingRequest.ChunkIndex);
-
-                        if (chunkData == null)
-                            //We can return a busy reply if we were unsuccesfull in accessing the bytes.
+                        //ChunkData will be null if we don't actually 
+                        if (NetworkComms.CurrentNetworkLoad > DFS.PeerBusyNetworkLoadThreshold)
+                        {
+                            //We can return a busy reply if we are currently experiencing high demand
                             NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
+                        }
                         else
                         {
-                            try
-                            {
+                            //try
+                            //{
+                                //We get the data here
+                                byte[] chunkData = selectedItem.GetChunkBytes(incomingRequest.ChunkIndex);
+
                                 //Console.WriteLine("   ... ({0}) begin push of chunk {1} to {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
                                 NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, chunkData), ProtobufSerializer.Instance, NullCompressor.Instance);
                                 //Console.WriteLine("         ... ({0}) pushed chunk {1} to {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
@@ -665,12 +676,12 @@ namespace DistributedFileSystem
                                 //This seems to be an efficient place for a garbage collection
                                 try { GC.Collect(); }
                                 catch (Exception) { }
-                            }
-                            finally
-                            {
-                                //We must guarantee we leave the bytes if we had succesfully entered them.
-                                selectedItem.LeaveChunkBytes(incomingRequest.ChunkIndex);
-                            }
+                            //}
+                            //finally
+                            //{
+                            //    //We must guarantee we leave the bytes if we had succesfully entered them.
+                            //    selectedItem.LeaveChunkBytes(incomingRequest.ChunkIndex);
+                            //}
                         }
                     }
                 }

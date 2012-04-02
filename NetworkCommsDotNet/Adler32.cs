@@ -14,6 +14,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
+using System.Linq;
 
 namespace NetworkCommsDotNet
 {
@@ -50,6 +51,51 @@ namespace NetworkCommsDotNet
                 {
                     s1 = s1 + (uint)(buffer[offset++] & 0xff);
                     s2 = s2 + s1;
+                }
+                s1 %= BASE;
+                s2 %= BASE;
+            }
+
+            checksum = (s2 << 16) | s1;
+
+            return checksum;
+        }
+
+        /// <summary>
+        /// Generate an Adler32 checksum value based on the provided split byte array. Checksum calculated across each row from [0] forwards.
+        /// </summary>
+        /// <param name="splitBuffer"></param>
+        /// <returns></returns>
+        public static long GenerateCheckSum(byte[][] splitBuffer)
+        {
+            uint BASE = 65521;
+            uint checksum = 1;
+
+            int count = (from current in splitBuffer where current != null select current.Length).Sum();
+            int offset = 0;
+            int currentIndex = 0;
+
+            uint s1 = checksum & 0xFFFF;
+            uint s2 = checksum >> 16;
+
+            while (count > 0)
+            {
+                int n = 3800;
+                if (n > count)
+                {
+                    n = count;
+                }
+                count -= n;
+                while (--n >= 0)
+                {
+                    s1 = s1 + (uint)(splitBuffer[currentIndex][offset++] & 0xff);
+                    s2 = s2 + s1;
+
+                    if (offset >= splitBuffer[currentIndex].Length)
+                    {
+                        offset = 0;
+                        currentIndex++;
+                    }
                 }
                 s1 %= BASE;
                 s2 %= BASE;

@@ -254,6 +254,58 @@ namespace NetworkCommsDotNet
         {
             get { return localNetworkIdentifier.ToString(); }
         }
+
+        /// <summary>
+        /// Returns the current network usage, as last updated, and value between 0 and 1. Outgoing and incoming usage are investigated and the larger of the two is used.
+        /// </summary>
+        public static double CurrentNetworkLoad { get; private set; }
+
+        /// <summary>
+        /// The number of millisconds over which to take an average load. Default is 200ms but use atleast 100ms to get a reliable value.
+        /// </summary>
+        public static int NetworkLoadUpdateWindowMS { get; set; }
+        private static Thread NetworkLoadThread;
+
+        /// <summary>
+        /// Calculates the network load every NetworkLoadUpdateWindowMS
+        /// </summary>
+        private static void NetworkLoadWorker()
+        {
+            //Get the right interface
+            NetworkInterface interfaceToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces()
+                                               where (from inner in outer.GetIPProperties().UnicastAddresses where inner.Address.ToString() == LocalIP select inner).Count() > 0
+                                               select outer).FirstOrDefault();
+
+            //We need to make sure we have managed to get an adaptor
+            if (interfaceToUse == null) throw new CommunicationException("Unable to locate correct network adaptor.");
+
+            do
+            {
+                try
+                {
+                    //Get the usage over numMillisecsToAverage
+                    DateTime startTime = DateTime.Now;
+                    IPv4InterfaceStatistics startingStats = interfaceToUse.GetIPv4Statistics();
+                    Thread.Sleep(NetworkLoadUpdateWindowMS);
+                    IPv4InterfaceStatistics endingStats = interfaceToUse.GetIPv4Statistics();
+                    DateTime endTime = DateTime.Now;
+
+                    //Calculate both the out and in usage
+                    decimal outUsage = (decimal)(endingStats.BytesSent - startingStats.BytesSent) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
+                    decimal inUsage = (decimal)(endingStats.BytesReceived - startingStats.BytesReceived) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
+
+                    //Take the maximum value
+                    double returnValue = (double)Math.Max(outUsage, inUsage);
+
+                    //Limit to one
+                    CurrentNetworkLoad = (returnValue > 1 ? 1 : returnValue);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, "NetworkLoadWorker");
+                }
+            } while (!commsShutdown);
+        }
         #endregion
 
         #region Current Comms State
@@ -303,7 +355,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static int connectionKeepAlivePollIntervalSecs = 30;
 
-        private static Thread connectionKeepAlivePollThread;
+        private static Thread ConnectionKeepAliveThread;
 
         /// <summary>
         /// The last time serverside connections were polled
@@ -354,6 +406,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         static Thread newIncomingListenThread;
         static TcpListener tcpListener;
+
+        /// <summary>
+        /// Lists which handle the incoming connections. Originally this was used as a single but this allows networkComms.net to listen across multiple adaptors
+        /// </summary>
+        static List<Thread> incomingListenThreadList;
+        static List<TcpListener> tcpListenerList;
 
         /// <summary>
         /// Send and receive buffer sizes
@@ -805,7 +863,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time is proportional to total number of connections.</param>
         /// <param name="lastTrafficTimePassSeconds">Will not test connections which have a lastSeen time within provided number of seconds</param>
-        public static void CheckConnectionAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
+        public static void TestAllConnectionsAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
         {
             //Loop through all connections and test the alive state
             List<TCPConnection> dictCopy;
@@ -1181,12 +1239,28 @@ namespace NetworkCommsDotNet
             //We need to wait for the polling thread to close here
             try
             {
-                if (connectionKeepAlivePollThread != null)
+                if (ConnectionKeepAliveThread != null)
                 {
-                    if (!connectionKeepAlivePollThread.Join(PacketConfirmationTimeoutMS * 10))
+                    if (!ConnectionKeepAliveThread.Join(PacketConfirmationTimeoutMS * 10))
                     {
-                        connectionKeepAlivePollThread.Abort();
-                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread thread aborted.");
+                        ConnectionKeepAliveThread.Abort();
+                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread status = "+ ConnectionKeepAliveThreadState() +" connectionKeepAlivePollThread thread aborted.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "CommsShutdownError");
+            }
+
+            try
+            {
+                if (NetworkLoadThread != null)
+                {
+                    if (!NetworkLoadThread.Join(NetworkLoadUpdateWindowMS * 2))
+                    {
+                        NetworkLoadThread.Abort();
+                        throw new TimeoutException("Timeout waiting for NetworkLoadThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". NetworkLoadThread thread aborted.");
                     }
                 }
             }
@@ -1230,52 +1304,6 @@ namespace NetworkCommsDotNet
                 else
                     return false;
             }
-        }
-
-        /// <summary>
-        /// Returns the current network usage as a percentage between 0 and 1. Calculates both outgoing and incoming usage and returns the larger of the two.
-        /// </summary>
-        /// <param name="numMillisecsToAverage">Number of millisconds over which to take an average. Use atleast 100ms to get a sensible value.</param>
-        /// <returns></returns>
-        public static double CurrentNetworkLoad(int numMillisecsToAverage)
-        {
-            //Get the right interface
-            NetworkInterface[] allInterfaces = NetworkInterface.GetAllNetworkInterfaces();
-            NetworkInterface interfaceToUse = null;
-
-            for (int i = 0; i < allInterfaces.Length; i++)
-            {
-                if (allInterfaces[i].GetIPProperties().UnicastAddresses.Count > 0)
-                {
-                    if ((from current in allInterfaces[i].GetIPProperties().UnicastAddresses
-                     where current.Address.AddressFamily == AddressFamily.InterNetwork
-                     select current.Address).First().ToString() == LocalIP)
-                    {
-                        interfaceToUse = allInterfaces[i];
-                        break;
-                    }
-                }
-            }
-
-            //We need to make sure we have managed to get an adaptor
-            if (interfaceToUse==null) throw new CommunicationException("Unable to locate correct network adaptor.");
-
-            //Get the usage over numMillisecsToAverage
-            DateTime startTime = DateTime.Now;
-            IPv4InterfaceStatistics startingStats = interfaceToUse.GetIPv4Statistics();
-            Thread.Sleep(numMillisecsToAverage);
-            IPv4InterfaceStatistics endingStats = interfaceToUse.GetIPv4Statistics();
-            DateTime endTime = DateTime.Now;
-
-            //Calculate both the out and in usage
-            decimal outUsage = (decimal)(endingStats.BytesSent - startingStats.BytesSent) / ((decimal)(interfaceToUse.Speed * (endTime-startTime).TotalMilliseconds) / 8000);
-            decimal inUsage = (decimal)(endingStats.BytesReceived - startingStats.BytesReceived) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
-
-            //Take the maximum value
-            double returnValue = (double)Math.Max(outUsage, inUsage);
-
-            //Limit to one
-            return (returnValue > 1 ? 1 : returnValue);
         }
 
         /// <summary>
@@ -1788,9 +1816,14 @@ namespace NetworkCommsDotNet
             {
                 if (!commsInitialised)
                 {
-                    connectionKeepAlivePollThread = new Thread(AllConnectionKeepAlivePollThread);
-                    connectionKeepAlivePollThread.Name = "AllConnectionKeepAlivePoll";
-                    connectionKeepAlivePollThread.Start();
+                    ConnectionKeepAliveThread = new Thread(ConnectionKeepAliveThreadWorker);
+                    ConnectionKeepAliveThread.Name = "ConnectionKeepAliveThread";
+                    ConnectionKeepAliveThread.Start();
+
+                    NetworkLoadUpdateWindowMS = 200;
+                    NetworkLoadThread = new Thread(NetworkLoadWorker);
+                    NetworkLoadThread.Name = "NetworkLoadThread";
+                    NetworkLoadThread.Start();
 
                     commsInitialised = true;
                     if (loggingEnabled) logger.Info("networkComms.net has been initialised");
@@ -1962,14 +1995,14 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// A thread that ensures all established connections are maintained
         /// </summary>
-        private static void AllConnectionKeepAlivePollThread()
+        private static void ConnectionKeepAliveThreadWorker()
         {
-            try
-            {
-                if (loggingEnabled) logger.Debug("Connection keep alive polling thread has started.");
-                DateTime lastPollCheck = DateTime.Now;
+            if (loggingEnabled) logger.Debug("Connection keep alive polling thread has started.");
+            DateTime lastPollCheck = DateTime.Now;
 
-                do
+            do
+            {
+                try
                 {
                     //We have a short sleep here so that we can exit the thread fairly quickly if we need too
                     Thread.Sleep(100);
@@ -1977,16 +2010,15 @@ namespace NetworkCommsDotNet
                     //Any connections which we have not seen in the last poll interval get tested using a null packet
                     if ((DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs)
                     {
-                        AllConnectionsKeepAlivePoll();
+                        ConnectionKeepAlivePoll();
                         lastPollCheck = DateTime.Now;
                     }
-
-                } while (!commsShutdown);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, "KeepAlivePollError");
-            }
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, "KeepAlivePollError");
+                }
+            } while (!commsShutdown);
 
             //connectionKeepAlivePollThread = null;
         }
@@ -2010,12 +2042,12 @@ namespace NetworkCommsDotNet
         /// Returns the threadState of the ConnectionKeepAlivePollThread
         /// </summary>
         /// <returns></returns>
-        public static ThreadState AllConnectionKeepAlivePollThreadState()
+        public static ThreadState ConnectionKeepAliveThreadState()
         {
             lock (globalDictAndDelegateLocker)
             {
-                if (connectionKeepAlivePollThread != null)
-                    return connectionKeepAlivePollThread.ThreadState;
+                if (ConnectionKeepAliveThread != null)
+                    return ConnectionKeepAliveThread.ThreadState;
                 else
                     return ThreadState.Unstarted;
             }
@@ -2025,7 +2057,7 @@ namespace NetworkCommsDotNet
         /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
         /// </summary>
         /// <param name="returnImmediately"></param>
-        private static void AllConnectionsKeepAlivePoll(bool returnImmediately = false)
+        private static void ConnectionKeepAlivePoll(bool returnImmediately = false)
         {
             if (ConnectionKeepAlivePollIntervalSecs < int.MaxValue)
             {
