@@ -70,22 +70,35 @@ namespace SerializerBase
                     return objectToSerialise as byte[];
                 else if (elementType.IsPrimitive)
                 {
-                    var asArray = objectToSerialise as Array;
-                    GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
                     byte[] output = null;
 
-                    try
-                    {                        
-                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
-
-                        using (System.IO.UnmanagedMemoryStream stream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
+                    //Problems with garbage collector not deallocating array due to GCHandle have possibly arrisen (see ants profiler).  For Byte[] we don't need to do any of this mess
+                    if (elementType == typeof(byte))
+                    {
+                        var asByteArray = objectToSerialise as byte[];
+                        using (System.IO.MemoryStream ms = new System.IO.MemoryStream(asByteArray, true))
                         {
-                            output = compressor.CompressDataStream(stream);
+                            output = compressor.CompressDataStream(ms);
                         }
                     }
-                    finally
+                    else
                     {
-                        arrayHandle.Free();
+                        var asArray = objectToSerialise as Array;
+                        GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
+                        
+                        try
+                        {
+                            IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
+
+                            using (System.IO.UnmanagedMemoryStream stream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
+                            {
+                                output = compressor.CompressDataStream(stream);
+                            }
+                        }
+                        finally
+                        {
+                            arrayHandle.Free();
+                        }
                     }
 
                     return output;
@@ -118,20 +131,34 @@ namespace SerializerBase
                     int numElements = (int)(BitConverter.ToUInt64(receivedObjectBytes, receivedObjectBytes.Length - 8) / (ulong)Marshal.SizeOf(elementType));
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
-                    GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
-                    
-                    try
-                    {                        
-                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(resultArray, 0);
 
-                        using (System.IO.UnmanagedMemoryStream stream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
+                    //Problems with garbage collector not deallocating array due to GCHandle have possibly arrisen (see ants profiler).  For Byte[] we don't need to do any of this mess
+                    if (elementType == typeof(byte))
+                    {
+                        var asByteArray = resultArray as byte[];
+
+                        using (System.IO.MemoryStream ms = new System.IO.MemoryStream(asByteArray, true))
                         {
-                            compressor.DecompressToStream(receivedObjectBytes, stream);
+                            compressor.DecompressToStream(receivedObjectBytes, ms);
                         }
                     }
-                    finally
-                    {
-                        arrayHandle.Free();
+                    else
+                    {                        
+                        GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
+
+                        try
+                        {
+                            IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(resultArray, 0);
+
+                            using (System.IO.UnmanagedMemoryStream stream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
+                            {
+                                compressor.DecompressToStream(receivedObjectBytes, stream);
+                            }
+                        }
+                        finally
+                        {
+                            arrayHandle.Free();
+                        }
                     }
 
                     return (T)((object)resultArray);
