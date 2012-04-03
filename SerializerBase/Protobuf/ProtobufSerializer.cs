@@ -62,13 +62,13 @@ namespace SerializerBase.Protobuf
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
         public override byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
         {
-            //Increase timeout to prevent errors when CPU busy
-            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
-
             var baseRes = base.SerialiseDataObject<T>(objectToSerialise, compressor);
 
             if (baseRes != null)
                 return baseRes;
+
+            //Increase timeout to prevent errors when CPU busy
+            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
 
             MemoryStream memIn = new MemoryStream();
             Serializer.Serialize(memIn, objectToSerialise);
@@ -86,13 +86,13 @@ namespace SerializerBase.Protobuf
         /// <returns>The deserialized object</returns>
         public override T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
         {
-            //Increase timeout to prevent errors when CPU busy
-            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
-
             var baseRes = base.DeserialiseDataObject<T>(receivedObjectBytes, compressor);
 
             if (!Equals(baseRes, default(T)))
                 return baseRes;
+
+            //Increase timeout to prevent errors when CPU busy
+            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
 
             MemoryStream stream = new MemoryStream();
             compressor.DecompressToStream(receivedObjectBytes, stream);
