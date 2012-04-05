@@ -24,10 +24,10 @@ namespace DebugTests
             Thread.CurrentThread.Name = "MainThread";
 
             //Configure the logger here
-            NameValueCollection properties = new NameValueCollection();
-            properties["configType"] = "FILE";
-            properties["configFile"] = "log4net.config";
-            NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+            //NameValueCollection properties = new NameValueCollection();
+            //properties["configType"] = "FILE";
+            //properties["configFile"] = "log4net.config";
+            //NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();

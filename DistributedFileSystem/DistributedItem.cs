@@ -40,6 +40,8 @@ namespace DistributedFileSystem
         byte[][] ItemByteArray { get; set; }
         public int ItemBytesLength { get; private set; }
 
+        public int ItemBuildCascadeDepth { get; private set; }
+
         public DateTime ItemBuildCompleted { get; private set; }
 
         /// <summary>
@@ -64,12 +66,12 @@ namespace DistributedFileSystem
         public int TotalChunkEnterCount { get; private set; }
         public int PushCount { get; private set; }
 
-        public DistributedItem(byte[] itemBytes, ConnectionInfo seedConnectionInfo)
+        public DistributedItem(byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth = 1)
         {
-            Constructor(itemBytes, seedConnectionInfo);
+            Constructor(itemBytes, seedConnectionInfo, itemBuildCascadeDepth);
         }
 
-        private void Constructor(byte[] itemBytes, ConnectionInfo seedConnectionInfo)
+        private void Constructor(byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth)
         {
             //CurrentChunkEnterCounter = 0;
             TotalChunkEnterCount = 0;
@@ -80,6 +82,7 @@ namespace DistributedFileSystem
             //    ItemCheckSum = BitConverter.ToString(md5.ComputeHash(itemBytes)).Replace("-", "");
             ItemCheckSum = Adler32.GenerateCheckSum(itemBytes);
             ItemBytesLength = itemBytes.Length;
+            this.ItemBuildCascadeDepth = itemBuildCascadeDepth;
 
             this.ItemBuildCompleted = DateTime.Now;
 
@@ -119,6 +122,7 @@ namespace DistributedFileSystem
             this.ChunkSizeInBytes = assemblyConfig.ChunkSizeInBytes;
             this.ItemCheckSum = assemblyConfig.ItemCheckSum;
             this.ItemBytesLength = assemblyConfig.TotalItemSizeInBytes;
+            this.ItemBuildCascadeDepth = assemblyConfig.ItemBuildCascadeDepth;
 
             //this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
             this.ItemByteArray = new byte[TotalNumChunks][];
@@ -150,8 +154,7 @@ namespace DistributedFileSystem
 
         public void IncrementPushCount()
         {
-            lock (itemLocker)
-                PushCount++;
+            lock (itemLocker) PushCount++;
         }
 
         public void AssembleItem(int assembleTimeoutSecs)
@@ -164,7 +167,7 @@ namespace DistributedFileSystem
             DateTime assembleStartTime = DateTime.Now;
 
             //Contact all known peers and request an update
-            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, 1);
+            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, ItemBuildCascadeDepth);
 
             NetworkComms.ConnectionShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionShutdownDelegate((ShortGuid connectionId) =>
             {
@@ -264,7 +267,7 @@ namespace DistributedFileSystem
                                                                                     //We don't want a peer from whom we currently await a response
                                                                                     where !currentRequestIdentifiers.Contains(current.Key.NetworkIdentifier)
                                                                                     //Order possible peers by whoever has the least complete file first. See comments within /**/ below
-                                                                                    orderby current.Value.PeerChunkFlags.NumCompletedChunks() ascending
+                                                                                    orderby current.Value.PeerChunkFlags.NumCompletedChunks() ascending, randGen.NextDouble() ascending
                                                                                     select current.Key).ToArray();
 
                                 /*
@@ -273,6 +276,7 @@ namespace DistributedFileSystem
                                 there are situations (in particular if we have a single complete non super peer), where all 
                                 peers which are building and item will go to a single peer.
                                 Because of that we go to the peer with the least data in the fist instance and this should help load balance
+                                We also add a random sort at the end to make sure we always go for peers in a different order on a subsequent loop
                                 */
 
                                 //We can only make a request if there are available peers
@@ -685,20 +689,29 @@ namespace DistributedFileSystem
 //            }
 //        }
 
-        /// <summary>
-        /// Updates the chunkflags for the provided peer
-        /// </summary>
-        /// <param name="peerIdentifier"></param>
-        /// <param name="peerChunkFlags"></param>
-        public void UpdateCachedPeerChunkFlags(ShortGuid peerIdentifier, ChunkFlags peerChunkFlags)
-        {
-            SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerIdentifier, peerChunkFlags);
-        }
+        ///// <summary>
+        ///// Updates the chunkflags for the provided peer
+        ///// </summary>
+        ///// <param name="peerIdentifier"></param>
+        ///// <param name="peerChunkFlags"></param>
+        //public void UpdateCachedPeerChunkFlags(ShortGuid peerIdentifier, ChunkFlags peerChunkFlags)
+        //{
+        //    SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerIdentifier, peerChunkFlags);
+        //}
 
-        public ChunkFlags PeerChunkAvailability(ShortGuid peerIdentifier)
-        {
-            return SwarmChunkAvailability.PeerChunkAvailability(peerIdentifier);
-        }
+        //public ChunkFlags PeerChunkAvailability(ShortGuid peerIdentifier)
+        //{
+        //    return SwarmChunkAvailability.PeerChunkAvailability(peerIdentifier);
+        //}
+
+        ///// <summary>
+        ///// Get all known peer end points
+        ///// </summary>
+        ///// <returns></returns>
+        //public string[] AllPeerEndPoints()
+        //{
+        //    return SwarmChunkAvailability.AllPeerEndPoints();
+        //}
 
         /// <summary>
         /// Once the item has been fully assembled the completed bytes can be access via this method.
@@ -786,21 +799,21 @@ namespace DistributedFileSystem
                 return SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks);
         }
 
-        /// <summary>
-        /// Removes all references to the provided peer in this item if it exists.
-        /// </summary>
-        /// <param name="disconnectedConnectionIdentifier"></param>
-        public void RemovePeer(ShortGuid disconnectedConnectionIdentifier, bool forceRemove = false)
-        {
-            SwarmChunkAvailability.RemovePeerFromSwarm(disconnectedConnectionIdentifier, forceRemove);
-        }
+        ///// <summary>
+        ///// Removes all references to the provided peer in this item if it exists.
+        ///// </summary>
+        ///// <param name="disconnectedConnectionIdentifier"></param>
+        //public void RemovePeer(ShortGuid disconnectedConnectionIdentifier, bool forceRemove = false)
+        //{
+        //    SwarmChunkAvailability.RemovePeerFromSwarm(disconnectedConnectionIdentifier, forceRemove);
+        //}
 
         /// <summary>
         /// Triggers a client update of all clients in swarm. Returns within 50ms regardless of whether responses have yet been received.
         /// </summary>
         public void UpdateItemSwarmStatus(int responseTimeoutMS)
         {
-            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, 1, responseTimeoutMS);
+            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, 0, responseTimeoutMS);
         }
     }
 

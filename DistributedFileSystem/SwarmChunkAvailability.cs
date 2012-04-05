@@ -423,7 +423,11 @@ namespace DistributedFileSystem
                 //We only remove the peer if we have more than one and it is not a super peer
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
                 {
-                    if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && !peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer))
+                    //We can remove this peer if
+                    //1. We have set force remove
+                    //or
+                    //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other one in order to remove
+                    if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer || (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
                     {
                         peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
 
@@ -445,7 +449,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="peerNetworkIdentifier"></param>
         /// <param name="latestChunkFlags"></param>
-        public void AddOrUpdateCachedPeerChunkFlags(string peerNetworkIdentifier, ChunkFlags latestChunkFlags)
+        public void AddOrUpdateCachedPeerChunkFlags(string peerNetworkIdentifier, ChunkFlags latestChunkFlags, bool superPeer = false)
         {
             lock (peerLocker)
             {
@@ -457,7 +461,7 @@ namespace DistributedFileSystem
                     if (!peerNetworkIdentifierToConnectionInfo.ContainsKey(peerNetworkIdentifier))
                         peerNetworkIdentifierToConnectionInfo.Add(peerNetworkIdentifier, NetworkComms.ConnectionIdToConnectionInfo(new ShortGuid(peerNetworkIdentifier)));
 
-                    peerAvailabilityByNetworkIdentifierDict.Add(peerNetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, false));
+                    peerAvailabilityByNetworkIdentifierDict.Add(peerNetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
                 }
 
 #if logging
@@ -487,21 +491,88 @@ namespace DistributedFileSystem
         /// <param name="cascadeDepth"></param>
         public void UpdatePeerAvailability(long itemCheckSum, int cascadeDepth, int responseTimeoutMS = 1000)
         {
-            if (cascadeDepth > 1)
-                throw new NotImplementedException("A cascading update has not yet been implemented. Only direct connection to original peers is.");
+            string[] currentPeerKeys;
+            lock (peerLocker) currentPeerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
 
-            string[] peerKeys;
-            lock (peerLocker)
-                peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
+            object peerEndPointLocker = new object();
+            List<string> allUnknownPeerEndPoints = new List<string>();
+            List<Task> unknownPeersUpdateTasks = new List<Task>();
 
-            List<Task> updateTasks = new List<Task>();
+            if (cascadeDepth > 0)
+            {
+                if (cascadeDepth > 1) throw new NotImplementedException("A cascading update greater than 1 is not yet supported.");
 
-            //Contact all known peers and request an availability update
-            foreach (ShortGuid peerIdentifierOuter in peerKeys)
+                //If we are going to cascade peers we need to contact all our known peers and get them to send us their known peers
+                #region GetAllUnknownPeers
+                //Contact all known peers and request an availability update
+                foreach (ShortGuid peerIdentifierInner in currentPeerKeys)
+                {
+                    ShortGuid peerIdentifier = peerIdentifierInner;
+                    //Removed tasks as this wants to run in the same thread as the originating call
+                    unknownPeersUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                    {
+                        try
+                        {
+                            string clientIP; int clientPort; bool superPeer;
+                            lock (peerLocker)
+                            {
+                                clientIP = peerNetworkIdentifierToConnectionInfo[peerIdentifier].ClientIP;
+                                superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
+                                clientPort = peerNetworkIdentifierToConnectionInfo[peerIdentifier].ClientPort;
+                            }
+
+                            string[] result = null;
+                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
+                            {
+                                if (NetworkComms.ConnectionExists(peerIdentifier))
+                                    result = NetworkComms.SendReceiveObject<string[]>("DFS_KnownPeersRequest", peerIdentifier, false, "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                else
+                                    result = NetworkComms.SendReceiveObject<string[]>("DFS_KnownPeersRequest", clientIP, clientPort, false, "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                            }
+
+                            //We take all of the results and put them in our summary list
+                            if (result != null)
+                            {
+                                lock (peerEndPointLocker)
+                                {
+                                    for (int i = 0; i < result.Length; i++)
+                                    {
+                                        if (result[i] != "") allUnknownPeerEndPoints.Add(result[i]);
+                                    }
+                                }
+                            }
+                        }
+                        catch (CommsException)
+                        {
+                            //If a peer has disconnected or fails to respond we just remove them from the list
+                            RemovePeerFromSwarm(peerIdentifier);
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
+                            //but it has been removed since we accessed the peerKeys at the start of this method
+                            //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                            //exception here or networkcomms will throw one when we try to connect to an old peer.
+                            RemovePeerFromSwarm(peerIdentifier);
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_1");
+                        }
+                    })));
+                }
+                #endregion
+            }
+
+            //Contact all our original peers and request a chunk availability update
+            #region GetAllOriginalPeerAvailabilityFlags
+            List<Task> originalPeerAvailabilityFlagUpdateTasks = new List<Task>();
+            foreach (ShortGuid peerIdentifierOuter in currentPeerKeys)
             {
                 ShortGuid peerIdentifier = peerIdentifierOuter;
                 //Removed tasks as this wants to run in the same thread as the originating call
-                updateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                originalPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
                 {
                     try
                     {
@@ -517,9 +588,11 @@ namespace DistributedFileSystem
                         if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
                         {
                             if (NetworkComms.ConnectionExists(peerIdentifier))
-                                NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", peerIdentifier, false, itemCheckSum);
+                                //NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", peerIdentifier, false, itemCheckSum); 
+                                NetworkComms.SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", peerIdentifier, false, "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             else
-                                NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", clientIP, clientPort, false, itemCheckSum);
+                                //NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", clientIP, clientPort, false, itemCheckSum);
+                                NetworkComms.SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", clientIP, clientPort, false, "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                         }
                     }
                     catch (CommsException)
@@ -538,13 +611,58 @@ namespace DistributedFileSystem
                     }
                     catch (Exception ex)
                     {
-                        NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError");
+                        NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_2");
                     }
                 })));
             }
+            #endregion
 
-            //All peers have upto 1 second to sort out their shit otherwise we move on without them responding.
-            Task.WaitAll(updateTasks.ToArray(), responseTimeoutMS);
+            //We now ensure we have waited the necessary timeout for any potential cascade update tasks
+            Task.WaitAll(unknownPeersUpdateTasks.ToArray(), responseTimeoutMS);
+
+            #region ContactUnknownPeers
+            List<Task> unknownPeerAvailabilityFlagUpdateTasks = new List<Task>();
+            if (allUnknownPeerEndPoints.Count > 0)
+            {     
+                //Make sure we have a distinct list of unknown peers
+                List<string> allUnknownPeerEndPointsComplete = new List<string>();
+                lock (peerEndPointLocker) allUnknownPeerEndPointsComplete = allUnknownPeerEndPoints.Distinct().Except(AllPeerEndPoints()).ToList();
+
+                if (allUnknownPeerEndPointsComplete.Count > 0)
+                {
+                    //If we have some unknown peers we can request an update from them as well
+                    foreach (string peerEndPointOuter in allUnknownPeerEndPointsComplete)
+                    {
+                        string peerEndPoint = peerEndPointOuter;
+                        //Removed tasks as this wants to run in the same thread as the originating call
+                        unknownPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                        {
+                            try
+                            {
+                                string clientIP = peerEndPoint.Split(':')[0];
+                                int clientPort = int.Parse(peerEndPoint.Split(':')[1]);
+
+                                //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                                if (clientIP != NetworkComms.LocalIP && clientPort != NetworkComms.CommsPort && PeerContactAllowed(clientIP, false))
+                                    NetworkComms.SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", clientIP, clientPort, false, "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                            }
+                            catch (CommsException)
+                            {
+
+                            }
+                            catch (Exception ex)
+                            {
+                                NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_3");
+                            }
+                        })));
+                    }
+                }
+
+            }
+            #endregion
+
+            //All our original and unknown peers have upto the timeout to sort out their shit otherwise we move on without them responding.
+            Task.WaitAll(originalPeerAvailabilityFlagUpdateTasks.Union(unknownPeerAvailabilityFlagUpdateTasks).ToArray(), responseTimeoutMS);
         }
 
         /// <summary>
@@ -742,10 +860,15 @@ namespace DistributedFileSystem
             }
         }
 
-        public int NumPeersInSwarm()
+        public int NumPeersInSwarm(bool excludeSuperPeers = false)
         {
             lock (peerLocker)
-                return peerAvailabilityByNetworkIdentifierDict.Count;
+            {
+                if (excludeSuperPeers)
+                    return (from current in peerAvailabilityByNetworkIdentifierDict where !current.Value.SuperPeer select current).Count();
+                else
+                    return peerAvailabilityByNetworkIdentifierDict.Count;
+            }
         }
 
         /// <summary>
@@ -756,6 +879,16 @@ namespace DistributedFileSystem
         {
             lock (peerLocker)
                 return peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
+        }
+
+        /// <summary>
+        /// Returns an array containing all known peer endpoints inthe format locaIP:port
+        /// </summary>
+        /// <returns></returns>
+        public string[] AllPeerEndPoints()
+        {
+            lock (peerLocker)
+                return (from current in peerNetworkIdentifierToConnectionInfo select current.Value.ClientIP + ":" + current.Value.ClientPort).ToArray();
         }
 
         public void ClearAllLocalAvailabilityFlags()

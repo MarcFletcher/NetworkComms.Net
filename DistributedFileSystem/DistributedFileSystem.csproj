@@ -47,6 +47,7 @@
     <Compile Include="DFS.cs" />
     <Compile Include="DistributedItem.cs" />
     <Compile Include="ItemAssemblyConfig.cs" />
+    <Compile Include="ItemLinkRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SwarmChunkAvailability.cs" />
   </ItemGroup>

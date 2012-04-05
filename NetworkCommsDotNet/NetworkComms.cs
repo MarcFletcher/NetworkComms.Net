@@ -2142,6 +2142,9 @@ namespace NetworkCommsDotNet
                 if (commsShutdown)
                     throw new Exception("Attempting to access comms after shutdown has been initiated.");
 
+                if (targetIPAddress == "")
+                    throw new Exception("targetIPAddress provided was empty, i.e. '', clearly not a valid IP.");
+
                 if (commsPort < 1)
                     throw new Exception("Invalid commsPort specified. Must be greater than 0.");
 

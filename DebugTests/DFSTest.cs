@@ -22,6 +22,7 @@ using NetworkCommsDotNet;
 using System.Threading;
 using SerializerBase.Protobuf;
 using SerializerBase;
+using System.IO;
 
 namespace DebugTests
 {
@@ -50,24 +51,41 @@ namespace DebugTests
             {
                 //Prepare DFS in host mode
                 #region ServerMode
-                Console.WriteLine("\n ... host mode selected.");
-                Console.WriteLine("\nPlease enter how large the test data packet should be in MB and press return, e.g. 50:");
-                int numberMegsToCreate = int.Parse(Console.ReadLine());
+                //Console.WriteLine("\n ... host mode selected.");
+                //Console.WriteLine("\nPlease enter how large the test data packet should be in MB and press return, e.g. 50:");
+                //int numberMegsToCreate = int.Parse(Console.ReadLine());
 
-                //Fill a byte[] with random data
-                DateTime startTime = DateTime.Now;
-                Random randGen = new Random();
-                byte[] someRandomData = new byte[numberMegsToCreate * 1024 * 1024];
-                randGen.NextBytes(someRandomData);
+                ////Fill a byte[] with random data
+                //DateTime startTime = DateTime.Now;
+                //Random randGen = new Random();
+                //byte[] someRandomData = new byte[numberMegsToCreate * 1024 * 1024];
+                //randGen.NextBytes(someRandomData);
 
-                Console.WriteLine("\n ... succesfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
+                //Console.WriteLine("\n ... succesfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
+                byte[] someRandomData = File.ReadAllBytes("handRanks.dat");
 
                 object listLocker = new object();
                 List<ShortGuid> connectedClients = new List<ShortGuid>();
+                DFS.InitialiseDFS(true);
 
                 //Create the item to be distributed
                 DistributedItem newItem = new DistributedItem(someRandomData, new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort));
+                //
 
+                if (NetworkComms.CommsPort != 4000)
+                {
+                    DFS.InitialiseDFSLink("131.111.73.200", 4000, DFSLinkMode.LinkAndRepeat);
+                    Console.WriteLine("Enabled DFS link with master peer");
+                }
+                else
+                {
+                    DFS.AddItemToLocal(newItem);
+                    Console.WriteLine("Acting as master peer");
+                }
+
+                Console.WriteLine(" ... DFS has been initialised.");
+
+                #region CommsDelegates
                 NetworkComms.ConnectionShutdownDelegate clientShutdownDelegate = (connectionId) =>
                 {
                     lock (listLocker)
@@ -83,7 +101,7 @@ namespace DebugTests
                         if (!connectedClients.Contains(connectionId))
                             connectedClients.Add(connectionId);
 
-                    DFS.PushItemToSwarm(connectionId, newItem, "BigDataRequestResponse");
+                    DFS.PushItemToPeer(connectionId, newItem, "BigDataRequestResponse");
                     Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkEnterCount);
                 };
 
@@ -91,9 +109,7 @@ namespace DebugTests
                 {
                     Console.WriteLine(" ... " + connectionId + " - " + incomingString);
                 };
-
-                DFS.InitialiseDFS(true);
-                Console.WriteLine(" ... DFS has been initialised.");
+                #endregion
 
                 NetworkComms.AppendGlobalConnectionCloseHandler(clientShutdownDelegate);
                 NetworkComms.AppendIncomingPacketHandler("BigDataRequest", ReplyDelegate);
@@ -145,6 +161,8 @@ namespace DebugTests
                         Console.WriteLine("Closing host.");
                         break;
                     }
+                    else
+                        DFS.CheckForSharedItems("131.111.73.200", 4000);
                     #endregion
                 }
                 #endregion
@@ -155,30 +173,14 @@ namespace DebugTests
                 #region PeerMode
                 Console.WriteLine("\n ... peer mode selected.");
 
-                //Expecting user to enter ip address as 192.168.0.1:4000
-                Console.WriteLine("\nPlease enter the host IP address and port, e.g. '192.168.0.1:4000':");
-
                 string serverIP; int serverPort;
-                while (true)
-                {
-                    try
-                    {
-                        //Parse the provided information
-                        string userEnteredStr = Console.ReadLine();
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Unable to determine host IP address and port. Check format and try again:");
-                    }
-                }
+                ExampleHelper.GetServerDetails(out serverIP, out serverPort);
 
                 DFS.InitialiseDFS(serverIP, serverPort);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 bool shutDown = false;
+                bool buildComplete = true;
                 DateTime startTime = DateTime.Now;
 
                 int buildCount = 0;
@@ -193,31 +195,7 @@ namespace DebugTests
 
                         double speed = (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds);
                         NetworkComms.SendObject("ClientInfo", connectionId, false, " ... build " + buildCount + " took " + (DateTime.Now - startTime).TotalSeconds.ToString("0.00") + " secs (" + speed.ToString("0.0") + " MB/s) using " + item.SwarmChunkAvailability.NumPeersInSwarm() + " peers. " + buildCount + " builds completed.");
-
-                        if (!shutDown)
-                        {
-                            //Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
-                            //var shutdownKey = Console.ReadKey(true).Key;
-                            //if (shutdownKey != ConsoleKey.R) shutDown = true;
-
-                            Thread.Sleep(3000);
-
-                            if (!shutDown)
-                            {
-                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
-                                Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
-                                startTime = DateTime.Now;
-                                NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
-                            }
-                            else
-                                DFS.ShutdownDFS();
-                        }
-
-                        else
-                        {
-                            shutDown = true;
-                            DFS.ShutdownDFS();
-                        }
+                        buildComplete = true;
                     }
                     catch (Exception)
                     {
@@ -235,12 +213,43 @@ namespace DebugTests
                 NetworkComms.AppendIncomingPacketHandler("ClientCommand", ShutdownDelegate, false);
 
                 Console.WriteLine("\nListening for connections on " + NetworkComms.LocalIP + ":" + NetworkComms.CommsPort + " (" + NetworkComms.NetworkNodeIdentifier + ").\n");
-                Console.WriteLine(" ... initiating item build ...");
+
 
                 startTime = DateTime.Now;
-                NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
+                //NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
 
-                while (!shutDown) Thread.Sleep(1000);
+                while (true)
+                {
+                    if (!shutDown && buildComplete)
+                    {
+                        Console.WriteLine("Press 'r' to rebuild or any other key to shutdown.");
+                        var shutdownKey = Console.ReadKey(true).Key;
+                        if (shutdownKey != ConsoleKey.R) shutDown = true;
+
+                        if (!shutDown)
+                        {
+                            DistributedItem item = DFS.MostRecentlyCompletedItem();
+                            if (item != null)
+                            {
+                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
+                                Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
+                                startTime = DateTime.Now;
+                            }
+
+                            buildComplete = false;
+                            NetworkComms.SendObject("BigDataRequest", serverIP, serverPort, false, 0);
+                            Console.WriteLine(" ... initiating item build ...");
+                        }
+                    }
+                    else if (shutDown)
+                    {
+                        shutDown = true;
+                        DFS.ShutdownDFS();
+                        break;
+                    }
+
+                    Thread.Sleep(250);
+                }
 
                 try
                 {

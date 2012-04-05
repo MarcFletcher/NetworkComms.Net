@@ -83,7 +83,7 @@ namespace ExamplesConsole
                         if (!connectedClients.Contains(connectionId))
                             connectedClients.Add(connectionId);
 
-                    DFS.PushItemToSwarm(connectionId, newItem, "BigDataRequestResponse");
+                    DFS.PushItemToPeer(connectionId, newItem, "BigDataRequestResponse");
                     Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkEnterCount);
                 };
 

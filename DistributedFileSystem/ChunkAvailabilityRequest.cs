@@ -22,6 +22,13 @@ using ProtoBuf;
 
 namespace DistributedFileSystem
 {
+    public enum ChunkReplyState : byte
+    {
+        DataIncluded,
+        ItemOrChunkNotAvailable,
+        PeerBusy
+    }
+
     [ProtoContract]
     public class ChunkAvailabilityRequest
     {
@@ -55,13 +62,6 @@ namespace DistributedFileSystem
             this.RequestIncoming = false;
             this.RequestComplete = false;
         }
-    }
-
-    public enum ChunkReplyState : byte
-    {
-        DataIncluded,
-        ItemOrChunkNotAvailable,
-        PeerBusy
     }
 
     [ProtoContract]

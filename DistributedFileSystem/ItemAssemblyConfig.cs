@@ -58,6 +58,12 @@ namespace DistributedFileSystem
         public string CompletedPacketType { get; private set; }
 
         /// <summary>
+        /// The cascade depth to use when building this item. Default is normally 0
+        /// </summary>
+        [ProtoMember(7)]
+        public int ItemBuildCascadeDepth { get; private set; }
+
+        /// <summary>
         /// Private constructor for serialisation.
         /// </summary>
         private ItemAssemblyConfig() { }
@@ -70,6 +76,7 @@ namespace DistributedFileSystem
             this.TotalItemSizeInBytes = itemToDistribute.ItemBytesLength;
             this.SwarmChunkAvailabilityBytes = itemToDistribute.SwarmChunkAvailability.ThreadSafeSerialise();
             this.CompletedPacketType = completedPacketType;
+            this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
         }
     }
 }
