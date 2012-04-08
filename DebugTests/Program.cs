@@ -12,6 +12,7 @@ using log4net.Layout;
 using log4net.Appender;
 using System.Threading;
 using System.IO;
+using DistributedFileSystem;
 
 namespace DebugTests
 {
@@ -27,12 +28,21 @@ namespace DebugTests
             //NameValueCollection properties = new NameValueCollection();
             //properties["configType"] = "FILE";
             //properties["configFile"] = "log4net.config";
-            //NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+            //DFS.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.Go();
-            DFSTest.RunExample();
+            //DFSTest.RunExample();
+
+            DFS.InitialiseDFS();
+            DFS.InitialiseDFSLink("131.111.73.213", 2004, DFSLinkMode.LinkAndRepeat);
+
+            while (true)
+            {
+                Console.WriteLine(DFS.AllLocalDFSItemKeys(true).Length + " (" + DFS.AllLocalDFSItemKeys(false).Length + ") Items. " + DFS.TotalNumCompletedChunkRequests + " Chuncks Served.");
+                Thread.Sleep(5000);
+            }
         }
     }
 }

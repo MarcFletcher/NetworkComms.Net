@@ -258,13 +258,40 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns the current network usage, as last updated, and value between 0 and 1. Outgoing and incoming usage are investigated and the larger of the two is used.
         /// </summary>
-        public static double CurrentNetworkLoad { get; private set; }
+        public static double CurrentNetworkLoad
+        {
+            get
+            {
+                //We start the load thread when we first access the network load
+                //this helps cut down on uncessary threads if unrequired
+                if (NetworkLoadThread == null)
+                {
+                    lock (globalDictAndDelegateLocker)
+                    {
+                        if (NetworkLoadThread == null)
+                        {
+                            NetworkLoadThread = new Thread(NetworkLoadWorker);
+                            NetworkLoadThread.Name = "NetworkLoadThread";
+                            NetworkLoadThread.Start();
+                        }
+                    }
+                }
+
+                return currentNetworkLoad;
+            }
+
+            private set
+            {
+                currentNetworkLoad = value;
+            }
+        }
 
         /// <summary>
         /// The number of millisconds over which to take an average load. Default is 200ms but use atleast 100ms to get a reliable value.
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
-        private static Thread NetworkLoadThread;
+        private static Thread NetworkLoadThread = null;
+        private static double currentNetworkLoad;
 
         /// <summary>
         /// Calculates the network load every NetworkLoadUpdateWindowMS
@@ -884,6 +911,25 @@ namespace NetworkCommsDotNet
 
             if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
         }
+
+        /// <summary>
+        /// Pings the provided connection and return true if the ping was succesfull, returns false otherwise. Usefull to see if an ip address is listening for connections.
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="port"></param>
+        /// <param name="pingTimeoutMS"></param>
+        /// <returns></returns>
+        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS)
+        {
+            try
+            {
+                return NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), ipAddress, port, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), pingTimeoutMS, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+            }
+            catch (CommsException)
+            {
+                return false;
+            }
+        }
         #endregion
 
         #region PacketHandlers
@@ -1244,7 +1290,7 @@ namespace NetworkCommsDotNet
                     if (!ConnectionKeepAliveThread.Join(PacketConfirmationTimeoutMS * 10))
                     {
                         ConnectionKeepAliveThread.Abort();
-                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread status = "+ ConnectionKeepAliveThreadState() +" connectionKeepAlivePollThread thread aborted.");
+                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread status = "+ ConnectionKeepAliveThreadState() +" connectionKeepAlivePollThread thread aborted. Number of connections = "+TotalNumConnections()+".");
                     }
                 }
             }
@@ -1821,9 +1867,6 @@ namespace NetworkCommsDotNet
                     ConnectionKeepAliveThread.Start();
 
                     NetworkLoadUpdateWindowMS = 200;
-                    NetworkLoadThread = new Thread(NetworkLoadWorker);
-                    NetworkLoadThread.Name = "NetworkLoadThread";
-                    NetworkLoadThread.Start();
 
                     commsInitialised = true;
                     if (loggingEnabled) logger.Info("networkComms.net has been initialised");

@@ -66,7 +66,7 @@ namespace ExamplesConsole
                 List<ShortGuid> connectedClients = new List<ShortGuid>();
 
                 //Create the item to be distributed
-                DistributedItem newItem = new DistributedItem(someRandomData, new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort));
+                DistributedItem newItem = new DistributedItem("exampleItem", someRandomData, new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort));
 
                 NetworkComms.ConnectionShutdownDelegate clientShutdownDelegate = (connectionId) =>
                 {
@@ -84,7 +84,7 @@ namespace ExamplesConsole
                             connectedClients.Add(connectionId);
 
                     DFS.PushItemToPeer(connectionId, newItem, "BigDataRequestResponse");
-                    Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkEnterCount);
+                    Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkSupplyCount);
                 };
 
                 NetworkComms.PacketHandlerCallBackDelegate<string> InfoDelegate = (packetHeader, connectionId, incomingString) =>
@@ -213,7 +213,7 @@ namespace ExamplesConsole
                             DistributedItem item = DFS.MostRecentlyCompletedItem();
                             if (item != null)
                             {
-                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
+                                DFS.RemoveItem(item.ItemCheckSum);
                                 Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
                                 startTime = DateTime.Now;
                             }

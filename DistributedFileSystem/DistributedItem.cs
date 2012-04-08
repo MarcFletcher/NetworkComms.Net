@@ -28,6 +28,7 @@ namespace DistributedFileSystem
 {
     public class DistributedItem
     {
+        public string ItemTypeStr { get; private set; }
         public long ItemCheckSum { get; private set; }
         public byte TotalNumChunks { get; private set; }
         public int ChunkSizeInBytes { get; private set; }
@@ -63,18 +64,18 @@ namespace DistributedFileSystem
         //private int CurrentChunkEnterCounter { get; set; }
         object itemLocker = new object();
 
-        public int TotalChunkEnterCount { get; private set; }
+        public int TotalChunkSupplyCount { get; private set; }
         public int PushCount { get; private set; }
 
-        public DistributedItem(byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth = 1)
+        public DistributedItem(string itemTypeStr, byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth = 1)
         {
-            Constructor(itemBytes, seedConnectionInfo, itemBuildCascadeDepth);
+            Constructor(itemTypeStr, itemBytes, seedConnectionInfo, itemBuildCascadeDepth);
         }
 
-        private void Constructor(byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth)
+        private void Constructor(string itemTypeStr, byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth)
         {
             //CurrentChunkEnterCounter = 0;
-            TotalChunkEnterCount = 0;
+            TotalChunkSupplyCount = 0;
             PushCount = 0;
 
             //The md5 is based on not just the bytes but also the other parameters
@@ -108,14 +109,12 @@ namespace DistributedFileSystem
             //Intialise the swarm availability
             SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, TotalNumChunks);
 
-#if logging
-            DFS.logger.Debug("Completed DistributedItem created with MD5 "+ItemMd5+".");
-#endif
+            if (DFS.loggingEnabled) DFS.logger.Debug("... created new original DFS item (" + this.ItemCheckSum + ").");
         }
 
         public DistributedItem(ItemAssemblyConfig assemblyConfig)
         {
-            this.TotalChunkEnterCount = 0;
+            this.TotalChunkSupplyCount = 0;
             this.PushCount = 0;
 
             this.TotalNumChunks = assemblyConfig.TotalNumChunks;
@@ -147,9 +146,7 @@ namespace DistributedFileSystem
                 SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
             }
 
-#if logging
-            DFS.logger.Debug("Empty DistributedItem created with expected MD5 " + ItemMd5 + ".");
-#endif
+            if (DFS.loggingEnabled) DFS.logger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
         }
 
         public void IncrementPushCount()
@@ -159,9 +156,8 @@ namespace DistributedFileSystem
 
         public void AssembleItem(int assembleTimeoutSecs)
         {
-#if logging
-            DFS.logger.Debug("Starting AssembleItem for item " + ItemMd5 + ".");
-#endif
+            if (DFS.loggingEnabled) DFS.logger.Debug("Started DFS item assemble (" + this.ItemCheckSum + ").");
+
             //Used to load balance
             Random randGen = new Random();
             DateTime assembleStartTime = DateTime.Now;
@@ -222,9 +218,8 @@ namespace DistributedFileSystem
                         {
                             if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > DFS.ChunkRequestTimeoutMS)
                             {
-#if logging
-                            DFS.logger.Debug("... removing " + currentTrackerKeys[i] + " from ItemBuildTrackerDict due to potential timeout.");
-#endif
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + currentTrackerKeys[i] + " peer from AssembleItem due to potential timeout.");
+
                                 //Console.WriteLine("      Request Timeout {0} - Removing request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), currentTrackerKeys[i], itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
                                 //If we had a timeout we will not try that peer again
                                 SwarmChunkAvailability.RemovePeerFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
@@ -504,6 +499,8 @@ namespace DistributedFileSystem
             //Close connections to other completed clients which are not a super peer
             //SwarmChunkAvailability.CloseConnectionToCompletedPeers(TotalNumChunks);
 
+            if (DFS.loggingEnabled) DFS.logger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+
             try { GC.Collect(); }
             catch (Exception) { }
         }
@@ -607,9 +604,7 @@ namespace DistributedFileSystem
                     if (SwarmChunkAvailability.ChunkHealthMetric(incomingReply.ChunkIndex, TotalNumChunks) < 1)
                         SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
 
-#if logging
-                DFS.logger.Debug("... added data for chunk " + incomingReply.ChunkIndex + " to item " + ItemMd5 + ".");
-#endif
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... added data for chunk " + incomingReply.ChunkIndex + " to item " + ItemCheckSum + ".");
                     #endregion
 
                     //For the same reason we garbage collect at the server end when creating this data we want to 
@@ -652,7 +647,7 @@ namespace DistributedFileSystem
             //If we have made it this far we are returning data
             if (SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkNodeIdentifier, chunkIndex))
             {
-                lock (itemLocker) TotalChunkEnterCount++;
+                lock (itemLocker) TotalChunkSupplyCount++;
 
                 //Select the correct returnArray length
                 //byte[] returnArray = new byte[(chunkIndex == TotalNumChunks - 1 ? ItemBytes.Length - (chunkIndex * ChunkSizeInBytes) : ChunkSizeInBytes)];
@@ -748,9 +743,6 @@ namespace DistributedFileSystem
             if (ItemCheckSum == Adler32.GenerateCheckSum(ItemByteArray))
             //if (true)
             {
-#if logging
-                    DFS.logger.Debug("... checked to see if completed item is finished and valid. Item complete and valid.");
-#endif
                 return true;
             }
             else

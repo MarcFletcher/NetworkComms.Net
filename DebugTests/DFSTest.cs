@@ -57,19 +57,24 @@ namespace DebugTests
 
                 ////Fill a byte[] with random data
                 //DateTime startTime = DateTime.Now;
-                //Random randGen = new Random();
-                //byte[] someRandomData = new byte[numberMegsToCreate * 1024 * 1024];
-                //randGen.NextBytes(someRandomData);
+                Random randGen = new Random();
+                List<byte[]> someRandomData = new List<byte[]>(); ;
 
-                //Console.WriteLine("\n ... succesfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
-                byte[] someRandomData = File.ReadAllBytes("handRanks.dat");
+                for (int i = 0; i < 15; i++)
+                {
+                    someRandomData.Add(new byte[20 * 1024 * 1024]);
+                    randGen.NextBytes(someRandomData.Last());
+                }
+
+                Console.WriteLine("\n ... succesfully created 15 x {0}MB test packet.", ((double)someRandomData[0].Length / (1024.0 * 1024.0)).ToString("0.###"));
+                //byte[] someRandomData = File.ReadAllBytes("handRanks.dat");
 
                 object listLocker = new object();
                 List<ShortGuid> connectedClients = new List<ShortGuid>();
                 DFS.InitialiseDFS(true);
 
                 //Create the item to be distributed
-                DistributedItem newItem = new DistributedItem(someRandomData, new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort));
+                DistributedItem newItem = new DistributedItem("testItem", someRandomData[0], new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort));
                 //
 
                 if (NetworkComms.CommsPort != 4000)
@@ -79,7 +84,9 @@ namespace DebugTests
                 }
                 else
                 {
-                    DFS.AddItemToLocal(newItem);
+                    foreach(var item in someRandomData)
+                        DFS.AddItem(new DistributedItem("testItem", item, new ConnectionInfo(NetworkComms.NetworkNodeIdentifier, NetworkComms.LocalIP, NetworkComms.CommsPort)));
+
                     Console.WriteLine("Acting as master peer");
                 }
 
@@ -102,7 +109,7 @@ namespace DebugTests
                             connectedClients.Add(connectionId);
 
                     DFS.PushItemToPeer(connectionId, newItem, "BigDataRequestResponse");
-                    Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkEnterCount);
+                    Console.WriteLine("Pushing item to " + connectionId + " (" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(connectionId).ClientPort + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkSupplyCount);
                 };
 
                 NetworkComms.PacketHandlerCallBackDelegate<string> InfoDelegate = (packetHeader, connectionId, incomingString) =>
@@ -231,7 +238,7 @@ namespace DebugTests
                             DistributedItem item = DFS.MostRecentlyCompletedItem();
                             if (item != null)
                             {
-                                DFS.RemoveItemFromLocalOnly(item.ItemCheckSum);
+                                DFS.RemoveItem(item.ItemCheckSum);
                                 Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
                                 startTime = DateTime.Now;
                             }

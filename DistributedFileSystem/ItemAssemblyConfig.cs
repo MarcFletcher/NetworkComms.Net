@@ -64,6 +64,12 @@ namespace DistributedFileSystem
         public int ItemBuildCascadeDepth { get; private set; }
 
         /// <summary>
+        /// A string which can be used to distinguish this distributed item from others
+        /// </summary>
+        [ProtoMember(8)]
+        public string ItemTypeStr { get; private set; }
+
+        /// <summary>
         /// Private constructor for serialisation.
         /// </summary>
         private ItemAssemblyConfig() { }
@@ -77,6 +83,7 @@ namespace DistributedFileSystem
             this.SwarmChunkAvailabilityBytes = itemToDistribute.SwarmChunkAvailability.ThreadSafeSerialise();
             this.CompletedPacketType = completedPacketType;
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
+            this.ItemTypeStr = itemToDistribute.ItemTypeStr;
         }
     }
 }

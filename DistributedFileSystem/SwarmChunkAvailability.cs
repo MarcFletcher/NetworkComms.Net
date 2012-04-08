@@ -263,9 +263,7 @@ namespace DistributedFileSystem
             peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerAvailabilityInfo>() { { sourceConnectionInfo.NetworkIdentifier, new PeerAvailabilityInfo(new ChunkFlags(totalNumChunks), true) } };
             peerNetworkIdentifierToConnectionInfo = new Dictionary<string, ConnectionInfo>() { { sourceConnectionInfo.NetworkIdentifier, sourceConnectionInfo } };
 
-#if logging
-            DFS.logger.Debug("New SwarmChunkAvailability by " + sourceNetworkIdentifier + ".");
-#endif
+            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created by " + sourceConnectionInfo.NetworkIdentifier + ".");
         }
 
         /// <summary>
@@ -307,10 +305,6 @@ namespace DistributedFileSystem
                         }
                     }
                 }
-
-#if logging
-                DFS.logger.Debug("... returned latest CachedChunkSwarmExistences.");
-#endif
 
                 return chunkExistence;
             }
@@ -434,9 +428,7 @@ namespace DistributedFileSystem
                         if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
                             peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
 
-#if logging
-                DFS.logger.Debug("... removed " + networkIdentifier + " from item swarm.");
-#endif
+                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
 
                         //Console.WriteLine("... removing peer " + networkIdentifier + ".");
                     }
@@ -463,10 +455,6 @@ namespace DistributedFileSystem
 
                     peerAvailabilityByNetworkIdentifierDict.Add(peerNetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
                 }
-
-#if logging
-                DFS.logger.Debug("... updated peer chunk availability flags for " + peerNetworkIdentifier + ".");
-#endif
             }
         }
 
@@ -808,13 +796,16 @@ namespace DistributedFileSystem
         /// Broadcast to all known peers that the local DFS is removing the specified item
         /// </summary>
         /// <param name="itemCheckSum"></param>
-        public void BroadcastItemRemoval(long itemCheckSum)
+        public void BroadcastItemRemoval(long itemCheckSum, bool removeSwarmWide)
         {
             string[] peerKeys;
             lock (peerLocker)
             {
                 if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkNodeIdentifier))
                     throw new Exception("Local peer not located in peerChunkAvailabity for this item.");
+
+                if (removeSwarmWide && !peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].SuperPeer)
+                    throw new Exception("Attempted to trigger a swarm wide item removal but local is not a SuperPeer.");
 
                 peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
             }
@@ -841,9 +832,9 @@ namespace DistributedFileSystem
                         {
                             //For each peer that is not us we send our latest availability.
                             if (NetworkComms.ConnectionExists(peerIdentifier))
-                                NetworkComms.SendObject("DFS_ItemRemovedLocallyUpdate", peerIdentifier, false, itemCheckSum);
+                                NetworkComms.SendObject("DFS_ItemRemovalUpdate", peerIdentifier, false, new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
                             else
-                                NetworkComms.SendObject("DFS_ItemRemovedLocallyUpdate", clientIP, clientPort, false, itemCheckSum);
+                                NetworkComms.SendObject("DFS_ItemRemovalUpdate", clientIP, clientPort, false, new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
                         }
                     }
                     catch (CommsException)
@@ -868,6 +859,17 @@ namespace DistributedFileSystem
                     return (from current in peerAvailabilityByNetworkIdentifierDict where !current.Value.SuperPeer select current).Count();
                 else
                     return peerAvailabilityByNetworkIdentifierDict.Count;
+            }
+        }
+
+        public int NumCompletePeersInSwarm(byte totalItemChunks, bool excludeSuperPeers = false)
+        {
+            lock (peerLocker)
+            {
+                if (excludeSuperPeers)
+                    return (from current in peerAvailabilityByNetworkIdentifierDict where !current.Value.SuperPeer && current.Value.PeerChunkFlags.AllFlagsSet(totalItemChunks) select current).Count();
+                else
+                    return (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.PeerChunkFlags.AllFlagsSet(totalItemChunks) select current).Count();
             }
         }
 
