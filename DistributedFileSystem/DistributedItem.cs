@@ -253,6 +253,9 @@ namespace DistributedFileSystem
                                 //We have non super peers if the number of peers who are not us and are not super peers is greater than 0
                                 bool containsNonSuperPeers = (nonLocalChunkExistence[chunkRarity[i]].Count(entry => entry.Key.NetworkIdentifier != NetworkComms.NetworkNodeIdentifier && !entry.Value.SuperPeer) > 0);
 
+                                //If over half the number of swarm peers are completed we will use them rather than uncompleted peers
+                                bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
+
                                 //We can now determine which peers we could contact for this chunk
                                 ConnectionInfo[] possibleChunkPeers = (from current in nonLocalChunkExistence[chunkRarity[i]]
                                                                                     //We don't want to to contact busy peers
@@ -261,8 +264,11 @@ namespace DistributedFileSystem
                                                                                     where (containsNonSuperPeers ? !current.Value.SuperPeer : true)
                                                                                     //We don't want a peer from whom we currently await a response
                                                                                     where !currentRequestIdentifiers.Contains(current.Key.NetworkIdentifier)
-                                                                                    //Order possible peers by whoever has the least complete file first. See comments within /**/ below
-                                                                                    orderby current.Value.PeerChunkFlags.NumCompletedChunks() ascending, randGen.NextDouble() ascending
+                                                                                    //See comments within /**/ below for ordering notes
+                                                                                    orderby
+                                                                                        (useCompletedPeers ? 0 :  current.Value.PeerChunkFlags.NumCompletedChunks()) ascending,
+                                                                                        (useCompletedPeers ? current.Value.PeerChunkFlags.NumCompletedChunks() : 0) descending, 
+                                                                                        randGen.NextDouble() ascending
                                                                                     select current.Key).ToArray();
 
                                 /*
@@ -272,6 +278,9 @@ namespace DistributedFileSystem
                                 peers which are building and item will go to a single peer.
                                 Because of that we go to the peer with the least data in the fist instance and this should help load balance
                                 We also add a random sort at the end to make sure we always go for peers in a different order on a subsequent loop
+                                
+                                10/4/12
+                                We are modifying this sorting when over half the swarm peers have already completed the item
                                 */
 
                                 //We can only make a request if there are available peers

@@ -654,7 +654,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Metric used to determine the health of a chunk and whether swarm will benefit from a broadcasted update.
+        /// Metric used to determine the health of a chunk and whether swarm will benefit from a broadcasted update. A value greater than 1 signifies a healthy chunk availability.
         /// </summary>
         /// <param name="chunkIndex"></param>
         /// <returns></returns>
@@ -670,8 +670,10 @@ namespace DistributedFileSystem
 
                 //=((1.5*($A3-0.5))/B$2)
 
-                //return (1.5*(double)chunkExistenceCount) / (double)totalNumIncompletePeers;
-                return (1.5 * ((double)chunkExistenceCount - 0.5)) / (double)totalNumIncompletePeers;
+                if (totalNumIncompletePeers == 0)
+                    return 100;
+                else
+                    return (1.5 * ((double)chunkExistenceCount - 0.5)) / (double)totalNumIncompletePeers;
             }
         }
 

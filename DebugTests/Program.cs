@@ -20,8 +20,13 @@ namespace DebugTests
     {      
         static void Main(string[] args)
         {
-            Console.SetBufferSize(130, 500);
-            Console.SetWindowSize(130, 25);
+            try
+            {
+                Console.SetBufferSize(130, 500);
+                Console.SetWindowSize(130, 25);
+            }
+            catch (Exception) { }
+
             Thread.CurrentThread.Name = "MainThread";
 
             //Configure the logger here
@@ -35,12 +40,20 @@ namespace DebugTests
             //DebugTest.Go();
             //DFSTest.RunExample();
 
+            NetworkComms.PreferredIPPrefix = new string[] { "131", "172" };
+
             DFS.InitialiseDFS();
             DFS.InitialiseDFSLink("131.111.73.213", 2004, DFSLinkMode.LinkAndRepeat);
 
+            if (NetworkComms.HostName.StartsWith("gpu-s1") || NetworkComms.HostName.StartsWith("gpu-s2"))
+            {
+                Console.WriteLine("Detected gpu-s1/s2, increasing InterfaceLinkSpeed to 1Gbps");
+                NetworkComms.InterfaceLinkSpeed = 1000000000;
+            }
+
             while (true)
             {
-                Console.WriteLine(DFS.AllLocalDFSItemKeys(true).Length + " (" + DFS.AllLocalDFSItemKeys(false).Length + ") Items. " + DFS.TotalNumCompletedChunkRequests + " Chuncks Served.");
+                Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " - " + DFS.AllLocalDFSItemKeys(true).Length + " (" + DFS.AllLocalDFSItemKeys(false).Length + ") Items. " + DFS.TotalNumCompletedChunkRequests + " Chunks Served. "+NetworkComms.TotalNumConnections()+" Connections. Comms Load "+(NetworkComms.AverageNetworkLoad(5)*NetworkComms.InterfaceLinkSpeed/8.0E6).ToString("0.0")+"MB/s.");
                 Thread.Sleep(5000);
             }
         }

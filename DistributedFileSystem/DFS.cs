@@ -69,6 +69,10 @@ namespace DistributedFileSystem
         public static DFSLinkMode LinkMode { get; private set; }
         static int linkRequestTimeoutSecs = 10;
         static int linkRequestIntervalSecs = 5;
+        /// <summary>
+        /// The number of link items to build concurrently
+        /// </summary>
+        static int concurrentNumLinkItems = 2;
 
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
@@ -194,23 +198,31 @@ namespace DistributedFileSystem
             {
                 try
                 {
-                    //This links any existing items and retrieves a list of all remote items
-                    DFSLinkRequest availableLinkTargetItems = NetworkComms.SendReceiveObject<DFSLinkRequest>("DFS_ItemLinkRequest", linkTargetIP, linkTargetPort, false, "DFS_ItemLinkRequest", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemKeys(), false));
-                    if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker could link " + availableLinkTargetItems .AvailableItemCheckSums.Length+ " items from target.");
+                    //This links any existing local items and retrieves a list of all remote items
+                    DFSLinkRequest availableLinkTargetItems = NetworkComms.SendReceiveObject<DFSLinkRequest>("DFS_ItemLinkRequest", linkTargetIP, linkTargetPort, false, "DFS_ItemLinkRequest", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
+                    if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker could link " + availableLinkTargetItems.AvailableItems.Count+ " items from target.");
 
                     if (LinkMode == DFSLinkMode.LinkAndRepeat)
                     {
                         //We get a list of items we don't have
-                        long[] localItems = AllLocalDFSItemKeys(false);
+                        long[] allLocalItems = AllLocalDFSItemKeys(false);
 
-                        //Pull out the items we want to request
-                        long[] itemsToRequest = (from current in availableLinkTargetItems.AvailableItemCheckSums where !localItems.Contains(current) select current).ToArray();
-
-                        //Make the request for items we do not have
-                        if (itemsToRequest.Length > 0)
+                        //We only begin a new link cycle if all local items are complete
+                        if (allLocalItems.Length == AllLocalDFSItemKeys(true).Length)
                         {
-                            NetworkComms.SendObject("DFS_RequestLocalItemBuild", linkTargetIP, linkTargetPort, false, itemsToRequest);
-                            if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker made a request to link "+itemsToRequest.Length+" item.");
+                            //Pull out the items we want to request
+                            //We order the items by item creation time starting with the newest
+                            long[] itemsToRequest = (from current in availableLinkTargetItems.AvailableItems
+                                                     where !allLocalItems.Contains(current.Key)
+                                                     orderby current.Value descending
+                                                     select current.Key).ToArray();
+
+                            //Make the request for items we do not have
+                            if (itemsToRequest.Length > 0)
+                            {
+                                NetworkComms.SendObject("DFS_RequestLocalItemBuild", linkTargetIP, linkTargetPort, false, itemsToRequest.Take(concurrentNumLinkItems).ToArray());
+                                if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker made a request to link " + itemsToRequest.Take(concurrentNumLinkItems).Count() + " items.");
+                            }
                         }
                     }
                 }
@@ -550,7 +562,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemKeys(), false));
+                NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
             }
             catch (CommsException ex)
             {
@@ -569,6 +581,24 @@ namespace DistributedFileSystem
             }
 
             return returnArray;
+        }
+
+        public static Dictionary<long, DateTime> AllLocalDFSItemsWithBuildTime(bool completeItemsOnly = true)
+        {
+            long[] itemCheckSums = AllLocalDFSItemKeys(completeItemsOnly);
+
+            Dictionary<long, DateTime> returnDict = new Dictionary<long, DateTime>();
+
+            lock (globalDFSLocker)
+            {
+                foreach (long item in itemCheckSums)
+                {
+                    if (swarmedItemsDict.ContainsKey(item))
+                        returnDict.Add(item, swarmedItemsDict[item].ItemBuildCompleted);
+                }
+            }
+
+            return returnDict;
         }
 
         #region NetworkCommsDelegates
@@ -838,8 +868,7 @@ namespace DistributedFileSystem
                     }
                     else
                     {
-                        //ChunkData will be null if we don't actually 
-                        if (NetworkComms.CurrentNetworkLoad > DFS.PeerBusyNetworkLoadThreshold)
+                        if (NetworkComms.AverageNetworkLoad(10) > DFS.PeerBusyNetworkLoadThreshold)
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
@@ -1053,14 +1082,14 @@ namespace DistributedFileSystem
         {
             try
             {
-                long[] localItemKeys = AllLocalDFSItemKeys();
+                var localItemKeys = AllLocalDFSItemsWithBuildTime();
 
                 //We only check for potential links if the remote end has provided us with some items to link
-                if (linkRequestData.AvailableItemCheckSums.Length > 0)
+                if (linkRequestData.AvailableItems.Count > 0)
                 {
                     //Get the item matches using linq. Could also use localItemKeys.Intersect<long>(linkRequestData.AvailableItemCheckSums);
-                    long[] itemsToLink = (from current in localItemKeys
-                                          join remote in linkRequestData.AvailableItemCheckSums on current equals remote
+                    long[] itemsToLink = (from current in localItemKeys.Keys
+                                          join remote in linkRequestData.AvailableItems.Keys on current equals remote
                                           select current).ToArray();
 
                     lock (globalDFSLocker)

@@ -47,11 +47,11 @@ namespace DistributedFileSystem
         /// The DFS items which can possibly be linked
         /// </summary>
         [ProtoMember(2)]
-        public long[] AvailableItemCheckSums { get; private set; }
+        public Dictionary<long, DateTime> AvailableItems { get; private set; }
 
         private DFSLinkRequest() 
         {
-            if (AvailableItemCheckSums == null) AvailableItemCheckSums = new long[0];
+            if (AvailableItems == null) AvailableItems = new Dictionary<long, DateTime>();
         }
 
         /// <summary>
@@ -59,10 +59,10 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="availableItemCheckSums"></param>
         /// <param name="linkRequestReply"></param>
-        public DFSLinkRequest(long[] availableItemCheckSums, bool linkRequestReply = false)
+        public DFSLinkRequest(Dictionary<long, DateTime> availableItems, bool linkRequestReply = false)
         {
             this.LinkRequestReply = linkRequestReply;
-            this.AvailableItemCheckSums = availableItemCheckSums;
+            this.AvailableItems = availableItems;
         }
     }
 }

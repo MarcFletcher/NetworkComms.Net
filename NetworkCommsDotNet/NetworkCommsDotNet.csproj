@@ -51,6 +51,7 @@
     <Compile Include="ConnectionInfo.cs" />
     <Compile Include="Exception.cs" />
     <Compile Include="IPExtAccess.cs" />
+    <Compile Include="Math.cs" />
     <Compile Include="NetworkComms.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketHeader.cs" />

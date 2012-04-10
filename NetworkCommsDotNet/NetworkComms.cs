@@ -256,7 +256,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the current network usage, as last updated, and value between 0 and 1. Outgoing and incoming usage are investigated and the larger of the two is used.
+        /// Returns the current instance network usage, as a value between 0 and 1. Outgoing and incoming usage are investigated and the larger of the two is used. Triggers load analysis upon first call.
         /// </summary>
         public static double CurrentNetworkLoad
         {
@@ -287,11 +287,39 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// The number of millisconds over which to take an average load. Default is 200ms but use atleast 100ms to get a reliable value.
+        /// Retuns an averaged version of CurrentNetworkLoad, as a value between 0 and 1, upto a maximum window of 254 seconds. Triggers load analysis upon first call.
+        /// </summary>
+        /// <param name="secondsToAverage"></param>
+        /// <returns></returns>
+        public static double AverageNetworkLoad(byte secondsToAverage)
+        {
+            if (NetworkLoadThread == null)
+            {
+                lock (globalDictAndDelegateLocker)
+                {
+                    if (NetworkLoadThread == null)
+                    {
+                        currentNetworkLoadValues = new CommsMath();
+
+                        NetworkLoadThread = new Thread(NetworkLoadWorker);
+                        NetworkLoadThread.Name = "NetworkLoadThread";
+                        NetworkLoadThread.Start();
+                    }
+                }
+            }
+
+            return currentNetworkLoadValues.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+        }
+
+        public static long InterfaceLinkSpeed { get; set; }
+
+        /// <summary>
+        /// The number of millisconds over which to take an instance load (CurrentNetworkLoad). Default is 200ms but use atleast 100ms to get reliable values.
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
         private static Thread NetworkLoadThread = null;
         private static double currentNetworkLoad;
+        private static CommsMath currentNetworkLoadValues;
 
         /// <summary>
         /// Calculates the network load every NetworkLoadUpdateWindowMS
@@ -310,22 +338,41 @@ namespace NetworkCommsDotNet
             {
                 try
                 {
+                    //If we are not running in Mono we can correctly get the link speed from the Speed property
+                    //Other environment do not always implement this property correctly
+                    //This is inside loop if for whatever reason the linkSpeed is changed during application execution
+                    if (Type.GetType("Mono.Runtime") == null) InterfaceLinkSpeed = interfaceToUse.Speed;
+
                     //Get the usage over numMillisecsToAverage
+                    long startSent, startRecieved, endSent, endRecieved;
                     DateTime startTime = DateTime.Now;
-                    IPv4InterfaceStatistics startingStats = interfaceToUse.GetIPv4Statistics();
+
+                    //We need to pull the stat numbers out here because different environments return different things on a call to interfaceToUse.GetIPv4Statistics();
+                    IPv4InterfaceStatistics currentStats = interfaceToUse.GetIPv4Statistics();
+                    startSent = currentStats.BytesSent;
+                    startRecieved = currentStats.BytesReceived;
+
                     Thread.Sleep(NetworkLoadUpdateWindowMS);
-                    IPv4InterfaceStatistics endingStats = interfaceToUse.GetIPv4Statistics();
+
+                    currentStats = interfaceToUse.GetIPv4Statistics();
+                    endSent = currentStats.BytesSent;
+                    endRecieved = currentStats.BytesReceived;
+
                     DateTime endTime = DateTime.Now;
 
                     //Calculate both the out and in usage
-                    decimal outUsage = (decimal)(endingStats.BytesSent - startingStats.BytesSent) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
-                    decimal inUsage = (decimal)(endingStats.BytesReceived - startingStats.BytesReceived) / ((decimal)(interfaceToUse.Speed * (endTime - startTime).TotalMilliseconds) / 8000);
+                    decimal outUsage = (decimal)(endSent - startSent) / ((decimal)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000);
+                    decimal inUsage = (decimal)(endRecieved - startRecieved) / ((decimal)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000);
 
                     //Take the maximum value
                     double returnValue = (double)Math.Max(outUsage, inUsage);
 
                     //Limit to one
                     CurrentNetworkLoad = (returnValue > 1 ? 1 : returnValue);
+                    currentNetworkLoadValues.AddValue(CurrentNetworkLoad);
+
+                    //We can only have upto 255 seconds worth of data in the average list
+                    currentNetworkLoadValues.TrimList((int)(255000.0 / NetworkLoadUpdateWindowMS));
                 }
                 catch (Exception ex)
                 {
@@ -1853,6 +1900,12 @@ namespace NetworkCommsDotNet
 
         #region Private Setup, Connection and Shutdown
 
+        static NetworkComms()
+        {
+            NetworkLoadUpdateWindowMS = 200;
+            InterfaceLinkSpeed = 100000000;
+        }
+
         /// <summary>
         /// Initialise comms items on startup
         /// </summary>
@@ -1865,8 +1918,6 @@ namespace NetworkCommsDotNet
                     ConnectionKeepAliveThread = new Thread(ConnectionKeepAliveThreadWorker);
                     ConnectionKeepAliveThread.Name = "ConnectionKeepAliveThread";
                     ConnectionKeepAliveThread.Start();
-
-                    NetworkLoadUpdateWindowMS = 200;
 
                     commsInitialised = true;
                     if (loggingEnabled) logger.Info("networkComms.net has been initialised");
