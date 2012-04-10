@@ -73,6 +73,9 @@ namespace SerializerBase
         /// <param name="outputStream">Stream to write output data to</param>
         public void DecompressToStream(byte[] inBytes, Stream outputStream)
         {
+            if (inBytes.Length - 8 < 0)
+                throw new Exception("Unable to decompress stream using NullCompressor as inBytes.Length is only " + inBytes.Length);
+
             outputStream.Write(inBytes, 0, inBytes.Length - 8);
         }
         
