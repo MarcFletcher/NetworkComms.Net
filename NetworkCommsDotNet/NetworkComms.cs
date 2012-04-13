@@ -488,10 +488,10 @@ namespace NetworkCommsDotNet
         static List<TcpListener> tcpListenerList;
 
         /// <summary>
-        /// Send and receive buffer sizes
+        /// Send and receive buffer sizes. These values are chosen to prevent the buffers ending up on the Large Object Heap
         /// </summary>
-        internal static int receiveBufferSizeBytes = 256000;
-        internal static int sendBufferSizeBytes = 256000;
+        internal static int receiveBufferSizeBytes = 80000;
+        internal static int sendBufferSizeBytes = 80000;
 
         /// <summary>
         /// Receive data buffer size. Default is 256KB. CAUTION: Changing the default value can lead to severe performance degredation.
@@ -547,7 +547,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The maximum packet size which will be maintained for possible future resend requests
         /// </summary>
-        internal static int checkSumMismatchSentPacketCacheMaxByteLimit = 153750;
+        internal static int checkSumMismatchSentPacketCacheMaxByteLimit = 75000;
 
         /// <summary>
         /// Set to true to enable checksum validation during all receives. Default 150KB.
