@@ -25,7 +25,7 @@ namespace SerializerBase
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
-    public class BinaryFormaterSerializer : ArraySerializer
+    public class BinaryFormaterSerializer : ArraySerializer, ISerialize
     {
         static BinaryFormaterSerializer instance;
         static object locker = new object();
@@ -56,9 +56,9 @@ namespace SerializerBase
         /// <param name="objectToSerialise">Object to serialize.  Must be marked Serializable</param>
         /// <param name="compressor">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public override byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        public byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
         {
-            var baseRes = base.SerialiseDataObject<T>(objectToSerialise, compressor);
+            var baseRes = SerialiseArrayObject<T>(objectToSerialise, compressor);
 
             if (baseRes != null)
                 return baseRes;
@@ -80,9 +80,9 @@ namespace SerializerBase
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object</returns>
-        public override T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
         {
-            var baseRes = base.DeserialiseDataObject<T>(receivedObjectBytes, compressor);
+            var baseRes = DeserialiseArrayObject<T>(receivedObjectBytes, compressor);
 
             if (!Equals(baseRes, default(T)))
                 return baseRes;

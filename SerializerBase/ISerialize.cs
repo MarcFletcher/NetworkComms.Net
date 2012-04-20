@@ -45,10 +45,8 @@ namespace SerializerBase
     /// <summary>
     /// Abstract class that provides fastest method for serializing arrays of primitive data types.
     /// </summary>
-    public abstract class ArraySerializer : ISerialize
+    public abstract class ArraySerializer
     {
-        #region ISerialize Members
-
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
         /// to serialize other types
@@ -57,10 +55,10 @@ namespace SerializerBase
         /// <param name="objectToSerialise">Object to serialize</param>
         /// <param name="compressor">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public unsafe virtual byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        protected unsafe byte[] SerialiseArrayObject<T>(T objectToSerialise, ICompress compressor)
         {
             Type objType = objectToSerialise.GetType();
-            
+
             if (objType.IsArray)
             {
                 var elementType = objType.GetElementType();
@@ -85,7 +83,7 @@ namespace SerializerBase
                     {
                         var asArray = objectToSerialise as Array;
                         GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
-                        
+
                         try
                         {
                             IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
@@ -115,7 +113,7 @@ namespace SerializerBase
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
-        public unsafe virtual T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        protected unsafe T DeserialiseArrayObject<T>(byte[] receivedObjectBytes, ICompress compressor)
         {
             Type objType = typeof(T);
 
@@ -143,7 +141,7 @@ namespace SerializerBase
                         }
                     }
                     else
-                    {                        
+                    {
                         GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
 
                         try
@@ -168,6 +166,5 @@ namespace SerializerBase
             return default(T);
         }
 
-        #endregion
     }
 }
