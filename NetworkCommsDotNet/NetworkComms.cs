@@ -25,8 +25,6 @@ using SerializerBase;
 using SerializerBase.Protobuf;
 using System.Collections;
 using System.Net.NetworkInformation;
-using QuickLZCompressor;
-using SharpZipLibCompressor;
 using Common.Logging;
 using System.Collections.Specialized;
 
@@ -754,7 +752,7 @@ namespace NetworkCommsDotNet
         /// Default serializer and compressor for sending and receiving in the absence of specific values
         /// </summary>
         static ISerialize defaultSerializer = ProtobufSerializer.Instance;
-        static ICompress defaultCompressor = SharpZipLibGzipCompressor.Instance;
+        static ICompress defaultCompressor = SevenZipLZMACompressor.LZMACompressor.Instance;
 
         /// <summary>
         /// Get or set the default serializer for sending and receiving objects

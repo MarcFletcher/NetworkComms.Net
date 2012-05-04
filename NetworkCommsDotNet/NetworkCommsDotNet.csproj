@@ -61,10 +61,6 @@
     <Compile Include="ShortGUID.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
-      <Project>{B659339D-A958-4F33-96E6-3A0CCFCBC5C1}</Project>
-      <Name>QuickLZCompressor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
       <Name>SerializerBase</Name>
@@ -72,10 +68,6 @@
     <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
       <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>
       <Name>SevenZipLZMACompressor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
-      <Project>{E10B41F4-696D-465C-963D-086488E2B6AA}</Project>
-      <Name>SharpZipLibCompressor</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
