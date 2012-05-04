@@ -44,12 +44,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Dlls\quicklz150_32_1.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Dlls\quicklz150_64_1.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Include="Dlls\quicklz150_32_1.dll" />
+    <EmbeddedResource Include="Dlls\quicklz150_64_1.dll" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">

@@ -28,23 +28,35 @@ namespace QuickLZCompressor
     /// </summary>
     public class QuickLZ : ICompress
     {
-        [DllImport("Dlls/quicklz150_32_1.dll", EntryPoint = "qlz_compress")]
-        private static extern IntPtr qlz_compress_32(IntPtr source, byte[] destination, IntPtr size, byte[] scratch);
-        [DllImport("Dlls//quicklz150_32_1.dll", EntryPoint = "qlz_decompress")]
-        private static extern IntPtr qlz_decompress_32(byte[] source, byte[] destination, byte[] scratch);
-        [DllImport("Dlls//quicklz150_32_1.dll", EntryPoint = "qlz_size_decompressed")]
-        private static extern IntPtr qlz_size_decompressed_32(byte[] source);
-        [DllImport("Dlls//quicklz150_32_1.dll", EntryPoint = "qlz_get_setting")]
-        private static extern int qlz_get_setting_32(int setting);
+        private static string DllDir = Path.Combine(Path.GetTempPath(), "QuickLZTemp");
+        private static string dllName = Marshal.SizeOf(typeof(IntPtr)) == 8 ? "QuickLZCompressor.Dlls.quicklz150_64_1.dll" : "QuickLZCompressor.Dlls.quicklz150_32_1.dll";
+        private static string dllFullName = Path.Combine(DllDir, Marshal.SizeOf(typeof(IntPtr)) == 8 ? "quicklz150_64_1.dll" : "quicklz150_32_1.dll");
 
-        [DllImport("Dlls/quicklz150_64_1.dll", EntryPoint = "qlz_compress")]
-        private static extern IntPtr qlz_compress_64(IntPtr source, byte[] destination, IntPtr size, byte[] scratch);
-        [DllImport("Dlls//quicklz150_64_1.dll", EntryPoint = "qlz_decompress")]
-        private static extern IntPtr qlz_decompress_64(byte[] source, byte[] destination, byte[] scratch);
-        [DllImport("Dlls//quicklz150_64_1.dll", EntryPoint = "qlz_size_decompressed")]
-        private static extern IntPtr qlz_size_decompressed_64(byte[] source);
-        [DllImport("Dlls//quicklz150_64_1.dll", EntryPoint = "qlz_get_setting")]
-        private static extern int qlz_get_setting_64(int setting);
+        [DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+        private static extern IntPtr LoadLibrary(string dllToLoad);
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool FreeLibrary(IntPtr hModule);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate IntPtr qlz_compress_del(IntPtr source, byte[] destination, IntPtr size, byte[] scratch);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate IntPtr qlz_decompress_del(byte[] source, byte[] destination, byte[] scratch);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate IntPtr qlz_size_compressed_del(byte[] source);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int qlz_get_settings_del(int setting);
+
+        private static qlz_compress_del qlz_compress;
+        private static qlz_decompress_del qlz_decompress;
+        private static qlz_size_compressed_del qlz_size_decompressed;
+        private static qlz_get_settings_del qlz_get_setting;
 
         private byte[] state_compress;
         private byte[] state_decompress;
@@ -74,24 +86,57 @@ namespace QuickLZCompressor
             }
         }
 
+        static QuickLZ()
+        {
+            if (!Directory.Exists(DllDir) || !File.Exists(dllFullName))
+            {
+                if (!Directory.Exists(DllDir))
+                    Directory.CreateDirectory(DllDir);
+
+                if (!File.Exists(dllFullName))
+                {
+                    using (Stream s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(dllName))
+                    {
+                        using (FileStream fs = new FileStream(dllFullName, FileMode.CreateNew))
+                        {
+                            byte[] bytes = new byte[s.Length];
+                            s.Read(bytes, 0, bytes.Length);
+                            fs.Write(bytes, 0, bytes.Length);
+                        }
+                    }
+                }
+            }
+
+            IntPtr dllPtr = LoadLibrary(dllFullName);
+
+            IntPtr procAddress = GetProcAddress(dllPtr, "qlz_compress");
+            qlz_compress = (qlz_compress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_compress_del));
+            procAddress = GetProcAddress(dllPtr, "qlz_decompress");
+            qlz_decompress = (qlz_decompress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_decompress_del));
+            procAddress = GetProcAddress(dllPtr, "qlz_size_decompressed");
+            qlz_size_decompressed = (qlz_size_compressed_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_size_compressed_del));
+            procAddress = GetProcAddress(dllPtr, "qlz_get_setting");
+            qlz_get_setting = (qlz_get_settings_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_get_settings_del));
+
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler((o, e) =>
+            {
+                try
+                {
+                    if (dllPtr != IntPtr.Zero)
+                        FreeLibrary(dllPtr);
+                }
+                catch (Exception) { }
+            });
+        }
+
         private QuickLZ()
         {
-            arch_x86 = Marshal.SizeOf(typeof(IntPtr)) == 4;
-
-            if (arch_x86)
-                state_compress = new byte[qlz_get_setting_32(1)];
-            else
-                state_compress = new byte[qlz_get_setting_64(1)];
+            state_compress = new byte[qlz_get_setting(1)];
 
             if (QLZ_STREAMING_BUFFER == 0)
                 state_decompress = state_compress;
             else
-            {
-                if (arch_x86)
-                    state_decompress = new byte[qlz_get_setting_32(2)];
-                else
-                    state_decompress = new byte[qlz_get_setting_64(2)];
-            }
+                state_decompress = new byte[qlz_get_setting(2)];
         }
 
         private void Compress(byte[] Source, byte[] dest, out int destLength)
@@ -101,11 +146,7 @@ namespace QuickLZCompressor
             try
             {
                 IntPtr sourcePtr = Marshal.UnsafeAddrOfPinnedArrayElement(Source, 0);
-
-                if (arch_x86)
-                    destLength = (int)qlz_compress_32(sourcePtr, dest, (IntPtr)Source.Length, state_compress);
-                else
-                    destLength = (int)qlz_compress_64(sourcePtr, dest, (IntPtr)Source.Length, state_compress);
+                destLength = (int)qlz_compress(sourcePtr, dest, (IntPtr)Source.Length, state_compress);
             }
             finally
             {
@@ -115,27 +156,18 @@ namespace QuickLZCompressor
 
         private void Compress(IntPtr Source, int sourceSizeInBytes, byte[] dest, out int destLength)
         {
-            if (arch_x86)
-                destLength = (int)qlz_compress_32(Source, dest, (IntPtr)sourceSizeInBytes, state_compress);
-            else
-                destLength = (int)qlz_compress_64(Source, dest, (IntPtr)sourceSizeInBytes, state_compress);
+            destLength = (int)qlz_compress(Source, dest, (IntPtr)sourceSizeInBytes, state_compress);
         }
 
         private byte[] Decompress(byte[] Source)
         {
             byte[] d = null;
 
-            if (arch_x86)
-                d = new byte[(uint)qlz_size_decompressed_32(Source)];
-            else
-                d = new byte[(uint)qlz_size_decompressed_64(Source)];
+            d = new byte[(uint)qlz_size_decompressed(Source)];
 
             uint s;
 
-            if (arch_x86)
-                s = (uint)qlz_decompress_32(Source, d, state_decompress);
-            else
-                s = (uint)qlz_decompress_64(Source, d, state_decompress);
+            s = (uint)qlz_decompress(Source, d, state_decompress);
 
             return d;
         }
@@ -144,10 +176,7 @@ namespace QuickLZCompressor
         {
             get
             {
-                if (arch_x86)
-                    return (uint)qlz_get_setting_32(3);
-                else
-                    return (uint)qlz_get_setting_64(3);
+                return (uint)qlz_get_setting(3);
             }
         }
 
