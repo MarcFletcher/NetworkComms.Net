@@ -41,16 +41,16 @@ namespace QuickLZCompressor
         [DllImport("kernel32.dll")]
         public static extern bool FreeLibrary(IntPtr hModule);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate IntPtr qlz_compress_del(IntPtr source, byte[] destination, IntPtr size, byte[] scratch);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate IntPtr qlz_decompress_del(byte[] source, byte[] destination, byte[] scratch);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate IntPtr qlz_size_compressed_del(byte[] source);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int qlz_get_settings_del(int setting);
 
         private static qlz_compress_del qlz_compress;
