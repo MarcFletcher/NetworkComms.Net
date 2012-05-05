@@ -27,7 +27,7 @@ namespace SerializerBase.Protobuf
     /// <summary>
     /// Serializer using ProtoBuf.Net
     /// </summary>
-    public class ProtobufSerializer : ArraySerializer, ISerialize
+    public class ProtobufSerializer : ISerialize
     {
         static ProtobufSerializer instance;
         static object locker = new object();
@@ -60,9 +60,9 @@ namespace SerializerBase.Protobuf
         /// <param name="objectToSerialise">Object to serialize.  Must be marked with ProtoContract and members to serialize marked as protoMembers</param>
         /// <param name="compressor">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
         {
-            var baseRes = SerialiseArrayObject<T>(objectToSerialise, compressor);
+            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, compressor);
 
             if (baseRes != null)
                 return baseRes;
@@ -70,8 +70,8 @@ namespace SerializerBase.Protobuf
             //Increase timeout to prevent errors when CPU busy
             RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
 
-            MemoryStream memIn = new MemoryStream();
-            Serializer.Serialize(memIn, objectToSerialise);
+            MemoryStream memIn = new MemoryStream();            
+            Serializer.NonGeneric.Serialize(memIn, objectToSerialise);
             memIn.Seek(0, 0); 
           
             return compressor.CompressDataStream(memIn);
@@ -84,21 +84,21 @@ namespace SerializerBase.Protobuf
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        protected override object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor)
         {
-            var baseRes = DeserialiseArrayObject<T>(receivedObjectBytes, compressor);
+            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, resultType, compressor);
             
-            if (!Equals(baseRes, default(T)))
+            if (baseRes != null)
                 return baseRes;
 
             //Increase timeout to prevent errors when CPU busy
             RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
 
-            MemoryStream stream = new MemoryStream();
+            MemoryStream stream = new MemoryStream();            
             compressor.DecompressToStream(receivedObjectBytes, stream);
             stream.Seek(0, 0);
 
-            return Serializer.Deserialize<T>(stream);
+            return Serializer.NonGeneric.Deserialize(resultType, stream);
         }
 
         #endregion

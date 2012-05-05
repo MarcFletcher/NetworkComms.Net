@@ -8,7 +8,7 @@ namespace SerializerBase
     /// <summary>
     /// Only usefull for serializing primitive arrays to bytes. Will throw an exception otherwise
     /// </summary>
-    public class NullSerializer : ArraySerializer, ISerialize
+    public class NullSerializer : ISerialize
     {
         static NullSerializer instance;
         static object locker = new object();
@@ -32,9 +32,9 @@ namespace SerializerBase
 
         #region ISerialize Members
 
-        public byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
         {
-            var baseRes = SerialiseArrayObject<T>(objectToSerialise, compressor);
+            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, compressor);
 
             if (baseRes != null)
                 return baseRes;
@@ -42,11 +42,11 @@ namespace SerializerBase
                 throw new Exception("Null serializer can only be used to serialize primitive arrays.");
         }
 
-        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        protected override object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor)
         {
-            var baseRes = DeserialiseArrayObject<T>(receivedObjectBytes, compressor);
+            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, resultType, compressor);
 
-            if (!Equals(baseRes, default(T)))
+            if (baseRes != null)
                 return baseRes;
             else
                 throw new Exception("Null serializer can only be used to deserialize primitive arrays.");

@@ -25,7 +25,7 @@ namespace SerializerBase
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
-    public class BinaryFormaterSerializer : ArraySerializer, ISerialize
+    public class BinaryFormaterSerializer : ISerialize
     {
         static BinaryFormaterSerializer instance;
         static object locker = new object();
@@ -56,9 +56,9 @@ namespace SerializerBase
         /// <param name="objectToSerialise">Object to serialize.  Must be marked Serializable</param>
         /// <param name="compressor">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
         {
-            var baseRes = SerialiseArrayObject<T>(objectToSerialise, compressor);
+            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, compressor);
 
             if (baseRes != null)
                 return baseRes;
@@ -80,11 +80,11 @@ namespace SerializerBase
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        protected override object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor)
         {
-            var baseRes = DeserialiseArrayObject<T>(receivedObjectBytes, compressor);
+            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, resultType, compressor);
 
-            if (!Equals(baseRes, default(T)))
+            if (baseRes != null)
                 return baseRes;
 
             BinaryFormatter formatter = new BinaryFormatter();
@@ -92,7 +92,7 @@ namespace SerializerBase
             compressor.DecompressToStream(receivedObjectBytes, stream);
             stream.Seek(0,0);
 
-            return (T)formatter.Deserialize(stream);
+            return formatter.Deserialize(stream);
         }
 
         #endregion

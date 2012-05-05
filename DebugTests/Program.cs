@@ -20,6 +20,14 @@ namespace DebugTests
     {      
         static void Main(string[] args)
         {
+            int a = 100;
+
+            var bytes = SerializerBase.Protobuf.ProtobufSerializer.Instance.SerialiseDataObject(a, SerializerBase.NullCompressor.Instance);
+
+            int b = SerializerBase.Protobuf.ProtobufSerializer.Instance.DeserialiseDataObject<int>(bytes, SerializerBase.NullCompressor.Instance);
+
+            return;
+
             try
             {
                 Console.SetBufferSize(130, 500);

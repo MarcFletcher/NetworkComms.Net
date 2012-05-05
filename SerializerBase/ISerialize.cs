@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 
 namespace SerializerBase
 {
-    public interface ISerialize
+    public abstract class ISerialize
     {
         /// <summary>
         /// Converts objectToSerialize to an array of bytes using the compression provided by compressor
@@ -30,7 +30,10 @@ namespace SerializerBase
         /// <param name="objectToSerialise">Object to serialize</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>Serialized array of bytes</returns>
-        byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor);
+        public byte[] SerialiseDataObject<T>(T objectToSerialise, ICompress compressor)
+        {
+            return SerialiseDataObjectInt(objectToSerialise, compressor);
+        }
 
         /// <summary>
         /// Converts array of bytes previously serialized and compressed using compressor to an object of provided type
@@ -39,13 +42,20 @@ namespace SerializerBase
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object</returns>
-        T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor);
+        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, ICompress compressor)
+        {
+            return (T)DeserialiseDataObjectInt(receivedObjectBytes, typeof(T), compressor);            
+        }
+        
+        protected abstract byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor);
+                
+        protected abstract object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor);
     }
 
     /// <summary>
     /// Abstract class that provides fastest method for serializing arrays of primitive data types.
     /// </summary>
-    public abstract class ArraySerializer
+    public static class ArraySerializer
     {
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
@@ -55,7 +65,7 @@ namespace SerializerBase
         /// <param name="objectToSerialise">Object to serialize</param>
         /// <param name="compressor">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        protected unsafe byte[] SerialiseArrayObject<T>(T objectToSerialise, ICompress compressor)
+        public static unsafe byte[] SerialiseArrayObject(object objectToSerialise, ICompress compressor)
         {
             Type objType = objectToSerialise.GetType();
 
@@ -113,17 +123,15 @@ namespace SerializerBase
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
-        protected unsafe T DeserialiseArrayObject<T>(byte[] receivedObjectBytes, ICompress compressor)
-        {
-            Type objType = typeof(T);
-
+        public static unsafe object DeserialiseArrayObject(byte[] receivedObjectBytes, Type objType, ICompress compressor)
+        {            
             if (objType.IsArray)
             {
                 var elementType = objType.GetElementType();
 
                 //No need to do anything for a byte array
                 if (elementType == typeof(byte) && compressor.GetType() == typeof(NullCompressor))
-                    return (T)((object)receivedObjectBytes);
+                    return (object)receivedObjectBytes;
                 if (elementType.IsPrimitive)
                 {
                     int numElements = (int)(BitConverter.ToUInt64(receivedObjectBytes, receivedObjectBytes.Length - 8) / (ulong)Marshal.SizeOf(elementType));
@@ -159,11 +167,11 @@ namespace SerializerBase
                         }
                     }
 
-                    return (T)((object)resultArray);
+                    return (object)resultArray;
                 }
             }
 
-            return default(T);
+            return null;
         }
 
     }
