@@ -20,26 +20,27 @@ using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
 using SerializerBase;
 using System.IO;
+using System.ComponentModel.Composition;
 
 namespace SharpZipLibCompressor
 {
     /// <summary>
     /// Compresor using Gzip compression from SharpZipLib http://www.icsharpcode.net/opensource/sharpziplib/
     /// </summary>
+    [Export(typeof(ICompress))]
     public class SharpZipLibGzipCompressor : ICompress
     {
-        static SharpZipLibGzipCompressor instance;
-        static object locker = new object();
+        static ICompress instance;
 
-        public static SharpZipLibGzipCompressor Instance
+        /// <summary>
+        /// Instance singleton
+        /// </summary>
+        public static ICompress Instance
         {
             get
             {
-                lock (locker)
-                {
-                    if (instance == null)
-                        instance = new SharpZipLibGzipCompressor();
-                }
+                if (instance == null)
+                    instance = GetInstance<SharpZipLibGzipCompressor>();
 
                 return instance;
             }
@@ -47,12 +48,14 @@ namespace SharpZipLibCompressor
 
         private SharpZipLibGzipCompressor() { }
 
+        public override byte Identifier { get { return 2; } }
+
         /// <summary>
         /// Compresses data in inStream to a byte array appending uncompressed data size
         /// </summary>
         /// <param name="inStream">Stream contaiing data to compress</param>
         /// <returns>Compressed data appended with uncompressed data size</returns>
-        public byte[] CompressDataStream(Stream inStream)
+        public override byte[] CompressDataStream(Stream inStream)
         {
             using (MemoryStream realOutStream = new MemoryStream())
             {
@@ -74,7 +77,7 @@ namespace SharpZipLibCompressor
         /// </summary>
         /// <param name="inBytes">Compressed data from CompressDataStream</param>
         /// <param name="outputStream">Stream to output uncompressed data to</param>
-        public void DecompressToStream(byte[] inBytes, Stream outputStream)
+        public override void DecompressToStream(byte[] inBytes, Stream outputStream)
         {
             using (MemoryStream memIn = new MemoryStream(inBytes, 0, inBytes.Length - 8, false))
             {

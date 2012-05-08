@@ -2,27 +2,27 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {
     /// <summary>
     /// Only usefull for serializing primitive arrays to bytes. Will throw an exception otherwise
     /// </summary>
+    [Export(typeof(ISerialize))]    
     public class NullSerializer : ISerialize
     {
-        static NullSerializer instance;
-        static object locker = new object();
+        static ISerialize instance;
 
         /// <summary>
-        /// Singleton instance
+        /// Instance singleton
         /// </summary>
-        public static NullSerializer Instance
+        public static ISerialize Instance
         {
             get
             {
-                lock (locker)
-                    if (instance == null)
-                        instance = new NullSerializer();
+                if (instance == null)
+                    instance = GetInstance<NullSerializer>();
 
                 return instance;
             }
@@ -31,6 +31,8 @@ namespace SerializerBase
         private NullSerializer() { }
 
         #region ISerialize Members
+
+        public override byte Identifier { get { return 0; } }
 
         protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
         {

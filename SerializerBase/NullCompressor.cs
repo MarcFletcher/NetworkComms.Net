@@ -19,42 +19,42 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {
     /// <summary>
     /// Compressor that does no compression. Simply appends the size of the input data on compression and strips this information on decompression
     /// </summary>
+    [Export(typeof(ICompress))]
     public class NullCompressor : ICompress
     {
-        static NullCompressor instance;
-        static object locker = new object();
+        static ICompress instance;
 
         /// <summary>
-        /// Singleton instance
+        /// Instance singleton
         /// </summary>
-        public static NullCompressor Instance
+        public static ICompress Instance
         {
             get
             {
-                lock (locker)
-                {
-                    if (instance == null)
-                        instance = new NullCompressor();
-                }
+                if (instance == null)
+                    instance = GetInstance<NullCompressor>();
 
                 return instance;
             }
         }
 
         private NullCompressor() { }
+
+        public override byte Identifier { get { return 0; } }
         
         /// <summary>
         /// Performs no compression just appends the size of the input data
         /// </summary>
         /// <param name="inStream">Stream containing input data</param>
         /// <returns>Array of input data bytes appended with data size</returns>
-        public byte[] CompressDataStream(System.IO.Stream inStream)
+        public override byte[] CompressDataStream(System.IO.Stream inStream)
         {
             inStream.Seek(0, 0);
 
@@ -71,7 +71,7 @@ namespace SerializerBase
         /// </summary>
         /// <param name="inBytes">Bytes to decompress</param>
         /// <param name="outputStream">Stream to write output data to</param>
-        public void DecompressToStream(byte[] inBytes, Stream outputStream)
+        public override void DecompressToStream(byte[] inBytes, Stream outputStream)
         {
             if (inBytes.Length - 8 < 0)
                 throw new Exception("Unable to decompress stream using NullCompressor as inBytes.Length is only " + inBytes.Length);

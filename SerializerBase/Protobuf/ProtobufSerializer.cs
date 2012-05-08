@@ -21,37 +21,40 @@ using ProtoBuf;
 using System.IO;
 using System.Runtime.InteropServices;
 using ProtoBuf.Meta;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase.Protobuf
 {
     /// <summary>
     /// Serializer using ProtoBuf.Net
     /// </summary>
+    [Export(typeof(ISerialize))]    
+    [PartCreationPolicy(System.ComponentModel.Composition.CreationPolicy.Shared)]
     public class ProtobufSerializer : ISerialize
-    {
-        static ProtobufSerializer instance;
-        static object locker = new object();
-
+    {        
         private static int metaDataTimeoutMS = 150000;
 
+        static ISerialize instance;
+
         /// <summary>
-        /// Singleton instance
+        /// Instance singleton
         /// </summary>
-        public static ProtobufSerializer Instance
+        public static ISerialize Instance
         {
             get
             {
-                lock (locker)
-                    if (instance == null)
-                        instance = new ProtobufSerializer();
+                if (instance == null)
+                    instance = GetInstance<ProtobufSerializer>();
 
                 return instance;
             }
         }
-
+        
         private ProtobufSerializer() { }
 
         #region ISerialize Members
+
+        public override byte Identifier { get { return 1; } }
 
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor

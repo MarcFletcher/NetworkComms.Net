@@ -21,21 +21,28 @@ using System.IO;
 
 namespace SerializerBase
 {
-    public interface ICompress
+    public abstract class ICompress
     {
+        protected static ICompress GetInstance<T>() where T : ICompress
+        {
+            return SerializerCompressorLoadingHelper.Instance.GetAllCompressors()[typeof(T)];
+        }
+
+        public abstract byte Identifier { get; }
+
         /// <summary>
         /// Compress data held in a stream.  Last 8 bytes of output should contain uncompressed size of data as a ulong
         /// </summary>
         /// <param name="inStream">Input stream holding data to compress.  Stream must support reading and seeking</param>
         /// <returns>Compressed data.  Last 8 bytes should contain uncompressed size of data as a ulong</returns>
-        byte[] CompressDataStream(Stream inStream);
+        public abstract byte[] CompressDataStream(Stream inStream);
         
         /// <summary>
         /// Decompress data to a stream.  Last 8 bytes of inBytes should contain uncompressed size of data as a ulong
         /// </summary>
         /// <param name="inBytes">Data to decompress. Last 8 bytes should contain uncompressed size of data as a ulong</param>
         /// <param name="outputStream"></param>
-        void DecompressToStream(byte[] inBytes, Stream outputStream);        
+        public abstract void DecompressToStream(byte[] inBytes, Stream outputStream);        
        
     }
 }

@@ -19,27 +19,27 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
+    [Export(typeof(ISerialize))]    
     public class BinaryFormaterSerializer : ISerialize
     {
-        static BinaryFormaterSerializer instance;
-        static object locker = new object();
+        static ISerialize instance;
 
         /// <summary>
-        /// Singleton instance of serializer
+        /// Instance singleton
         /// </summary>
-        public static BinaryFormaterSerializer Instance
+        public static ISerialize Instance
         {
             get
             {
-                lock (locker)
-                    if (instance == null)
-                        instance = new BinaryFormaterSerializer();
+                if (instance == null)
+                    instance = GetInstance<BinaryFormaterSerializer>();
 
                 return instance;
             }
@@ -49,6 +49,8 @@ namespace SerializerBase
 
         #region ISerialize Members
 
+        public override byte Identifier { get { return 2; } }
+        
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor
         /// </summary>

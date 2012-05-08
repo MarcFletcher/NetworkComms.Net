@@ -20,9 +20,14 @@ using System.Text;
 using System.Runtime.InteropServices;
 
 namespace SerializerBase
-{
+{    
     public abstract class ISerialize
     {
+        protected static ISerialize GetInstance<T>() where T : ISerialize
+        {   
+            return SerializerCompressorLoadingHelper.Instance.GetAllSerializes()[typeof(T)];
+        }
+
         /// <summary>
         /// Converts objectToSerialize to an array of bytes using the compression provided by compressor
         /// </summary>
@@ -46,6 +51,8 @@ namespace SerializerBase
         {
             return (T)DeserialiseDataObjectInt(receivedObjectBytes, typeof(T), compressor);            
         }
+
+        public abstract byte Identifier { get; }
         
         protected abstract byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor);
                 
