@@ -61,11 +61,11 @@
     </Reference>
     <Reference Include="Common.Logging.Log4Net, Version=2.0.0.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>.\Common.Logging.Log4Net.dll</HintPath>
+      <HintPath>..\Common.Logging.Log4Net.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>.\log4net.dll</HintPath>
+      <HintPath>..\log4net.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.404, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -141,10 +141,6 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Common.Logging.Log4Net.dll" />
-    <Content Include="log4net.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
