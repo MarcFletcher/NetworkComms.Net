@@ -975,6 +975,17 @@ namespace NetworkCommsDotNet
                 return false;
             }
         }
+
+        /// <summary>
+        /// Return the MD5 hash of the provided byte array as a string
+        /// </summary>
+        /// <param name="bytesToMd5"></param>
+        /// <returns></returns>
+        public static string MD5Bytes(byte[] bytesToMd5)
+        {
+            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+            return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-","");
+        }
         #endregion
 
         #region PacketHandlers

@@ -779,7 +779,7 @@ namespace DistributedFileSystem
 
                 //Once complete we pass the item bytes back into network comms
                 //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
-                if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "") NetworkComms.TriggerPacketHandler(new PacketHeader(assemblyConfig.CompletedPacketType, false, 0, newItem.ItemBytesLength, true), sourceConnectionId, newItem.AccessItemBytes(), NullSerializer.Instance, NullCompressor.Instance);
+                if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "") NetworkComms.TriggerPacketHandler(new PacketHeader(assemblyConfig.CompletedPacketType, false, "", newItem.ItemBytesLength, true), sourceConnectionId, newItem.AccessItemBytes(), NullSerializer.Instance, NullCompressor.Instance);
 
                 //Close any connections which are no longer required
                 newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);

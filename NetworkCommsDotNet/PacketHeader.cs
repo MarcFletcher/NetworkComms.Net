@@ -36,7 +36,7 @@ namespace NetworkCommsDotNet
         [ProtoMember(3)]
         bool receiveConfirmationRequired;
         [ProtoMember(4)]
-        long checkSumHash;
+        string checkSumHash;
         [ProtoMember(5)]
         DateTime packetCreationTime;
 
@@ -48,7 +48,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         private PacketHeader() { }
 
-        public PacketHeader(string packetTypeStr, bool receiveConfirmationRequired, long checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
+        public PacketHeader(string packetTypeStr, bool receiveConfirmationRequired, string checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
         {
             this.packetTypeStr = packetTypeStr;
             this.receiveConfirmationRequired = receiveConfirmationRequired;
@@ -100,7 +100,7 @@ namespace NetworkCommsDotNet
             get { return receiveConfirmationRequired; }
         }
 
-        public long CheckSumHash
+        public string CheckSumHash
         {
             get { return checkSumHash; }
         }
