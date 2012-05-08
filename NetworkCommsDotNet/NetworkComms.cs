@@ -1098,10 +1098,6 @@ namespace NetworkCommsDotNet
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
         public static void AppendIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
         {
-            var pb = allKnownSerializers[typeof(ProtobufSerializer)];
-            
-
-
             AppendIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, null, null, enableAutoListen);
         }
 
