@@ -133,7 +133,7 @@ namespace NetworkCommsDotNet
         /// Maintains a list of sent packets for the purpose of confirmation and possible resends.
         /// </summary>
         object sentPacketsLocker = new object();
-        Dictionary<long, OldSentPacket> sentPackets = new Dictionary<long, OldSentPacket>();
+        Dictionary<string, OldSentPacket> sentPackets = new Dictionary<string, OldSentPacket>();
         private class OldSentPacket
         {
             public int sendCount = 1;
@@ -1076,10 +1076,10 @@ namespace NetworkCommsDotNet
                 if (packetDataSection == null) throw new NullReferenceException("Type cast to byte[] failed in CompleteIncomingPacketWorker.");
 
                 //We only look at the check sum if we want to and if it has been set by the remote end
-                if (NetworkComms.enablePacketCheckSumValidation && packetHeader.CheckSumHash != 0)
+                if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.CheckSumHash.Length > 0)
                 {
                     //Validate the checkSumhash of the data
-                    if (packetHeader.CheckSumHash != Adler32.GenerateCheckSum(packetDataSection))
+                    if (packetHeader.CheckSumHash != NetworkComms.MD5Bytes(packetDataSection))
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet header detected.");
 
@@ -1306,7 +1306,7 @@ namespace NetworkCommsDotNet
             OldSentPacket packetToReSend;
             lock (sentPacketsLocker)
             {
-                long checkSumRequested = NetworkComms.internalFixedSerializer.DeserialiseDataObject<long>(packetDataSection, NetworkComms.internalFixedCompressor);
+                string checkSumRequested = NetworkComms.internalFixedSerializer.DeserialiseDataObject<string>(packetDataSection, NetworkComms.internalFixedCompressor);
 
                 if (sentPackets.ContainsKey(checkSumRequested))
                     packetToReSend = sentPackets[checkSumRequested];
@@ -1377,8 +1377,8 @@ namespace NetworkCommsDotNet
                         AppendConnectionSpecificShutdownHandler(ConfirmationShutDownDelegate);
                     }
 
-                    //Add this packet to the sent list
-                    if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
+                    //If this packet is not a checkSumFailResend
+                    if (NetworkComms.EnablePacketCheckSumValidation && packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
                     {
                         //We only want to keep packets when they are under some provided theshold
                         //otherwise this becomes a quick 'memory leak'

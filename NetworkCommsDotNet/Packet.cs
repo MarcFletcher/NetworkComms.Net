@@ -50,12 +50,12 @@ namespace NetworkCommsDotNet
                     this.packetData = serializer.SerialiseDataObject(packetObject, compressor);
             //}
 
-            //We only calculate the md5 if we are going to use it
-            long dataHashValue = 0;
+            //We only calculate the checkSum if we are going to use it
+            string hashStr = "";
             if (NetworkComms.EnablePacketCheckSumValidation)
-                dataHashValue = Adler32.GenerateCheckSum(packetData);
+                hashStr = NetworkComms.MD5Bytes(packetData);
 
-            this.packetHeader = new PacketHeader(packetTypeStr, receiveConfirmationRequired, dataHashValue, packetData.Length, pureBytesInPayload);
+            this.packetHeader = new PacketHeader(packetTypeStr, receiveConfirmationRequired, hashStr, packetData.Length, pureBytesInPayload);
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }
@@ -89,7 +89,7 @@ namespace NetworkCommsDotNet
             byte[] returnArray = new byte[1 + serialisedHeader.Length];
 
             if (serialisedHeader.Length > byte.MaxValue)
-                throw new SerialisationException("Unable to send packet as header size is larger than Byte.MaxValue");
+                throw new SerialisationException("Unable to send packet as header size is larger than Byte.MaxValue. Try reducing the length of provided packetTypeStr or turning off checkSum validation.");
 
             //The first byte now specifies the header size (allows for variable header size)
             returnArray[0] = (byte)serialisedHeader.Length;
