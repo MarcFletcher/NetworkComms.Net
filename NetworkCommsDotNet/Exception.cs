@@ -93,6 +93,18 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
+    /// An error occured while trying to setup networkComms.net
+    /// </summary>
+    public class CommsSetupException : CommsException
+    {
+        public CommsSetupException(string msg)
+            : base(msg)
+        {
+
+        }
+    }
+
+    /// <summary>
     /// An error has occured while during communication.
     /// </summary>
     public class CommunicationException : CommsException
