@@ -34,6 +34,7 @@ namespace SerializerBase
         /// <summary>
         /// Instance singleton
         /// </summary>
+        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
         public static ISerialize Instance
         {
             get

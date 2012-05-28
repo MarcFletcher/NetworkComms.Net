@@ -25,7 +25,7 @@ namespace SerializerBase
     {
         protected static ICompress GetInstance<T>() where T : ICompress
         {
-            return SerializerCompressorLoadingHelper.Instance.GetAllCompressors()[typeof(T)];
+            return WrappersHelper.Instance.GetAllCompressors()[typeof(T)];
         }
 
         public abstract byte Identifier { get; }

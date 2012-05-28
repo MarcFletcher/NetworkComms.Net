@@ -25,7 +25,7 @@ namespace SerializerBase
     {
         protected static ISerialize GetInstance<T>() where T : ISerialize
         {   
-            return SerializerCompressorLoadingHelper.Instance.GetAllSerializes()[typeof(T)];
+            return WrappersHelper.Instance.GetAllSerializes()[typeof(T)];
         }
 
         /// <summary>

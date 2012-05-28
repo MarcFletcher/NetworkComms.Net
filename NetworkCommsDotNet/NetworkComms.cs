@@ -809,35 +809,37 @@ namespace NetworkCommsDotNet
 
         #region Serializers and Compressors
 
-        private static Dictionary<Type, ISerialize> allKnownSerializers = SerializerCompressorLoadingHelper.Instance.GetAllSerializes();
-        private static Dictionary<Type, ICompress> allKnownCompressors = SerializerCompressorLoadingHelper.Instance.GetAllCompressors();
+        private static Dictionary<Type, ISerialize> allKnownSerializers = WrappersHelper.Instance.GetAllSerializes();
+        private static Dictionary<Type, ICompress> allKnownCompressors = WrappersHelper.Instance.GetAllCompressors();
         
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50kb)
         /// Given the typical header size is 40kb we might as well not compress these objects.
         /// </summary>
-        internal static readonly ISerialize internalFixedSerializer = ProtobufSerializer.Instance;
-        internal static readonly ICompress internalFixedCompressor = NullCompressor.Instance;
+        internal static readonly ISerialize internalFixedSerializer = WrappersHelper.Instance.GetSerializer<ProtobufSerializer>();
+        internal static readonly ICompress internalFixedCompressor = WrappersHelper.Instance.GetCompressor<NullCompressor>();
 
         /// <summary>
         /// Default serializer and compressor for sending and receiving in the absence of specific values
         /// </summary>
-        static ISerialize defaultSerializer = ProtobufSerializer.Instance;
-        static ICompress defaultCompressor = SevenZipLZMACompressor.LZMACompressor.Instance;
+        static ISerialize defaultSerializer = WrappersHelper.Instance.GetSerializer<ProtobufSerializer>();
+        static ICompress defaultCompressor = WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>();
 
         /// <summary>
         /// Get or set the default serializer for sending and receiving objects
         /// </summary>
+        [Obsolete]
         public static ISerialize DefaultSerializer
         {
             get { return defaultSerializer; }
             set { defaultSerializer = value; }
         }
-
+                
         /// <summary>
         /// Get or set the default compressor for sending and receiving objects
         /// </summary>
+        [Obsolete]
         public static ICompress DefaultCompressor
         {
             get { return defaultCompressor; }
@@ -1110,6 +1112,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStrSerializer">A specific serializer to use instead of default</param>
         /// <param name="packetTypeStrCompressor">A specific compressor to use instead of default</param>
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
+        [Obsolete]
         public static void AppendIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
         {
             lock (globalDictAndDelegateLocker)
@@ -1572,8 +1575,8 @@ namespace NetworkCommsDotNet
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
-
-            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
+            
+            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, defaultSerializer, defaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
 
@@ -1591,7 +1594,7 @@ namespace NetworkCommsDotNet
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
-            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
+            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, defaultSerializer, defaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
 
@@ -1605,7 +1608,7 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
-            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
+            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, defaultSerializer, defaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
 
@@ -1620,7 +1623,7 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
-            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
+            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, defaultSerializer, defaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
 
@@ -1634,7 +1637,7 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject)
         {
             TCPConnection targetConnection = CheckForConnection(connectionId);
-            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
+            Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, defaultSerializer, defaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
 
@@ -1650,6 +1653,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
@@ -1658,7 +1662,7 @@ namespace NetworkCommsDotNet
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
-
+                
         /// <summary>
         /// Send the provided object to the specified destination on a specific comms port and sets the connectionId. Uses the provided compressor and serializer delegates
         /// </summary>
@@ -1670,6 +1674,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
@@ -1688,6 +1693,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
+        [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
@@ -1705,6 +1711,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
+        [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
@@ -1721,6 +1728,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
+        [Obsolete]
         public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
             TCPConnection targetConnection = CheckForConnection(connectionId);
@@ -1841,6 +1849,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
+        [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
@@ -1866,6 +1875,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
+        [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
@@ -1889,6 +1899,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
+        [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
@@ -1911,6 +1922,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
+        [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
             TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
@@ -1932,6 +1944,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
+        [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
             TCPConnection targetConnection = CheckForConnection(connectionId);
@@ -2069,6 +2082,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject"></param>
         /// <param name="serializer"></param>
         /// <param name="compressor"></param>
+        [Obsolete]
         internal static void SendObject(string packetTypeStr, TCPConnection targetConnection, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);

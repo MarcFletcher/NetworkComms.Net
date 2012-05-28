@@ -35,6 +35,7 @@ namespace SevenZipLZMACompressor
         /// <summary>
         /// Instance singleton
         /// </summary>
+        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetCompressor")]
         public static ICompress Instance
         {
             get
