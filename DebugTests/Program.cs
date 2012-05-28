@@ -20,13 +20,13 @@ namespace DebugTests
     {      
         static void Main(string[] args)
         {
-            int a = 100;
+            //int a = 100;
 
-            var bytes = SerializerBase.Protobuf.ProtobufSerializer.Instance.SerialiseDataObject(a, SerializerBase.NullCompressor.Instance);
+            //var bytes = SerializerBase.Protobuf.ProtobufSerializer.Instance.SerialiseDataObject(a, SerializerBase.NullCompressor.Instance);
 
-            int b = SerializerBase.Protobuf.ProtobufSerializer.Instance.DeserialiseDataObject<int>(bytes, SerializerBase.NullCompressor.Instance);
+            //int b = SerializerBase.Protobuf.ProtobufSerializer.Instance.DeserialiseDataObject<int>(bytes, SerializerBase.NullCompressor.Instance);
 
-            return;
+            //return;
 
             try
             {
@@ -43,10 +43,10 @@ namespace DebugTests
             //properties["configFile"] = "log4net.config";
             //DFS.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
-            //BasicSend.RunExample();
+            BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.Go();
-            DFSTest.RunExample();
+            //DFSTest.RunExample();
         }
     }
 }
