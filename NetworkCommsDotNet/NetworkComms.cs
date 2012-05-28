@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet
         static string[] preferredIPPRefix = null;
 
         /// <summary>
-        /// The preferred IP prefixs if network comms may try to help select the correct listening ip address.
+        /// Setting preferred IP prefixs will help network comms select the correct listening ip address. An alternative is to set ListenOnAllInterfaces to true.
         /// Correct format is string[] { "192.168", "213.111.10" }.
         /// If multiple prefixs are provided the lower index prefix if found takes priority
         /// </summary>
@@ -65,9 +65,29 @@ namespace NetworkCommsDotNet
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
+                    throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
 
                 preferredIPPRefix = value;
+            }
+        }
+
+        /// <summary>
+        /// Another way of selecting the desired adaptor is by name
+        /// </summary>
+        static string preferredAdaptorName = null;
+
+        /// <summary>
+        /// If a prefered adaptor name is provided, i.e. eth0, en0 etc. networkComms.net will try to listen on that adaptor.
+        /// </summary>
+        public static string PreferredAdaptorName
+        {
+            get { return preferredAdaptorName; }
+            set
+            {
+                if (isListening || commsInitialised)
+                    throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
+
+                preferredAdaptorName = value;
             }
         }
 
@@ -81,6 +101,14 @@ namespace NetworkCommsDotNet
             {
                 if (localIP == null)
                 {
+                    //First we try to find the preffered adaptor
+                    if (preferredAdaptorName != null)
+                    {
+                        string[] possibleIPs = AllLocalIPs(preferredAdaptorName);
+                        if (possibleIPs.Length > 0) localIP = possibleIPs[0];
+                        if (localIP != null) return localIP;
+                    }
+
                     //If we have not specified a preffered ip prefix we attempt to guess the ip.
                     if (preferredIPPRefix == null)
                     {
@@ -91,33 +119,9 @@ namespace NetworkCommsDotNet
                     //If the cool detection above did not work or we provided a preffered prefix we iterate through all addresses
                     //In order to do that the user must have provided some ip prefixs
                     if (preferredIPPRefix == null || preferredIPPRefix.Length == 0)
-                        throw new ConnectionSetupException("Unable to determine LocalIP address. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
+                        throw new CommsSetupException("Unable to determine LocalIP address. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
 
-                    //This is probably the most awesome linq expression ever
-                    //It loops through every known network adaptor and tries to pull out any 
-                    //ip addresses which match the provided prefixes
-                    //If multiple matches are found then we rank by prefix order at the end
-                    var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-                    localIP = (from current in interfaces
-                                where
-                                (from inside in current.GetIPProperties().UnicastAddresses
-                                where inside.Address.AddressFamily == AddressFamily.InterNetwork &&
-                                    preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
-                                select inside).Count() > 0
-                                select
-                                (
-                                from inside in current.GetIPProperties().UnicastAddresses
-                                where inside.Address.AddressFamily == AddressFamily.InterNetwork &&
-                                    preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
-                                select inside.Address.ToString()
-                                ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
-                                            {
-                                                //ip corresponds with the full ip address being passed in
-                                                for (int i = 0; i < preferredIPPRefix.Length; i++)
-                                                    if (ip.StartsWith(preferredIPPRefix[i])) return i;
-
-                                                return int.MaxValue;
-                                            }).Where(ip => { return ip != ""; }).FirstOrDefault();
+                    localIP = AllLocalIPs().FirstOrDefault();
 
                     //If we managed to pull something out using our preferred prefixes then we use that
                     if (localIP != null) return localIP;
@@ -129,7 +133,7 @@ namespace NetworkCommsDotNet
                         if (localIP != null) return localIP;
                     }
 
-                    throw new ConnectionSetupException("Unable to determine LocalIP address using provided prefixes. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
+                    throw new CommsSetupException("Unable to determine LocalIP address using provided prefixes. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
                 }
                 else
                     return localIP;
@@ -137,25 +141,70 @@ namespace NetworkCommsDotNet
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change LocalIP once comms has been initialised. Shutdown comms, change IP and restart.");
+                    throw new CommsSetupException("Unable to change LocalIP once comms has been initialised. Shutdown comms, change IP and restart.");
 
-                //If we want to set the localIP we must first validate it
-                String strHostName = Dns.GetHostName();
-
-                // Then using host name, get the IP address list (we will have more than one for sure)
-                IPHostEntry ipEntry = Dns.GetHostEntry(strHostName);
-                IPAddress[] addr = ipEntry.AddressList;
-
-                for (int i = 0; i < addr.Length; i++)
+                //If we want to set the localIP we can validate it here
+                if (AllLocalIPs().Contains(value))
                 {
-                    if (addr[i].ToString() == value)
-                    {
-                        localIP = value;
-                        return;
-                    }
+                    LocalIP = value;
+                    return;
                 }
 
-                throw new ConnectionSetupException("Unable to confirm validity of provided IP.");
+                throw new CommsSetupException("Unable to confirm validity of provided IP.");
+            }
+        }
+
+        /// <summary>
+        /// Returns all possible ipV4 addresses. If preferredIPPRefix has been set ranks be preference descending. i.e. Most preffered at [0].
+        /// </summary>
+        /// <param name="preferredAdaptorName">Leave blank to consider all adaptors. If provided only adaptors with matching ids are considered, e.g. eth0, en0</param>
+        /// <returns></returns>
+        public static string[] AllLocalIPs(string preferredAdaptorName = null)
+        {
+            //This is probably the most awesome linq expression ever
+            //It loops through every known network adaptor and tries to pull out any 
+            //ip addresses which match the provided prefixes
+            //If multiple matches are found then we rank by prefix order at the end
+            //Credit: M.Fletcher & M.Dean
+
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+
+            if (preferredIPPRefix != null)
+            {
+                return (from current in interfaces
+                        where
+                        (from inside in current.GetIPProperties().UnicastAddresses
+                         where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName) &&
+                             preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
+                         select inside).Count() > 0
+                        select
+                        (
+                        from inside in current.GetIPProperties().UnicastAddresses
+                        where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName) &&
+                            preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
+                        select inside.Address.ToString()
+                        ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
+                        {
+                            //ip corresponds with the full ip address being passed in
+                            for (int i = 0; i < preferredIPPRefix.Length; i++)
+                                if (ip.StartsWith(preferredIPPRefix[i])) return i;
+
+                            return int.MaxValue;
+                        }).Where(ip => { return ip != ""; }).ToArray();
+            }
+            else
+            {
+                return (from current in interfaces
+                        where
+                        (from inside in current.GetIPProperties().UnicastAddresses
+                         where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                         select inside).Count() > 0
+                        select
+                        (
+                        from inside in current.GetIPProperties().UnicastAddresses
+                        where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                        select inside.Address.ToString()
+                        ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).Where(ip => { return ip != ""; }).ToArray();
             }
         }
 
@@ -207,7 +256,7 @@ namespace NetworkCommsDotNet
                     if (value != commsPort)
                     {
                         if (isListening)
-                            throw new ConnectionSetupException("Unable to change CommsPort once already listening. Shutdown comms, change port and restart.");
+                            throw new CommsSetupException("Unable to change CommsPort once already listening. Shutdown comms, change port and restart.");
 
                         commsPort = value;
                     }
@@ -232,7 +281,7 @@ namespace NetworkCommsDotNet
                     if (value != enableNagleAlgorithmForEstablishedConnections)
                     {
                         if (isListening)
-                            throw new ConnectionSetupException("Unable to set EnableNagleAlgorithmForEstablishedConnections once already listening. Shutdown comms, set and restart.");
+                            throw new CommsSetupException("Unable to set EnableNagleAlgorithmForEstablishedConnections once already listening. Shutdown comms, set and restart.");
 
                         enableNagleAlgorithmForEstablishedConnections = value;
                     }
@@ -454,9 +503,14 @@ namespace NetworkCommsDotNet
 
         #region Incoming Data and Connection Config
         /// <summary>
-        /// Used for switching between async and sync connectionListen modes. Sync is slightly better performing but spawns a worker thread for each unique connection.
+        /// Used for switching between async and sync connectionListen modes. Sync performs slightly better but spawns a worker thread for each unique connection. Probably best not to use if you are going to have >50 simultaneous connections.
         /// </summary>
         internal static bool connectionListenModeUseSync = false;
+
+        /// <summary>
+        /// Networkcomms.net can listen on a single interface (IP) or all interfaces. Default is single interface.
+        /// </summary>
+        internal static bool listenOnAllInterfaces = false;
 
         /// <summary>
         /// Used for switching between async and sync connectionListen modes. Default is false. No noticable performance difference between the two modes.
@@ -467,9 +521,24 @@ namespace NetworkCommsDotNet
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change connectionListenModeUseSync once already initialised. Shutdown comms, change mode and restart.");
+                    throw new CommsSetupException("Unable to change connectionListenModeUseSync once already initialised. Shutdown comms, change mode and restart.");
 
                 connectionListenModeUseSync = value;
+            }
+        }
+
+        /// <summary>
+        /// Used for switching between listening on a single interface or all interfaces. Default is false (single interface).
+        /// </summary>
+        public static bool ListenOnAllInterfaces
+        {
+            get { return listenOnAllInterfaces; }
+            set
+            {
+                if (isListening || commsInitialised)
+                    throw new CommsSetupException("Unable to change listenOnAllInterfaces once already initialised. Shutdown comms, change mode and restart.");
+
+                listenOnAllInterfaces = value;
             }
         }
 
@@ -477,12 +546,12 @@ namespace NetworkCommsDotNet
         /// New incoming connection listeners
         /// </summary>
         static Thread newIncomingListenThread;
-        static TcpListener tcpListener;
+        //static TcpListener tcpListener;
 
         /// <summary>
         /// Lists which handle the incoming connections. Originally this was used as a single but this allows networkComms.net to listen across multiple adaptors
         /// </summary>
-        static List<Thread> incomingListenThreadList;
+        //static List<Thread> incomingListenThreadList;
         static List<TcpListener> tcpListenerList;
 
         /// <summary>
@@ -500,7 +569,7 @@ namespace NetworkCommsDotNet
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change receiveBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
+                    throw new CommsSetupException("Unable to change receiveBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
 
                 receiveBufferSizeBytes = value;
             }
@@ -515,7 +584,7 @@ namespace NetworkCommsDotNet
             set
             {
                 if (isListening || commsInitialised)
-                    throw new ConnectionSetupException("Unable to change sendBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
+                    throw new CommsSetupException("Unable to change sendBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
 
                 sendBufferSizeBytes = value;
             }
@@ -1173,7 +1242,7 @@ namespace NetworkCommsDotNet
                 globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
                 if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
-            }
+           } 
         }
 
         /// <summary>
@@ -1301,12 +1370,25 @@ namespace NetworkCommsDotNet
                             if (!newIncomingListenThread.Join(PacketConfirmationTimeoutMS))
                             {
                                 //If we are still waiting for a close it may be stuck on AcceptTCPClient
-                                try
+                                if (tcpListenerList != null)
                                 {
-                                    if (tcpListener != null) tcpListener.Stop();
-                                }
-                                catch (Exception)
-                                {
+                                    try
+                                    {
+                                        foreach (var listener in tcpListenerList)
+                                        {
+                                            try
+                                            {
+                                                if (listener != null) listener.Stop();
+                                            }
+                                            catch (Exception) { }
+                                        }
+                                    }
+                                    catch (Exception) { }
+                                    finally
+                                    {
+                                        //Once we have stopped all listeners we set the list to null incase we want to resart listening
+                                        tcpListenerList = null;
+                                    }
                                 }
 
                                 //We now wait for a further time. If it is still stuck it gets nuked
@@ -1424,7 +1506,7 @@ namespace NetworkCommsDotNet
                     if (oldConnectionIdToConnectionInfo.ContainsKey(connectionId))
                         return oldConnectionIdToConnectionInfo[connectionId];
                     else
-                        throw new ConnectionSetupException("Unable to locate connection with provided connectionId.");
+                        throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
                 }
             }
         }
@@ -1485,7 +1567,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1503,7 +1585,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1519,7 +1601,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1534,7 +1616,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1567,7 +1649,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
@@ -1587,7 +1669,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, DefaultSerializer, DefaultCompressor);
@@ -1605,7 +1687,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1622,7 +1704,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             Packet sendPacket = new Packet(packetTypeStr, receiveConfirmationRequired, sendObject, serializer, compressor);
             targetConnection.SendPacket(sendPacket);
         }
@@ -1660,7 +1742,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
@@ -1681,7 +1763,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
@@ -1700,7 +1782,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
@@ -1718,7 +1800,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
@@ -1758,7 +1840,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
@@ -1783,7 +1865,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             connectionId = targetConnection.ConnectionId;
 
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
@@ -1806,7 +1888,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, CommsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, CommsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
@@ -1828,7 +1910,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
         {
-            TCPConnection targetConnection = CheckForConnection(destinationIPAddress, commsPort);
+            TCPConnection targetConnection = EstablishTCPConnection(destinationIPAddress, commsPort);
             return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, targetConnection.ConnectionId, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, serializerOutgoing, compressorOutgoing, serializerIncoming, compressorIncoming);
         }
 
@@ -2005,50 +2087,56 @@ namespace NetworkCommsDotNet
                 {
                     try
                     {
-                        if (tcpListener.Pending() && !commsShutdown)
+                        bool pickedUpNewConnection = false;
+                        foreach (var listener in tcpListenerList)
                         {
-                            //Pick up the new connection
-                            TcpClient newClient = tcpListener.AcceptTcpClient();
-
-                            //Build the endPoint object based on available information at the current moment
-                            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[1]));
-                            TCPConnection newConnection = new TCPConnection(true, endPoint);
-
-                            //Once we have the connection we want to check if we already have an existing one
-                            //If we already have a connection with this remote end point we close it
-                            TCPConnection existingConnection = null;
-                            lock (globalDictAndDelegateLocker)
+                            if (listener.Pending() && !commsShutdown)
                             {
-                                if (allConnectionsByEndPoint.ContainsKey(endPoint))
-                                    existingConnection = allConnectionsByEndPoint[endPoint];
-                            }
-                            //GAP START
+                                pickedUpNewConnection = true;
 
-                            //If we had an existing connection we will try to close it here
-                            //Do this outside the locker above to ensure the closeConnection works
-                            if (existingConnection != null) existingConnection.CloseConnection(false, -4);
+                                //Pick up the new connection
+                                TcpClient newClient = listener.AcceptTcpClient();
 
-                            //In the commented GAP another thread may have established a new outgoing connection
-                            //If we have then there is no need to finish establishing this one
-                            bool establishNewConnection = false;
+                                //Build the endPoint object based on available information at the current moment
+                                IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[1]));
+                                TCPConnection newConnection = new TCPConnection(true, endPoint);
 
-                            //GAP END
-                            lock (globalDictAndDelegateLocker)
-                            {
-                                if (!allConnectionsByEndPoint.ContainsKey(endPoint))
+                                //Once we have the connection we want to check if we already have an existing one
+                                //If we already have a connection with this remote end point we close it
+                                TCPConnection existingConnection = null;
+                                lock (globalDictAndDelegateLocker)
                                 {
-                                    allConnectionsByEndPoint.Add(endPoint, newConnection);
-                                    establishNewConnection = true;
+                                    if (allConnectionsByEndPoint.ContainsKey(endPoint))
+                                        existingConnection = allConnectionsByEndPoint[endPoint];
                                 }
-                            }
+                                //GAP START
 
-                            //If we have made it this far and establish connection is true we can proceed with the handshake
-                            if (establishNewConnection) newConnection.EstablishConnection(newClient);
+                                //If we had an existing connection we will try to close it here
+                                //Do this outside the locker above to ensure the closeConnection works
+                                if (existingConnection != null) existingConnection.CloseConnection(false, -4);
+
+                                //In the commented GAP another thread may have established a new outgoing connection
+                                //If we have then there is no need to finish establishing this one
+                                bool establishNewConnection = false;
+
+                                //GAP END
+                                lock (globalDictAndDelegateLocker)
+                                {
+                                    if (!allConnectionsByEndPoint.ContainsKey(endPoint))
+                                    {
+                                        allConnectionsByEndPoint.Add(endPoint, newConnection);
+                                        establishNewConnection = true;
+                                    }
+                                }
+
+                                //If we have made it this far and establish connection is true we can proceed with the handshake
+                                if (establishNewConnection) newConnection.EstablishConnection(newClient);
+                            }
                         }
-                        else
-                        {
+
+                        //We will only pause if we didnt get any new connections
+                        if (!pickedUpNewConnection)
                             Thread.Sleep(200);
-                        }
                     }
                     catch (ConfirmationTimeoutException)
                     {
@@ -2086,6 +2174,28 @@ namespace NetworkCommsDotNet
             }
             finally
             {
+                //We try to close all of the tcpListeners
+                if (tcpListenerList != null)
+                {
+                    try
+                    {
+                        foreach (var listener in tcpListenerList)
+                        {
+                            try
+                            {
+                                if (listener != null) listener.Stop();
+                            }
+                            catch (Exception) { }
+                        }
+                    }
+                    catch (Exception) { }
+                    finally
+                    {
+                        //Once we have stopped all listeners we set the list to null incase we want to resart listening
+                        tcpListenerList = null;
+                    }
+                }
+
                 //If we get this far we have definately stopped accepting new connections
                 endListen = false;
                 isListening = false;
@@ -2211,31 +2321,68 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void OpenIncomingPorts()
         {
-            System.Net.IPAddress localAddress = System.Net.IPAddress.Parse(LocalIP);
+            //If we already have open listeners we need to make sure they are closed correctly
+            if (tcpListenerList != null && tcpListenerList.Count > 0)
+                throw new CommunicationException("Port Listeners have already been defined. Unable to open further ports.");
 
-            try
+            //Make sure we have a list of listeners
+            tcpListenerList = new List<TcpListener>();
+            TcpListener newListenerInstance = null;
+
+            if (listenOnAllInterfaces)
             {
-                tcpListener = new TcpListener(localAddress, CommsPort);
-                tcpListener.Start();
+                //We need a list of all IP address and then open a listener for each one
+                IPAddress[] allIPs = (from current in AllLocalIPs() select System.Net.IPAddress.Parse(current)).ToArray();
+
+                foreach (var ipAddress in allIPs)
+                {
+                    try
+                    {
+                        newListenerInstance = new TcpListener(ipAddress, CommsPort);
+                        newListenerInstance.Start();
+                        tcpListenerList.Add(newListenerInstance);
+                    }
+                    catch (SocketException)
+                    {
+                        //We need to ensure the same port is used across all interfaces otherwise someone will end up pulling their hair out trying to troubleshoot this particular problem.
+                        //We won't throw an exception on 169.x.x.x addresses as they are generally non routable anyway
+                        if (!ipAddress.ToString().StartsWith("169"))
+                            throw new CommsSetupException("Port " + CommsPort + " was already in use on IP " + ipAddress.ToString() + ". Ensure port is available across all interfaces, change CommsPort, or only enable listening on a single interface.");
+                    }
+                }
             }
-            catch (SocketException)
+            else
             {
-                //The port we wanted is not available so we need to let .net choose one for us
-                tcpListener = new TcpListener(localAddress, 0);
-                tcpListener.Start();
+                System.Net.IPAddress localAddress = System.Net.IPAddress.Parse(LocalIP);
 
-                //Need to jump commsInitialised otherwise we won't be able to change the port
-                CommsPort = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+                try
+                {
+                    newListenerInstance = new TcpListener(localAddress, CommsPort);
+                    newListenerInstance.Start();
+                }
+                catch (SocketException)
+                {
+                    //The port we wanted is not available so we need to let .net choose one for us
+                    newListenerInstance = new TcpListener(localAddress, 0);
+                    newListenerInstance.Start();
+
+                    //Need to jump commsInitialised otherwise we won't be able to change the port
+                    CommsPort = ((IPEndPoint)newListenerInstance.LocalEndpoint).Port;
+                }
+                finally
+                {
+                    tcpListenerList.Add(newListenerInstance);
+                }
             }
 
             if (loggingEnabled) logger.Info("networkComms.net has opened port "+CommsPort+".");
         }
 
         /// <summary>
-        /// Checks for a connection and if it does not exist creates a new one
+        /// Checks for a connection and if it does not exist creates a new one. If the connection fails throws ConnectionSetupException.
         /// </summary>
         /// <param name="targetIPAddress"></param>
-        private static TCPConnection CheckForConnection(string targetIPAddress, int commsPort)
+        public static TCPConnection EstablishTCPConnection(string targetIPAddress, int commsPort)
         {
             if (loggingEnabled) logger.Trace("Checking for connection to " + targetIPAddress + ":" + commsPort);
 

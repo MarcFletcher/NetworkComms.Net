@@ -151,7 +151,13 @@ namespace NetworkCommsDotNet
             //In order to prevent the same machine creating the same guid within the same tick we loop by process id
             //A normal PID will have a max value of about 1E5, based on some brief tests this loop will take less than 1ms
             Guid resultGuid = Guid.NewGuid();
-            for (int i = 0; i < System.Diagnostics.Process.GetCurrentProcess().Id; i++)
+
+            //Try and get the process Id. May fail in some enviornments.
+            int processId = 0;
+            try {processId = System.Diagnostics.Process.GetCurrentProcess().Id;}
+            catch (Exception) { }
+
+            for (int i = 0; i < processId; i++)
                 resultGuid = Guid.NewGuid();
 
             return new ShortGuid(resultGuid);
