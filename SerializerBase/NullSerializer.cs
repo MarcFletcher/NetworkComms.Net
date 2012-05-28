@@ -17,7 +17,7 @@ namespace SerializerBase
         /// <summary>
         /// Instance singleton
         /// </summary>
-        public static ISerialize Instance
+        public static ISerialize Instance 
         {
             get
             {
