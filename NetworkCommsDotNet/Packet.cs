@@ -24,7 +24,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Wrapper for the entire comms packet. Packet consists of header and data in serialised byte[] form.
     /// </summary>
-    class Packet
+    public class Packet
     {
         PacketHeader packetHeader;
         byte[] packetData;

@@ -28,7 +28,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// A TCPConnection represents each established tcp connection between two peers.
     /// </summary>
-    class TCPConnection
+    public class TCPConnection
     {
         /// <summary>
         /// The TcpClient corresponding to this connection.
