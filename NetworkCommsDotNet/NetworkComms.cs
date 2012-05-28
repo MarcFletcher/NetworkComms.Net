@@ -26,6 +26,7 @@ using SerializerBase.Protobuf;
 using System.Collections;
 using System.Net.NetworkInformation;
 using Common.Logging;
+using System.Collections.Specialized;
 
 namespace NetworkCommsDotNet
 {
@@ -739,10 +740,6 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-
-        private static Dictionary<Type, ISerialize> allKnownSerializers = SerializerCompressorLoadingHelper.Instance.GetAllSerializes();
-        private static Dictionary<Type, ICompress> allKnownCompressors = SerializerCompressorLoadingHelper.Instance.GetAllCompressors();
-        
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50kb)
@@ -1098,10 +1095,6 @@ namespace NetworkCommsDotNet
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
         public static void AppendIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
         {
-            var pb = allKnownSerializers[typeof(ProtobufSerializer)];
-            
-
-
             AppendIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, null, null, enableAutoListen);
         }
 

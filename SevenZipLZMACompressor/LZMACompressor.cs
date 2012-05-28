@@ -20,42 +20,42 @@ using System.Text;
 using SerializerBase;
 using System.IO;
 using LZMA;
-using System.ComponentModel.Composition;
 
 namespace SevenZipLZMACompressor
 {
     /// <summary>
     /// Compressor utilizing LZMA algorithm from 7Zip http://www.7-zip.org/    
     /// </summary>
-    [Export(typeof(ICompress))]
     public class LZMACompressor : ICompress
     {
-        static ICompress instance;
+        static LZMACompressor instance;
+        static object locker = new object();
 
         /// <summary>
         /// Instance singleton
         /// </summary>
-        public static ICompress Instance
+        public static LZMACompressor Instance
         {
             get
             {
-                if (instance == null)
-                    instance = GetInstance<LZMACompressor>();
+                lock (locker)
+                {
+                    if (instance == null)
+                        instance = new LZMACompressor();
+                }
 
                 return instance;
             }
         }
 
         private LZMACompressor() { }
-
-        public override byte Identifier { get { return 1; } }
-
+        
         /// <summary>
         /// Compresses data in inStream to a byte array appending uncompressed data size
         /// </summary>
         /// <param name="inStream">Stream contaiing data to compress</param>
         /// <returns>Compressed data appended with uncompressed data size</returns>
-        public override byte[] CompressDataStream(Stream inStream)
+        public byte[] CompressDataStream(Stream inStream)
         {
             inStream.Seek(0, 0);
 
@@ -71,7 +71,7 @@ namespace SevenZipLZMACompressor
         /// </summary>
         /// <param name="inBytes">Compressed data from CompressDataStream</param>
         /// <param name="outputStream">Stream to output uncompressed data to</param>
-        public override void DecompressToStream(byte[] inBytes, Stream outputStream)
+        public void DecompressToStream(byte[] inBytes, Stream outputStream)
         {
             MemoryStream inStream = new MemoryStream(inBytes, 0, inBytes.Length - 8, false);
             var bytes =  SevenZipHelper.DecompressFromStream(inStream);

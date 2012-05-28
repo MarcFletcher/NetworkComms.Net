@@ -38,7 +38,6 @@
       <HintPath>Protobuf\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -55,7 +54,6 @@
     <Compile Include="NullSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Protobuf\ProtobufSerializer.cs" />
-    <Compile Include="SerializerCompressorLoadingHelper.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
