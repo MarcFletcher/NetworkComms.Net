@@ -1027,7 +1027,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Pings the provided connection and return true if the ping was succesfull, returns false otherwise. Usefull to see if an ip address is listening for connections.
+        /// Pings the provided connection and returns true if the ping was succesfull, returns false otherwise. Usefull to see if an ip address is listening for connections.
         /// </summary>
         /// <param name="ipAddress"></param>
         /// <param name="port"></param>
@@ -1041,6 +1041,30 @@ namespace NetworkCommsDotNet
             }
             catch (CommsException)
             {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Pings the provided connection and returns true if the ping was succesfull after setting pingTimeMS, returns false otherwise. Usefull to see if an ip address is listening for connections.
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="port"></param>
+        /// <param name="pingTimeoutMS"></param>
+        /// <param name="pingTimeMS"></param>
+        /// <returns></returns>
+        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS, out double pingTimeMS)
+        {
+            try
+            {
+                DateTime startTime = DateTime.Now;
+                bool result = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), ipAddress, port, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), pingTimeoutMS, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                pingTimeMS = (DateTime.Now - startTime).TotalMilliseconds;
+                return result;
+            }
+            catch (CommsException)
+            {
+                pingTimeMS = double.MaxValue;
                 return false;
             }
         }
