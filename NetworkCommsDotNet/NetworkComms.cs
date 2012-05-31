@@ -27,6 +27,7 @@ using System.Collections;
 using System.Net.NetworkInformation;
 using Common.Logging;
 using System.Collections.Specialized;
+using System.Diagnostics;
 
 namespace NetworkCommsDotNet
 {
@@ -1053,18 +1054,20 @@ namespace NetworkCommsDotNet
         /// <param name="pingTimeoutMS"></param>
         /// <param name="pingTimeMS"></param>
         /// <returns></returns>
-        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS, out double pingTimeMS)
+        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS, out long pingTimeMS)
         {
             try
             {
-                DateTime startTime = DateTime.Now;
+                Stopwatch timer = new Stopwatch();
+                timer.Start();
                 bool result = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), ipAddress, port, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), pingTimeoutMS, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                pingTimeMS = (DateTime.Now - startTime).TotalMilliseconds;
+                timer.Stop();
+                pingTimeMS = timer.ElapsedMilliseconds;
                 return result;
             }
             catch (CommsException)
             {
-                pingTimeMS = double.MaxValue;
+                pingTimeMS = long.MaxValue;
                 return false;
             }
         }
