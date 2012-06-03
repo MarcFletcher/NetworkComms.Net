@@ -53,7 +53,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The preferred IP prefixs if network comms may try to auto select the ip address
         /// </summary>
-        static string[] preferredIPPRefix = null;
+        static string[] preferredIPPrefix = null;
 
         /// <summary>
         /// Setting preferred IP prefixs will help network comms select the correct listening ip address. An alternative is to set ListenOnAllInterfaces to true.
@@ -62,13 +62,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static string[] PreferredIPPrefix
         {
-            get { return preferredIPPRefix; }
+            get { return preferredIPPrefix; }
             set
             {
                 if (isListening || commsInitialised)
                     throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
 
-                preferredIPPRefix = value;
+                preferredIPPrefix = value;
             }
         }
 
@@ -94,7 +94,7 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Get the localIP as detected by network comms. If an incorrect IP is being returned
-        /// set the cirrect IP on application startup or specify PreferredIPPrefix to aid detection
+        /// set the IP on startup, specify PreferredIPPrefix or PreferredAdaptorName.
         /// </summary>
         public static string LocalIP
         {
@@ -102,39 +102,29 @@ namespace NetworkCommsDotNet
             {
                 if (localIP == null)
                 {
-                    //First we try to find the preffered adaptor
-                    if (preferredAdaptorName != null)
+                    //If we are listening on all interfaces or we have specific prefereces we try to get an ip that way
+                    if (listenOnAllInterfaces || preferredAdaptorName != null || (preferredIPPrefix != null && preferredIPPrefix.Length > 0))
                     {
-                        string[] possibleIPs = AllLocalIPs(preferredAdaptorName);
-                        if (possibleIPs.Length > 0) localIP = possibleIPs[0];
-                        if (localIP != null) return localIP;
+                        string[] possibleIPs = AllLocalIPs();
+                        if (possibleIPs.Length > 0)
+                        {
+                            localIP = possibleIPs[0];
+                            return localIP;
+                        }
                     }
 
-                    //If we have not specified a preffered ip prefix we attempt to guess the ip.
-                    if (preferredIPPRefix == null)
-                    {
-                        localIP = AttemptBestIPAddressGuess();
-                        if (localIP != null) return localIP;
-                    }
-                    
-                    //If the cool detection above did not work or we provided a preffered prefix we iterate through all addresses
-                    //In order to do that the user must have provided some ip prefixs
-                    if (preferredIPPRefix == null || preferredIPPRefix.Length == 0)
-                        throw new CommsSetupException("Unable to determine LocalIP address. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
-
-                    localIP = AllLocalIPs().FirstOrDefault();
-
-                    //If we managed to pull something out using our preferred prefixes then we use that
+#if !iOS
+                    //If we did not get an IP by using the above method we try using an external ping
+                    //This will only work in windows
+                    localIP = AttemptBestIPAddressGuess();
                     if (localIP != null) return localIP;
-                    else
-                    {
-                        //If we still have nothing it may be we provided some prefixs which were not located
-                        //Try to auto detect as last attempt. This is only going to succed in native .net.
-                        localIP = AttemptBestIPAddressGuess();
-                        if (localIP != null) return localIP;
-                    }
+#endif
 
-                    throw new CommsSetupException("Unable to determine LocalIP address using provided prefixes. Either specifiy LocalIP explicity before using comms or provide suitable preferred prefixes.");
+                    //If we have got to this point we should probably throw an exception and let the user decide on the best course of action
+                    if (preferredAdaptorName != null || preferredIPPrefix !=null)
+                        throw new CommsSetupException("Unable to determine LocalIP address using provided prefixes. Specifiy LocalIP explicity before using comms, try different preferred prefixes or listenOnAllInterfaces.");
+                    else
+                        throw new CommsSetupException("Unable to determine LocalIP address. Specifiy LocalIP explicity, provide preferred prefixes or listenOnAllInterfaces.");
                 }
                 else
                     return localIP;
@@ -147,7 +137,7 @@ namespace NetworkCommsDotNet
                 //If we want to set the localIP we can validate it here
                 if (AllLocalIPs().Contains(value))
                 {
-                    LocalIP = value;
+                    localIP = value;
                     return;
                 }
 
@@ -156,11 +146,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns all possible ipV4 addresses. If preferredIPPRefix has been set ranks be preference descending. i.e. Most preffered at [0].
+        /// Returns all possible ipV4 addresses. Considers networkComms.PreferredIPPrefix and networkComms.PreferredAdaptorName. If preferredIPPRefix has been set ranks be descending preference. i.e. Most preffered at [0].
         /// </summary>
-        /// <param name="preferredAdaptorName">Leave blank to consider all adaptors. If provided only adaptors with matching ids are considered, e.g. eth0, en0</param>
         /// <returns></returns>
-        public static string[] AllLocalIPs(string preferredAdaptorName = null)
+        public static string[] AllLocalIPs()
         {
             //This is probably the most awesome linq expression ever
             //It loops through every known network adaptor and tries to pull out any 
@@ -168,45 +157,39 @@ namespace NetworkCommsDotNet
             //If multiple matches are found then we rank by prefix order at the end
             //Credit: M.Fletcher & M.Dean
 
-            var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-
-            if (preferredIPPRefix != null)
-            {
-                return (from current in interfaces
-                        where
-                        (from inside in current.GetIPProperties().UnicastAddresses
-                         where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName) &&
-                             preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
-                         select inside).Count() > 0
-                        select
-                        (
-                        from inside in current.GetIPProperties().UnicastAddresses
-                        where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName) &&
-                            preferredIPPRefix.Contains(inside.Address.ToString(), new IPComparer())
-                        select inside.Address.ToString()
-                        ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
-                        {
-                            //ip corresponds with the full ip address being passed in
-                            for (int i = 0; i < preferredIPPRefix.Length; i++)
-                                if (ip.StartsWith(preferredIPPRefix[i])) return i;
-
+            return (from current in NetworkInterface.GetAllNetworkInterfaces()
+                    where
+                    //First we need to select interfaces that contain address information
+                    (from inside in current.GetIPProperties().UnicastAddresses
+                     where inside.Address.AddressFamily == AddressFamily.InterNetwork
+                        && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                        //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))  
+                     select inside).Count() > 0 &&
+                     //We only want adaptors which are operational
+                     current.OperationalStatus == OperationalStatus.Up
+                    select
+                    (
+                    //Once we have adaptors that contain address information we are after the address
+                    from inside in current.GetIPProperties().UnicastAddresses
+                    where inside.Address.AddressFamily == AddressFamily.InterNetwork
+                        && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                        //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
+                    select inside.Address.ToString()
+                    ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
+                    {
+                        //If we have no preffered addresses we just return a default
+                        if (preferredIPPrefix == null)
                             return int.MaxValue;
-                        }).Where(ip => { return ip != ""; }).ToArray();
-            }
-            else
-            {
-                return (from current in interfaces
-                        where
-                        (from inside in current.GetIPProperties().UnicastAddresses
-                         where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
-                         select inside).Count() > 0
-                        select
-                        (
-                        from inside in current.GetIPProperties().UnicastAddresses
-                        where inside.Address.AddressFamily == AddressFamily.InterNetwork && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
-                        select inside.Address.ToString()
-                        ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).Where(ip => { return ip != ""; }).ToArray();
-            }
+                        else
+                        {
+                            //We can check the preffered and return the index at which the IP occurs
+                            for (int i = 0; i < preferredIPPrefix.Length; i++)
+                                if (ip.StartsWith(preferredIPPrefix[i])) return i;
+
+                            //If there was no match for this IP in the preffered IP range we just return maxValue
+                            return int.MaxValue;
+                        }
+                    }).Where(ip => { return ip != ""; }).ToArray();
         }
 
         /// <summary>
@@ -822,7 +805,11 @@ namespace NetworkCommsDotNet
         /// Default serializer and compressor for sending and receiving in the absence of specific values
         /// </summary>
         static ISerialize defaultSerializer = ProtobufSerializer.Instance;
+#if !iOS
         static ICompress defaultCompressor = SevenZipLZMACompressor.LZMACompressor.Instance;
+#else
+        static ICompress defaultCompressor = NullCompressor.Instance;
+#endif
 
         /// <summary>
         /// Get or set the default serializer for sending and receiving objects
@@ -2267,14 +2254,14 @@ namespace NetworkCommsDotNet
         /// Returns the threadState of the IncomingConnectionListenThread
         /// </summary>
         /// <returns></returns>
-        public static ThreadState IncomingConnectionListenThreadState()
+        public static System.Threading.ThreadState IncomingConnectionListenThreadState()
         {
             lock(globalDictAndDelegateLocker)
             {
                 if (newIncomingListenThread != null)
                     return newIncomingListenThread.ThreadState;
                 else
-                    return ThreadState.Unstarted;
+                    return System.Threading.ThreadState.Unstarted;
             }
         }
 
@@ -2282,14 +2269,14 @@ namespace NetworkCommsDotNet
         /// Returns the threadState of the ConnectionKeepAlivePollThread
         /// </summary>
         /// <returns></returns>
-        public static ThreadState ConnectionKeepAliveThreadState()
+        public static System.Threading.ThreadState ConnectionKeepAliveThreadState()
         {
             lock (globalDictAndDelegateLocker)
             {
                 if (ConnectionKeepAliveThread != null)
                     return ConnectionKeepAliveThread.ThreadState;
                 else
-                    return ThreadState.Unstarted;
+                    return System.Threading.ThreadState.Unstarted;
             }
         }
 
