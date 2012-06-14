@@ -435,14 +435,14 @@ namespace DistributedFileSystem
             catch (Exception) { }
         }
 
-        public static void RemoveAllItemsFromLocalOnly()
+        public static void RemoveAllItemsFromLocalOnly(bool broadcastRemoval = false)
         {
             long[] keysToRemove;
             lock (globalDFSLocker)
                 keysToRemove = swarmedItemsDict.Keys.ToArray();
 
             foreach (long key in keysToRemove)
-                RemoveItem(key, false);
+                RemoveItem(key, broadcastRemoval);
         }
 
         /// <summary>
