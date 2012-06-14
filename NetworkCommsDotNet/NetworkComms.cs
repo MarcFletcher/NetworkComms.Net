@@ -2433,10 +2433,6 @@ namespace NetworkCommsDotNet
                         connection = allConnectionsByEndPoint[endPoint];
                     else
                     {
-                        //We want to make sure we connect to our target from the chosen localIP
-                        targetClient = new TcpClient(new IPEndPoint(IPAddress.Parse(LocalIP), 0));
-                        connection = new TCPConnection(false, targetClient);
-
                         allConnectionsByEndPoint.Add(endPoint, connection);
                         newConnectionEstablish = true;
                     }
@@ -2447,7 +2443,10 @@ namespace NetworkCommsDotNet
                     if (loggingEnabled) logger.Trace(" ... establishing a new connection");
 
                     //We now connect to our target
+                    targetClient = new TcpClient();
                     targetClient.Connect(targetIPAddress, commsPort);
+
+                    connection = new TCPConnection(false, targetClient);
                     connection.EstablishConnection();
                 }
                 else
@@ -2466,9 +2465,13 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If there was an exception we need to close the connection
-                if (connection != null) connection.CloseConnection(true, 17);
+                if (connection != null)
+                {
+                    connection.CloseConnection(true, 17);
+                    throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + ") from (" + connection.LocalConnectionIP + "). Destination may not be listening. " + ex.ToString());
+                }
 
-                throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + ") from (" + LocalIP + "). Destination may not be listening. " + ex.ToString());
+                throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + "). Destination may not be listening. " + ex.ToString());
             }
         }
 
