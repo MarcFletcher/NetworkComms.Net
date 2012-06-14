@@ -94,7 +94,8 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Get the localIP as detected by network comms. If an incorrect IP is being returned
-        /// set the IP on startup, specify PreferredIPPrefix or PreferredAdaptorName.
+        /// set the IP on startup, specify PreferredIPPrefix or PreferredAdaptorName. If listening on multiple adaptors
+        /// this getter on returns whatever is chosen as the primary ip, consider AllLocalIPs().
         /// </summary>
         public static string LocalIP
         {
@@ -2117,7 +2118,8 @@ namespace NetworkCommsDotNet
 
                                 //Build the endPoint object based on available information at the current moment
                                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[1]));
-                                TCPConnection newConnection = new TCPConnection(true, endPoint);
+
+                                TCPConnection newConnection = new TCPConnection(true, newClient);
 
                                 //Once we have the connection we want to check if we already have an existing one
                                 //If we already have a connection with this remote end point we close it
@@ -2148,7 +2150,7 @@ namespace NetworkCommsDotNet
                                 }
 
                                 //If we have made it this far and establish connection is true we can proceed with the handshake
-                                if (establishNewConnection) newConnection.EstablishConnection(newClient);
+                                if (establishNewConnection) newConnection.EstablishConnection();
                             }
                         }
 
@@ -2420,6 +2422,8 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("Attempting to connect local network comms instance to itself.");
 
                 bool newConnectionEstablish = false;
+                TcpClient targetClient = null;
+
                 lock (globalDictAndDelegateLocker)
                 {
                     InitialiseComms();
@@ -2429,7 +2433,10 @@ namespace NetworkCommsDotNet
                         connection = allConnectionsByEndPoint[endPoint];
                     else
                     {
-                        connection = new TCPConnection(false, endPoint);
+                        //We want to make sure we connect to our target from the chosen localIP
+                        targetClient = new TcpClient(new IPEndPoint(IPAddress.Parse(LocalIP), 0));
+                        connection = new TCPConnection(false, targetClient);
+
                         allConnectionsByEndPoint.Add(endPoint, connection);
                         newConnectionEstablish = true;
                     }
@@ -2439,13 +2446,9 @@ namespace NetworkCommsDotNet
                 {
                     if (loggingEnabled) logger.Trace(" ... establishing a new connection");
 
-                    //We want to make sure we connect to our target from the chosen localIP
-                    IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(LocalIP), 0);
-                    TcpClient targetClient = new TcpClient(localEndPoint);
-
                     //We now connect to our target
                     targetClient.Connect(targetIPAddress, commsPort);
-                    connection.EstablishConnection(targetClient);
+                    connection.EstablishConnection();
                 }
                 else
                     if (loggingEnabled) logger.Trace(" ... using an existing connection");
