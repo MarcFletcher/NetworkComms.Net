@@ -49,6 +49,8 @@ namespace NetworkCommsDotNet
         /// Information about this connection
         /// </summary>
         IPEndPoint ConnectionEndPoint { get; set; }
+        IPEndPoint ConnectionLocalPoint { get; set; }
+
         public ConnectionInfo ConnectionInfo { get; private set; }
 
         /// <summary>
@@ -101,6 +103,11 @@ namespace NetworkCommsDotNet
         public string RemoteClientIP
         {
             get { return ConnectionEndPoint.Address.ToString(); }
+        }
+
+        public string LocalConnectionIP
+        {
+            get { return ConnectionLocalPoint.Address.ToString(); }
         }
 
         public ShortGuid ConnectionId
@@ -401,10 +408,14 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
         /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        public TCPConnection(bool serverSide, IPEndPoint connectionEndPoint)
+        public TCPConnection(bool serverSide, TcpClient tcpClient)
         {
             this.tcpConnectionCreationTime = DateTime.Now;
-            this.ConnectionEndPoint = connectionEndPoint;
+            
+            this.tcpClient = tcpClient;
+            this.ConnectionEndPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[1])); ;
+            this.ConnectionLocalPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[1])); ;
+
             this.ServerSide = serverSide;
             this.packetBuilder = new ConnectionPacketBuilder();
             this.dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
@@ -414,7 +425,7 @@ namespace NetworkCommsDotNet
         /// Establish a connection with the provided TcpClient
         /// </summary>
         /// <param name="sourceClient"></param>
-        public void EstablishConnection(TcpClient sourceClient)
+        public void EstablishConnection()
         {
             try
             {
@@ -429,7 +440,7 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("Attempting to establish new connection while comms is shutting down.");
 
                 //Ensure that we do not already have a connection from this client
-                this.tcpClient = sourceClient;
+                //this.tcpClient = sourceClient;
                 this.tcpClientNetworkStream = tcpClient.GetStream();
                 
                 //When we tell the socket/client to close we want it to do so immediately
@@ -468,7 +479,7 @@ namespace NetworkCommsDotNet
                     }
 
                     //Once we have the clients id we send our own
-                    NetworkComms.SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), NetworkComms.LocalIP, NetworkComms.CommsPort),NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    NetworkComms.SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
                 }
                 else
                 {
@@ -476,7 +487,7 @@ namespace NetworkCommsDotNet
 
                     //As the client we initiated the connection we now forward our local node identifier to the server
                     //If we are listening we include our local listen port as well
-                    NetworkComms.SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), NetworkComms.LocalIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), NetworkComms.LocalIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    NetworkComms.SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
 
                     //Wait here for the server end to return its own identifier
                     if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))

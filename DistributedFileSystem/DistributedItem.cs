@@ -779,7 +779,11 @@ namespace DistributedFileSystem
 
             if (saveOut)
             {
+#if iOS
+                string fileName = "checkSumError " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
+#else
                 string fileName = "checkSumError " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
+#endif
                 using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
                 {
                     for (int i = 0; i < returnValues.Length; i++)
