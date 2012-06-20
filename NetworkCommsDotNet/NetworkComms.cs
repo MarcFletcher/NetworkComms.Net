@@ -96,7 +96,7 @@ namespace NetworkCommsDotNet
         /// set the IP on startup, specify PreferredIPPrefix or PreferredAdaptorName. If listening on multiple adaptors
         /// this getter on returns whatever is chosen as the primary ip, consider AllLocalIPs().
         /// </summary>
-        public static string LocalIP
+        public static string[] LocalIP
         {
             get
             {
@@ -105,7 +105,7 @@ namespace NetworkCommsDotNet
                     //If we are listening on all interfaces or we have specific prefereces we try to get an ip that way
                     if (listenOnAllInterfaces || preferredAdaptorName != null || (preferredIPPrefix != null && preferredIPPrefix.Length > 0))
                     {
-                        string[] possibleIPs = AllLocalIPs();
+                        string[] possibleIPs = PossibleLocalIPs();
                         if (possibleIPs.Length > 0)
                         {
                             localIP = possibleIPs[0];
@@ -135,7 +135,7 @@ namespace NetworkCommsDotNet
                     throw new CommsSetupException("Unable to change LocalIP once comms has been initialised. Shutdown comms, change IP and restart.");
 
                 //If we want to set the localIP we can validate it here
-                if (AllLocalIPs().Contains(value))
+                if (PossibleLocalIPs().Contains(value))
                 {
                     localIP = value;
                     return;
@@ -149,7 +149,7 @@ namespace NetworkCommsDotNet
         /// Returns all possible ipV4 addresses. Considers networkComms.PreferredIPPrefix and networkComms.PreferredAdaptorName. If preferredIPPRefix has been set ranks be descending preference. i.e. Most preffered at [0].
         /// </summary>
         /// <returns></returns>
-        public static string[] AllLocalIPs()
+        public static string[] PossibleLocalIPs()
         {
             //This is probably the most awesome linq expression ever
             //It loops through every known network adaptor and tries to pull out any 
@@ -281,9 +281,9 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The local identifier of this instance of network comms
         /// </summary>
-        public static string NetworkNodeIdentifier
+        public static ShortGuid NetworkNodeIdentifier
         {
-            get { return localNetworkIdentifier.ToString(); }
+            get { return localNetworkIdentifier; }
         }
 
         /// <summary>
@@ -443,17 +443,17 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Primary connection dictionary stored by network indentifier
         /// </summary>
-        internal static Dictionary<ShortGuid, TCPConnection> allConnectionsById = new Dictionary<ShortGuid, TCPConnection>();
+        internal static Dictionary<ShortGuid, Dictionary<ConnectionType, Connection>> allConnectionsById = new Dictionary<ShortGuid, Dictionary<ConnectionType, Connection>>();
 
         /// <summary>
         /// Secondary connection dictionary stored by ip end point. Allows for quick cross referencing.
         /// </summary>
-        internal static Dictionary<IPEndPoint, TCPConnection> allConnectionsByEndPoint = new Dictionary<IPEndPoint, TCPConnection>();
+        internal static Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>> allConnectionsByEndPoint = new Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>>();
 
         /// <summary>
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
         /// </summary>
-        internal static Dictionary<ShortGuid, ConnectionInfo> oldConnectionIdToConnectionInfo = new Dictionary<ShortGuid, ConnectionInfo>();
+        internal static Dictionary<ShortGuid, Dictionary<ConnectionType, ConnectionInfo>> oldConnectionIdToConnectionInfo = new Dictionary<ShortGuid, Dictionary<ConnectionType, ConnectionInfo>>();
 
         /// <summary>
         /// The interval between keep alive polls of all serverside connections
@@ -804,6 +804,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static readonly ISerialize internalFixedSerializer = WrappersHelper.Instance.GetSerializer<ProtobufSerializer>();
         internal static readonly ICompress internalFixedCompressor = WrappersHelper.Instance.GetCompressor<NullCompressor>();
+
+        internal static SendReceiveOptions internalFixedSendRecieveOptions { get; set; }
 
         /// <summary>
         /// Default serializer and compressor for sending and receiving in the absence of specific values
@@ -2304,6 +2306,81 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Get an existing connection with the provided connectionId of a provided type. Returns null if the connection does not exist.
+        /// </summary>
+        /// <param name="connectionId"></param>
+        /// <param name="connectionType"></param>
+        /// <returns></returns>
+        public static Connection GetConnection(ShortGuid connectionId, ConnectionType connectionType)
+        {
+            lock (globalDictAndDelegateLocker)
+                return (from current in NetworkComms.allConnectionsById where current.Key == connectionId && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Get an existing connection with the provided ipAddress of a provided type. Returns null if the connection does not exist.
+        /// </summary>
+        /// <param name="connectionId"></param>
+        /// <param name="connectionType"></param>
+        /// <returns></returns>
+        public static Connection GetConnection(IPEndPoint ipEndPoint, ConnectionType connectionType)
+        {
+            lock (globalDictAndDelegateLocker)
+                return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == ipEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+        }
+
+        internal static void RemoveConnection(Connection connection)
+        {
+            if (connection.ConnectionInfo.ConnectionEstablished || !connection.ConnectionInfo.ConnectionShutdown)
+                throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
+
+            lock (globalDictAndDelegateLocker)
+            {
+                if (allConnectionsById.ContainsKey(connection.ConnectionInfo.RemoteNetworkIdentifier))
+                {
+                    if (connection.ConnectionInfo.ConnectionEstablished)
+                    {
+                        //Keep a reference of the connection for possible debugging later
+                        if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.RemoteNetworkIdentifier) && oldConnectionIdToConnectionInfo[connection.ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.RemoteNetworkIdentifier][connection.ConnectionInfo.ConnectionType] = connection.ConnectionInfo;
+                        else
+                            oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.RemoteNetworkIdentifier, new Dictionary<ConnectionType, ConnectionInfo>() { { connection.ConnectionInfo.ConnectionType, connection.ConnectionInfo } });
+
+                        //Remove by network identifier
+                        allConnectionsById[connection.ConnectionInfo.RemoteNetworkIdentifier].Remove(connection.ConnectionInfo.ConnectionType);
+
+                        if (allConnectionsById[connection.ConnectionInfo.RemoteNetworkIdentifier].Count == 0)
+                            allConnectionsById.Remove(connection.ConnectionInfo.RemoteNetworkIdentifier);
+                    }
+
+                    //We can now remove this connection by end point as well
+                    if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) && allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                    {
+                        allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Remove(connection.ConnectionInfo.ConnectionType);
+
+                        if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count ==0)
+                            allConnectionsByEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                    }
+                }
+            }
+        }
+
+        internal static void AddConnection(Connection connection)
+        {
+            if (connection.ConnectionInfo.ConnectionEstablished || !connection.ConnectionInfo.ConnectionShutdown)
+                throw new ConnectionSetupException("A connection can only be removed once correctly shutdown.");
+
+            lock (globalDictAndDelegateLocker)
+            {
+                //Ensure this is a genuine new connection
+
+                //Do we have any old references with the same details, if so they can be deleted from the old cache
+
+
+            }
+        }
+
+        /// <summary>
         /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
         /// </summary>
         /// <param name="returnImmediately"></param>
@@ -2314,7 +2391,7 @@ namespace NetworkCommsDotNet
                 //Loop through all connections and test the alive state
                 List<TCPConnection> dictCopy;
                 lock (globalDictAndDelegateLocker)
-                    dictCopy = new Dictionary<IPEndPoint, TCPConnection>(allConnectionsByEndPoint).Values.ToList();
+                    dictCopy = new List<TCPConnection>(allConnectionsByEndPoint).Values.ToList();
 
                 List<Task> connectionCheckTasks = new List<Task>();
 
@@ -2369,7 +2446,7 @@ namespace NetworkCommsDotNet
             if (listenOnAllInterfaces)
             {
                 //We need a list of all IP address and then open a listener for each one
-                IPAddress[] allIPs = (from current in AllLocalIPs() select System.Net.IPAddress.Parse(current)).ToArray();
+                IPAddress[] allIPs = (from current in PossibleLocalIPs() select System.Net.IPAddress.Parse(current)).ToArray();
 
                 foreach (var ipAddress in allIPs)
                 {

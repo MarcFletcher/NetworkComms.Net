@@ -93,6 +93,18 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
+    /// An error occured while trying to establish a remote connection
+    /// </summary>
+    public class ConnectionShutdownException : CommsException
+    {
+        public ConnectionShutdownException(string msg)
+            : base(msg)
+        {
+
+        }
+    }
+
+    /// <summary>
     /// An error occured while trying to setup networkComms.net
     /// </summary>
     public class CommsSetupException : CommsException

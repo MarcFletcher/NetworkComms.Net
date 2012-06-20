@@ -49,6 +49,8 @@
   <ItemGroup>
     <Compile Include="Adler32.cs" />
     <Compile Include="Connection.cs" />
+    <Compile Include="SendReceiveOptions.cs" />
+    <Compile Include="TCPConnection.cs" />
     <Compile Include="ConnectionInfo.cs" />
     <Compile Include="Exception.cs" />
     <Compile Include="IPExtAccess.cs" />
@@ -60,6 +62,7 @@
     <Compile Include="ReservedPacketType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShortGUID.cs" />
+    <Compile Include="UDPConnection.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">
