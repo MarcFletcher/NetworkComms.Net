@@ -1268,8 +1268,39 @@ namespace NetworkCommsDotNet
                     }
                     else if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier))
                     {
-                        possibleExistingConnectionWithPeer_ByIdentifier = true;
-                        existingConnection = NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier];
+                        //We can check endpoints to see if this is an independant connection from the same peer
+                        if (NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionEndPoint.Address == ConnectionEndPoint.Address)
+                        {
+                            possibleExistingConnectionWithPeer_ByIdentifier = true;
+                            existingConnection = NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier];
+                        }
+                        else
+                        {
+                            //This is an independant connection. In early version of networkComms we leave the existing conneciton and just make sure this new
+                            //connection is correctly reference in the endPoint dictionary
+                            if (ConnectionEndPoint.Port != this.ConnectionInfo.ClientPort && this.ConnectionInfo.ClientPort != -1)
+                            {
+                                //Remove the entry for 'this' before we change our local ConnectionEndPoint
+                                NetworkComms.allConnectionsByEndPoint.Remove(ConnectionEndPoint);
+                                ConnectionEndPoint = new IPEndPoint(ConnectionEndPoint.Address, this.ConnectionInfo.ClientPort);
+
+                                if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
+                                {
+                                    //If we have an existing entry at the new end point we unroll the changes made in this method and set the necessary boolean
+                                    NetworkComms.allConnectionsById.Remove(this.ConnectionInfo.NetworkIdentifier);
+                                    possibleExistingConnectionWithPeer_ByEndPoint = true;
+                                    existingConnection = NetworkComms.allConnectionsByEndPoint[ConnectionEndPoint];
+                                }
+                                else
+                                {
+                                    //Readd to the endPoint dict using the updated ConnectionEndPoint
+                                    NetworkComms.allConnectionsByEndPoint.Add(ConnectionEndPoint, this);
+                                    return true;
+                                }
+                            }
+                            else
+                                return true;
+                        }
                     }
                     else
                     {
