@@ -2406,6 +2406,8 @@ namespace NetworkCommsDotNet
         {
             if (loggingEnabled) logger.Trace("Checking for connection to " + targetIPAddress + ":" + commsPort);
 
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(targetIPAddress), commsPort);
+
             TCPConnection connection = null;
             try
             {
@@ -2428,7 +2430,6 @@ namespace NetworkCommsDotNet
                 {
                     InitialiseComms();
 
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(targetIPAddress), commsPort);
                     if (allConnectionsByEndPoint.ContainsKey(endPoint))
                         connection = allConnectionsByEndPoint[endPoint];
                     else
@@ -2455,15 +2456,18 @@ namespace NetworkCommsDotNet
                 if (!connection.WaitForConnectionEstablish(connectionEstablishTimeoutMS))
                 {
                     if (newConnectionEstablish)
-                        throw new ConnectionSetupException("Timeout after 60 secs waiting for connection to finish establish.");
+                        throw new ConnectionSetupException("Timeout after connectionEstablishTimeoutMS waiting for connection to finish establish.");
                     else
-                        throw new ConnectionSetupException("Timeout after 60 secs waiting for another thread to finish establishing connection.");
+                        throw new ConnectionSetupException("Timeout after connectionEstablishTimeoutMS waiting for another thread to finish establishing connection.");
                 }
 
                 return connection;
             }
             catch (Exception ex)
             {
+                //If the connection failed we need to remove the endPoint, duh!
+                allConnectionsByEndPoint.Remove(endPoint);
+
                 //If there was an exception we need to close the connection
                 if (connection != null)
                 {
