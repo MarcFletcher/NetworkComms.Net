@@ -638,7 +638,9 @@ namespace NetworkCommsDotNet
                     if (this.ConnectionInfo != null)
                     {
                         //We establish whether we have already done this step
-                        if (NetworkComms.allConnectionsById.ContainsKey(this.ConnectionInfo.NetworkIdentifier))
+                        if ((NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier) && 
+                            NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionEndPoint == this.ConnectionEndPoint) ||
+                            NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
                         {
                             //Maintain a reference if this is our first connection close
                             firstClose = true;
@@ -651,7 +653,21 @@ namespace NetworkCommsDotNet
                             NetworkComms.oldConnectionIdToConnectionInfo.Add(this.ConnectionInfo.NetworkIdentifier, this.ConnectionInfo);
 
                         //Remove by network identifier
-                        NetworkComms.allConnectionsById.Remove(this.ConnectionInfo.NetworkIdentifier);
+                        if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier) &&
+                            NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionEndPoint == this.ConnectionEndPoint)
+                        {
+                            NetworkComms.allConnectionsById.Remove(this.ConnectionInfo.NetworkIdentifier);
+
+                            //We may have another connection to this identifier so we want to replace the deleted reference so that we can still use it
+                            foreach (var connection in NetworkComms.allConnectionsByEndPoint)
+                            {
+                                if (connection.Value.ConnectionId == this.ConnectionInfo.NetworkIdentifier)
+                                {
+                                    NetworkComms.allConnectionsById.Add(connection.Value.ConnectionId, connection.Value);
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                     //We can now remove this connection by end point as well

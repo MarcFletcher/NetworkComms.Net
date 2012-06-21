@@ -1540,7 +1540,7 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-                foreach (var connection in allConnectionsById)
+                foreach (var connection in allConnectionsByEndPoint)
                     returnArray.Add(connection.Value.ConnectionInfo);
             }
 
