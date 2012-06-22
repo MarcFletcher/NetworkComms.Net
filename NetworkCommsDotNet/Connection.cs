@@ -71,7 +71,7 @@ namespace NetworkCommsDotNet
         DateTime tcpConnectionCreationTime;
         volatile bool connectionSetupException = false;
         string connectionSetupExceptionStr = "";
-        bool connectionEstablished = false;
+        public bool connectionEstablished { get; private set; }
         volatile bool connectionShutdown = false;
         ManualResetEvent connectionEstablishWait = new ManualResetEvent(false);
         public bool ServerSide { get; private set; }
