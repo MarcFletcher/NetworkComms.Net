@@ -59,9 +59,17 @@ namespace DebugTests
                         try
                         {
                             //Every 10 minutes the client sends a little string
-                            if ((DateTime.Now - lastMessageTime).TotalMinutes > 10)
+                            if ((DateTime.Now - lastMessageTime).TotalSeconds > 5)
                             {
-                                NetworkComms.SendObject("Message", serverIP, serverPort, false, "Hello server!");
+                                try
+                                {
+                                    NetworkComms.SendObject("Message", serverIP, serverPort, false, "Hello server!");
+                                    Console.Write(".");
+                                }
+                                catch (Exception)
+                                {
+                                    Console.Write("X");
+                                }
                                 lastMessageTime = DateTime.Now;
                             }
                             else

@@ -43,8 +43,8 @@ namespace DebugTests
             //properties["configFile"] = "log4net.config";
             //DFS.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
-            BasicSend.RunExample();
-            //AliveTest.RunExample();
+            //BasicSend.RunExample();
+            AliveTest.RunExample();
             //DebugTest.Go();
             //DFSTest.RunExample();
         }
