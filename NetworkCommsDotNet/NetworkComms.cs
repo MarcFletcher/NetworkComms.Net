@@ -2159,7 +2159,7 @@ namespace NetworkCommsDotNet
                                 //Build the endPoint object based on available information at the current moment
                                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(newClient.Client.RemoteEndPoint.ToString().Split(':')[1]));
 
-                                TCPConnection newConnection = new TCPConnection(true, newClient);
+                                TCPConnection newConnection = new TCPConnection();
 
                                 //Once we have the connection we want to check if we already have an existing one
                                 //If we already have a connection with this remote end point we close it
@@ -2190,7 +2190,7 @@ namespace NetworkCommsDotNet
                                 }
 
                                 //If we have made it this far and establish connection is true we can proceed with the handshake
-                                if (establishNewConnection) newConnection.EstablishConnection();
+                                if (establishNewConnection) newConnection.EstablishConnection(true, newClient);
                             }
                         }
 
