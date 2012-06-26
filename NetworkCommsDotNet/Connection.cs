@@ -408,15 +408,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
         /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        public TCPConnection(bool serverSide, TcpClient tcpClient)
+        public TCPConnection()
         {
             this.tcpConnectionCreationTime = DateTime.Now;
-            
-            this.tcpClient = tcpClient;
-            this.ConnectionEndPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[1])); ;
-            this.ConnectionLocalPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[1])); ;
-
-            this.ServerSide = serverSide;
             this.packetBuilder = new ConnectionPacketBuilder();
             this.dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
         }
@@ -425,11 +419,16 @@ namespace NetworkCommsDotNet
         /// Establish a connection with the provided TcpClient
         /// </summary>
         /// <param name="sourceClient"></param>
-        public void EstablishConnection()
+        public void EstablishConnection(bool serverSide, TcpClient tcpClient)
         {
             try
             {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port);
+
+                this.tcpClient = tcpClient;
+                this.ConnectionEndPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[1])); ;
+                this.ConnectionLocalPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[1])); ;
+                this.ServerSide = serverSide;
 
                 DateTime establishStartTime = DateTime.Now;
 

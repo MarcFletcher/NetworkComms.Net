@@ -2474,6 +2474,7 @@ namespace NetworkCommsDotNet
                         connection = allConnectionsByEndPoint[endPoint];
                     else
                     {
+                        connection = new TCPConnection();
                         allConnectionsByEndPoint.Add(endPoint, connection);
                         newConnectionEstablish = true;
                     }
@@ -2487,8 +2488,7 @@ namespace NetworkCommsDotNet
                     targetClient = new TcpClient();
                     targetClient.Connect(targetIPAddress, commsPort);
 
-                    connection = new TCPConnection(false, targetClient);
-                    connection.EstablishConnection();
+                    connection.EstablishConnection(false, targetClient);
 
                     if (connection == null || !connection.connectionEstablished)
                         throw new ConnectionSetupException("Connection not correctly established.");
