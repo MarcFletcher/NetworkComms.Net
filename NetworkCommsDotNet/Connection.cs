@@ -1430,7 +1430,7 @@ namespace NetworkCommsDotNet
                     //Add the confirmation handler if required
                     if (packet.PacketHeader.ReceiveConfirmationRequired)
                     {
-                        NetworkComms.AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, false);
+                        NetworkComms.AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, false);
                         AppendConnectionSpecificShutdownHandler(ConfirmationShutDownDelegate);
                     }
 
