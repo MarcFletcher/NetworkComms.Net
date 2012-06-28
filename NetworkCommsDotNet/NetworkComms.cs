@@ -136,13 +136,14 @@ namespace NetworkCommsDotNet
                     throw new CommsSetupException("Unable to change LocalIP once comms has been initialised. Shutdown comms, change IP and restart.");
 
                 //If we want to set the localIP we can validate it here
-                if (AllLocalIPs().Contains(value))
+                string[] possibleIPs = AllLocalIPs();
+                if (possibleIPs.Contains(value))
                 {
                     localIP = value;
                     return;
                 }
 
-                throw new CommsSetupException("Unable to confirm validity of provided IP.");
+                throw new CommsSetupException("Unable to confirm validity of provided IP (" + value + "). Possible IPs were " + possibleIPs.Aggregate("", (p, q) => { return p + q + ", "; }));
             }
         }
 
@@ -160,21 +161,21 @@ namespace NetworkCommsDotNet
 
             return (from current in NetworkInterface.GetAllNetworkInterfaces()
                     where
-                    //First we need to select interfaces that contain address information
+                        //First we need to select interfaces that contain address information
                     (from inside in current.GetIPProperties().UnicastAddresses
-                     where inside.Address.AddressFamily == AddressFamily.InterNetwork
-                        && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
-                        //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))  
-                     select inside).Count() > 0 &&
-                     //We only want adaptors which are operational
-                     current.OperationalStatus == OperationalStatus.Up
+                     where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
+                        (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                     //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))  
+                     select inside).Count() > 0
+                    //We only want adaptors which are operational
+                    //&& current.OperationalStatus == OperationalStatus.Up //This line causes problems in mono
                     select
                     (
-                    //Once we have adaptors that contain address information we are after the address
+                        //Once we have adaptors that contain address information we are after the address
                     from inside in current.GetIPProperties().UnicastAddresses
-                    where inside.Address.AddressFamily == AddressFamily.InterNetwork
-                        && (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
-                        //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
+                    where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
+                        (preferredAdaptorName == null ? true : current.Id == preferredAdaptorName)
+                    //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
                     select inside.Address.ToString()
                     ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
                     {
@@ -2512,7 +2513,7 @@ namespace NetworkCommsDotNet
                 allConnectionsByEndPoint.Remove(endPoint);
 
                 //If there was an exception we need to close the connection
-                if (connection != null)
+                if (connection != null && connection.connectionEstablished)
                 {
                     connection.CloseConnection(true, 17);
                     throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + ") from (" + connection.LocalConnectionIP + "). Destination may not be listening. " + ex.ToString());

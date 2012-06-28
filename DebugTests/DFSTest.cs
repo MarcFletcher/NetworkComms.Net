@@ -60,9 +60,9 @@ namespace DebugTests
                 Random randGen = new Random();
                 List<byte[]> someRandomData = new List<byte[]>(); ;
 
-                for (int i = 0; i < 15; i++)
+                for (int i = 0; i < 2; i++)
                 {
-                    someRandomData.Add(new byte[20 * 1024 * 1024]);
+                    someRandomData.Add(new byte[10 * 1024 * 1024]);
                     randGen.NextBytes(someRandomData.Last());
                 }
 

@@ -423,12 +423,12 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port);
-
                 this.tcpClient = tcpClient;
                 this.ConnectionEndPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.RemoteEndPoint.ToString().Split(':')[1])); ;
                 this.ConnectionLocalPoint = new IPEndPoint(IPAddress.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[0]), int.Parse(tcpClient.Client.LocalEndPoint.ToString().Split(':')[1])); ;
                 this.ServerSide = serverSide;
+
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionEndPoint.Address.ToString() + ":" + ConnectionEndPoint.Port);
 
                 DateTime establishStartTime = DateTime.Now;
 
@@ -554,6 +554,8 @@ namespace NetworkCommsDotNet
         /// <param name="callLocation">Optional debug parameter.</param>
         public void CloseConnection(bool closeDueToError, int callLocation = 0)
         {
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering CloseConnection "+(closeDueToError ? "due to error from" : "from")+ " [" + callLocation + "]");
+
             if (closeDueToError)
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " due to error [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
             else
@@ -660,7 +662,8 @@ namespace NetworkCommsDotNet
                             //We may have another connection to this identifier so we want to replace the deleted reference so that we can still use it
                             foreach (var connection in NetworkComms.allConnectionsByEndPoint)
                             {
-                                if (connection.Value.ConnectionId == this.ConnectionInfo.NetworkIdentifier)
+                                if (connection.Value.ConnectionId == this.ConnectionInfo.NetworkIdentifier && 
+                                    connection.Value.ConnectionEndPoint != this.ConnectionEndPoint)
                                 {
                                     NetworkComms.allConnectionsById.Add(connection.Value.ConnectionId, connection.Value);
                                     break;
