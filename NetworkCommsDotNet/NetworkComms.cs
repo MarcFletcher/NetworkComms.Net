@@ -2513,7 +2513,7 @@ namespace NetworkCommsDotNet
                 allConnectionsByEndPoint.Remove(endPoint);
 
                 //If there was an exception we need to close the connection
-                if (connection != null)
+                if (connection != null && connection.connectionEstablished)
                 {
                     connection.CloseConnection(true, 17);
                     throw new ConnectionSetupException("Error during connection to destination (" + targetIPAddress + ":" + commsPort + ") from (" + connection.LocalConnectionIP + "). Destination may not be listening. " + ex.ToString());

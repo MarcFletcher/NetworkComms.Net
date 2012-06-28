@@ -554,6 +554,8 @@ namespace NetworkCommsDotNet
         /// <param name="callLocation">Optional debug parameter.</param>
         public void CloseConnection(bool closeDueToError, int callLocation = 0)
         {
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering CloseConnection "+(closeDueToError ? "due to error from" : "from")+ " [" + callLocation + "]");
+
             if (closeDueToError)
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " due to error [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
             else
