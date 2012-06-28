@@ -1980,10 +1980,13 @@ namespace NetworkCommsDotNet
             #region SendReceiveDelegate
             PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnectionId, incomingObject) =>
             {
-                if (sourceConnectionId == targetConnection.ConnectionId)
+                if (targetConnection.ConnectionInfo!=null)
                 {
-                    returnObject = incomingObject;
-                    returnWaitSignal.Set();
+                    if (sourceConnectionId == targetConnection.ConnectionId)
+                    {
+                        returnObject = incomingObject;
+                        returnWaitSignal.Set();
+                    }
                 }
             };
 
