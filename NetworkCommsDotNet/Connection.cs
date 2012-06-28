@@ -664,9 +664,9 @@ namespace NetworkCommsDotNet
                             NetworkComms.allConnectionsById.Remove(this.ConnectionInfo.NetworkIdentifier);
 
                             //We may have another connection to this identifier so we want to replace the deleted reference so that we can still use it
-                            if (ConnectionInfo != null)
+                            foreach (var connection in NetworkComms.allConnectionsByEndPoint)
                             {
-                                foreach (var connection in NetworkComms.allConnectionsByEndPoint)
+                                if (connection.Value.ConnectionInfo!=null)
                                 {
                                     if (connection.Value.ConnectionId == this.ConnectionId &&
                                         connection.Value.ConnectionEndPoint != this.ConnectionEndPoint)
@@ -688,14 +688,14 @@ namespace NetworkCommsDotNet
                 //Last thing is to call any connection specific shutdown delegates
                 if (firstClose && connectionSpecificShutdownDelegate != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegate for " + RemoteClientIP + " (" + this.ConnectionInfo.NetworkIdentifier.ToString() + ")");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegate for " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
                     connectionSpecificShutdownDelegate(this.ConnectionInfo.NetworkIdentifier);
                 }
 
                 //Last but not least we call any global connection shutdown delegates
                 if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegate for " + RemoteClientIP + " (" + this.ConnectionInfo.NetworkIdentifier.ToString() + ")");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegate for " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
                     NetworkComms.globalConnectionShutdownDelegates(this.ConnectionInfo.NetworkIdentifier);
                 }
             }
