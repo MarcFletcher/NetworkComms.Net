@@ -413,6 +413,10 @@ namespace NetworkCommsDotNet
             this.tcpConnectionCreationTime = DateTime.Now;
             this.packetBuilder = new ConnectionPacketBuilder();
             this.dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+
+            //Initialise these parameters otherwise we may get NullReferenceErrors
+            ConnectionEndPoint = new IPEndPoint(0, 0);
+            ConnectionLocalPoint = new IPEndPoint(0, 0);
         }
 
         /// <summary>
