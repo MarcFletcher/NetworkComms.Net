@@ -751,11 +751,13 @@ namespace DistributedFileSystem
         /// <param name="incomingObjectBytes"></param>
         private static void IncomingLocalItemBuild(PacketHeader packetHeader, ShortGuid sourceConnectionId, ItemAssemblyConfig assemblyConfig)
         {
+            DistributedItem newItem = null;
+
             try
             {
                 if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + sourceConnectionId + " for item " + assemblyConfig.ItemCheckSum + ".");
 
-                DistributedItem newItem = null;
+                
                 //We check to see if we already have the necessary file locally
                 lock (globalDFSLocker)
                 {
@@ -796,7 +798,11 @@ namespace DistributedFileSystem
             {
                 //Crap an error has happened, let people know we probably don't have a good file
                 RemoveItem(assemblyConfig.ItemCheckSum);
-                NetworkComms.LogError(e, "Error_IncomingLocalItemBuild");
+
+                if (newItem != null)
+                    NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                else
+                    NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
             }
         }
 
