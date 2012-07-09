@@ -17,13 +17,12 @@ using DistributedFileSystem;
 namespace DebugTests
 {
     class Program
-    {      
+    {
         static void Main(string[] args)
         {
             //int a = 100;
 
             //var bytes = SerializerBase.Protobuf.ProtobufSerializer.Instance.SerialiseDataObject(a, SerializerBase.NullCompressor.Instance);
-
             //int b = SerializerBase.Protobuf.ProtobufSerializer.Instance.DeserialiseDataObject<int>(bytes, SerializerBase.NullCompressor.Instance);
 
             //return;
@@ -43,10 +42,37 @@ namespace DebugTests
             properties["configFile"] = "log4net.config";
             NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
 
-            //BasicSend.RunExample();
+            NetworkComms.PreferredIPPrefix = new string[] { "172", "131" };
+            NetworkComms.CommsPort = int.Parse(args[0]);
+
+            //No arguments we are running in NIES
+
+            string serverIP = "172.24.226.32";
+            if (NetworkComms.LocalIP != serverIP)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    try
+                    {
+                        NetworkComms.SendObject("Message", serverIP, NetworkComms.CommsPort, true, "Calling home from " + NetworkComms.HostName);
+                        break;
+                    }
+                    catch(Exception)
+                    {
+
+                    }
+
+                    Thread.Sleep(60000);
+                }
+            }
+            else
+                BasicSend.RunExample();
+
             //AliveTest.RunExample();
             //DebugTest.Go();
-            DFSTest.RunExample();
+            //DFSTest.RunExample();
+
+            NetworkComms.ShutdownComms();
         }
     }
 }

@@ -123,15 +123,15 @@ namespace NetworkCommsDotNet
 
         public DateTime LastTrafficTime
         {
-            get 
-            { 
-                lock (lastTrafficTimeLocker) 
-                    return lastTrafficTime; 
+            get
+            {
+                lock (lastTrafficTimeLocker)
+                    return lastTrafficTime;
             }
             private set
             {
                 lock (lastTrafficTimeLocker)
-                    lastTrafficTime = value; 
+                    lastTrafficTime = value;
             }
         }
         #endregion
@@ -445,7 +445,7 @@ namespace NetworkCommsDotNet
                 //Ensure that we do not already have a connection from this client
                 //this.tcpClient = sourceClient;
                 this.tcpClientNetworkStream = tcpClient.GetStream();
-                
+
                 //When we tell the socket/client to close we want it to do so immediately
                 //this.tcpClient.LingerState = new LingerOption(false, 0);
 
@@ -535,7 +535,7 @@ namespace NetworkCommsDotNet
             catch (SocketException e)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true,5);
+                CloseConnection(true, 5);
                 throw new ConnectionSetupException(e.ToString());
             }
             catch (Exception ex)
@@ -558,12 +558,12 @@ namespace NetworkCommsDotNet
         /// <param name="callLocation">Optional debug parameter.</param>
         public void CloseConnection(bool closeDueToError, int callLocation = 0)
         {
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering CloseConnection "+(closeDueToError ? "due to error from" : "from")+ " [" + callLocation + "]");
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering CloseConnection " + (closeDueToError ? "due to error from" : "from") + " [" + callLocation + "]");
 
             if (closeDueToError)
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " due to error [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
-            else
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
+                else
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + RemoteClientIP + " [" + callLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
 
             try
             {
@@ -628,7 +628,7 @@ namespace NetworkCommsDotNet
                         if (!incomingDataListenThread.Join(50))
                         {
                             incomingDataListenThread.Abort();
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("Incoming data listen thread for " + ConnectionId + " aborted.");
+                            if (NetworkComms.loggingEnabled && ConnectionInfo != null) NetworkComms.logger.Warn("Incoming data listen thread for " + ConnectionId + " aborted.");
                         }
                     }
                 }
@@ -643,7 +643,7 @@ namespace NetworkCommsDotNet
                     if (this.ConnectionInfo != null)
                     {
                         //We establish whether we have already done this step
-                        if ((NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier) && 
+                        if ((NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.NetworkIdentifier) &&
                             NetworkComms.allConnectionsById[ConnectionInfo.NetworkIdentifier].ConnectionEndPoint == this.ConnectionEndPoint) ||
                             NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionEndPoint))
                         {
@@ -666,11 +666,14 @@ namespace NetworkCommsDotNet
                             //We may have another connection to this identifier so we want to replace the deleted reference so that we can still use it
                             foreach (var connection in NetworkComms.allConnectionsByEndPoint)
                             {
-                                if (connection.Value.ConnectionId == this.ConnectionInfo.NetworkIdentifier && 
-                                    connection.Value.ConnectionEndPoint != this.ConnectionEndPoint)
+                                if (connection.Value.ConnectionInfo!=null)
                                 {
-                                    NetworkComms.allConnectionsById.Add(connection.Value.ConnectionId, connection.Value);
-                                    break;
+                                    if (connection.Value.ConnectionId == this.ConnectionId &&
+                                        connection.Value.ConnectionEndPoint != this.ConnectionEndPoint)
+                                    {
+                                        NetworkComms.allConnectionsById.Add(connection.Value.ConnectionId, connection.Value);
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -685,14 +688,14 @@ namespace NetworkCommsDotNet
                 //Last thing is to call any connection specific shutdown delegates
                 if (firstClose && connectionSpecificShutdownDelegate != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegate for " + RemoteClientIP + " (" + this.ConnectionInfo.NetworkIdentifier.ToString() + ")");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegate for " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
                     connectionSpecificShutdownDelegate(this.ConnectionInfo.NetworkIdentifier);
                 }
 
                 //Last but not least we call any global connection shutdown delegates
                 if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegate for " + RemoteClientIP + " (" + this.ConnectionInfo.NetworkIdentifier.ToString() + ")");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegate for " + RemoteClientIP + " (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.NetworkIdentifier.ToString()) + ")");
                     NetworkComms.globalConnectionShutdownDelegates(this.ConnectionInfo.NetworkIdentifier);
                 }
             }
@@ -806,7 +809,7 @@ namespace NetworkCommsDotNet
                         CloseConnection(false, -1);
                         break;
                     }
-        
+
                     //If we have read some data and we have more or equal what was expected we attempt a data handoff
                     if (packetBuilder.TotalBytesRead > 0 && packetBuilder.TotalBytesRead >= packetBuilder.TotalBytesExpected)
                         IncomingPacketHandleHandOff(packetBuilder);
@@ -1194,8 +1197,8 @@ namespace NetworkCommsDotNet
             this.ConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
 
             //We use the following bool to track a possible existing connection which needs closing
-            bool possibleExistingConnectionWithPeer_ByIdentifier=false;
-            bool possibleExistingConnectionWithPeer_ByEndPoint=false;
+            bool possibleExistingConnectionWithPeer_ByIdentifier = false;
+            bool possibleExistingConnectionWithPeer_ByEndPoint = false;
             TCPConnection existingConnection = null;
 
             //We first try to establish everything within this lock in one go
@@ -1599,7 +1602,7 @@ namespace NetworkCommsDotNet
         /// <returns>True if the connection is active, false otherwise.</returns>
         public bool CheckConnectionAliveState(int aliveRespondTimeout)
         {
-            DateTime startTime=DateTime.Now;
+            DateTime startTime = DateTime.Now;
 
             if (ConnectionInfo == null)
             {
@@ -1618,7 +1621,7 @@ namespace NetworkCommsDotNet
                     bool returnValue = NetworkComms.SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), ConnectionId, false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeout, false, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
 
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
-                  
+
                     return returnValue;
                 }
                 catch (Exception)

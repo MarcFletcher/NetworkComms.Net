@@ -67,6 +67,9 @@ namespace DistributedFileSystem
         public int TotalChunkSupplyCount { get; private set; }
         public int PushCount { get; private set; }
 
+        List<string> assembleLog;
+        object assembleLogLocker = new object();
+
         public DistributedItem(string itemTypeStr, byte[] itemBytes, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth = 1)
         {
             Constructor(itemTypeStr, itemBytes, seedConnectionInfo, itemBuildCascadeDepth);
@@ -154,9 +157,32 @@ namespace DistributedFileSystem
             lock (itemLocker) PushCount++;
         }
 
+        private void AddLogLine(string newLine)
+        {
+            lock (assembleLogLocker)
+            {
+                if (assembleLog == null) assembleLog = new List<string>();
+
+                assembleLog.Add(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " - " + newLine);
+            }
+        }
+
+        public string[] BuildLog()
+        {
+            lock (assembleLogLocker)
+            {
+                if (assembleLog != null)
+                    return assembleLog.ToArray();
+                else
+                    return new string[0];
+            }
+        }
+
         public void AssembleItem(int assembleTimeoutSecs)
         {
             if (DFS.loggingEnabled) DFS.logger.Debug("Started DFS item assemble (" + this.ItemCheckSum + ").");
+
+            AddLogLine("Started DFS item assemble (" + this.ItemCheckSum + ").");
 
             //Used to load balance
             Random randGen = new Random();
@@ -200,6 +226,8 @@ namespace DistributedFileSystem
                     //if were werent chances are we are actually done
                     if (nonLocalChunkExistence.Count > 0)
                     {
+                        AddLogLine(nonLocalChunkExistence.Count + " chunks required.");
+
                         //We will want to know how many unique peers we can potentially contact
                         int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.PeerBusy)).Max();
 
@@ -218,7 +246,9 @@ namespace DistributedFileSystem
                         {
                             if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > DFS.ChunkRequestTimeoutMS)
                             {
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + currentTrackerKeys[i] + " peer from AssembleItem due to potential timeout.");
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " peer from AssembleItem due to potential timeout.");
+
+                                AddLogLine("Removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " from AssembleItem due to potential timeout.");
 
                                 //Console.WriteLine("      Request Timeout {0} - Removing request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), currentTrackerKeys[i], itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
                                 //If we had a timeout we will not try that peer again
@@ -296,6 +326,8 @@ namespace DistributedFileSystem
 
                                     newRequestCount++;
 
+                                    AddLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.ClientIP + ":" + newChunkRequest.PeerConnectionInfo.ClientPort + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                    
                                     itemBuildTrackerDict.Add(chunkRarity[i], newChunkRequest);
 
                                     //Once we have added a new request we should check if we have enough
@@ -358,6 +390,8 @@ namespace DistributedFileSystem
                                         {
                                             //We can now add the new request to the build dictionaries
                                             ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i]);
+
+                                            AddLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.ClientIP + ":" + newChunkRequest.PeerConnectionInfo.ClientPort + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                             if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                                 newRequests[currentRequestConnectionInfo[i]].Add(newChunkRequest);
@@ -468,6 +502,8 @@ namespace DistributedFileSystem
 
                         Task.Factory.StartNew(requestAction);
                     }
+
+                    AddLogLine("Sent " + newRequests.Count + " chunk requests.");
                 }
                 else
                 {
@@ -509,6 +545,8 @@ namespace DistributedFileSystem
             //SwarmChunkAvailability.CloseConnectionToCompletedPeers(TotalNumChunks);
 
             if (DFS.loggingEnabled) DFS.logger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+
+            AddLogLine("Completed assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
 
             try { GC.Collect(); }
             catch (Exception) { }

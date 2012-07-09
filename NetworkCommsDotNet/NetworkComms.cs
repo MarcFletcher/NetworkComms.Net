@@ -958,7 +958,7 @@ namespace NetworkCommsDotNet
 #if iOS
                 fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy");
 #else
-                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
+                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "-" + HostName + "]");
 #endif
 
                 try
@@ -1980,10 +1980,13 @@ namespace NetworkCommsDotNet
             #region SendReceiveDelegate
             PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnectionId, incomingObject) =>
             {
-                if (sourceConnectionId == targetConnection.ConnectionId)
+                if (targetConnection.ConnectionInfo!=null)
                 {
-                    returnObject = incomingObject;
-                    returnWaitSignal.Set();
+                    if (sourceConnectionId == targetConnection.ConnectionId)
+                    {
+                        returnObject = incomingObject;
+                        returnWaitSignal.Set();
+                    }
                 }
             };
 
@@ -2510,7 +2513,8 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If the connection failed we need to remove the endPoint, duh!
-                allConnectionsByEndPoint.Remove(endPoint);
+                lock (globalDictAndDelegateLocker)              
+                    allConnectionsByEndPoint.Remove(endPoint);
 
                 //If there was an exception we need to close the connection
                 if (connection != null && connection.connectionEstablished)
