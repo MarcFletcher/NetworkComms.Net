@@ -21,7 +21,7 @@ namespace DebugTests
 
             NetworkComms.AppendIncomingPacketHandler<string>("Message", (header, conectionId, message) => 
             { 
-                Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP.ToString() + " saying '" + message  +"'.");
+                Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).RemoteEndPoint.Address.ToString() + " saying '" + message  +"'.");
                 //NetworkComms.SendObject("MessageReturn", conectionId, false, "Got your message!");
             });
 

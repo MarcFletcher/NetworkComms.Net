@@ -11,5 +11,19 @@ namespace NetworkCommsDotNet
     {
         UdpClient udpClient;
 
+        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
