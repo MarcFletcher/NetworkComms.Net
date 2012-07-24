@@ -260,10 +260,10 @@ namespace DistributedFileSystem
         public SwarmChunkAvailability(ConnectionInfo sourceConnectionInfo, byte totalNumChunks)
         {
             //When initialising the chunk availability we add the starting source in the intialisation
-            peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerAvailabilityInfo>() { { sourceConnectionInfo.RemoteNetworkIdentifier, new PeerAvailabilityInfo(new ChunkFlags(totalNumChunks), true) } };
-            peerNetworkIdentifierToConnectionInfo = new Dictionary<string, ConnectionInfo>() { { sourceConnectionInfo.RemoteNetworkIdentifier, sourceConnectionInfo } };
+            peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerAvailabilityInfo>() { { sourceConnectionInfo.NetworkIdentifier, new PeerAvailabilityInfo(new ChunkFlags(totalNumChunks), true) } };
+            peerNetworkIdentifierToConnectionInfo = new Dictionary<string, ConnectionInfo>() { { sourceConnectionInfo.NetworkIdentifier, sourceConnectionInfo } };
 
-            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created by " + sourceConnectionInfo.RemoteNetworkIdentifier + ".");
+            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created by " + sourceConnectionInfo.NetworkIdentifier + ".");
         }
 
         /// <summary>
@@ -445,16 +445,29 @@ namespace DistributedFileSystem
         {
             lock (peerLocker)
             {
-                if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(peerNetworkIdentifier))
-                    peerAvailabilityByNetworkIdentifierDict[peerNetworkIdentifier].PeerChunkFlags.UpdateFlags(latestChunkFlags);
-                else
-                {
-                    //We also need to add the ip address. This should not fail as if we are calling this method locally we should have the relevant connection
-                    if (!peerNetworkIdentifierToConnectionInfo.ContainsKey(peerNetworkIdentifier))
-                        peerNetworkIdentifierToConnectionInfo.Add(peerNetworkIdentifier, NetworkComms.ConnectionIdToConnectionInfo(new ShortGuid(peerNetworkIdentifier)));
+                var peerConnectionInfo = NetworkComms.ConnectionIdToConnectionInfo(new ShortGuid(peerNetworkIdentifier));
 
-                    peerAvailabilityByNetworkIdentifierDict.Add(peerNetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
+                //We can only add a peer if it is listening
+                if (peerConnectionInfo.ClientPort > 0)
+                {
+                    if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(peerNetworkIdentifier))
+                    {
+                        if (peerNetworkIdentifierToConnectionInfo[peerNetworkIdentifier].ClientPort != peerConnectionInfo.ClientPort)
+                            peerNetworkIdentifierToConnectionInfo[peerNetworkIdentifier] = peerConnectionInfo;
+
+                        peerAvailabilityByNetworkIdentifierDict[peerNetworkIdentifier].PeerChunkFlags.UpdateFlags(latestChunkFlags);
+                    }
+                    else
+                    {
+                        //We also need to add the ip address. This should not fail as if we are calling this method locally we should have the relevant connection
+                        if (!peerNetworkIdentifierToConnectionInfo.ContainsKey(peerNetworkIdentifier))
+                            peerNetworkIdentifierToConnectionInfo.Add(peerNetworkIdentifier, peerConnectionInfo);
+
+                        peerAvailabilityByNetworkIdentifierDict.Add(peerNetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
+                    }
                 }
+                else
+                    NetworkComms.LogError(new Exception("Attemped to AddOrUpdateCachedPeerChunkFlags for client which was not listening"), "PeerChunkFlagsUpdateError", "IP:" + peerConnectionInfo.ClientIP + ", Port:" + peerConnectionInfo.ClientPort);
             }
         }
 
