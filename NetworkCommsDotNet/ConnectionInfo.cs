@@ -31,6 +31,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The type of this connection
         /// </summary>
+        [ProtoMember(1)]
         public ConnectionType ConnectionType { get; protected set; }
 
         /// <summary>
@@ -44,10 +45,15 @@ namespace NetworkCommsDotNet
         public bool ServerSide { get; protected set; }
 
         /// <summary>
+        /// The DateTime corresponding to the creation time of this connection object
+        /// </summary>
+        public DateTime ConnectionEstablishedTime { get; private set; }
+
+        /// <summary>
         /// We store our unique peer identifier as a string so that it can be easily serialised.
         /// </summary>
-        [ProtoMember(1)]
-        string networkIdentifier;
+        [ProtoMember(2)]
+        string remoteNetworkIdentifierStr;
 
         /// <summary>
         /// Returns the networkIdentifier of this peer as a ShortGuid
@@ -57,18 +63,19 @@ namespace NetworkCommsDotNet
             get 
             {
                 if (ConnectionEstablished)
-                    return new ShortGuid(networkIdentifier);
+                    return new ShortGuid(remoteNetworkIdentifierStr);
                 else
                     throw new ConnectionSetupException("Unable to access RemoteNetworkIdentifier until connection is successfully established.");
             }
-            private set { networkIdentifier = value; }
+            private set { remoteNetworkIdentifierStr = value; }
         }
 
         public IPEndPoint LocalEndPoint { get; private set; }
 
+        [ProtoMember(3)]
         public IPEndPoint RemoteEndPoint { get; private set; }
 
-        public bool ConnectionEstablished { get; internal set; }
+        public bool ConnectionEstablished { get; private set; }
 
         public bool ConnectionShutdown { get; internal set; }
 
@@ -103,11 +110,57 @@ namespace NetworkCommsDotNet
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="clientIP"></param>
         /// <param name="localPort"></param>
-        public ConnectionInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+        public ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
         {
-            this.networkIdentifier = remoteNetworkIdentifier;
+            this.ServerSide = serverSide;
+            this.ConnectionType = connectionType;
             this.LocalEndPoint = localEndPoint;
             this.RemoteEndPoint = remoteEndPoint;
+            this.ConnectionCreationTime = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Set this connection info to established.
+        /// </summary>
+        /// <param name="remoteNetworkIdentifier"></param>
+        public void SetEstablished(ShortGuid remoteNetworkIdentifier)
+        {
+            SetEstablised(remoteNetworkIdentifier, null);
+        }
+
+        /// <summary>
+        /// Set this connection info to established including an update of the remoteEndPoint.
+        /// </summary>
+        /// <param name="remoteNetworkIdentifier"></param>
+        /// <param name="remoteEndPoint"></param>
+        public void SetEstablised(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
+        {
+            ConnectionEstablished = true;
+            ConnectionEstablishedTime = DateTime.Now;
+            RemoteNetworkIdentifier = remoteNetworkIdentifier;
+
+            if (RemoteEndPoint != null) RemoteEndPoint = remoteEndPoint;
+        }
+
+        /// <summary>
+        /// Returns a string containing suitable information about this connection
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            string returnString = "[" + ConnectionType + "] ";
+
+            if (ConnectionEstablished)
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + remoteNetworkIdentifierStr + ")";
+            else
+            {
+                if (RemoteEndPoint != null && LocalEndPoint !=null)
+                    returnString+= LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
+                else
+                    returnString+= "NA";
+            }
+
+            return returnString;
         }
 
         internal void UpdateLastTrafficTime()

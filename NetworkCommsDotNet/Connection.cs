@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using SerializerBase;
+using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
@@ -56,6 +57,7 @@ namespace NetworkCommsDotNet
         protected Thread incomingDataListenThread = null;
         #endregion
 
+        #region Connection Setup
         /// <summary>
         /// Connection setup parameters
         /// </summary>
@@ -64,6 +66,7 @@ namespace NetworkCommsDotNet
 
         protected volatile bool connectionSetupException = false;
         protected string connectionSetupExceptionStr = "";
+        #endregion
 
         /// <summary>
         /// Maintains a list of sent packets for the purpose of confirmation and possible resends.
@@ -90,9 +93,49 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// We only allow internal classes to create connection instances
         /// </summary>
-        public Connection() { }
+        public Connection(ConnectionInfo connectionInfo) 
+        {
+            this.ConnectionInfo = connectionInfo;
+        }
 
-        public void EstablishConnection() { }
+        public void EstablishConnection()
+        {
+            try
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionInfo.ToString());
+
+                DateTime establishStartTime = DateTime.Now;
+
+                if (ConnectionInfo.ConnectionEstablished || ConnectionInfo.ConnectionShutdown)
+                    throw new ConnectionSetupException("Attempting to re-establish an already established or closed connection.");
+
+                if (NetworkComms.commsShutdown)
+                    throw new ConnectionSetupException("Attempting to establish new connection while comms is shutting down.");
+
+                EstablishConnectionInternal();
+
+                throw new NotImplementedException();
+            }
+            catch (SocketException e)
+            {
+                //If anything goes wrong we close the connection.
+                CloseConnection(true, 5);
+                throw new ConnectionSetupException(e.ToString());
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong we close the connection.
+                CloseConnection(true, 6);
+
+                //For some odd reason not all SocketExceptions get caught above, so another check here
+                if (ex.GetBaseException().GetType() == typeof(SocketException))
+                    throw new ConnectionSetupException(ex.ToString());
+                else
+                    throw;
+            }
+        }
+
+        protected abstract void EstablishConnectionInternal();
 
         /// <summary>
         /// Close the connection and trigger any associated shutdown delegates
@@ -101,7 +144,105 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation"></param>
         public void CloseConnection(bool closeDueToError, int logLocation = 0) 
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (NetworkComms.loggingEnabled)
+                {
+                    if (closeDueToError)
+                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.ToString() + " due to error from [" + logLocation + "].");
+                    else
+                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.ToString() + " from [" + logLocation + "].");
+                }
+
+                ConnectionInfo.ConnectionShutdown = true;
+
+                //Set possible error cases
+                if (closeDueToError)
+                {
+                    connectionSetupException = true;
+                    connectionSetupExceptionStr = "Connection was closed during setup from ["+logLocation+"].";
+                }
+
+                //Ensure we are not waiting for a connection to be established if we have died due to error
+                connectionSetupWait.Set();
+
+                //Call any connection specific close requirements
+                CloseConnectionInternal(closeDueToError, logLocation);
+
+                //Close connection my get called multiple times for a given connection depending on the reason for being closed
+                bool firstClose = false;
+
+                //Ensure connection references are removed from networkComms
+                //Once we think we have closed the connection it's time to get rid of our other references
+                lock (NetworkComms.globalDictAndDelegateLocker)
+                {
+                    #region Update NetworkComms Connection Dictionaries
+                    //We establish whether we have already done this step
+                    if ((NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier) &&
+                        NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType) &&
+                        NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Contains(this))
+                        ||
+                        (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) &&
+                        NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].ContainsKey(ConnectionInfo.ConnectionType)))
+                    {
+                        //Maintain a reference if this is our first connection close
+                        firstClose = true;
+                    }
+
+                    //Keep a reference of the connection for possible debugging later
+                    if (NetworkComms.oldConnectionIdToConnectionInfo.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier))
+                    {
+                        if (NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType))
+                            NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Add(ConnectionInfo);
+                        else
+                            NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier].Add(ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { ConnectionInfo });
+                    }
+                    else
+                        NetworkComms.oldConnectionIdToConnectionInfo.Add(ConnectionInfo.RemoteNetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { ConnectionInfo } } });
+
+                    if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier) &&
+                            NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType))
+                    {
+                        if (!NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Contains(this))
+                            throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
+                        else
+                            NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Remove(this);
+                    }
+
+                    //We can now remove this connection by end point as well
+                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) && NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].ContainsKey(ConnectionInfo.ConnectionType))
+                        NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].Remove(ConnectionInfo.ConnectionType);
+
+                    //If this was the last connection type for this endpoint we can remove the endpoint reference as well
+                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) && NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].Count == 0)
+                        NetworkComms.allConnectionsByEndPoint.Remove(ConnectionInfo.RemoteEndPoint);
+                    #endregion
+                }
+
+                //Almost there
+                //Last thing is to call any connection specific shutdown delegates
+                if (firstClose && ConnectionSpecificShutdownDelegate != null)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo.ToString());
+                    ConnectionSpecificShutdownDelegate(this.ConnectionInfo);
+                }
+
+                //Last but not least we call any global connection shutdown delegates
+                if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo.ToString());
+                    NetworkComms.globalConnectionShutdownDelegates(this.ConnectionInfo);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ThreadAbortException)
+                { /*Ignore the threadabort exception if we had to nuke a thread*/ }
+                else
+                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo.ToString() + ". Close called from " + logLocation + (closeDueToError ? " due to error." : "."));
+            
+                //We try to rethrow where possible but CloseConnection could very likely be called from within networkComms so we just have to be happy with a log here
+            }
         }
 
         /// <summary>
@@ -109,7 +250,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="closeDueToError"></param>
         /// <param name="logLocation"></param>
-        protected abstract void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0);
+        protected abstract void CloseConnectionInternal(bool closeDueToError, int logLocation = 0);
 
         /// <summary>
         /// Send the provided object with the connection default options
@@ -117,6 +258,18 @@ namespace NetworkCommsDotNet
         /// <param name="sendingPacketType"></param>
         /// <param name="objectToSend"></param>
         public void SendObject(string sendingPacketType, object objectToSend) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions); }
+
+        /// <summary>
+        /// Sends the provided object with the connection default options and waits for return object
+        /// </summary>
+        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
+        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
+        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
+        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
+        /// <param name="sendObject">Object to send</param>
+        /// <returns>The expected return object</returns>
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject); }
 
         /// <summary>
         /// Send the provided object with the provided options
@@ -132,18 +285,6 @@ namespace NetworkCommsDotNet
         public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
 
         /// <summary>
-        /// Sends the provided object with the connection default options and waits for return object
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <returns>The expected return object</returns>
-        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject); }
-
-        /// <summary>
         /// Sends the provided object with the provided options and waits for return object.
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
@@ -157,10 +298,10 @@ namespace NetworkCommsDotNet
         public abstract returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options);
 
         /// <summary>
-        /// Uses the current connection to ensure the remote end responds within the provided aliveRespondTimeoutMS
+        /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
         /// </summary>
         /// <returns></returns>
-        public bool CheckConnectionAliveState(int aliveRespondTimeoutMS) 
+        public bool ConnectionAliveState(int aliveRespondTimeoutMS) 
         {
             DateTime startTime = DateTime.Now;
 

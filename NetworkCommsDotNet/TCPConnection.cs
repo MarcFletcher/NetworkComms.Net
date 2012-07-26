@@ -45,8 +45,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
         /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        public TCPConnection(bool serverSide, TcpClient tcpClient)
+        public TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient) : base (connectionInfo)
         {
+            this.tcpClient = tcpClient;
+            this.tcpClientNetworkStream = tcpClient.GetStream();
+
             throw new NotImplementedException();
         }
 
@@ -54,7 +57,7 @@ namespace NetworkCommsDotNet
         /// Establish a connection with the provided TcpClient
         /// </summary>
         /// <param name="sourceClient"></param>
-        public new void EstablishConnection()
+        protected override void EstablishConnectionInternal()
         {
             throw new NotImplementedException();
         }
@@ -64,9 +67,61 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
         /// <param name="logLocation">Optional debug parameter.</param>
-        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
+        protected override void CloseConnectionInternal(bool closeDueToError, int logLocation = 0)
         {
-            throw new NotImplementedException();
+            //The following attempts to correctly close the connection
+            //Try to close the networkStream first
+            try
+            {
+                if (tcpClientNetworkStream != null) tcpClientNetworkStream.Close();
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                tcpClientNetworkStream = null;
+            }
+
+            //Try to close the tcpClient
+            try
+            {
+                tcpClient.Client.Disconnect(false);
+                tcpClient.Client.Close();
+                tcpClient.Client.Dispose();
+            }
+            catch (Exception)
+            {
+            }
+
+            //Try to close the tcpClient
+            try
+            {
+                tcpClient.Close();
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                //If we are calling close from the listen thread we are actually in the same thread
+                //We must guarantee the listen thread stops even if that means we need to nuke it
+                //If we did not we may not be able to shutdown properly.
+                if (incomingDataListenThread != null && incomingDataListenThread != Thread.CurrentThread && (incomingDataListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin || incomingDataListenThread.ThreadState == System.Threading.ThreadState.Running))
+                {
+                    //If we have made it this far we give the ythread a further 50ms to finish before nuking.
+                    if (!incomingDataListenThread.Join(50))
+                    {
+                        incomingDataListenThread.Abort();
+                        if (NetworkComms.loggingEnabled && ConnectionInfo != null) NetworkComms.logger.Warn("Incoming data listen thread with " + ConnectionInfo.ToString() + " aborted.");
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         /// <summary>

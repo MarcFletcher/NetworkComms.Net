@@ -11,7 +11,18 @@ namespace NetworkCommsDotNet
     {
         UdpClient udpClient;
 
-        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
+        public UDPConnection(ConnectionInfo connectionInfo)
+            : base(connectionInfo)
+        {
+
+        }
+
+        protected override void EstablishConnectionInternal()
+        {
+            //There is generally no establish for a UDP connection
+        }
+
+        protected override void CloseConnectionInternal(bool closeDueToError, int logLocation = 0)
         {
             throw new NotImplementedException();
         }
