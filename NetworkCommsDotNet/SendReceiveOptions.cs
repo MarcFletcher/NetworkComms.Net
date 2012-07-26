@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SerializerBase;
+using System.Threading;
 
 namespace NetworkCommsDotNet
 {
@@ -11,8 +12,11 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class SendReceiveOptions
     {
-        ISerialize serializer;
-        ICompress compressor;
+        public ISerialize Serializer { get; set; }
+        public ICompress Compressor { get; set; }
+
+        //The priority with which this send recieve is dealt with
+        ThreadPriority priority { get; set; }
 
         //IEncrypt?
     }

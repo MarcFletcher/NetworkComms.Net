@@ -981,23 +981,23 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStrSerializer">A specific serializer to use instead of default</param>
         /// <param name="packetTypeStrCompressor">A specific compressor to use instead of default</param>
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions, bool enableAutoListen = true)
         {
             lock (globalDictAndDelegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (packetTypeStrSerializer != null && packetTypeStrCompressor != null)
+                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.Compressor != null)
                 {
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
                         //Make sure if we already have an existing entry that it matches with the provided
-                        if (globalIncomingPacketUnwrappers[packetTypeStr].Compressor != packetTypeStrCompressor || globalIncomingPacketUnwrappers[packetTypeStr].Serializer != packetTypeStrSerializer)
+                        if (globalIncomingPacketUnwrappers[packetTypeStr].Compressor != sendReceiveOptions.Compressor || globalIncomingPacketUnwrappers[packetTypeStr].Serializer != sendReceiveOptions.Serializer)
                             throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
                     }
                     else
-                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, packetTypeStrCompressor, packetTypeStrSerializer));
+                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions.Compressor, sendReceiveOptions.Serializer));
                 }
-                else if (packetTypeStrSerializer != null ^ packetTypeStrCompressor != null)
+                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.Compressor != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
@@ -1038,7 +1038,7 @@ namespace NetworkCommsDotNet
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
         public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
         {
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, null, null, enableAutoListen);
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, internalFixedSendReceiveOptions, enableAutoListen);
         }
 
         /// <summary>
