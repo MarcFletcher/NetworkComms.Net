@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using SerializerBase;
 
 namespace NetworkCommsDotNet
 {
@@ -19,7 +20,7 @@ namespace NetworkCommsDotNet
         public ConnectionInfo ConnectionInfo { get; protected set; }
 
         /// <summary>
-        /// The default send recieve options used for this connection
+        /// The default send receive options used for this connection
         /// </summary>
         public SendReceiveOptions ConnectionDefaultSendReceiveOptions { get; set; }
 
@@ -29,9 +30,31 @@ namespace NetworkCommsDotNet
         protected NetworkComms.ConnectionShutdownDelegate ConnectionSpecificShutdownDelegate { get; set; }
 
         /// <summary>
+        /// A connection specific incoming packet handler dictionary. These are called before any applicable global handlers
+        /// </summary>
+        protected Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>>();
+
+        #region Incoming Data
+        /// <summary>
         /// The packet builder for this connection
         /// </summary>
         protected ConnectionPacketBuilder PacketBuilder { get; set; }
+
+        /// <summary>
+        /// The current incoming data buffer
+        /// </summary>
+        byte[] dataBuffer;
+
+        /// <summary>
+        /// The total bytes read so far within dataBuffer
+        /// </summary>
+        int totalBytesRead;
+
+        /// <summary>
+        /// The thread listening for incoming data should we be using synchronous methods.
+        /// </summary>
+        protected Thread incomingDataListenThread = null;
+        #endregion
 
         /// <summary>
         /// Connection setup parameters
@@ -78,67 +101,7 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation"></param>
         public void CloseConnection(bool closeDueToError, int logLocation = 0) 
         {
-            try
-            {
-                if (closeDueToError)
-                {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.RemoteEndPoint.Address + " due to error [" + logLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.RemoteNetworkIdentifier.ToString()) + ")");
-                    else
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.RemoteEndPoint.Address + " [" + logLocation + "] - (" + (ConnectionInfo == null ? "NA" : ConnectionInfo.RemoteNetworkIdentifier.ToString()) + ")");
-                }
-
-                ConnectionInfo.ConnectionShutdown = true;
-
-                //Set possible error cases
-                if (closeDueToError)
-                {
-                    connectionSetupException = true;
-                    connectionSetupExceptionStr = "Connection has been closed.";
-                }
-
-                //Ensure we are not waiting for a connection to be established if we have died due to error
-                connectionSetupWait.Set();
-
-                //Now call any connection specific shutdown tasks
-                CloseConnectionSpecific(closeDueToError, logLocation);
-
-                //Close connection my get called multiple times for a given connection depending on the reason for being closed
-                bool firstClose = false;
-
-                //Once we think we have closed the connection it's time to get rid of our other references
-                lock (NetworkComms.globalDictAndDelegateLocker)
-                {
-                    if (ConnectionInfo != null)
-                    {
-                        //We establish whether we have already done this step
-                        //if (NetworkComms.allConnectionsById.ContainsKey(RemoteConnectionInfo.NetworkIdentifier))
-                        if (NetworkComms.GetConnection(ConnectionInfo.RemoteNetworkIdentifier, ConnectionInfo.ConnectionType) != null)
-                            //Maintain a reference if this is our first connection close
-                            firstClose = true;
-
-                    }
-
-                }
-
-                //Almost there
-                //Last thing is to call any connection specific shutdown delegates
-                if (firstClose && ConnectionSpecificShutdownDelegate != null)
-                {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegate for " + ConnectionInfo.RemoteEndPoint.Address + " (" + ConnectionInfo.RemoteNetworkIdentifier.ToString() + ")");
-                    ConnectionSpecificShutdownDelegate(ConnectionInfo.RemoteNetworkIdentifier);
-                }
-
-                //Last but not least we call any global connection shutdown delegates
-                if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
-                {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegate for " + ConnectionInfo.RemoteEndPoint.Address + " (" + ConnectionInfo.RemoteNetworkIdentifier.ToString() + ")");
-                    NetworkComms.globalConnectionShutdownDelegates(ConnectionInfo.RemoteNetworkIdentifier);
-                }
-            }
-            catch (Exception ex)
-            {
-                NetworkComms.LogError(ex, "ConnectionShutdownError");
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -163,7 +126,7 @@ namespace NetworkCommsDotNet
         public abstract void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options);
 
         /// <summary>
-        /// Sends an empty packet using the provided packetType. Usefull for signalling
+        /// Sends an empty packet using the provided packetType. Usefull for signalling.
         /// </summary>
         /// <param name="sendingPacketType"></param>
         public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
@@ -189,7 +152,7 @@ namespace NetworkCommsDotNet
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
-        /// <param name="options">Send recieve options to use</param>
+        /// <param name="options">Send receive options to use</param>
         /// <returns>The expected return object</returns>
         public abstract returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options);
 
@@ -256,11 +219,57 @@ namespace NetworkCommsDotNet
             throw new NotImplementedException();
         }
 
+        #region Connection Specific Packet and Shutdown Handler Methods
+        public static void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Add a new incoming packet handler using default serializer and compressor. Multiple handlers for the same packet type are allowed
+        /// </summary>
+        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
+        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
+        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
+        {
+            AppendIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, null, null, enableAutoListen);
+        }
+
+        /// <summary>
+        /// Removes the provided delegate for the specified packet type
+        /// </summary>
+        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
+        /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
+        public static void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Removes all delegates for the provided packet type
+        /// </summary>
+        /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
+        public static void RemoveAllPacketHandlers(string packetTypeStr)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Removes all delegates for all packet types
+        /// </summary>
+        public static void RemoveAllPacketHandlers()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Add a connection specific shutdown delegate
         /// </summary>
         /// <param name="handlerToAppend"></param>
-        public void AppendConnectionSpecificShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToAppend)
+        public void AppendShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToAppend)
         {
             lock (delegateLocker)
             {
@@ -277,7 +286,7 @@ namespace NetworkCommsDotNet
         /// Remove a connection specific shutdown delegate.
         /// </summary>
         /// <param name="handlerToRemove"></param>
-        public void RemoveConnectionSpecificShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToRemove)
+        public void RemoveShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToRemove)
         {
             lock (delegateLocker)
             {
@@ -285,6 +294,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.RemoteNetworkIdentifier.ToString()));
             }
         }
+        #endregion
     }
 
     /// <summary>

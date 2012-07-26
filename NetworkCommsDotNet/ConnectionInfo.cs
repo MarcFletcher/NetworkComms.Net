@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
         protected object lastTrafficTimeLocker = new object();
 
         /// <summary>
-        /// The DateTime corresponding to the time data was sent or recieved
+        /// The DateTime corresponding to the time data was sent or received
         /// </summary>
         public DateTime LastTrafficTime
         {

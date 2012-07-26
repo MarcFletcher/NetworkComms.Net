@@ -41,21 +41,6 @@ namespace NetworkCommsDotNet
         NetworkStream tcpClientNetworkStream;
 
         /// <summary>
-        /// The thread listening for incoming data should we be using synchronous methods.
-        /// </summary>
-        Thread incomingDataListenThread = null;
-
-        /// <summary>
-        /// The current incoming data buffer
-        /// </summary>
-        byte[] dataBuffer;
-
-        /// <summary>
-        /// The total bytes read so far within dataBuffer
-        /// </summary>
-        int totalBytesRead;
-
-        /// <summary>
         /// Connection constructor
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
