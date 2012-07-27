@@ -15,8 +15,10 @@ namespace NetworkCommsDotNet
         public ISerialize Serializer { get; set; }
         public ICompress Compressor { get; set; }
 
+        public bool ReceiveConfirmationRequired { get; set; }
+
         //The priority with which this send recieve is dealt with
-        ThreadPriority priority { get; set; }
+        public ThreadPriority ReceiveHandlePriority { get; set; }
 
         //IEncrypt?
     }

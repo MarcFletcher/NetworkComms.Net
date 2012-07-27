@@ -91,11 +91,22 @@ namespace NetworkCommsDotNet
         protected object delegateLocker = new object();
 
         /// <summary>
-        /// We only allow internal classes to create connection instances
+        /// Create a new connection object
         /// </summary>
-        public Connection(ConnectionInfo connectionInfo) 
+        /// <param name="connectionInfo"></param>
+        protected Connection(ConnectionInfo connectionInfo)
         {
+            if (ConnectionInfo.ConnectionType == ConnectionType.Undefined)
+                throw new ConnectionSetupException("Connection type must be defined within provided ConnectionInfo.");
+
+            //If a connection already exists with this info then we can throw an exception here to prevent duplicates
+            if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
+                throw new ConnectionSetupException("A connection of this type already exists with " + connectionInfo.ToString());
+
             this.ConnectionInfo = connectionInfo;
+
+            //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
+            NetworkComms.AddConnectionByEndPointReference(this);
         }
 
         public void EstablishConnection()
@@ -114,7 +125,10 @@ namespace NetworkCommsDotNet
 
                 EstablishConnectionInternal();
 
-                throw new NotImplementedException();
+                //Once the above has been done the last step is to allow other threads to use the connection
+                ConnectionInfo.SetEstablished();
+                NetworkComms.AddConnectionByIdentifierReference(this);
+                connectionEstablishWait.Set();
             }
             catch (SocketException e)
             {
@@ -170,54 +184,7 @@ namespace NetworkCommsDotNet
                 CloseConnectionInternal(closeDueToError, logLocation);
 
                 //Close connection my get called multiple times for a given connection depending on the reason for being closed
-                bool firstClose = false;
-
-                //Ensure connection references are removed from networkComms
-                //Once we think we have closed the connection it's time to get rid of our other references
-                lock (NetworkComms.globalDictAndDelegateLocker)
-                {
-                    #region Update NetworkComms Connection Dictionaries
-                    //We establish whether we have already done this step
-                    if ((NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier) &&
-                        NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType) &&
-                        NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Contains(this))
-                        ||
-                        (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) &&
-                        NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].ContainsKey(ConnectionInfo.ConnectionType)))
-                    {
-                        //Maintain a reference if this is our first connection close
-                        firstClose = true;
-                    }
-
-                    //Keep a reference of the connection for possible debugging later
-                    if (NetworkComms.oldConnectionIdToConnectionInfo.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier))
-                    {
-                        if (NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType))
-                            NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Add(ConnectionInfo);
-                        else
-                            NetworkComms.oldConnectionIdToConnectionInfo[ConnectionInfo.RemoteNetworkIdentifier].Add(ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { ConnectionInfo });
-                    }
-                    else
-                        NetworkComms.oldConnectionIdToConnectionInfo.Add(ConnectionInfo.RemoteNetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { ConnectionInfo } } });
-
-                    if (NetworkComms.allConnectionsById.ContainsKey(ConnectionInfo.RemoteNetworkIdentifier) &&
-                            NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(ConnectionInfo.ConnectionType))
-                    {
-                        if (!NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Contains(this))
-                            throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
-                        else
-                            NetworkComms.allConnectionsById[ConnectionInfo.RemoteNetworkIdentifier][ConnectionInfo.ConnectionType].Remove(this);
-                    }
-
-                    //We can now remove this connection by end point as well
-                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) && NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].ContainsKey(ConnectionInfo.ConnectionType))
-                        NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].Remove(ConnectionInfo.ConnectionType);
-
-                    //If this was the last connection type for this endpoint we can remove the endpoint reference as well
-                    if (NetworkComms.allConnectionsByEndPoint.ContainsKey(ConnectionInfo.RemoteEndPoint) && NetworkComms.allConnectionsByEndPoint[ConnectionInfo.RemoteEndPoint].Count == 0)
-                        NetworkComms.allConnectionsByEndPoint.Remove(ConnectionInfo.RemoteEndPoint);
-                    #endregion
-                }
+                bool firstClose = NetworkComms.RemoveConnectionReference(this);
 
                 //Almost there
                 //Last thing is to call any connection specific shutdown delegates
@@ -419,7 +386,7 @@ namespace NetworkCommsDotNet
                 else
                     ConnectionSpecificShutdownDelegate += handlerToAppend;
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Added connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.RemoteNetworkIdentifier.ToString()));
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Added connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()));
             }
         }
 
@@ -432,7 +399,7 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 ConnectionSpecificShutdownDelegate -= handlerToRemove;
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.RemoteNetworkIdentifier.ToString()));
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()));
             }
         }
         #endregion
@@ -694,6 +661,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     public enum ConnectionType : byte
     {
+        Undefined,
         TCP,
         UDPUnmanaged,
 

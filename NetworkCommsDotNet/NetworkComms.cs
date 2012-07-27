@@ -1265,45 +1265,41 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a network connection exists with the provided remoteNetworkIdentifier
+        /// Returns true if a network connection exists with the provided remoteNetworkIdentifier, type and endPoint
         /// </summary>
-        /// <param name="remoteNetworkIdentifier"></param>
+        /// <param name="networkIdentifier"></param>
         /// <returns></returns>
-        public static bool ConnectionExists(string remoteNetworkIdentifier)
+        public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType, IPEndPoint remoteEndPoint)
         {
             lock (globalDictAndDelegateLocker)
             {
-                return (allConnectionsById.ContainsKey(new ShortGuid(remoteNetworkIdentifier)));
+                if (allConnectionsById.ContainsKey(networkIdentifier))
+                {
+                    if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
+                        return allConnectionsById[networkIdentifier][connectionType].Count(
+                            connection => { return connection.ConnectionInfo.RemoteEndPoint == remoteEndPoint; }
+                            ) > 0;
+                }
             }
+
+            return false;
         }
 
         /// <summary>
-        /// Returns true if a connection already exists with the provided ip and port number
+        /// Returns true if a connection already exists with the provided endPoint and type
         /// </summary>
         /// <param name="ipAddress"></param>
         /// <param name="portNumber"></param>
         /// <returns></returns>
-        public static bool ConnectionExists(string ipAddress, int portNumber)
+        public static bool ConnectionExists(IPEndPoint endPoint, ConnectionType connectionType)
         {
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), portNumber);
-
             lock (globalDictAndDelegateLocker)
             {
                 if (allConnectionsByEndPoint.ContainsKey(endPoint))
-                    return true;
+                    return allConnectionsByEndPoint[endPoint].ContainsKey(connectionType);
                 else
                     return false;
             }
-        }
-
-        /// <summary>
-        /// Converts a connectionId into connectionInfo if a connection with the corresponding id exists
-        /// </summary>
-        /// <param name="connectionId"></param>
-        /// <returns></returns>
-        public static ConnectionInfo ConnectionIdToConnectionInfo(ShortGuid connectionId)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -1844,59 +1840,135 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId"></param>
         /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static Connection GetConnection(IPEndPoint ipEndPoint, ConnectionType connectionType)
+        public static Connection GetConnection(IPEndPoint IPEndPoint, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
-                return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == ipEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+                return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
         }
 
-        internal static void RemoveConnection(Connection connection)
+        /// <summary>
+        /// Removes the reference to the provided connection from within networkComms. Returns true if the provided connection reference existed and was removed, false otherwise.
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        internal static bool RemoveConnectionReference(Connection connection)
         {
             if (connection.ConnectionInfo.ConnectionEstablished || !connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
 
+            bool returnValue = false;
+
+            //Ensure connection references are removed from networkComms
+            //Once we think we have closed the connection it's time to get rid of our other references
             lock (globalDictAndDelegateLocker)
             {
-                if (allConnectionsById.ContainsKey(connection.ConnectionInfo.RemoteNetworkIdentifier))
+                #region Update NetworkComms Connection Dictionaries
+                //We establish whether we have already done this step
+                if ((allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
+                    allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                    allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                    ||
+                    (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) &&
+                    allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType)))
                 {
-                    if (connection.ConnectionInfo.ConnectionEstablished)
-                    {
-                        //Keep a reference of the connection for possible debugging later
-                        if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.RemoteNetworkIdentifier) && oldConnectionIdToConnectionInfo[connection.ConnectionInfo.RemoteNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.RemoteNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
-                        else
-                            oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.RemoteNetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>{ connection.ConnectionInfo }} });
+                    //Maintain a reference if this is our first connection close
+                    returnValue = true;
+                }
 
-                        //Remove by network identifier
-                        allConnectionsById[connection.ConnectionInfo.RemoteNetworkIdentifier].Remove(connection.ConnectionInfo.ConnectionType);
+                //Keep a reference of the connection for possible debugging later
+                if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                {
+                    if (oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                        oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
+                    else
+                        oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
+                }
+                else
+                    oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
 
-                        if (allConnectionsById[connection.ConnectionInfo.RemoteNetworkIdentifier].Count == 0)
-                            allConnectionsById.Remove(connection.ConnectionInfo.RemoteNetworkIdentifier);
-                    }
+                if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
+                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                {
+                    if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                        throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
+                    else
+                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Remove(connection);
+                }
 
-                    //We can now remove this connection by end point as well
-                    if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) && allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                    {
+                //We can now remove this connection by end point as well
+                if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
+                {
+                    if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
                         allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Remove(connection.ConnectionInfo.ConnectionType);
 
-                        if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count ==0)
-                            allConnectionsByEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                    //If this was the last connection type for this endpoint we can remove the endpoint reference as well
+                    if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
+                        allConnectionsByEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                }
+                #endregion
+            }
+
+            return returnValue;
+        }
+
+        /// <summary>
+        /// Adds a reference to the provided connection within networkComms. If a connection to the same endPoint already exists 
+        /// </summary>
+        /// <param name="connection"></param>
+        internal static void AddConnectionByEndPointReference(Connection connection)
+        {
+            if (connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
+                throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
+
+            //How do we prevent multiple threads from trying to create a duplicate connection??
+            lock (globalDictAndDelegateLocker)
+            {
+                if (ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType))
+                    throw new ConnectionSetupException("A connection already exists with " + connection.ConnectionInfo.ToString());
+                else
+                {
+                    //Add reference to the endPoint dictionary
+                    if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
+                    {
+                        if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            throw new Exception("Idiot check fail. The method ConnectionExists should have prevented execution getting here!!");
+                        else
+                            allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Add(connection.ConnectionInfo.ConnectionType, connection);
                     }
+                    else
+                        allConnectionsByEndPoint.Add(connection.ConnectionInfo.RemoteEndPoint, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
                 }
             }
         }
 
-        internal static void AddConnection(Connection connection)
+        internal static void AddConnectionByIdentifierReference(Connection connection)
         {
-            if (connection.ConnectionInfo.ConnectionEstablished || !connection.ConnectionInfo.ConnectionShutdown)
-                throw new ConnectionSetupException("A connection can only be removed once correctly shutdown.");
+            if (!connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
+                throw new ConnectionSetupException("Connection reference by identifier should only be added once a connection is established. This is to prevent duplicate connections.");
+
+            if (connection.ConnectionInfo.NetworkIdentifier == null || connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
+                throw new ConnectionSetupException("Should not be calling AddConnectionByIdentifierReference unless the connection remote identifier has been set.");
 
             lock (globalDictAndDelegateLocker)
             {
-                //Ensure this is a genuine new connection
-
-                //Do we have any old references with the same details, if so they can be deleted from the old cache
-
+                //Check for an existing reference first, if there is one and it matches this connection then no worries
+                if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                {
+                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                    {
+                        if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                        {
+                            if ((from current in allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType]
+                                 where current.ConnectionInfo.RemoteEndPoint == connection.ConnectionInfo.RemoteEndPoint
+                                 select current).Count() > 0)
+                                throw new ConnectionSetupException("A different connection object to the same remote end already exists. Duplicate connections should be prevented elsewhere.");
+                        }
+                    }
+                    else
+                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<Connection>() { connection });
+                }
+                else
+                    allConnectionsById.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<Connection>>() { { connection.ConnectionInfo.ConnectionType, new List<Connection>() {connection}} });
             }
         }
 

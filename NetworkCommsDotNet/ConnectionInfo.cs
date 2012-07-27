@@ -31,7 +31,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The type of this connection
         /// </summary>
-        [ProtoMember(1)]
         public ConnectionType ConnectionType { get; protected set; }
 
         /// <summary>
@@ -52,27 +51,27 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// We store our unique peer identifier as a string so that it can be easily serialised.
         /// </summary>
-        [ProtoMember(2)]
-        string remoteNetworkIdentifierStr;
+        [ProtoMember(1)]
+        string NetworkIdentifierStr;
 
         /// <summary>
         /// Returns the networkIdentifier of this peer as a ShortGuid
         /// </summary>
-        public ShortGuid RemoteNetworkIdentifier
+        public ShortGuid NetworkIdentifier
         {
             get 
             {
                 if (ConnectionEstablished)
-                    return new ShortGuid(remoteNetworkIdentifierStr);
+                    return new ShortGuid(NetworkIdentifierStr);
                 else
                     throw new ConnectionSetupException("Unable to access RemoteNetworkIdentifier until connection is successfully established.");
             }
-            private set { remoteNetworkIdentifierStr = value; }
+            private set { NetworkIdentifierStr = value; }
         }
 
+        [ProtoMember(2)]
         public IPEndPoint LocalEndPoint { get; private set; }
 
-        [ProtoMember(3)]
         public IPEndPoint RemoteEndPoint { get; private set; }
 
         public bool ConnectionEstablished { get; private set; }
@@ -105,7 +104,7 @@ namespace NetworkCommsDotNet
         private ConnectionInfo() { }
 
         /// <summary>
-        /// Constructor
+        /// Create a connectionInfo object for a new connection
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="clientIP"></param>
@@ -120,12 +119,27 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Create a connectionInfo object which can be used to inform a remote point of local information
+        /// </summary>
+        /// <param name="localNetworkIdentifier"></param>
+        /// <param name="localEndPoint"></param>
+        public ConnectionInfo(ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
+        {
+            this.NetworkIdentifier = localNetworkIdentifier;
+            this.LocalEndPoint = localEndPoint;
+        }
+
+        /// <summary>
         /// Set this connection info to established.
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
-        public void SetEstablished(ShortGuid remoteNetworkIdentifier)
+        public void SetEstablished()
         {
-            SetEstablised(remoteNetworkIdentifier, null);
+            ConnectionEstablished = true;
+            ConnectionEstablishedTime = DateTime.Now;
+
+            if (NetworkIdentifier == null || NetworkIdentifier == ShortGuid.Empty)
+                throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
         }
 
         /// <summary>
@@ -133,13 +147,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="remoteEndPoint"></param>
-        public void SetEstablised(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
+        public void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
         {
-            ConnectionEstablished = true;
-            ConnectionEstablishedTime = DateTime.Now;
-            RemoteNetworkIdentifier = remoteNetworkIdentifier;
+            NetworkIdentifier = remoteNetworkIdentifier;
+            RemoteEndPoint = remoteEndPoint;
 
-            if (RemoteEndPoint != null) RemoteEndPoint = remoteEndPoint;
+            //We may need to update the networkComms references at this point as well
         }
 
         /// <summary>
@@ -151,7 +164,7 @@ namespace NetworkCommsDotNet
             string returnString = "[" + ConnectionType + "] ";
 
             if (ConnectionEstablished)
-                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + remoteNetworkIdentifierStr + ")";
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifierStr + ")";
             else
             {
                 if (RemoteEndPoint != null && LocalEndPoint !=null)
@@ -173,12 +186,12 @@ namespace NetworkCommsDotNet
 
         public bool Equals(ConnectionInfo x, ConnectionInfo y)
         {
-            return (x.RemoteNetworkIdentifier.ToString() == y.RemoteNetworkIdentifier.ToString());
+            return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString());
         }
 
         public int GetHashCode(ConnectionInfo obj)
         {
-            return obj.RemoteNetworkIdentifier.GetHashCode();
+            return obj.NetworkIdentifier.GetHashCode();
         }
 
         #endregion

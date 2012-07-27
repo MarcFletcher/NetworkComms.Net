@@ -954,7 +954,7 @@ namespace NetworkCommsDotNet
             {
                 lock (locker)
                 {
-                    var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connectionInfo.RemoteNetworkIdentifier.ToString()).GetHashCode() ^ salt))));
+                    var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connectionInfo.NetworkIdentifier.ToString()).GetHashCode() ^ salt))));
 
                     if (!RPCObjects.ContainsKey(instanceId))
                         RPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]));
@@ -975,7 +975,7 @@ namespace NetworkCommsDotNet
                         addedHandlers.Add(typeof(I).ToString() + "-RPC-CALL", callDel);
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION", connectionInfo.RemoteNetworkIdentifier, false, instanceId);
+                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION", connectionInfo.NetworkIdentifier, false, instanceId);
                 }
             }
 
@@ -992,7 +992,7 @@ namespace NetworkCommsDotNet
                         var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", connectionInfo.RemoteNetworkIdentifier, false, instanceId);
+                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", connectionInfo.NetworkIdentifier, false, instanceId);
                 }
             }
 
@@ -1007,7 +1007,7 @@ namespace NetworkCommsDotNet
                         var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", connectionInfo.RemoteNetworkIdentifier, false, instanceId);
+                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", connectionInfo.NetworkIdentifier, false, instanceId);
                 }
             }
 
@@ -1027,7 +1027,7 @@ namespace NetworkCommsDotNet
                 {
                     wrapper.result = null;
                     wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + "Invalid instanceID" + "\n\nEND SERVER SIDE EXCEPTION\n\n";
-                    NetworkComms.SendObject(header.PacketType, connectionInfo.RemoteNetworkIdentifier, false, wrapper);
+                    NetworkComms.SendObject(header.PacketType, connectionInfo.NetworkIdentifier, false, wrapper);
                     return;
                 }
 
@@ -1049,7 +1049,7 @@ namespace NetworkCommsDotNet
                     wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + e.ToString() + "\n\nEND SERVER SIDE EXCEPTION\n\n";
                 }
 
-                NetworkComms.SendObject(header.PacketType, connectionInfo.RemoteNetworkIdentifier, false, wrapper);
+                NetworkComms.SendObject(header.PacketType, connectionInfo.NetworkIdentifier, false, wrapper);
 
             }
 

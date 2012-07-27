@@ -11,7 +11,7 @@ namespace NetworkCommsDotNet
     {
         UdpClient udpClient;
 
-        public UDPConnection(ConnectionInfo connectionInfo)
+        protected UDPConnection(ConnectionInfo connectionInfo)
             : base(connectionInfo)
         {
 

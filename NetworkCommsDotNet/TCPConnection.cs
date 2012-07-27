@@ -40,17 +40,40 @@ namespace NetworkCommsDotNet
         /// </summary>
         NetworkStream tcpClientNetworkStream;
 
+        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, TcpClient tcpClient, bool establishIfRequired = true)
+        {
+            bool newConnection = false;
+            TCPConnection connection; 
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
+                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
+                    connection = (TCPConnection)NetworkComms.GetConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
+                else
+                {
+                    connection = new TCPConnection(connectionInfo, tcpClient);
+                    newConnection = true;
+                }
+            }
+
+            if (establishIfRequired)
+            {
+                if (newConnection) connection.EstablishConnection();
+                else  connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
+            }
+
+            return connection;
+        }
+
         /// <summary>
-        /// Connection constructor
+        /// TCP connection constructor
         /// </summary>
         /// <param name="serverSide">True if this connection was requested by a remote client.</param>
         /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        public TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient) : base (connectionInfo)
+        protected TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient) : base (connectionInfo)
         {
             this.tcpClient = tcpClient;
             this.tcpClientNetworkStream = tcpClient.GetStream();
-
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -59,7 +82,81 @@ namespace NetworkCommsDotNet
         /// <param name="sourceClient"></param>
         protected override void EstablishConnectionInternal()
         {
-            throw new NotImplementedException();
+            //When we tell the socket/client to close we want it to do so immediately
+            //this.tcpClient.LingerState = new LingerOption(false, 0);
+
+            //We need to set the keep alive option otherwise the connection will just die at some random time should we not be using it
+            //NOTE: This did not seem to work reliably so was replaced with the keepAlive packet feature
+            //this.tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+            tcpClient.ReceiveBufferSize = NetworkComms.receiveBufferSizeBytes;
+            tcpClient.SendBufferSize = NetworkComms.sendBufferSizeBytes;
+
+            //This disables the 'nagle alogrithm'
+            //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
+            //Basically we may want to send lots of small packets (<200 bytes) and sometimes those are time critical (e.g. when establishing a connection)
+            //If we leave this enabled small packets may never be sent until a suitable send buffer length threshold is passed. i.e. BAD
+            tcpClient.NoDelay = true;
+            tcpClient.Client.NoDelay = true;
+
+            //Start listening for incoming data
+            StartIncomingDataListen();
+
+            //If we are server side and we have just received an incoming connection we need to return a conneciton id
+            //This id will be used in all future connections from this machine
+            if (ConnectionInfo.ServerSide)
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("New connection detected from " + ConnectionInfo.ToString() + ", waiting for client connId.");
+
+                //Wait for the client to send its identification
+                if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
+                    throw new ConnectionSetupException("Timeout waiting for client connId with " + ConnectionInfo.ToString() + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+
+                if (connectionSetupException)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ServerSide. " + connectionSetupExceptionStr);
+                    throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
+                }
+
+                //Once we have the clients id we send our own
+                //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, NetworkComms.CommsPort)), NetworkComms.internalFixedSendReceiveOptions);
+            }
+            else
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Initiating connection to " + ConnectionInfo.ToString());
+
+                //As the client we initiated the connection we now forward our local node identifier to the server
+                //If we are listening we include our local listen port as well
+                //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (NetworkComms.isListening ? NetworkComms.CommsPort : 0))), NetworkComms.internalFixedSendReceiveOptions);
+
+                //Wait here for the server end to return its own identifier
+                if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
+                    throw new ConnectionSetupException("Timeout waiting for server connId with " + ConnectionInfo.ToString() + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+
+                if (connectionSetupException)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ClientSide. " + connectionSetupExceptionStr);
+                    throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
+                }
+            }
+
+            if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Connection was closed during handshake.");
+
+            //A quick idiot test
+            if (ConnectionInfo == null) throw new ConnectionSetupException("ConnectionInfo should never be null at this point.");
+
+            if (ConnectionInfo.NetworkIdentifier == null || ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
+                throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
+
+            //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
+            //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
+            if (NetworkComms.EnableNagleAlgorithmForEstablishedConnections)
+            {
+                tcpClient.NoDelay = false;
+                tcpClient.Client.NoDelay = false;
+            }
         }
 
         /// <summary>
