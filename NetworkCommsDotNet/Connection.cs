@@ -96,14 +96,16 @@ namespace NetworkCommsDotNet
         /// <param name="connectionInfo"></param>
         protected Connection(ConnectionInfo connectionInfo)
         {
-            if (ConnectionInfo.ConnectionType == ConnectionType.Undefined)
-                throw new ConnectionSetupException("Connection type must be defined within provided ConnectionInfo.");
+            if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global comms shutdown has been initiated.");
+
+            if (ConnectionInfo.ConnectionType == ConnectionType.Undefined || ConnectionInfo.RemoteEndPoint == null)
+                throw new ConnectionSetupException("ConnectionType and RemoteEndPoint must be defined within provided ConnectionInfo.");
 
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
             if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
-                throw new ConnectionSetupException("A connection of this type already exists with " + connectionInfo.ToString());
+                throw new ConnectionSetupException("A connection already exists with " + ConnectionInfo);
 
-            this.ConnectionInfo = connectionInfo;
+            ConnectionInfo = connectionInfo;
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
             NetworkComms.AddConnectionByEndPointReference(this);
@@ -113,7 +115,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionInfo.ToString());
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionInfo);
 
                 DateTime establishStartTime = DateTime.Now;
 
@@ -163,9 +165,9 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled)
                 {
                     if (closeDueToError)
-                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.ToString() + " due to error from [" + logLocation + "].");
+                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo + " due to error from [" + logLocation + "].");
                     else
-                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo.ToString() + " from [" + logLocation + "].");
+                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo + " from [" + logLocation + "].");
                 }
 
                 ConnectionInfo.ConnectionShutdown = true;
@@ -183,6 +185,26 @@ namespace NetworkCommsDotNet
                 //Call any connection specific close requirements
                 CloseConnectionInternal(closeDueToError, logLocation);
 
+                try
+                {
+                    //If we are calling close from the listen thread we are actually in the same thread
+                    //We must guarantee the listen thread stops even if that means we need to nuke it
+                    //If we did not we may not be able to shutdown properly.
+                    if (incomingDataListenThread != null && incomingDataListenThread != Thread.CurrentThread && (incomingDataListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin || incomingDataListenThread.ThreadState == System.Threading.ThreadState.Running))
+                    {
+                        //If we have made it this far we give the ythread a further 50ms to finish before nuking.
+                        if (!incomingDataListenThread.Join(50))
+                        {
+                            incomingDataListenThread.Abort();
+                            if (NetworkComms.loggingEnabled && ConnectionInfo != null) NetworkComms.logger.Warn("Incoming data listen thread with " + ConnectionInfo + " aborted.");
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+
                 //Close connection my get called multiple times for a given connection depending on the reason for being closed
                 bool firstClose = NetworkComms.RemoveConnectionReference(this);
 
@@ -190,14 +212,14 @@ namespace NetworkCommsDotNet
                 //Last thing is to call any connection specific shutdown delegates
                 if (firstClose && ConnectionSpecificShutdownDelegate != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo.ToString());
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
                     ConnectionSpecificShutdownDelegate(this.ConnectionInfo);
                 }
 
                 //Last but not least we call any global connection shutdown delegates
                 if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo.ToString());
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
                     NetworkComms.globalConnectionShutdownDelegates(this.ConnectionInfo);
                 }
             }
@@ -206,7 +228,7 @@ namespace NetworkCommsDotNet
                 if (ex is ThreadAbortException)
                 { /*Ignore the threadabort exception if we had to nuke a thread*/ }
                 else
-                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo.ToString() + ". Close called from " + logLocation + (closeDueToError ? " due to error." : "."));
+                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation + (closeDueToError ? " due to error." : "."));
             
                 //We try to rethrow where possible but CloseConnection could very likely be called from within networkComms so we just have to be happy with a log here
             }
@@ -298,6 +320,35 @@ namespace NetworkCommsDotNet
                     return false;
                 }
             }   
+        }
+
+        protected abstract void SendPacket(Packet packet);
+
+        internal abstract void SendNullPacket();
+
+        /// <summary>
+        /// Starts listening for incoming data on this connection. Can choose between async or sync depending on the value of connectionListenModeIsSync
+        /// </summary>
+        protected void StartIncomingDataListen()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Synchronous incoming connection data worker
+        /// </summary>
+        protected void IncomingDataSyncWorker()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Asynchronous incoming connection data delegate
+        /// </summary>
+        /// <param name="ar"></param>
+        protected void IncomingPacketHandler(IAsyncResult ar)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

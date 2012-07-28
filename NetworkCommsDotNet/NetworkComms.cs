@@ -799,16 +799,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Closes the specified connection. Any global or connection specific shutdown delegates will be executed.
-        /// </summary>
-        /// <param name="connectionId"></param>
-        public static void CloseConnection(ShortGuid connectionId)
-        {
-            TCPConnection targetConnection = CheckForConnection(connectionId);
-            targetConnection.CloseConnection(false, -1);
-        }
-
-        /// <summary>
         /// Locker for LogError() which ensures thread safe operation.
         /// </summary>
         static object errorLocker = new object();
@@ -1262,44 +1252,6 @@ namespace NetworkCommsDotNet
             commsInitialised = false;
             commsShutdown = false;
             endListen = false;
-        }
-
-        /// <summary>
-        /// Returns true if a network connection exists with the provided remoteNetworkIdentifier, type and endPoint
-        /// </summary>
-        /// <param name="networkIdentifier"></param>
-        /// <returns></returns>
-        public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType, IPEndPoint remoteEndPoint)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                if (allConnectionsById.ContainsKey(networkIdentifier))
-                {
-                    if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
-                        return allConnectionsById[networkIdentifier][connectionType].Count(
-                            connection => { return connection.ConnectionInfo.RemoteEndPoint == remoteEndPoint; }
-                            ) > 0;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Returns true if a connection already exists with the provided endPoint and type
-        /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <param name="portNumber"></param>
-        /// <returns></returns>
-        public static bool ConnectionExists(IPEndPoint endPoint, ConnectionType connectionType)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                if (allConnectionsByEndPoint.ContainsKey(endPoint))
-                    return allConnectionsByEndPoint[endPoint].ContainsKey(connectionType);
-                else
-                    return false;
-            }
         }
 
         /// <summary>
@@ -1823,27 +1775,67 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Get an existing connection with the provided connectionId of a provided type. Returns null if the connection does not exist.
+        /// Get an existing connection with the provided connectionId of a provided type. Returns null if a connection does not exist.
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static List<Connection> GetConnection(ShortGuid connectionId, ConnectionType connectionType)
+        public static List<Connection> RetrieveConnection(ShortGuid connectionId, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
                 return (from current in NetworkComms.allConnectionsById where current.Key == connectionId && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
         }
 
         /// <summary>
-        /// Get an existing connection with the provided ipAddress of a provided type. Returns null if the connection does not exist.
+        /// Get an existing connection with the provided ipAddress of a provided type. Returns null if a connection does not exist.
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static Connection GetConnection(IPEndPoint IPEndPoint, ConnectionType connectionType)
+        public static Connection RetrieveConnection(IPEndPoint IPEndPoint, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
                 return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Returns true if a network connection exists with the provided remoteNetworkIdentifier, type and endPoint
+        /// </summary>
+        /// <param name="networkIdentifier"></param>
+        /// <returns></returns>
+        public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType)
+        {
+            if (loggingEnabled) logger.Trace("Checking by identifier and endPoint for existing " + connectionType + " connection to " + networkIdentifier);
+
+            lock (globalDictAndDelegateLocker)
+            {
+                if (allConnectionsById.ContainsKey(networkIdentifier))
+                {
+                    if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
+                        return allConnectionsById[networkIdentifier][connectionType].Count() > 0;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if a connection already exists with the provided endPoint and type
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="portNumber"></param>
+        /// <returns></returns>
+        public static bool ConnectionExists(IPEndPoint remoteEndPoint, ConnectionType connectionType)
+        {
+            if (loggingEnabled) logger.Trace("Checking by endPoint for existing " + connectionType + " connection to " + remoteEndPoint.Address + ":" + remoteEndPoint.Port);
+
+            lock (globalDictAndDelegateLocker)
+            {
+                if (allConnectionsByEndPoint.ContainsKey(remoteEndPoint))
+                    return allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType);
+                else
+                    return false;
+            }
         }
 
         /// <summary>
@@ -1924,7 +1916,14 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 if (ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType))
-                    throw new ConnectionSetupException("A connection already exists with " + connection.ConnectionInfo.ToString());
+                {
+                    if (RetrieveConnection(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType) != connection)
+                        throw new ConnectionSetupException("A difference connection already exists with " + connection.ConnectionInfo);
+                    else
+                    {
+                        //We have just tried to add the same reference twice, no need to do anything this time around
+                    }
+                }
                 else
                 {
                     //Add reference to the endPoint dictionary
@@ -1941,6 +1940,10 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        /// Add a reference (by networkIdentifier) to the provided connection within NetworkComms.
+        /// </summary>
+        /// <param name="connection"></param>
         internal static void AddConnectionByIdentifierReference(Connection connection)
         {
             if (!connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
@@ -1951,6 +1954,10 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
+                //There should already be a reference to this connection in the endPoint dictionary
+                if (!ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType))
+                    throw new ConnectionSetupException("A reference by identifier should only be added if a reference by endPoint already exists.");
+
                 //Check for an existing reference first, if there is one and it matches this connection then no worries
                 if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
                 {
@@ -1961,7 +1968,11 @@ namespace NetworkCommsDotNet
                             if ((from current in allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType]
                                  where current.ConnectionInfo.RemoteEndPoint == connection.ConnectionInfo.RemoteEndPoint
                                  select current).Count() > 0)
-                                throw new ConnectionSetupException("A different connection object to the same remote end already exists. Duplicate connections should be prevented elsewhere.");
+                                throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere.");
+                        }
+                        else
+                        {
+                            //We are trying to add the same connection twice, so just do nothing here.
                         }
                     }
                     else
@@ -1985,24 +1996,6 @@ namespace NetworkCommsDotNet
         /// Opens a local port for incoming connections
         /// </summary>
         private static void OpenIncomingPorts()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Checks for a connection and if it does not exist creates a new one. If the connection fails throws ConnectionSetupException.
-        /// </summary>
-        /// <param name="targetIPAddress"></param>
-        public static TCPConnection EstablishTCPConnection(string targetIPAddress, int commsPort)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Returns the connection object assocaited with the provided connectionId
-        /// </summary>
-        /// <param name="targetIPAddress"></param>
-        private static TCPConnection CheckForConnection(ShortGuid connectionId)
         {
             throw new NotImplementedException();
         }

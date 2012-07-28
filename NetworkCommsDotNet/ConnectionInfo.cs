@@ -31,6 +31,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The type of this connection
         /// </summary>
+        [ProtoMember(1)]
         public ConnectionType ConnectionType { get; protected set; }
 
         /// <summary>
@@ -51,7 +52,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// We store our unique peer identifier as a string so that it can be easily serialised.
         /// </summary>
-        [ProtoMember(1)]
+        [ProtoMember(2)]
         string NetworkIdentifierStr;
 
         /// <summary>
@@ -69,7 +70,7 @@ namespace NetworkCommsDotNet
             private set { NetworkIdentifierStr = value; }
         }
 
-        [ProtoMember(2)]
+        [ProtoMember(3)]
         public IPEndPoint LocalEndPoint { get; private set; }
 
         public IPEndPoint RemoteEndPoint { get; private set; }
@@ -109,11 +110,10 @@ namespace NetworkCommsDotNet
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="clientIP"></param>
         /// <param name="localPort"></param>
-        public ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+        public ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint)
         {
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
-            this.LocalEndPoint = localEndPoint;
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
         }
@@ -123,8 +123,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="localNetworkIdentifier"></param>
         /// <param name="localEndPoint"></param>
-        public ConnectionInfo(ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
+        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
         {
+            this.ConnectionType = connectionType;
             this.NetworkIdentifier = localNetworkIdentifier;
             this.LocalEndPoint = localEndPoint;
         }
@@ -147,9 +148,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="remoteEndPoint"></param>
-        public void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
+        public void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
         {
             NetworkIdentifier = remoteNetworkIdentifier;
+            LocalEndPoint = localEndPoint;
             RemoteEndPoint = remoteEndPoint;
 
             //We may need to update the networkComms references at this point as well
@@ -169,8 +171,8 @@ namespace NetworkCommsDotNet
             {
                 if (RemoteEndPoint != null && LocalEndPoint !=null)
                     returnString+= LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
-                else
-                    returnString+= "NA";
+                else if (RemoteEndPoint != null)
+                    returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
             }
 
             return returnString;

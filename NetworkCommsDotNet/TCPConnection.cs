@@ -40,17 +40,37 @@ namespace NetworkCommsDotNet
         /// </summary>
         NetworkStream tcpClientNetworkStream;
 
-        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, TcpClient tcpClient, bool establishIfRequired = true)
+        /// <summary>
+        /// Create a connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <param name="establishIfRequired"></param>
+        /// <returns></returns>
+        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
+        {
+            return CreateConnection(connectionInfo, null, establishIfRequired);
+        }
+
+        /// <summary>
+        /// Internal create which has the possibility of an existing TcpClient
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <param name="tcpClient"></param>
+        /// <param name="establishIfRequired"></param>
+        /// <returns></returns>
+        internal static TCPConnection CreateConnection(ConnectionInfo connectionInfo, TcpClient tcpClient, bool establishIfRequired = true)
         {
             bool newConnection = false;
-            TCPConnection connection; 
+            TCPConnection connection;
+
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
                 if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
-                    connection = (TCPConnection)NetworkComms.GetConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
+                    connection = (TCPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
                 else
                 {
+                    //We add a reference to networkComms for this connection within the constructor
                     connection = new TCPConnection(connectionInfo, tcpClient);
                     newConnection = true;
                 }
@@ -68,12 +88,16 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// TCP connection constructor
         /// </summary>
-        /// <param name="serverSide">True if this connection was requested by a remote client.</param>
-        /// <param name="connectionEndPoint">The IP information of the remote client.</param>
-        protected TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient) : base (connectionInfo)
+        protected TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient)
+            : base(connectionInfo)
         {
-            this.tcpClient = tcpClient;
-            this.tcpClientNetworkStream = tcpClient.GetStream();
+            //We don't guarantee that the tcpClient has been created yet
+            if (tcpClient != null) this.tcpClient = tcpClient;
+        }
+
+        public static void ListenForConnectionWorker()
+        {
+            //Do we listen for new connections here??
         }
 
         /// <summary>
@@ -82,6 +106,11 @@ namespace NetworkCommsDotNet
         /// <param name="sourceClient"></param>
         protected override void EstablishConnectionInternal()
         {
+            if (tcpClient == null) ConnectTCPClient();
+
+            //We are going to be using the networkStream quite a bit so we pull out a reference once here
+            tcpClientNetworkStream = tcpClient.GetStream();
+
             //When we tell the socket/client to close we want it to do so immediately
             //this.tcpClient.LingerState = new LingerOption(false, 0);
 
@@ -106,11 +135,11 @@ namespace NetworkCommsDotNet
             //This id will be used in all future connections from this machine
             if (ConnectionInfo.ServerSide)
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("New connection detected from " + ConnectionInfo.ToString() + ", waiting for client connId.");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("New connection detected from " + ConnectionInfo + ", waiting for client connId.");
 
                 //Wait for the client to send its identification
                 if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
-                    throw new ConnectionSetupException("Timeout waiting for client connId with " + ConnectionInfo.ToString() + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+                    throw new ConnectionSetupException("Timeout waiting for client connId with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 if (connectionSetupException)
                 {
@@ -120,20 +149,20 @@ namespace NetworkCommsDotNet
 
                 //Once we have the clients id we send our own
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, NetworkComms.CommsPort)), NetworkComms.internalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, NetworkComms.CommsPort)), NetworkComms.internalFixedSendReceiveOptions);
             }
             else
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Initiating connection to " + ConnectionInfo.ToString());
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Initiating connection to " + ConnectionInfo);
 
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (NetworkComms.isListening ? NetworkComms.CommsPort : 0))), NetworkComms.internalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (NetworkComms.isListening ? NetworkComms.CommsPort : 0))), NetworkComms.internalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
                 if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
-                    throw new ConnectionSetupException("Timeout waiting for server connId with " + ConnectionInfo.ToString() + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+                    throw new ConnectionSetupException("Timeout waiting for server connId with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 if (connectionSetupException)
                 {
@@ -156,6 +185,47 @@ namespace NetworkCommsDotNet
             {
                 tcpClient.NoDelay = false;
                 tcpClient.Client.NoDelay = false;
+            }
+        }
+
+        /// <summary>
+        /// If we were not provided with a tcpClient on creation we need to establish that now
+        /// </summary>
+        private void ConnectTCPClient()
+        {
+            try
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing TCP client with " + ConnectionInfo);
+
+                //We now connect to our target
+                tcpClient = new TcpClient();
+
+                bool connectSuccess = true;
+
+                //Start the connection using the asyn version
+                IAsyncResult ar = tcpClient.BeginConnect(ConnectionInfo.RemoteEndPoint.Address, ConnectionInfo.RemoteEndPoint.Port, null, null);
+                WaitHandle connectionWait = ar.AsyncWaitHandle;
+                try
+                {
+                    if (!ar.AsyncWaitHandle.WaitOne(NetworkComms.connectionEstablishTimeoutMS, false))
+                    {
+                        tcpClient.Close();
+                        connectSuccess = false;
+                    }
+
+                    tcpClient.EndConnect(ar);
+                }
+                finally
+                {
+                    connectionWait.Close();
+                }
+
+                if (!connectSuccess) throw new ConnectionSetupException("Timeout waiting for remoteEndPoint to accept TCP connection.");
+            }
+            catch (Exception ex)
+            {
+                CloseConnection(true, 17);
+                throw new ConnectionSetupException("Error during TCP connection establish with destination (" + ConnectionInfo + "). Destination may not be listening or connect timed out. " + ex.ToString());
             }
         }
 
@@ -199,26 +269,6 @@ namespace NetworkCommsDotNet
             catch (Exception)
             {
             }
-
-            try
-            {
-                //If we are calling close from the listen thread we are actually in the same thread
-                //We must guarantee the listen thread stops even if that means we need to nuke it
-                //If we did not we may not be able to shutdown properly.
-                if (incomingDataListenThread != null && incomingDataListenThread != Thread.CurrentThread && (incomingDataListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin || incomingDataListenThread.ThreadState == System.Threading.ThreadState.Running))
-                {
-                    //If we have made it this far we give the ythread a further 50ms to finish before nuking.
-                    if (!incomingDataListenThread.Join(50))
-                    {
-                        incomingDataListenThread.Abort();
-                        if (NetworkComms.loggingEnabled && ConnectionInfo != null) NetworkComms.logger.Warn("Incoming data listen thread with " + ConnectionInfo.ToString() + " aborted.");
-                    }
-                }
-            }
-            catch (Exception)
-            {
-
-            }
         }
 
         /// <summary>
@@ -229,31 +279,6 @@ namespace NetworkCommsDotNet
         internal bool WaitForConnectionEstablish(int waitTimeoutMS)
         {
             return connectionSetupWait.WaitOne(waitTimeoutMS);
-        }
-
-        /// <summary>
-        /// Starts listening for incoming data for this connection. Can choose between async or sync depending on the value of connectionListenModeIsSync
-        /// </summary>
-        private void StartIncomingDataListen()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Synchronous incoming connection data worker
-        /// </summary>
-        private void IncomingDataSyncWorker()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Asynchronous incoming connection data delegate
-        /// </summary>
-        /// <param name="ar"></param>
-        private void IncomingPacketHandler(IAsyncResult ar)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -284,15 +309,15 @@ namespace NetworkCommsDotNet
         /// <param name="destinationIPAddress"></param>
         /// <param name="receiveConfirmationRequired"></param>
         /// <returns></returns>
-        private void SendPacket(Packet packet)
+        protected override void SendPacket(Packet packet)
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Send a null packet (1 byte long) to this connection. Helps keep the connection alive but also bandwidth usage to absolute minimum. If an exception is thrown the connection will be closed.
+        /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
         /// </summary>
-        public void SendNullPacket()
+        internal override void SendNullPacket()
         {
             try
             {
@@ -315,7 +340,6 @@ namespace NetworkCommsDotNet
             catch (Exception)
             {
                 CloseConnection(true, 19);
-                //throw new CommunicationException(ex.ToString());
             }
         }
 

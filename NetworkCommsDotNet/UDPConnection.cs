@@ -36,5 +36,15 @@ namespace NetworkCommsDotNet
         {
             throw new NotImplementedException();
         }
+
+        protected override void SendPacket(Packet packet)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal override void SendNullPacket()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
