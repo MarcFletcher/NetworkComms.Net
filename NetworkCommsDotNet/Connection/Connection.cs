@@ -28,7 +28,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// A multicast function delegate for maintaining connection specific shutdown delegates
         /// </summary>
-        protected NetworkComms.ConnectionShutdownDelegate ConnectionSpecificShutdownDelegate { get; set; }
+        protected NetworkComms.ConnectionEstablishShutdownDelegate ConnectionSpecificShutdownDelegate { get; set; }
 
         /// <summary>
         /// A connection specific incoming packet handler dictionary. These are called before any applicable global handlers
@@ -39,17 +39,17 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The packet builder for this connection
         /// </summary>
-        protected ConnectionPacketBuilder PacketBuilder { get; set; }
+        protected ConnectionPacketBuilder packetBuilder;
 
         /// <summary>
         /// The current incoming data buffer
         /// </summary>
-        byte[] dataBuffer;
+        protected byte[] dataBuffer;
 
         /// <summary>
         /// The total bytes read so far within dataBuffer
         /// </summary>
-        int totalBytesRead;
+        protected int totalBytesRead;
 
         /// <summary>
         /// The thread listening for incoming data should we be using synchronous methods.
@@ -96,6 +96,10 @@ namespace NetworkCommsDotNet
         /// <param name="connectionInfo"></param>
         protected Connection(ConnectionInfo connectionInfo)
         {
+            ConnectionInfo = connectionInfo;
+            ConnectionDefaultSendReceiveOptions = NetworkComms.DefaultFixedSendReceiveOptions;
+            dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+
             if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global comms shutdown has been initiated.");
 
             if (ConnectionInfo.ConnectionType == ConnectionType.Undefined || ConnectionInfo.RemoteEndPoint == null)
@@ -104,8 +108,6 @@ namespace NetworkCommsDotNet
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
             if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
                 throw new ConnectionSetupException("A connection already exists with " + ConnectionInfo);
-
-            ConnectionInfo = connectionInfo;
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
             NetworkComms.AddConnectionByEndPointReference(this);
@@ -327,37 +329,118 @@ namespace NetworkCommsDotNet
         internal abstract void SendNullPacket();
 
         /// <summary>
-        /// Starts listening for incoming data on this connection. Can choose between async or sync depending on the value of connectionListenModeIsSync
-        /// </summary>
-        protected void StartIncomingDataListen()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Synchronous incoming connection data worker
-        /// </summary>
-        protected void IncomingDataSyncWorker()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Asynchronous incoming connection data delegate
-        /// </summary>
-        /// <param name="ar"></param>
-        protected void IncomingPacketHandler(IAsyncResult ar)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Attempts to use the data provided in packetBuilder to recreate something usefull. If we don't have enough data yet that value is set in packetBuilder.
         /// </summary>
         /// <param name="packetBuilder"></param>
         protected void IncomingPacketHandleHandOff(ConnectionPacketBuilder packetBuilder)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesRead + " bytes read.");
+
+                //Loop until we are finished with this packetBuilder
+                int loopCounter = 0;
+                while (true)
+                {
+                    //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
+                    //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
+                    if (packetBuilder.FirstByte() == 0)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff(), loop index - " + loopCounter);
+                        //LastTrafficTime = DateTime.Now;
+
+                        packetBuilder.ClearNTopBytes(1);
+
+                        //Reset the expected bytes to 0 so that the next check starts from scratch
+                        packetBuilder.TotalBytesExpected = 0;
+
+                        //If we have run out of data completely then we can return immediately
+                        if (packetBuilder.TotalBytesRead == 0) return;
+                    }
+                    else
+                    {
+                        //First determine the expected size of a header packet
+                        int packetHeaderSize = packetBuilder.FirstByte() + 1;
+
+                        //Do we have enough data to build a header?
+                        if (packetBuilder.TotalBytesRead < packetHeaderSize)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet header.");
+
+                            //Set the expected number of bytes and then return
+                            packetBuilder.TotalBytesExpected = packetHeaderSize;
+                            return;
+                        }
+
+                        //We have enough for a header
+                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+
+                        //Idiot test
+                        if (topPacketHeader.PacketType == null)
+                            throw new SerialisationException("packetType value in packetHeader should never be null");
+
+                        //We can now use the header to establish if we have enough payload data
+                        //First case is when we have not yet received enough data
+                        if (packetBuilder.TotalBytesRead < packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet payload.");
+
+                            //Set the expected number of bytes and then return
+                            packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
+                            return;
+                        }
+                        //Second case is we have enough data
+                        else if (packetBuilder.TotalBytesRead >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        {
+                            //We can either have exactly the right amount or even more than we were expecting
+                            //We may have too much data if we are sending high quantities and the packets have been concatenated
+                            //no problem!!
+
+                            //Build the necessary task input data
+                            object[] completedData = new object[2];
+                            completedData[0] = topPacketHeader;
+                            completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
+
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
+
+                            if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                            {
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
+                                //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
+                                CompleteIncomingPacketWorker(completedData);
+                            }
+                            else
+                            {
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching task to handle packet type '" + topPacketHeader.PacketType + "'. Loop index - " + loopCounter);
+                                //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
+                                Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
+                            }
+
+                            //We clear the bytes we have just handed off
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
+                            packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
+
+                            //Reset the expected bytes to 0 so that the next check starts from scratch
+                            packetBuilder.TotalBytesExpected = 0;
+
+                            //If we have run out of data completely then we can return immediately
+                            if (packetBuilder.TotalBytesRead == 0) return;
+                        }
+                        else
+                            throw new CommunicationException("This should be impossible!");
+                    }
+
+                    loopCounter++;
+                }
+            }
+            catch (Exception ex)
+            {
+                //Any error, throw an exception.
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A fatal exception occured in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
+
+                NetworkComms.LogError(ex, "CommsError");
+                CloseConnection(true, 16);
+            }
         }
 
         /// <summary>
@@ -375,25 +458,225 @@ namespace NetworkCommsDotNet
         /// <param name="packetBytes"></param>
         private void CompleteIncomingPacketWorker(object packetBytes)
         {
-            throw new NotImplementedException();
-        }
+            try
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... packet hand off task started.");
 
-        #region Connection Specific Packet and Shutdown Handler Methods
-        public static void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
-        {
-            throw new NotImplementedException();
+                //Check for a shutdown connection
+                if (ConnectionInfo.ConnectionShutdown) return;
+
+                //Idiot check
+                if (packetBytes == null) throw new NullReferenceException("Provided object packetBytes should really not be null.");
+
+                //Unwrap with an idiot check
+                object[] completedData = packetBytes as object[];
+                if (completedData == null) throw new NullReferenceException("Type cast to object[] failed in CompleteIncomingPacketWorker.");
+
+                //Unwrap with an idiot check
+                PacketHeader packetHeader = completedData[0] as PacketHeader;
+                if (packetHeader == null) throw new NullReferenceException("Type cast to PacketHeader failed in CompleteIncomingPacketWorker.");
+
+                //Unwrap with an idiot check
+                byte[] packetDataSection = completedData[1] as byte[];
+                if (packetDataSection == null) throw new NullReferenceException("Type cast to byte[] failed in CompleteIncomingPacketWorker.");
+
+                //We only look at the check sum if we want to and if it has been set by the remote end
+                if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.CheckSumHash.Length > 0)
+                {
+                    //Validate the checkSumhash of the data
+                    if (packetHeader.CheckSumHash != NetworkComms.MD5Bytes(packetDataSection))
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet header detected.");
+
+                        //We have corruption on a resend request, something is very wrong so we throw an exception.
+                        if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
+
+                        //Instead of throwing an exception we can request the packet to be resent
+                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), false, packetHeader.CheckSumHash, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                        SendPacket(returnPacket);
+
+                        //We need to wait for the packet to be resent before going further
+                        return;
+                    }
+                }
+
+                //Remote end may have requested packet receive confirmation so we send that now
+                if (packetHeader.ReceiveConfirmationRequired)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
+
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), false, packetHeader.CheckSumHash, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    SendPacket(returnPacket);
+                }
+
+                //We can now pass the data onto the correct delegate
+                //First we have to check for our reserved packet types
+                //The following large sections have been factored out to make reading and debugging a little easier
+                if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
+                    CheckSumFailResendHandler(packetDataSection);
+                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
+                    ConnectionSetupHandler(packetDataSection);
+                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && (NetworkComms.internalFixedSerializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.internalFixedCompressor)) == false)
+                {
+                    //If we have received a ping packet from the originating source we reply with true
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), false, true, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    SendPacket(returnPacket);
+                }
+
+                //We allow users to add their own custom handlers for reserved packet types here
+                //else
+                if (true)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
+
+                    NetworkComms.TriggerPacketHandler(packetHeader, this.ConnectionInfo, packetDataSection);
+
+                    //This is a really bad place to put a garbage collection, comment left in so that it does'nt get added again at some later date
+                    //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
+                    //GC.Collect();
+                }
+            }
+            catch (CommunicationException)
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed.");
+                CloseConnection(true, 2);
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
+
+                NetworkComms.LogError(ex, "CommsError");
+                CloseConnection(true, 3);
+            }
         }
 
         /// <summary>
-        /// Add a new incoming packet handler using default serializer and compressor. Multiple handlers for the same packet type are allowed
+        /// Handle an incoming ConnectionSetup packet type
         /// </summary>
-        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
-        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
-        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
-        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
+        /// <param name="packetDataSection"></param>
+        private void ConnectionSetupHandler(byte[] packetDataSection)
         {
-            AppendIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, null, null, enableAutoListen);
+            //We should never be trying to handshake an established connection
+            ConnectionInfo remoteConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
+
+            if (ConnectionInfo.ConnectionType != remoteConnectionInfo.ConnectionType)
+            {
+                connectionSetupException = true;
+                connectionSetupExceptionStr = "Remote connectionInfo provided connectionType did not match expected connection type.";
+            }
+            else
+            {
+                //We use the following bool to track a possible existing connection which needs closing
+                bool possibleClashConnectionWithPeer_ByEndPoint = false;
+                Connection existingConnection = null;
+
+                //We first try to establish everything within this lock in one go
+                //If we can't quite complete the establish we have to come out of the lock at try to sort the problem
+                bool connectionEstablishedSuccess = ConnectionSetupHandlerInner(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+
+                //If we were not succesfull at establishing the connection we need to sort it out!
+                if (!connectionEstablishedSuccess && !connectionSetupException)
+                {
+                    if (existingConnection == null) throw new Exception("Connection establish issues and existingConnection was left as null.");
+
+                    if (possibleClashConnectionWithPeer_ByEndPoint)
+                    {
+                        //If we have a clash by endPoint we test the existing connection
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
+                        if (existingConnection.ConnectionAliveState(1000))
+                        {
+                            //If the existing connection comes back as alive we don't allow this one to go any further
+                            //This might happen if two peers try to connect to each other at the same time
+                            connectionSetupException = true;
+                            connectionSetupExceptionStr = " ... existing live connection at provided end point for this connection (" + ConnectionInfo + "), no need for a second.  ";
+                        }
+                    }
+
+                    //We only try again if we did not log an exception
+                    if (!connectionSetupException)
+                    {
+                        //Once we have tried to sort the problem we can try to finish the establish one last time
+                        connectionEstablishedSuccess = ConnectionSetupHandlerInner(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+
+                        //If we still failed then that's it for this establish
+                        if (!connectionEstablishedSuccess && !connectionSetupException)
+                        {
+                            connectionSetupException = true;
+                            connectionSetupExceptionStr = "Attempted to establish conneciton with " + ConnectionInfo + ", but due to an existing connection this was not possible.";
+                        }
+                    }
+                }
+            }
+
+            //Trigger any setup waits
+            connectionSetupWait.Set();
+        }
+
+        /// <summary>
+        /// Attempts to complete the connection establish with a minimum of locking to prevent possible deadlocking
+        /// </summary>
+        /// <param name="possibleClashConnectionWithPeer_ByIdentifier"></param>
+        /// <param name="possibleClashConnectionWithPeer_ByEndPoint"></param>
+        /// <returns></returns>
+        private bool ConnectionSetupHandlerInner(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
+        {
+            try
+            {
+                lock (NetworkComms.globalDictAndDelegateLocker)
+                {
+                    Connection connectionByEndPoint = NetworkComms.RetrieveConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
+
+                    //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
+                    if (connectionByEndPoint == null)
+                    {
+                        connectionSetupException = true;
+                        connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
+                    }
+                    else
+                    {
+                        //We need to check for a possible GUID clash
+                        //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
+                        //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
+                        //but hey, we live in a crazy world!
+                        if (ConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
+                        {
+                            connectionSetupException = true;
+                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";
+                        }
+                        else if (connectionByEndPoint != this)
+                        {
+                            possibleClashConnectionWithPeer_ByEndPoint = true;
+                            existingConnection = connectionByEndPoint;
+                        }
+                        else
+                        {
+                            //Update the connection info
+                            ConnectionInfo.UpdateEndPointInfo(remoteConnectionInfo.NetworkIdentifier, remoteConnectionInfo.LocalEndPoint);
+
+                            //Check for a possible endPoint reference update
+                            NetworkComms.UpdateConnectionByEndPointReference(this, remoteConnectionInfo.LocalEndPoint);
+
+                            //Record the new connection
+                            NetworkComms.AddConnectionByIdentifierReference(this);
+
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "ConnectionSetupHandlerInnerError");
+            }
+
+            return false;
+        }
+
+        #region Connection Specific Packet and Shutdown Handler Methods
+        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -402,7 +685,7 @@ namespace NetworkCommsDotNet
         /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
         /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
-        public static void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        public void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
             throw new NotImplementedException();
         }
@@ -411,7 +694,7 @@ namespace NetworkCommsDotNet
         /// Removes all delegates for the provided packet type
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public static void RemoveAllPacketHandlers(string packetTypeStr)
+        public void RemoveAllPacketHandlers(string packetTypeStr)
         {
             throw new NotImplementedException();
         }
@@ -419,7 +702,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Removes all delegates for all packet types
         /// </summary>
-        public static void RemoveAllPacketHandlers()
+        public void RemoveAllPacketHandlers()
         {
             throw new NotImplementedException();
         }
@@ -428,7 +711,7 @@ namespace NetworkCommsDotNet
         /// Add a connection specific shutdown delegate
         /// </summary>
         /// <param name="handlerToAppend"></param>
-        public void AppendShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToAppend)
+        public void AppendShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToAppend)
         {
             lock (delegateLocker)
             {
@@ -445,7 +728,7 @@ namespace NetworkCommsDotNet
         /// Remove a connection specific shutdown delegate.
         /// </summary>
         /// <param name="handlerToRemove"></param>
-        public void RemoveShutdownHandler(NetworkComms.ConnectionShutdownDelegate handlerToRemove)
+        public void RemoveShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToRemove)
         {
             lock (delegateLocker)
             {
@@ -714,7 +997,9 @@ namespace NetworkCommsDotNet
     {
         Undefined,
         TCP,
-        UDPUnmanaged,
+        //TCPEncrypted,
+
+        UDP,
 
         //We may support others in future such as SSH, FTP, SCP etc.
     }

@@ -11,6 +11,11 @@ namespace NetworkCommsDotNet
     {
         UdpClient udpClient;
 
+        public UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPLevel level, bool establishIfRequired = true)
+        {
+            throw new NotImplementedException();
+        }
+
         protected UDPConnection(ConnectionInfo connectionInfo)
             : base(connectionInfo)
         {
@@ -46,5 +51,12 @@ namespace NetworkCommsDotNet
         {
             throw new NotImplementedException();
         }
+    }
+
+    [Flags]
+    public enum UDPLevel
+    {
+        None = 0x0,
+	    EstablishHandshake = 0x1,
     }
 }

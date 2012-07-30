@@ -45,11 +45,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// The IP networkComms is operating on
-        /// </summary>
-        static string[] listeningIPs = null;
-
-        /// <summary>
         /// The preferred IP prefixs if network comms may try to auto select the ip address
         /// </summary>
         static string[] preferredIPPrefixs = null;
@@ -74,37 +69,20 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Another way of selecting the desired adaptor is by name
         /// </summary>
-        static string[] preferredAdaptorNames = null;
+        static string[] allowedAdaptorNames = null;
 
         /// <summary>
         /// If a prefered adaptor name is provided, i.e. eth0, en0 etc. networkComms.net will try to listen on that adaptor.
         /// </summary>
-        public static string[] PreferredAdaptorNames
+        public static string[] AllowedAdaptorNames
         {
-            get { return preferredAdaptorNames; }
+            get { return allowedAdaptorNames; }
             set
             {
                 if (isListening || commsInitialised)
                     throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
 
-                preferredAdaptorNames = value;
-            }
-        }
-
-        /// <summary>
-        /// Get the localIP as detected by network comms. If an incorrect IP is being returned
-        /// set the IP on startup, specify PreferredIPPrefix or PreferredAdaptorName. If listening on multiple adaptors
-        /// this getter on returns whatever is chosen as the primary ip, consider AllLocalIPs().
-        /// </summary>
-        public static string[] ListeningIPs
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-            set
-            {
-                throw new NotImplementedException();
+                allowedAdaptorNames = value;
             }
         }
 
@@ -112,7 +90,7 @@ namespace NetworkCommsDotNet
         /// Returns all possible ipV4 addresses. Considers networkComms.PreferredIPPrefix and networkComms.PreferredAdaptorName. If preferredIPPRefix has been set ranks be descending preference. i.e. Most preffered at [0].
         /// </summary>
         /// <returns></returns>
-        public static string[] AllIPs()
+        public static List<IPAddress> AllAllowedLocalIPs()
         {
             //This is probably the most awesome linq expression ever
             //It loops through every known network adaptor and tries to pull out any 
@@ -125,7 +103,7 @@ namespace NetworkCommsDotNet
                         //First we need to select interfaces that contain address information
                     (from inside in current.GetIPProperties().UnicastAddresses
                      where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
-                        (preferredAdaptorNames == null ? true :  preferredAdaptorNames.Contains(current.Id))
+                        (allowedAdaptorNames == null ? true :  allowedAdaptorNames.Contains(current.Id))
                      //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))  
                      select inside).Count() > 0
                     //We only want adaptors which are operational
@@ -135,10 +113,10 @@ namespace NetworkCommsDotNet
                         //Once we have adaptors that contain address information we are after the address
                     from inside in current.GetIPProperties().UnicastAddresses
                     where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
-                        (preferredAdaptorNames == null ? true : preferredAdaptorNames.Contains(current.Id))
+                        (allowedAdaptorNames == null ? true : allowedAdaptorNames.Contains(current.Id))
                     //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
-                    select inside.Address.ToString()
-                    ).ToArray()).Aggregate(new string[] { "" }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
+                    select inside.Address
+                    ).ToArray()).Aggregate(new IPAddress[] { IPAddress.None }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
                     {
                         //If we have no preffered addresses we just return a default
                         if (preferredIPPrefixs == null)
@@ -147,12 +125,12 @@ namespace NetworkCommsDotNet
                         {
                             //We can check the preffered and return the index at which the IP occurs
                             for (int i = 0; i < preferredIPPrefixs.Length; i++)
-                                if (ip.StartsWith(preferredIPPrefixs[i])) return i;
+                                if (ip.ToString().StartsWith(preferredIPPrefixs[i])) return i;
 
                             //If there was no match for this IP in the preffered IP range we just return maxValue
                             return int.MaxValue;
                         }
-                    }).Where(ip => { return ip != ""; }).ToArray();
+                    }).Where(ip => { return ip != IPAddress.None; }).ToList();
         }
 
         /// <summary>
@@ -186,26 +164,26 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The port networkComms is operating on
         /// </summary>
-        static int commsPort = 10000;
+        static int defaultListenPort = 10000;
 
         /// <summary>
         /// The port networkComms is operating on
         /// </summary>
-        public static int CommsPort
+        public static int DefaultListenPort
         {
-            get { return commsPort; }
+            get { return defaultListenPort; }
             set
             {
                 //Need a quick check to see if we are already listening before trying to change the comms port.
                 lock (globalDictAndDelegateLocker)
                 {
                     //If we are trying to set the port to it's current value then nothing needs to happen.
-                    if (value != commsPort)
+                    if (value != defaultListenPort)
                     {
                         if (isListening)
                             throw new CommsSetupException("Unable to change CommsPort once already listening. Shutdown comms, change port and restart.");
 
-                        commsPort = value;
+                        defaultListenPort = value;
                     }
                 }
             }
@@ -408,7 +386,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Networkcomms.net can listen on a single interface (IP) or all interfaces. Default is single interface.
         /// </summary>
-        internal static bool listenOnAllInterfaces = false;
+        internal static bool listenOnAllAllowedInterfaces = false;
 
         /// <summary>
         /// Used for switching between async and sync connectionListen modes. Default is false. No noticable performance difference between the two modes.
@@ -428,15 +406,15 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Used for switching between listening on a single interface or all interfaces. Default is false (single interface).
         /// </summary>
-        public static bool ListenOnAllInterfaces
+        public static bool ListenOnAllAllowedInterfaces
         {
-            get { return listenOnAllInterfaces; }
+            get { return listenOnAllAllowedInterfaces; }
             set
             {
                 if (isListening || commsInitialised)
                     throw new CommsSetupException("Unable to change listenOnAllInterfaces once already initialised. Shutdown comms, change mode and restart.");
 
-                listenOnAllInterfaces = value;
+                listenOnAllAllowedInterfaces = value;
             }
         }
 
@@ -627,12 +605,13 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Delegate method for connection shutdown delegates.
         /// </summary>
-        public delegate void ConnectionShutdownDelegate(ConnectionInfo connectionInfo);
+        public delegate void ConnectionEstablishShutdownDelegate(ConnectionInfo connectionInfo);
 
         /// <summary>
         /// A multicast delegate pointer for any connection shutdown delegates.
         /// </summary>
-        internal static ConnectionShutdownDelegate globalConnectionShutdownDelegates;
+        internal static ConnectionEstablishShutdownDelegate globalConnectionShutdownDelegates;
+        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegates;
         #endregion
 
         #region Timeouts
@@ -721,6 +700,7 @@ namespace NetworkCommsDotNet
         internal static readonly ICompress internalFixedCompressor = WrappersHelper.Instance.GetCompressor<NullCompressor>();
 
         internal static SendReceiveOptions internalFixedSendReceiveOptions { get; set; }
+        public static SendReceiveOptions DefaultFixedSendReceiveOptions { get; set; }
 
         /// <summary>
         /// Default serializer and compressor for sending and receiving in the absence of specific values
@@ -926,7 +906,7 @@ namespace NetworkCommsDotNet
         /// Add a new shutdown delegate which will be called for every connection as it is closes.
         /// </summary>
         /// <param name="connectionShutdownDelegate"></param>
-        public static void AppendGlobalConnectionCloseHandler(ConnectionShutdownDelegate connectionShutdownDelegate)
+        public static void AppendGlobalConnectionCloseHandler(ConnectionEstablishShutdownDelegate connectionShutdownDelegate)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -943,7 +923,7 @@ namespace NetworkCommsDotNet
         /// Remove a shutdown delegate which will be called for every connection as it is closes.
         /// </summary>
         /// <param name="connectionShutdownDelegate"></param>
-        public static void RemoveGlobalConnectionCloseHandler(ConnectionShutdownDelegate connectionShutdownDelegate)
+        public static void RemoveGlobalConnectionCloseHandler(ConnectionEstablishShutdownDelegate connectionShutdownDelegate)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -958,6 +938,46 @@ namespace NetworkCommsDotNet
                 else
                 {
                     if (loggingEnabled) logger.Info("Handlers remain for shutdown connections.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Add a new shutdown delegate which will be called for every connection as it is closes.
+        /// </summary>
+        /// <param name="connectionShutdownDelegate"></param>
+        public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                if (globalConnectionEstablishDelegates == null)
+                    globalConnectionEstablishDelegates = connectionEstablishDelegate;
+                else
+                    globalConnectionEstablishDelegates += connectionEstablishDelegate;
+
+                if (loggingEnabled) logger.Info("Added global connection establish delegate.");
+            }
+        }
+
+        /// <summary>
+        /// Remove a shutdown delegate which will be called for every connection as it is closes.
+        /// </summary>
+        /// <param name="connectionShutdownDelegate"></param>
+        public static void RemoveGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                globalConnectionEstablishDelegates -= connectionEstablishDelegate;
+
+                if (loggingEnabled) logger.Info("Removed global connection establish delegate.");
+
+                if (globalConnectionEstablishDelegates == null)
+                {
+                    if (loggingEnabled) logger.Info("No handlers remain for establish connections.");
+                }
+                else
+                {
+                    if (loggingEnabled) logger.Info("Handlers remain for establish connections.");
                 }
             }
         }
@@ -1843,9 +1863,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="connection"></param>
         /// <returns></returns>
-        internal static bool RemoveConnectionReference(Connection connection)
+        internal static bool RemoveConnectionReference(Connection connection, bool maintainConnectionInfoHistory = true)
         {
-            if (connection.ConnectionInfo.ConnectionEstablished || !connection.ConnectionInfo.ConnectionShutdown)
+            //We don't have the connection identifier until the connection has been established.
+            if (!connection.ConnectionInfo.ConnectionEstablished)
+                return false;
+
+            if (connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
 
             bool returnValue = false;
@@ -1868,15 +1892,18 @@ namespace NetworkCommsDotNet
                 }
 
                 //Keep a reference of the connection for possible debugging later
-                if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                if (maintainConnectionInfoHistory)
                 {
-                    if (oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                        oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
+                    if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                    {
+                        if (oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
+                        else
+                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
+                    }
                     else
-                        oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
+                        oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
                 }
-                else
-                    oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
 
                 if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
                         allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
@@ -1936,6 +1963,23 @@ namespace NetworkCommsDotNet
                     }
                     else
                         allConnectionsByEndPoint.Add(connection.ConnectionInfo.RemoteEndPoint, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update the endPoint reference for the provided connection with the newEndPoint. Just returns if there is no change
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <param name="newEndPoint"></param>
+        internal static void UpdateConnectionByEndPointReference(Connection connection, IPEndPoint newEndPoint)
+        {
+            if (connection.ConnectionInfo.RemoteEndPoint != newEndPoint)
+            {
+                lock (globalDictAndDelegateLocker)
+                {
+                    RemoveConnectionReference(connection, false);
+                    AddConnectionByEndPointReference(connection);
                 }
             }
         }

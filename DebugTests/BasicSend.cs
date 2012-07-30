@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
+using System.Threading;
 
 namespace DebugTests
 {
@@ -14,17 +15,17 @@ namespace DebugTests
     {
         public static void RunExample()
         {
-            NetworkComms.ListenOnAllInterfaces = true;
+            NetworkComms.ListenOnAllAllowedInterfaces = true;
 
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
-            NetworkComms.AppendIncomingPacketHandler<string>("Message", (header, conectionId, message) => { Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP.ToString() + " saying '" + message  +"'.");});
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming message from " + connectionInfo.ToString() + " saying '" + message  +"'.");});
             
             //Print the ip address and comms port we are listening on.
             //If the ip address has not been auto detected correctly, either
             //  1 - Set the LocalIP property manually before calling NetworkComms.AppendIncomingPacketHandler
             //  2 - Specify some ip prefixs to help the auto detected by setting the NetworkComms.PreferredIPPrefix property
-            Console.WriteLine("Listening for messages on {0}:{1} ({2})", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString(), NetworkComms.AllLocalIPs().Length);
+            Console.WriteLine("Listening for messages on {0}:{1} ({2})", NetworkComms.AllAllowedLocalIPs()[0], NetworkComms.DefaultListenPort, NetworkComms.AllAllowedLocalIPs().Count);
             
             //We can loop here to allow any number of test messages to be sent and received
             while (true)

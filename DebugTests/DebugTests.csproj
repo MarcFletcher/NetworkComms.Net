@@ -49,10 +49,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AliveTest.cs" />
     <Compile Include="BasicSend.cs" />
     <Compile Include="DebugTest.cs" />
-    <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

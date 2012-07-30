@@ -32,7 +32,7 @@ namespace NetworkCommsDotNet
         /// The type of this connection
         /// </summary>
         [ProtoMember(1)]
-        public ConnectionType ConnectionType { get; protected set; }
+        public ConnectionType ConnectionType { get; internal set; }
 
         /// <summary>
         /// The DateTime corresponding to the creation time of this connection object
@@ -42,7 +42,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// True if connection was originally established by remote
         /// </summary>
-        public bool ServerSide { get; protected set; }
+        public bool ServerSide { get; internal set; }
 
         /// <summary>
         /// The DateTime corresponding to the creation time of this connection object
@@ -104,13 +104,25 @@ namespace NetworkCommsDotNet
         /// </summary>
         private ConnectionInfo() { }
 
+        public ConnectionInfo(IPEndPoint remoteEndPoint)
+        {
+            this.RemoteEndPoint = remoteEndPoint;
+            this.ConnectionCreationTime = DateTime.Now;
+        }
+
+        public ConnectionInfo(string ipAddress, int port)
+        {
+            this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(ipAddress),port);
+            this.ConnectionCreationTime = DateTime.Now;
+        }
+
         /// <summary>
         /// Create a connectionInfo object for a new connection
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="clientIP"></param>
         /// <param name="localPort"></param>
-        public ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint)
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint)
         {
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
@@ -123,7 +135,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="localNetworkIdentifier"></param>
         /// <param name="localEndPoint"></param>
-        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
+        internal ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
         {
             this.ConnectionType = connectionType;
             this.NetworkIdentifier = localNetworkIdentifier;
@@ -148,13 +160,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="remoteEndPoint"></param>
-        public void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+        internal void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
         {
             NetworkIdentifier = remoteNetworkIdentifier;
-            LocalEndPoint = localEndPoint;
             RemoteEndPoint = remoteEndPoint;
-
-            //We may need to update the networkComms references at this point as well
         }
 
         /// <summary>
