@@ -108,6 +108,8 @@ namespace NetworkCommsDotNet
         {
             if (tcpClient == null) ConnectTCPClient();
 
+            ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
+
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
             tcpClientNetworkStream = tcpClient.GetStream();
 
@@ -131,10 +133,14 @@ namespace NetworkCommsDotNet
             //Start listening for incoming data
             StartIncomingDataListen();
 
+            IPEndPoint existingListener = TCPConnection.ExistingConnectionListener(ConnectionInfo.LocalEndPoint.Address);
+
             //If we are server side and we have just received an incoming connection we need to return a conneciton id
             //This id will be used in all future connections from this machine
             if (ConnectionInfo.ServerSide)
             {
+                if (existingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
+
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
                 //Wait for the client to send its identification
@@ -149,7 +155,7 @@ namespace NetworkCommsDotNet
 
                 //Once we have the clients id we send our own
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, NetworkComms.DefaultListenPort)), NetworkComms.internalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
             }
             else
             {
@@ -158,11 +164,15 @@ namespace NetworkCommsDotNet
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (NetworkComms.isListening ? NetworkComms.DefaultListenPort : 0))), NetworkComms.internalFixedSendReceiveOptions);
+
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
                 if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+
+                //If we are client side we still update the localEndPoint for this connection to reflect what the remote end sees
+                if (existingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(existingListener);
 
                 if (connectionSetupException)
                 {
@@ -176,7 +186,7 @@ namespace NetworkCommsDotNet
             //A quick idiot test
             if (ConnectionInfo == null) throw new ConnectionSetupException("ConnectionInfo should never be null at this point.");
 
-            if (ConnectionInfo.NetworkIdentifier == null || ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
+            if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                 throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
 
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
@@ -198,7 +208,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing TCP client with " + ConnectionInfo);
 
                 //We now connect to our target
-                tcpClient = new TcpClient();
+                tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));
 
                 bool connectSuccess = true;
 

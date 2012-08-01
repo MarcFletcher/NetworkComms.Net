@@ -32,17 +32,7 @@ namespace NetworkCommsDotNet
             throw new NotImplementedException();
         }
 
-        public override void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void SendPacket(Packet packet)
+        protected override void SendPacketInternal(Packet packet)
         {
             throw new NotImplementedException();
         }

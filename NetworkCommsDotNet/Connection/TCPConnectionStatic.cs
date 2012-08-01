@@ -43,7 +43,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Accept new TCP connections on default IP's and Port's
         /// </summary>
-        public static void AddNewLocalEndPointListen()
+        public static void AddNewLocalConnectionListener()
         {
             List<IPAddress> localIPs = NetworkComms.AllAllowedLocalIPs();
 
@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            AddNewLocalEndPointListen(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
+                            AddNewLocalConnectionListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
                         }
                         catch (CommsSetupException)
                         {
@@ -71,14 +71,14 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                AddNewLocalEndPointListen(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
+                AddNewLocalConnectionListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
         }
 
         /// <summary>
         /// Accept new TCP connections on specified IP and port
         /// </summary>
         /// <param name="newLocalEndPoint"></param>
-        public static void AddNewLocalEndPointListen(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void AddNewLocalConnectionListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
             {
@@ -124,12 +124,12 @@ namespace NetworkCommsDotNet
         /// Accept new TCP connections on specified IP's and port's
         /// </summary>
         /// <param name="localEndPoint"></param>
-        public static void AddNewLocalEndPointListen(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        public static void AddNewLocalConnectionListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    AddNewLocalEndPointListen(endPoint, useRandomPortFailOver);
+                    AddNewLocalConnectionListener(endPoint, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -137,6 +137,17 @@ namespace NetworkCommsDotNet
                 Shutdown();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Returns an endPoint corresponding to a possible listener on the provided ipAddress. If not listening returns null.
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <returns></returns>
+        public static IPEndPoint ExistingConnectionListener(IPAddress ipAddress)
+        {
+            lock (staticTCPConnectionLocker)
+                return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
         }
 
         /// <summary>

@@ -530,14 +530,12 @@ namespace NetworkCommsDotNet
         private class PacketTypeUnwrapper
         {
             string packetTypeStr;
-            public ICompress Compressor { get; private set; }
-            public ISerialize Serializer { get; private set; }
+            public SendReceiveOptions Options { get; private set; }
 
-            public PacketTypeUnwrapper(string packetTypeStr, ICompress compressor, ISerialize serializer)
+            public PacketTypeUnwrapper(string packetTypeStr, SendReceiveOptions options)
             {
                 this.packetTypeStr = packetTypeStr;
-                this.Compressor = compressor;
-                this.Serializer = serializer;
+                this.Options = options;
             }
         }
 
@@ -561,7 +559,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public interface IPacketTypeHandlerDelegateWrapper : IEquatable<IPacketTypeHandlerDelegateWrapper>
         {
-            object DeSerialize(byte[] incomingBytes, ISerialize serializer, ICompress compressor);
+            object DeSerialize(byte[] incomingBytes, SendReceiveOptions options);
 
             void Process(PacketHeader packetHeader, ConnectionInfo connectionInfo, object obj);
             bool EqualsDelegate(Delegate other);
@@ -576,9 +574,9 @@ namespace NetworkCommsDotNet
                 this.innerDelegate = packetHandlerDelegate;
             }
 
-            public object DeSerialize(byte[] incomingBytes, ISerialize serializer, ICompress compressor)
+            public object DeSerialize(byte[] incomingBytes, SendReceiveOptions options)
             {
-                return serializer.DeserialiseDataObject<T>(incomingBytes, compressor);
+                return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.Compressor);
             }
 
             public void Process(PacketHeader packetHeader, ConnectionInfo connectionInfo, object obj)
@@ -690,47 +688,18 @@ namespace NetworkCommsDotNet
 
         private static Dictionary<Type, ISerialize> allKnownSerializers = WrappersHelper.Instance.GetAllSerializes();
         private static Dictionary<Type, ICompress> allKnownCompressors = WrappersHelper.Instance.GetAllCompressors();
-        
+
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50kb)
         /// Given the typical header size is 40kb we might as well not compress these objects.
         /// </summary>
-        internal static readonly ISerialize internalFixedSerializer = WrappersHelper.Instance.GetSerializer<ProtobufSerializer>();
-        internal static readonly ICompress internalFixedCompressor = WrappersHelper.Instance.GetCompressor<NullCompressor>();
-
-        internal static SendReceiveOptions internalFixedSendReceiveOptions { get; set; }
-        public static SendReceiveOptions DefaultFixedSendReceiveOptions { get; set; }
+        internal static SendReceiveOptions InternalFixedSendReceiveOptions { get; set; }
 
         /// <summary>
-        /// Default serializer and compressor for sending and receiving in the absence of specific values
+        /// Default options for sending and receiving in the absence of specific values
         /// </summary>
-        static ISerialize defaultSerializer = WrappersHelper.Instance.GetSerializer<ProtobufSerializer>();
-        static ICompress defaultCompressor = WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>();
-
-        /// <summary>
-        /// Get or set the default serializer for sending and receiving objects
-        /// </summary>
-
-        /// <summary>
-        /// Get or set the default serializer for sending and receiving objects
-        /// </summary>
-        [Obsolete]
-        public static ISerialize DefaultSerializer
-        {
-            get { return defaultSerializer; }
-            set { defaultSerializer = value; }
-        }
-                
-        /// <summary>
-        /// Get or set the default compressor for sending and receiving objects
-        /// </summary>
-        [Obsolete]
-        public static ICompress DefaultCompressor
-        {
-            get { return defaultCompressor; }
-            set { defaultCompressor = value; }
-        }
+        public static SendReceiveOptions DefaultSendReceiveOptions { get; set; }
         #endregion
 
         #region Public Usage Methods
@@ -943,7 +912,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a new shutdown delegate which will be called for every connection as it is closes.
+        /// Add a new establish delegate which will be called for every connection once it has been succesfully established
         /// </summary>
         /// <param name="connectionShutdownDelegate"></param>
         public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
@@ -960,7 +929,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Remove a shutdown delegate which will be called for every connection as it is closes.
+        /// Remove a connection establish delegate
         /// </summary>
         /// <param name="connectionShutdownDelegate"></param>
         public static void RemoveGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
@@ -1001,11 +970,11 @@ namespace NetworkCommsDotNet
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
                         //Make sure if we already have an existing entry that it matches with the provided
-                        if (globalIncomingPacketUnwrappers[packetTypeStr].Compressor != sendReceiveOptions.Compressor || globalIncomingPacketUnwrappers[packetTypeStr].Serializer != sendReceiveOptions.Serializer)
+                        if (globalIncomingPacketUnwrappers[packetTypeStr].Options != sendReceiveOptions)
                             throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
                     }
                     else
-                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions.Compressor, sendReceiveOptions.Serializer));
+                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
                 }
                 else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.Compressor != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
@@ -1048,7 +1017,7 @@ namespace NetworkCommsDotNet
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
         public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
         {
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, internalFixedSendReceiveOptions, enableAutoListen);
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, InternalFixedSendReceiveOptions, enableAutoListen);
         }
 
         /// <summary>
@@ -1135,9 +1104,9 @@ namespace NetworkCommsDotNet
         /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
         /// <param name="sourceConnectionId">The source connection id</param>
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        public static void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes)
+        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes)
         {
-            TriggerPacketHandler(packetHeader, connectionInfo, incomingObjectBytes, null, null);
+            TriggerGlobalPacketHandler(packetHeader, connectionInfo, incomingObjectBytes, null);
         }
 
         /// <summary>
@@ -1148,9 +1117,74 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
         /// <param name="serializer">Override serializer</param>
         /// <param name="compressor">Override compressor</param>
-        public static void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, ISerialize serializer, ICompress compressor)
+        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
         {
-            throw new NotImplementedException();
+            try
+            {
+                //We take a copy of the handlers list incase it is modified outside of the lock
+                List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
+                lock (globalDictAndDelegateLocker)
+                    if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
+                        handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(globalIncomingPacketHandlers[packetHeader.PacketType]);
+
+                if (handlersCopy == null && !IgnoreUnknownPacketTypes)
+                {
+                    //We may get here if we have not added any custom delegates for reserved packet types
+                    if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
+                    {
+                        //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
+                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerError_" + packetHeader.PacketType);
+                    }
+
+                    return;
+                }
+                else if (handlersCopy == null && IgnoreUnknownPacketTypes)
+                    //If we have received and unknown packet type and we are choosing to ignore them we just finish here
+                    return;
+                else
+                {
+                    //Idiot check
+                    if (handlersCopy.Count == 0)
+                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
+
+                    //We decide which serializer and compressor to use
+                    if (options == null)
+                    {
+                        if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                            options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
+                        else
+                            options = DefaultSendReceiveOptions;
+                    }
+
+                    //Deserialise the object only once
+                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
+
+                    //Pass the data onto the handler and move on.
+                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
+
+                    //Pass the object to all necessary delgates
+                    //We need to use a copy because we may modify the original delegate list during processing
+                    foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
+                    {
+                        try
+                        {
+                            wrapper.Process(packetHeader, connectionInfo, returnObject);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
+            }
         }
         #endregion
 
@@ -1666,7 +1700,9 @@ namespace NetworkCommsDotNet
         {
             NetworkLoadUpdateWindowMS = 200;
             InterfaceLinkSpeed = 100000000;
-            internalFixedSendReceiveOptions = new SendReceiveOptions();
+
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<NullCompressor>(), ThreadPriority.Normal);
+            DefaultSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>(), ThreadPriority.Normal);
         }
 
         /// <summary>
@@ -1934,17 +1970,19 @@ namespace NetworkCommsDotNet
         /// Adds a reference to the provided connection within networkComms. If a connection to the same endPoint already exists 
         /// </summary>
         /// <param name="connection"></param>
-        internal static void AddConnectionByEndPointReference(Connection connection)
+        internal static void AddConnectionByEndPointReference(Connection connection, IPEndPoint endPointToUse = null)
         {
             if (connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
+            if (endPointToUse == null) endPointToUse = connection.ConnectionInfo.RemoteEndPoint;
+
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)
             {
-                if (ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType))
+                if (ConnectionExists(endPointToUse, connection.ConnectionInfo.ConnectionType))
                 {
-                    if (RetrieveConnection(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType) != connection)
+                    if (RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType) != connection)
                         throw new ConnectionSetupException("A difference connection already exists with " + connection.ConnectionInfo);
                     else
                     {
@@ -1954,15 +1992,15 @@ namespace NetworkCommsDotNet
                 else
                 {
                     //Add reference to the endPoint dictionary
-                    if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
+                    if (allConnectionsByEndPoint.ContainsKey(endPointToUse))
                     {
-                        if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                        if (allConnectionsByEndPoint[endPointToUse].ContainsKey(connection.ConnectionInfo.ConnectionType))
                             throw new Exception("Idiot check fail. The method ConnectionExists should have prevented execution getting here!!");
                         else
-                            allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Add(connection.ConnectionInfo.ConnectionType, connection);
+                            allConnectionsByEndPoint[endPointToUse].Add(connection.ConnectionInfo.ConnectionType, connection);
                     }
                     else
-                        allConnectionsByEndPoint.Add(connection.ConnectionInfo.RemoteEndPoint, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
+                        allConnectionsByEndPoint.Add(endPointToUse, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
                 }
             }
         }
@@ -1974,12 +2012,12 @@ namespace NetworkCommsDotNet
         /// <param name="newEndPoint"></param>
         internal static void UpdateConnectionByEndPointReference(Connection connection, IPEndPoint newEndPoint)
         {
-            if (connection.ConnectionInfo.RemoteEndPoint != newEndPoint)
+            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newEndPoint))
             {
                 lock (globalDictAndDelegateLocker)
                 {
                     RemoveConnectionReference(connection, false);
-                    AddConnectionByEndPointReference(connection);
+                    AddConnectionByEndPointReference(connection, newEndPoint);
                 }
             }
         }
@@ -1993,7 +2031,7 @@ namespace NetworkCommsDotNet
             if (!connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionSetupException("Connection reference by identifier should only be added once a connection is established. This is to prevent duplicate connections.");
 
-            if (connection.ConnectionInfo.NetworkIdentifier == null || connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
+            if (connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                 throw new ConnectionSetupException("Should not be calling AddConnectionByIdentifierReference unless the connection remote identifier has been set.");
 
             lock (globalDictAndDelegateLocker)

@@ -62,15 +62,20 @@ namespace NetworkCommsDotNet
         {
             get 
             {
-                if (ConnectionEstablished)
-                    return new ShortGuid(NetworkIdentifierStr);
-                else
-                    throw new ConnectionSetupException("Unable to access RemoteNetworkIdentifier until connection is successfully established.");
+                if (NetworkIdentifierStr == null || NetworkIdentifierStr == "") return ShortGuid.Empty;
+                else return new ShortGuid(NetworkIdentifierStr);
             }
             private set { NetworkIdentifierStr = value; }
         }
 
         [ProtoMember(3)]
+        string localEndPointIPStr;
+        [ProtoMember(4)]
+        int localEndPointPort;
+
+        [ProtoMember(5)]
+        public bool IsConnectable { get; private set; }
+
         public IPEndPoint LocalEndPoint { get; private set; }
 
         public IPEndPoint RemoteEndPoint { get; private set; }
@@ -135,11 +140,25 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="localNetworkIdentifier"></param>
         /// <param name="localEndPoint"></param>
-        internal ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint)
+        internal ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
         {
             this.ConnectionType = connectionType;
             this.NetworkIdentifier = localNetworkIdentifier;
             this.LocalEndPoint = localEndPoint;
+            this.IsConnectable = isConnectable;
+        }
+
+        [ProtoBeforeSerialization]
+        private void OnSerialise()
+        {
+            localEndPointIPStr = LocalEndPoint.Address.ToString();
+            localEndPointPort = LocalEndPoint.Port;
+        }
+
+        [ProtoAfterDeserialization]
+        private void OnDeserialise()
+        {
+            LocalEndPoint = new IPEndPoint(IPAddress.Parse(localEndPointIPStr), localEndPointPort);
         }
 
         /// <summary>
@@ -151,8 +170,13 @@ namespace NetworkCommsDotNet
             ConnectionEstablished = true;
             ConnectionEstablishedTime = DateTime.Now;
 
-            if (NetworkIdentifier == null || NetworkIdentifier == ShortGuid.Empty)
+            if (NetworkIdentifier == ShortGuid.Empty)
                 throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
+        }
+
+        internal void UpdateLocalEndPointInfo(IPEndPoint localEndPoint)
+        {
+            this.LocalEndPoint = localEndPoint;
         }
 
         /// <summary>
@@ -160,10 +184,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="remoteEndPoint"></param>
-        internal void UpdateEndPointInfo(ShortGuid remoteNetworkIdentifier, IPEndPoint remoteEndPoint)
+        internal void UpdateInfo(ConnectionInfo handshakeInfo)
         {
-            NetworkIdentifier = remoteNetworkIdentifier;
-            RemoteEndPoint = remoteEndPoint;
+            NetworkIdentifier = handshakeInfo.NetworkIdentifier;
+            RemoteEndPoint = handshakeInfo.LocalEndPoint;
+            IsConnectable = handshakeInfo.IsConnectable;
         }
 
         /// <summary>
@@ -184,7 +209,7 @@ namespace NetworkCommsDotNet
                     returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
             }
 
-            return returnString;
+            return returnString.Trim();
         }
 
         internal void UpdateLastTrafficTime()

@@ -290,9 +290,23 @@ namespace NetworkCommsDotNet
         /// <param name="destinationIPAddress"></param>
         /// <param name="receiveConfirmationRequired"></param>
         /// <returns></returns>
-        protected override void SendPacket(Packet packet)
+        protected override void SendPacketInternal(Packet packet)
         {
-            throw new NotImplementedException();
+            //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
+            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions.Serializer, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+
+            tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
+            tcpClientNetworkStream.Write(packet.PacketData, 0, packet.PacketData.Length);
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
+
+            if (!tcpClient.Connected)
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+                throw new CommunicationException("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+            }
         }
 
         /// <summary>
@@ -322,16 +336,6 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 19);
             }
-        }
-
-        public override void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options)
-        {
-            throw new NotImplementedException();
         }
     }
 }

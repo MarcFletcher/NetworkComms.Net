@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
 using System.Threading;
+using System.Net;
 
 namespace DebugTests
 {
@@ -11,11 +12,12 @@ namespace DebugTests
     {
         public static void Go()
         {
-            if (false)
+            NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
+
+            if (true)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
-
-                TCPConnection.AddNewLocalEndPointListen();
+                TCPConnection.AddNewLocalConnectionListener();
 
                 Console.WriteLine("Listening on:");
                 foreach (var entry in TCPConnection.CurrentLocalEndPoints())
@@ -28,6 +30,7 @@ namespace DebugTests
             else
             {
                 TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.200", 10000));
+                Thread.Sleep(6000000);
             }
         }
     }

@@ -12,14 +12,32 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class SendReceiveOptions
     {
-        public ISerialize Serializer { get; set; }
-        public ICompress Compressor { get; set; }
+        public ISerialize Serializer { get; protected set; }
+        public ICompress Compressor { get; protected set; }
 
-        public bool ReceiveConfirmationRequired { get; set; }
+        public bool ReceiveConfirmationRequired { get; protected set; }
 
         //The priority with which this send recieve is dealt with
-        public ThreadPriority ReceiveHandlePriority { get; set; }
+        public ThreadPriority ReceiveHandlePriority { get; protected set; }
 
         //IEncrypt?
+
+        public SendReceiveOptions(bool receiveConfirmationRequired, ISerialize serializer, ICompress compressor, ThreadPriority receiveHandlePriority)
+        {
+            this.ReceiveConfirmationRequired = receiveConfirmationRequired;
+            this.Serializer = serializer;
+            this.Compressor = compressor;
+            this.ReceiveHandlePriority = receiveHandlePriority;
+        }
+
+        public override bool Equals(object obj)
+        {
+            SendReceiveOptions options = obj as SendReceiveOptions;
+            if (options == null) return false;
+            else
+            {
+                return options.Compressor == Compressor && options.Serializer == Serializer;
+            }
+        }
     }
 }

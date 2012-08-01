@@ -96,9 +96,11 @@ namespace NetworkCommsDotNet
         /// <param name="connectionInfo"></param>
         protected Connection(ConnectionInfo connectionInfo)
         {
-            ConnectionInfo = connectionInfo;
-            ConnectionDefaultSendReceiveOptions = NetworkComms.DefaultFixedSendReceiveOptions;
             dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+            packetBuilder = new ConnectionPacketBuilder();
+            
+            ConnectionInfo = connectionInfo;
+            ConnectionDefaultSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
 
             if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global comms shutdown has been initiated.");
 
@@ -133,6 +135,10 @@ namespace NetworkCommsDotNet
                 ConnectionInfo.SetEstablished();
                 NetworkComms.AddConnectionByIdentifierReference(this);
                 connectionEstablishWait.Set();
+
+                //Call the establish delegate if one is set
+                if (NetworkComms.globalConnectionEstablishDelegates != null)
+                    NetworkComms.globalConnectionEstablishDelegates(ConnectionInfo);
             }
             catch (SocketException e)
             {
@@ -263,17 +269,20 @@ namespace NetworkCommsDotNet
         public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, receiveConfirmationRequired, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject); }
 
         /// <summary>
-        /// Send the provided object with the provided options
-        /// </summary>
-        /// <param name="sendingPacketType"></param>
-        /// <param name="objectToSend"></param>
-        public abstract void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options);
-
-        /// <summary>
         /// Sends an empty packet using the provided packetType. Usefull for signalling.
         /// </summary>
         /// <param name="sendingPacketType"></param>
         public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
+
+        /// <summary>
+        /// Send the provided object with the provided options
+        /// </summary>
+        /// <param name="sendingPacketType"></param>
+        /// <param name="objectToSend"></param>
+        public void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
+        {
+            SendPacket(new Packet(sendingPacketType, objectToSend, options));
+        }
 
         /// <summary>
         /// Sends the provided object with the provided options and waits for return object.
@@ -286,7 +295,52 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">Object to send</param>
         /// <param name="options">Send receive options to use</param>
         /// <returns>The expected return object</returns>
-        public abstract returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options);
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options)
+        {
+            returnObjectType returnObject = default(returnObjectType);
+
+            bool remotePeerDisconnectedDuringWait = false;
+            AutoResetEvent returnWaitSignal = new AutoResetEvent(false);
+
+            #region SendReceiveDelegate
+            NetworkComms.PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnectionInfo, incomingObject) =>
+            {
+                returnObject = incomingObject;
+                returnWaitSignal.Set();
+            };
+
+            //We use the following delegate to quickly force a response timeout if the remote end disconnects
+            NetworkComms.ConnectionEstablishShutdownDelegate SendReceiveShutDownDelegate = (sourceConnectionInfo) =>
+            {
+                remotePeerDisconnectedDuringWait = true;
+                returnObject = default(returnObjectType);
+                returnWaitSignal.Set();
+            };
+            #endregion
+
+            if (options == null) options = NetworkComms.DefaultSendReceiveOptions;
+
+            AppendShutdownHandler(SendReceiveShutDownDelegate);
+            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, options, false);
+
+            Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, options);
+            SendPacket(sendPacket);
+
+            //We wait for the return data here
+            if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
+            {
+                RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
+                throw new ExpectedReturnTimeoutException("Timeout occurred after " + returnPacketTimeOutMilliSeconds + "ms waiting for response packet of type '" + expectedReturnPacketTypeStr + "'.");
+            }
+
+            RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
+            RemoveShutdownHandler(SendReceiveShutDownDelegate);
+
+            if (remotePeerDisconnectedDuringWait)
+                throw new ExpectedReturnTimeoutException("Remote end closed connection before data was successfully returned.");
+            else
+                return returnObject;
+        }
 
         /// <summary>
         /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
@@ -310,7 +364,7 @@ namespace NetworkCommsDotNet
             {
                 try
                 {
-                    bool returnValue = SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), false, Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, false, ConnectionDefaultSendReceiveOptions);
+                    bool returnValue = SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, false, ConnectionDefaultSendReceiveOptions);
 
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + (DateTime.Now - startTime).TotalMilliseconds + "ms");
 
@@ -324,7 +378,134 @@ namespace NetworkCommsDotNet
             }   
         }
 
-        protected abstract void SendPacket(Packet packet);
+        protected void SendPacket(Packet packet)
+        {
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
+
+            //Multiple threads may try to send packets at the same time so wait one at a time here
+            lock (sendLocker)
+            {
+                //We don't allow sends on a closed connection
+                if (ConnectionInfo.ConnectionShutdown) throw new CommunicationException("Attempting to send packet on connection which has been closed or is currently closing.");
+
+                string confirmationCheckSum = "";
+                AutoResetEvent confirmationWaitSignal = new AutoResetEvent(false);
+                bool remotePeerDisconnectedDuringWait = false;
+
+                #region Delegates
+                //Specify a delegate we may use if we require receive confirmation
+                NetworkComms.PacketHandlerCallBackDelegate<string> confirmationDelegate = (packetHeader, connectionInfo, incomingString) =>
+                {
+                    //if (connectionInfo.NetworkIdentifier == this.ConnectionInfo.NetworkIdentifier && connectionInfo.RemoteEndPoint == this.ConnectionInfo.RemoteEndPoint)
+                    //{
+                    confirmationCheckSum = incomingString;
+                    confirmationWaitSignal.Set();
+                    //}
+                };
+
+                //We use the following delegate to quickly force a response timeout if the remote end disconnects during a send/wait
+                NetworkComms.ConnectionEstablishShutdownDelegate ConfirmationShutDownDelegate = (connectionInfo) =>
+                {
+                    //if (connectionInfo.NetworkIdentifier == this.ConnectionInfo.NetworkIdentifier && connectionInfo.RemoteEndPoint == this.ConnectionInfo.RemoteEndPoint)
+                    //{
+                    remotePeerDisconnectedDuringWait = true;
+                    confirmationWaitSignal.Set();
+                    //}
+                };
+                #endregion
+
+                try
+                {
+                    #region Prepare For Confirmation and Possible Validation
+                    //Add the confirmation handler if required
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    {
+                        AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions, false);
+                        AppendShutdownHandler(ConfirmationShutDownDelegate);
+                    }
+
+                    //If this packet is not a checkSumFailResend
+                    if (NetworkComms.EnablePacketCheckSumValidation && packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
+                    {
+                        //We only want to keep packets when they are under some provided theshold
+                        //otherwise this becomes a quick 'memory leak'
+                        if (packet.PacketData.Length < NetworkComms.checkSumMismatchSentPacketCacheMaxByteLimit)
+                        {
+                            lock (sentPacketsLocker)
+                                if (!sentPackets.ContainsKey(packet.PacketHeader.CheckSumHash))
+                                    sentPackets.Add(packet.PacketHeader.CheckSumHash, new OldSentPacket(packet));
+                        }
+                    }
+                    #endregion
+
+                    SendPacketInternal(packet);
+
+                    #region SentPackets Cleanup
+                    //If sent packets is greater than 40 we delete anything older than a minute
+                    lock (sentPacketsLocker)
+                    {
+                        if (sentPackets.Count > 40)
+                        {
+                            sentPackets = (from current in sentPackets.Values
+                                           where current.packet.PacketHeader.PacketCreationTime < DateTime.Now.AddMinutes(-1)
+                                           select new
+                                           {
+                                               key = current.packet.PacketHeader.CheckSumHash,
+                                               value = current
+                                           }).ToDictionary(p => p.key, p => p.value);
+                        }
+                    }
+                    #endregion
+
+                    #region Wait For Confirmation If Required
+                    //If we required receive confirmation we now wait for that confirmation
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... waiting for receive confirmation packet.");
+
+                        if (!(confirmationWaitSignal.WaitOne(NetworkComms.packetConfirmationTimeoutMS)))
+                            throw new ConfirmationTimeoutException("Confirmation packet timeout.");
+
+                        if (remotePeerDisconnectedDuringWait)
+                            throw new ConfirmationTimeoutException("Remote end closed connection before confirmation packet was returned.");
+                        else
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... confirmation packet received.");
+                        }
+                    }
+                    #endregion
+
+                    //Update the traffic time as late as possible incase there is a problem
+                    ConnectionInfo.UpdateLastTrafficTime();
+                }
+                catch (ConfirmationTimeoutException)
+                {
+                    throw;
+                }
+                catch (CommunicationException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    throw new CommunicationException(ex.ToString());
+                }
+                finally
+                {
+                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    {
+                        //Cleanup our delegates
+                        RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate);
+                        RemoveShutdownHandler(ConfirmationShutDownDelegate);
+                    }
+                }
+            }
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
+        
+        }
+
+        protected abstract void SendPacketInternal(Packet packet);
 
         internal abstract void SendNullPacket();
 
@@ -373,7 +554,7 @@ namespace NetworkCommsDotNet
                         }
 
                         //We have enough for a header
-                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.InternalFixedSendReceiveOptions.Serializer, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
 
                         //Idiot test
                         if (topPacketHeader.PacketType == null)
@@ -492,7 +673,7 @@ namespace NetworkCommsDotNet
                         if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
 
                         //Instead of throwing an exception we can request the packet to be resent
-                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), false, packetHeader.CheckSumHash, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeader.CheckSumHash, NetworkComms.InternalFixedSendReceiveOptions);
                         SendPacket(returnPacket);
 
                         //We need to wait for the packet to be resent before going further
@@ -505,7 +686,7 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
 
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), false, packetHeader.CheckSumHash, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetHeader.CheckSumHash, NetworkComms.InternalFixedSendReceiveOptions);
                     SendPacket(returnPacket);
                 }
 
@@ -516,10 +697,10 @@ namespace NetworkCommsDotNet
                     CheckSumFailResendHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     ConnectionSetupHandler(packetDataSection);
-                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && (NetworkComms.internalFixedSerializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.internalFixedCompressor)) == false)
+                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && (NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.InternalFixedSendReceiveOptions.Compressor)) == false)
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), false, true, NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), true, NetworkComms.InternalFixedSendReceiveOptions);
                     SendPacket(returnPacket);
                 }
 
@@ -529,9 +710,13 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
 
-                    NetworkComms.TriggerPacketHandler(packetHeader, this.ConnectionInfo, packetDataSection);
+                    //We trigger connection specific handlers first
+                    TriggerPacketHandler(packetHeader, ConnectionInfo, packetDataSection);
 
-                    //This is a really bad place to put a garbage collection, comment left in so that it does'nt get added again at some later date
+                    //We trigger global handlers second
+                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, ConnectionInfo, packetDataSection);
+
+                    //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
                     //GC.Collect();
                 }
@@ -558,7 +743,7 @@ namespace NetworkCommsDotNet
         private void ConnectionSetupHandler(byte[] packetDataSection)
         {
             //We should never be trying to handshake an established connection
-            ConnectionInfo remoteConnectionInfo = NetworkComms.internalFixedSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.internalFixedCompressor);
+            ConnectionInfo remoteConnectionInfo = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
 
             if (ConnectionInfo.ConnectionType != remoteConnectionInfo.ConnectionType)
             {
@@ -639,10 +824,10 @@ namespace NetworkCommsDotNet
                         //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
                         //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
                         //but hey, we live in a crazy world!
-                        if (ConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
+                        if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
                         {
                             connectionSetupException = true;
-                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + ConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";
+                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";
                         }
                         else if (connectionByEndPoint != this)
                         {
@@ -652,13 +837,8 @@ namespace NetworkCommsDotNet
                         else
                         {
                             //Update the connection info
-                            ConnectionInfo.UpdateEndPointInfo(remoteConnectionInfo.NetworkIdentifier, remoteConnectionInfo.LocalEndPoint);
-
-                            //Check for a possible endPoint reference update
                             NetworkComms.UpdateConnectionByEndPointReference(this, remoteConnectionInfo.LocalEndPoint);
-
-                            //Record the new connection
-                            NetworkComms.AddConnectionByIdentifierReference(this);
+                            ConnectionInfo.UpdateInfo(remoteConnectionInfo);
 
                             return true;
                         }
@@ -674,7 +854,16 @@ namespace NetworkCommsDotNet
         }
 
         #region Connection Specific Packet and Shutdown Handler Methods
-        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, ISerialize packetTypeStrSerializer, ICompress packetTypeStrCompressor, bool enableAutoListen = true)
+        /// <summary>
+        /// Append a connection specific packet handler
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="packetTypeStr"></param>
+        /// <param name="packetHandlerDelgatePointer"></param>
+        /// <param name="packetTypeStrSerializer"></param>
+        /// <param name="packetTypeStrCompressor"></param>
+        /// <param name="enableAutoListen"></param>
+        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options, bool enableAutoListen = true)
         {
             throw new NotImplementedException();
         }
@@ -705,6 +894,25 @@ namespace NetworkCommsDotNet
         public void RemoveAllPacketHandlers()
         {
             throw new NotImplementedException();
+        }
+
+        public static void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes)
+        {
+            TriggerPacketHandler(packetHeader, connectionInfo, incomingObjectBytes, null);
+        }
+
+        /// <summary>
+        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
+        /// </summary>
+        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
+        /// <param name="sourceConnectionId">The source connection id</param>
+        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
+        /// <param name="serializer">Override serializer</param>
+        /// <param name="compressor">Override compressor</param>
+        public static void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
+        {
+            return;
+            //throw new NotImplementedException();
         }
 
         /// <summary>
