@@ -35,6 +35,20 @@ namespace NetworkCommsDotNet
         public ConnectionType ConnectionType { get; internal set; }
 
         /// <summary>
+        /// We store our unique peer identifier as a string so that it can be easily serialised.
+        /// </summary>
+        [ProtoMember(2)]
+        string NetworkIdentifierStr;
+
+        [ProtoMember(3)]
+        string localEndPointIPStr; //Only set on serialise
+        [ProtoMember(4)]
+        int localEndPointPort; //Only set on serialise
+
+        [ProtoMember(5)]
+        public bool IsConnectable { get; private set; }
+
+        /// <summary>
         /// The DateTime corresponding to the creation time of this connection object
         /// </summary>
         public DateTime ConnectionCreationTime { get; protected set; }
@@ -49,11 +63,15 @@ namespace NetworkCommsDotNet
         /// </summary>
         public DateTime ConnectionEstablishedTime { get; private set; }
 
-        /// <summary>
-        /// We store our unique peer identifier as a string so that it can be easily serialised.
-        /// </summary>
-        [ProtoMember(2)]
-        string NetworkIdentifierStr;
+        public IPEndPoint LocalEndPoint { get; private set; }
+
+        public IPEndPoint RemoteEndPoint { get; private set; }
+
+        public bool ConnectionEstablishing { get; private set; }
+
+        public bool ConnectionEstablished { get; private set; }
+
+        public bool ConnectionShutdown { get; private set; }
 
         /// <summary>
         /// Returns the networkIdentifier of this peer as a ShortGuid
@@ -68,24 +86,8 @@ namespace NetworkCommsDotNet
             private set { NetworkIdentifierStr = value; }
         }
 
-        [ProtoMember(3)]
-        string localEndPointIPStr;
-        [ProtoMember(4)]
-        int localEndPointPort;
-
-        [ProtoMember(5)]
-        public bool IsConnectable { get; private set; }
-
-        public IPEndPoint LocalEndPoint { get; private set; }
-
-        public IPEndPoint RemoteEndPoint { get; private set; }
-
-        public bool ConnectionEstablished { get; private set; }
-
-        public bool ConnectionShutdown { get; internal set; }
-
         protected DateTime lastTrafficTime;
-        protected object lastTrafficTimeLocker = new object();
+        protected object internalLocker = new object();
 
         /// <summary>
         /// The DateTime corresponding to the time data was sent or received
@@ -94,12 +96,12 @@ namespace NetworkCommsDotNet
         {
             get
             {
-                lock (lastTrafficTimeLocker)
+                lock (internalLocker)
                     return lastTrafficTime;
             }
             protected set
             {
-                lock (lastTrafficTimeLocker)
+                lock (internalLocker)
                     lastTrafficTime = value;
             }
         }
@@ -162,33 +164,91 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Marks the connection as establishing
+        /// </summary>
+        internal void NoteStartConnectionEstablish()
+        {
+            lock(internalLocker)
+            {
+                if (ConnectionShutdown) throw new ConnectionSetupException("Unable to mark as establishing as connection has already shutdown.");
+
+                if (ConnectionEstablishing) throw new ConnectionSetupException("Connection already marked as establishing");
+                else ConnectionEstablishing = true;
+            }
+        }
+
+        /// <summary>
         /// Set this connection info to established.
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
-        public void SetEstablished()
+        internal void NoteCompleteConnectionEstablish()
         {
-            ConnectionEstablished = true;
-            ConnectionEstablishedTime = DateTime.Now;
+            lock (internalLocker)
+            {
+                if (ConnectionShutdown) throw new ConnectionSetupException("Unable to mark as established as connection has already shutdown.");
 
-            if (NetworkIdentifier == ShortGuid.Empty)
-                throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
+                if (!ConnectionEstablishing) throw new ConnectionSetupException("Connection should be marked as establishing before calling CompleteConnectionEstablish");
+
+                if (ConnectionEstablished) throw new ConnectionSetupException("Connection already marked as establised.");
+
+                ConnectionEstablished = true;
+                ConnectionEstablishedTime = DateTime.Now;
+
+                if (NetworkIdentifier == ShortGuid.Empty) throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
+            }
         }
 
+        /// <summary>
+        /// Note this connection as shutdown
+        /// </summary>
+        internal void NoteConnectionShutdown()
+        {
+            lock (internalLocker)
+            {
+                ConnectionShutdown = true;
+                ConnectionEstablished = false;
+                ConnectionEstablishing = false;
+            }
+        }
+
+        /// <summary>
+        /// Update the localEndPoint information for this connection
+        /// </summary>
+        /// <param name="localEndPoint"></param>
         internal void UpdateLocalEndPointInfo(IPEndPoint localEndPoint)
         {
             this.LocalEndPoint = localEndPoint;
         }
 
         /// <summary>
-        /// Set this connection info to established including an update of the remoteEndPoint.
+        /// During a connection handShake we might be provided with more update information regarding endPoints, connectability and identifiers
         /// </summary>
         /// <param name="remoteNetworkIdentifier"></param>
         /// <param name="remoteEndPoint"></param>
-        internal void UpdateInfo(ConnectionInfo handshakeInfo)
+        internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo)
         {
             NetworkIdentifier = handshakeInfo.NetworkIdentifier;
             RemoteEndPoint = handshakeInfo.LocalEndPoint;
             IsConnectable = handshakeInfo.IsConnectable;
+        }
+
+        /// <summary>
+        /// Updates the last traffic time for this connection
+        /// </summary>
+        internal void UpdateLastTrafficTime()
+        {
+            lock (internalLocker)
+                lastTrafficTime = DateTime.Now;
+        }
+
+        public bool Equals(ConnectionInfo x, ConnectionInfo y)
+        {
+            return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString() && x.RemoteEndPoint.Equals(y.RemoteEndPoint));
+        }
+
+        public int GetHashCode(ConnectionInfo obj)
+        {
+            return obj.NetworkIdentifier.GetHashCode() ^ obj.RemoteEndPoint.GetHashCode();
         }
 
         /// <summary>
@@ -203,8 +263,8 @@ namespace NetworkCommsDotNet
                 returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifierStr + ")";
             else
             {
-                if (RemoteEndPoint != null && LocalEndPoint !=null)
-                    returnString+= LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
+                if (RemoteEndPoint != null && LocalEndPoint != null)
+                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
                 else if (RemoteEndPoint != null)
                     returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
             }
@@ -212,24 +272,5 @@ namespace NetworkCommsDotNet
             return returnString.Trim();
         }
 
-        internal void UpdateLastTrafficTime()
-        {
-            lock (lastTrafficTimeLocker)
-                lastTrafficTime = DateTime.Now;
-        }
-
-        #region IEqualityComparer<ConnectionInfo> Members
-
-        public bool Equals(ConnectionInfo x, ConnectionInfo y)
-        {
-            return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString());
-        }
-
-        public int GetHashCode(ConnectionInfo obj)
-        {
-            return obj.NetworkIdentifier.GetHashCode();
-        }
-
-        #endregion
     }
 }

@@ -527,7 +527,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Private class which wraps serializer and compressor information for specific packet types. Used by globalIncomingPacketUnwrappers.
         /// </summary>
-        private class PacketTypeUnwrapper
+        public class PacketTypeUnwrapper
         {
             string packetTypeStr;
             public SendReceiveOptions Options { get; private set; }
@@ -705,31 +705,6 @@ namespace NetworkCommsDotNet
         #region Public Usage Methods
 
         #region Misc Utility
-        /// <summary>
-        /// Opens a comms port and waits for incoming connections
-        /// </summary>
-        public static void StartListening()
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                InitialiseComms();
-
-                //We only start a new thread if we are currently not listening and endListen is false
-                if (!endListen && !isListening)
-                {
-                    OpenIncomingPorts();
-
-                    newIncomingListenThread = new Thread(IncomingConnectionListenThread);
-                    newIncomingListenThread.Priority = timeCriticalThreadPriority;
-                    newIncomingListenThread.Name = "NetworkCommsIncomingListen";
-
-                    IsListening = true;
-
-                    newIncomingListenThread.Start();
-                }
-            }
-        }
-
         /// <summary>
         /// Close all established connections
         /// </summary>
@@ -960,7 +935,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStrSerializer">A specific serializer to use instead of default</param>
         /// <param name="packetTypeStrCompressor">A specific compressor to use instead of default</param>
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions, bool enableAutoListen = true)
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -1001,10 +976,6 @@ namespace NetworkCommsDotNet
                     globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
 
                 if (loggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
-
-                //Start listening if we have not already.
-                if (enableAutoListen)
-                    StartListening();
             }
         }
 
@@ -1015,9 +986,9 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
         /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, bool enableAutoListen = true)
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
         {
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, InternalFixedSendReceiveOptions, enableAutoListen);
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, InternalFixedSendReceiveOptions);
         }
 
         /// <summary>
@@ -1099,17 +1070,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Trigger all packet type delegates with the provided parameters
-        /// </summary>
-        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
-        /// <param name="sourceConnectionId">The source connection id</param>
-        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes)
-        {
-            TriggerGlobalPacketHandler(packetHeader, connectionInfo, incomingObjectBytes, null);
-        }
-
-        /// <summary>
         /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
         /// </summary>
         /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
@@ -1148,14 +1108,9 @@ namespace NetworkCommsDotNet
                     if (handlersCopy.Count == 0)
                         throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
-                    //We decide which serializer and compressor to use
-                    if (options == null)
-                    {
-                        if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
-                            options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
-                        else
-                            options = DefaultSendReceiveOptions;
-                    }
+                    //If we find a global packet unwrapper for this packetType we used those options
+                    if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                        options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
 
                     //Deserialise the object only once
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
@@ -1705,61 +1660,6 @@ namespace NetworkCommsDotNet
             DefaultSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>(), ThreadPriority.Normal);
         }
 
-        /// <summary>
-        /// Initialise comms items on startup
-        /// </summary>
-        private static void InitialiseComms()
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                if (!commsInitialised)
-                {
-                    ConnectionKeepAliveThread = new Thread(ConnectionKeepAliveThreadWorker);
-                    ConnectionKeepAliveThread.Name = "ConnectionKeepAliveThread";
-                    ConnectionKeepAliveThread.Start();
-
-                    commsInitialised = true;
-                    if (loggingEnabled) logger.Info("networkComms.net has been initialised");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Attempts to guess the primary ip address of this machine using dll hooks in Windows API.
-        /// </summary>
-        /// <returns>IP address or null if failed.</returns>
-        private static string AttemptBestIPAddressGuess()
-        {
-            try
-            {
-                //We work out the best interface for connecting with the outside world
-                //If we are going to try and choose an ip address this one makes the most sense
-                //Using Google DNS server as reference IP
-                UInt32 ipaddr = BitConverter.ToUInt32(new byte[] { 8, 8, 8, 8 }, 0);
-
-                UInt32 interfaceindex = 0;
-                IPExtAccess.GetBestInterface(ipaddr, out interfaceindex);
-
-                var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-
-                var bestInterface = (from current in interfaces
-                                     where current.GetIPProperties().GetIPv4Properties().Index == interfaceindex
-                                     select current).First();
-
-                var ipAddressBest = (from current in bestInterface.GetIPProperties().UnicastAddresses
-                                     where current.Address.AddressFamily == AddressFamily.InterNetwork
-                                     select current.Address).First().ToString();
-
-                if (ipAddressBest != null)
-                    return ipAddressBest;
-            }
-            catch (Exception)
-            {
-
-            }
-
-            return null;
-        }
 
         /// <summary>
         /// New incoming connection listen worker thread

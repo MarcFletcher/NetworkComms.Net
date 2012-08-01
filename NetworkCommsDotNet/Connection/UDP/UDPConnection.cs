@@ -16,23 +16,23 @@ namespace NetworkCommsDotNet
             throw new NotImplementedException();
         }
 
-        protected UDPConnection(ConnectionInfo connectionInfo)
-            : base(connectionInfo)
+        protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
+            : base(connectionInfo, defaultSendReceiveOptions)
         {
 
         }
 
-        protected override void EstablishConnectionInternal()
+        protected override void EstablishConnectionSpecific()
         {
             //There is generally no establish for a UDP connection
         }
 
-        protected override void CloseConnectionInternal(bool closeDueToError, int logLocation = 0)
+        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             throw new NotImplementedException();
         }
 
-        protected override void SendPacketInternal(Packet packet)
+        protected override void SendPacketSpecific(Packet packet)
         {
             throw new NotImplementedException();
         }
@@ -41,12 +41,10 @@ namespace NetworkCommsDotNet
         {
             throw new NotImplementedException();
         }
-    }
 
-    [Flags]
-    public enum UDPLevel
-    {
-        None = 0x0,
-	    EstablishHandshake = 0x1,
+        protected override void StartIncomingDataListen()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

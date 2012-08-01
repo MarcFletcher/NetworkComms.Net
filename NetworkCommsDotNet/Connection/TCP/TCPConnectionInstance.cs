@@ -245,7 +245,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
         /// <param name="logLocation">Optional debug parameter.</param>
-        protected override void CloseConnectionInternal(bool closeDueToError, int logLocation = 0)
+        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //The following attempts to correctly close the connection
             //Try to close the networkStream first
@@ -290,10 +290,10 @@ namespace NetworkCommsDotNet
         /// <param name="destinationIPAddress"></param>
         /// <param name="receiveConfirmationRequired"></param>
         /// <returns></returns>
-        protected override void SendPacketInternal(Packet packet)
+        protected override void SendPacketSpecific(Packet packet)
         {
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
-            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions.Serializer, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
+            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 

@@ -47,24 +47,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adler32.cs" />
-    <Compile Include="Connection\Connection.cs" />
-    <Compile Include="Connection\TCPConnectionInstance.cs" />
-    <Compile Include="Connection\TCPConnectionStatic.cs" />
+    <Compile Include="Connection\ConnectionCreatecs.cs" />
+    <Compile Include="Connection\ConnectionDelegatesHandlers.cs" />
+    <Compile Include="Connection\ConnectionIncomingData.cs" />
+    <Compile Include="Connection\ConnectionType.cs" />
+    <Compile Include="Connection\UDP\UDPLevel.cs" />
+    <Compile Include="Tools\Adler32.cs" />
+    <Compile Include="Connection\ConnectionSendClose.cs" />
+    <Compile Include="Tools\PacketBuilder.cs" />
+    <Compile Include="Connection\TCP\TCPConnectionInstance.cs" />
+    <Compile Include="Connection\TCP\TCPConnectionStatic.cs" />
     <Compile Include="SendReceiveOptions.cs" />
-    <Compile Include="Connection\TCPConnectionCreate.cs" />
+    <Compile Include="Connection\TCP\TCPConnectionCreate.cs" />
     <Compile Include="ConnectionInfo.cs" />
     <Compile Include="Exception.cs" />
-    <Compile Include="IPExtAccess.cs" />
-    <Compile Include="Math.cs" />
+    <Compile Include="Tools\IPExtAccess.cs" />
+    <Compile Include="Tools\CommsMath.cs" />
     <Compile Include="NetworkComms.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketHeader.cs" />
     <Compile Include="RemoteProcedureCalls.cs" />
     <Compile Include="ReservedPacketType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ShortGUID.cs" />
-    <Compile Include="Connection\UDPConnection.cs" />
+    <Compile Include="Tools\ShortGUID.cs" />
+    <Compile Include="Connection\UDP\UDPConnection.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">

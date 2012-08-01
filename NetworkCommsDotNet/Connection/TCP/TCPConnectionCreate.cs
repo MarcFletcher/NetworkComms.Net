@@ -48,7 +48,18 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            return CreateConnection(connectionInfo, null, establishIfRequired);
+            return CreateConnection(connectionInfo, null, null, establishIfRequired);
+        }
+
+        /// <summary>
+        /// Create a connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <param name="establishIfRequired"></param>
+        /// <returns></returns>
+        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
+        {
+            return CreateConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
         }
 
         /// <summary>
@@ -58,7 +69,7 @@ namespace NetworkCommsDotNet
         /// <param name="tcpClient"></param>
         /// <param name="establishIfRequired"></param>
         /// <returns></returns>
-        internal static TCPConnection CreateConnection(ConnectionInfo connectionInfo, TcpClient tcpClient, bool establishIfRequired = true)
+        internal static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
@@ -76,7 +87,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     //We add a reference to networkComms for this connection within the constructor
-                    connection = new TCPConnection(connectionInfo, tcpClient);
+                    connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, tcpClient);
                     newConnection = true;
                 }
             }
@@ -93,8 +104,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// TCP connection constructor
         /// </summary>
-        protected TCPConnection(ConnectionInfo connectionInfo, TcpClient tcpClient)
-            : base(connectionInfo)
+        protected TCPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient)
+            : base(connectionInfo, defaultSendReceiveOptions)
         {
             //We don't guarantee that the tcpClient has been created yet
             if (tcpClient != null) this.tcpClient = tcpClient;
@@ -104,10 +115,11 @@ namespace NetworkCommsDotNet
         /// Establish a connection with the provided TcpClient
         /// </summary>
         /// <param name="sourceClient"></param>
-        protected override void EstablishConnectionInternal()
+        protected override void EstablishConnectionSpecific()
         {
             if (tcpClient == null) ConnectTCPClient();
 
+            //We should now be able to set the connectionInfo localEndPoint
             ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
@@ -171,7 +183,7 @@ namespace NetworkCommsDotNet
                 if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
-                //If we are client side we still update the localEndPoint for this connection to reflect what the remote end sees
+                //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
                 if (existingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(existingListener);
 
                 if (connectionSetupException)
@@ -180,14 +192,6 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                 }
             }
-
-            if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Connection was closed during handshake.");
-
-            //A quick idiot test
-            if (ConnectionInfo == null) throw new ConnectionSetupException("ConnectionInfo should never be null at this point.");
-
-            if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
-                throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
 
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
             //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
@@ -239,7 +243,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        private void StartIncomingDataListen()
+        protected override void StartIncomingDataListen()
         {
             if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP))
             {
@@ -247,7 +251,7 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");
             }
 
-            lock (sendLocker)
+            lock (delegateLocker)
             {
                 if (NetworkComms.connectionListenModeUseSync)
                 {
@@ -264,16 +268,6 @@ namespace NetworkCommsDotNet
             }
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Listening for incoming data from " + ConnectionInfo);
-        }
-
-        /// <summary>
-        /// Return true if the connection is established within the provided timeout, otherwise false
-        /// </summary>
-        /// <param name="waitTimeoutMS"></param>
-        /// <returns></returns>
-        internal bool WaitForConnectionEstablish(int waitTimeoutMS)
-        {
-            return connectionSetupWait.WaitOne(waitTimeoutMS);
         }
     }
 }

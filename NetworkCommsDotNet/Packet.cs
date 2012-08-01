@@ -129,10 +129,10 @@ namespace NetworkCommsDotNet
         /// Returns the serialisedbytes of the packet header appended by the serialised header size. This is required to rebuild the header on receive.
         /// </summary>
         /// <returns></returns>
-        public byte[] SerialiseHeader(ISerialize serializer, ICompress compressor)
+        public byte[] SerialiseHeader(SendReceiveOptions options)
         {
             //We need to start of by serialising the header
-            byte[] serialisedHeader = serializer.SerialiseDataObject(packetHeader, compressor);
+            byte[] serialisedHeader = options.Serializer.SerialiseDataObject(packetHeader, options.Compressor);
 
             //Define our return array which includes byte[0] as the header size
             byte[] returnArray = new byte[1 + serialisedHeader.Length];

@@ -203,8 +203,7 @@ namespace NetworkCommsDotNet
 
                                 //Pick up the new connection
                                 TcpClient newClient = listener.AcceptTcpClient();
-
-                                CreateConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), newClient, true);
+                                CreateConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true);
                             }
                         }
 
