@@ -98,6 +98,8 @@ namespace NetworkCommsDotNet
                 else  connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
             }
 
+            TriggerConnectionKeepAliveThread();
+
             return connection;
         }
 
@@ -161,7 +163,7 @@ namespace NetworkCommsDotNet
 
                 if (connectionSetupException)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ServerSide. " + connectionSetupExceptionStr);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ServerSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
                     throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
                 }
 
@@ -188,14 +190,14 @@ namespace NetworkCommsDotNet
 
                 if (connectionSetupException)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ClientSide. " + connectionSetupExceptionStr);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
                     throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                 }
             }
 
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
             //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
-            if (NetworkComms.EnableNagleAlgorithmForEstablishedConnections)
+            if (EnableNagleAlgorithmForNewEstablishedConnections)
             {
                 tcpClient.NoDelay = false;
                 tcpClient.Client.NoDelay = false;

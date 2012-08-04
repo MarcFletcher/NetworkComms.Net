@@ -19,7 +19,7 @@ using System.Linq;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// An implemenaton of the Adler32 checksum algothrim. It's not a particularly accurate checksum compared with MD5 but it is about 10 times as fast to compute.
+    /// An implemenaton of the Adler32 checksum algothrim. It's not a particularly accurate checksum compared with MD5 but it is about 10 times faster to compute.
     /// </summary>
     public static class Adler32
     {

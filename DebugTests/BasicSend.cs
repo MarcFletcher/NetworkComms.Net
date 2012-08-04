@@ -25,7 +25,7 @@ namespace DebugTests
             //If the ip address has not been auto detected correctly, either
             //  1 - Set the LocalIP property manually before calling NetworkComms.AppendIncomingPacketHandler
             //  2 - Specify some ip prefixs to help the auto detected by setting the NetworkComms.PreferredIPPrefix property
-            Console.WriteLine("Listening for messages on {0}:{1} ({2})", NetworkComms.AllAllowedLocalIPs()[0], NetworkComms.DefaultListenPort, NetworkComms.AllAllowedLocalIPs().Count);
+            Console.WriteLine("Listening for messages on {0}:{1} ({2})", NetworkComms.AllAvailableLocalIPs()[0], NetworkComms.DefaultListenPort, NetworkComms.AllAvailableLocalIPs().Count);
             
             //We can loop here to allow any number of test messages to be sent and received
             while (true)
@@ -53,7 +53,7 @@ namespace DebugTests
             }
 
             //We should always call shutdown on comms if we have used it
-            NetworkComms.ShutdownComms();
+            NetworkComms.Shutdown();
         }
     }
 }

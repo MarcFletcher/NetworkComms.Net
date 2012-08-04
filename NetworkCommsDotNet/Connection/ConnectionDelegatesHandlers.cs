@@ -54,6 +54,70 @@ namespace NetworkCommsDotNet
         protected Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>>();
 
         /// <summary>
+        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
+        /// </summary>
+        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
+        /// <param name="sourceConnectionId">The source connection id</param>
+        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
+        /// <param name="serializer">Override serializer</param>
+        /// <param name="compressor">Override compressor</param>
+        public void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
+        {
+            try
+            {
+                //We take a copy of the handlers list incase it is modified outside of the lock
+                List<NetworkComms.IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
+                lock (delegateLocker)
+                    if (incomingPacketHandlers.ContainsKey(packetHeader.PacketType))
+                        handlersCopy = new List<NetworkComms.IPacketTypeHandlerDelegateWrapper>(incomingPacketHandlers[packetHeader.PacketType]);
+
+                if (handlersCopy == null)
+                    //If we have received and unknown packet type we ignore them on this connection specific level and just finish here
+                    return;
+                else
+                {
+                    //Idiot check
+                    if (handlersCopy.Count == 0)
+                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
+
+                    //If we find a global packet unwrapper for this packetType we used those options
+                    lock (delegateLocker)
+                    {
+                        if (incomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                            options = incomingPacketUnwrappers[packetHeader.PacketType].Options;
+                    }
+
+                    //Deserialise the object only once
+                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
+
+                    //Pass the data onto the handler and move on.
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... passing completed data packet to selected handlers.");
+
+                    //Pass the object to all necessary delgates
+                    //We need to use a copy because we may modify the original delegate list during processing
+                    foreach (NetworkComms.IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
+                    {
+                        try
+                        {
+                            wrapper.Process(packetHeader, connectionInfo, returnObject);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
+            }
+        }
+
+        /// <summary>
         /// Append a connection specific packet handler
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -64,7 +128,46 @@ namespace NetworkCommsDotNet
         /// <param name="enableAutoListen"></param>
         public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options, bool enableAutoListen = true)
         {
-            throw new NotImplementedException();
+            lock (delegateLocker)
+            {
+                //Add the custom serializer and compressor if necessary
+                if (options.Serializer != null && options.Compressor != null)
+                {
+                    if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                    {
+                        //Make sure if we already have an existing entry that it matches with the provided
+                        if (incomingPacketUnwrappers[packetTypeStr].Options != options)
+                            throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
+                    }
+                    else
+                        incomingPacketUnwrappers.Add(packetTypeStr, new NetworkComms.PacketTypeUnwrapper(packetTypeStr, options));
+                }
+                else if (options.Serializer != null ^ options.Compressor != null)
+                    throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
+                else
+                {
+                    //If we have not specified the serialiser and compressor we assume to be using defaults
+                    //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
+                    if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specific serializer and compressor instances. Please ensure the same instances are provided in this call to AppendPacketHandler.");
+                }
+
+                //Ad the handler to the list
+                if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    //Make sure we avoid duplicates
+                    NetworkComms.PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new NetworkComms.PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
+                    bool delegateAlreadyExists = (from current in incomingPacketHandlers[packetTypeStr] where current == toCompareDelegate select current).Count() > 0;
+                    if (delegateAlreadyExists)
+                        throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
+
+                    incomingPacketHandlers[packetTypeStr].Add(new NetworkComms.PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer));
+                }
+                else
+                    incomingPacketHandlers.Add(packetTypeStr, new List<NetworkComms.IPacketTypeHandlerDelegateWrapper>() { new NetworkComms.PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
+
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added connection specific incoming packetHandler for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
+            }
         }
 
         /// <summary>
@@ -75,7 +178,40 @@ namespace NetworkCommsDotNet
         /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
         public void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
-            throw new NotImplementedException();
+            lock (delegateLocker)
+            {
+                if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    //Remove any instances of this handler from the delegates
+                    //The bonus here is if the delegate has not been added we continue quite happily
+                    NetworkComms.IPacketTypeHandlerDelegateWrapper toRemove = null;
+
+                    foreach (var handler in incomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                        {
+                            toRemove = handler;
+                            break;
+                        }
+                    }
+
+                    if (toRemove != null)
+                        incomingPacketHandlers[packetTypeStr].Remove(toRemove);
+
+                    if (incomingPacketHandlers[packetTypeStr] == null || incomingPacketHandlers[packetTypeStr].Count == 0)
+                    {
+                        incomingPacketHandlers.Remove(packetTypeStr);
+
+                        //Remove any entries in the unwrappers dict as well as we are done with this packetTypeStr
+                        if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                            incomingPacketHandlers.Remove(packetTypeStr);
+
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. No handlers remain with " + ConnectionInfo);
+                    }
+                    else
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. Handlers remain with " + ConnectionInfo);
+                }
+            }
         }
 
         /// <summary>
@@ -84,7 +220,16 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
         public void RemoveAllPacketHandlers(string packetTypeStr)
         {
-            throw new NotImplementedException();
+            lock (delegateLocker)
+            {
+                //We don't need to check for potentially removing a critical reserved packet handler here because those cannot be removed.
+                if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    incomingPacketHandlers.Remove(packetTypeStr);
+
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed all connection specific incoming packetHandlers for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
+                }
+            }
         }
 
         /// <summary>
@@ -92,20 +237,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         public void RemoveAllPacketHandlers()
         {
-            throw new NotImplementedException();
-        }
+            lock (delegateLocker)
+            {
+                incomingPacketHandlers = new Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>>();
 
-        /// <summary>
-        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
-        /// </summary>
-        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
-        /// <param name="sourceConnectionId">The source connection id</param>
-        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        /// <param name="serializer">Override serializer</param>
-        /// <param name="compressor">Override compressor</param>
-        public static void TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
-        {
-            throw new NotImplementedException();
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed all connection specific incoming packetHandlers for all packetTypes with " + ConnectionInfo);
+            }
         }
 
         /// <summary>
@@ -121,7 +258,7 @@ namespace NetworkCommsDotNet
                 else
                     ConnectionSpecificShutdownDelegate += handlerToAppend;
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Added connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()));
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Added a connection specific shutdown delegate to connection with " + ConnectionInfo);
             }
         }
 
@@ -134,7 +271,7 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 ConnectionSpecificShutdownDelegate -= handlerToRemove;
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed connection specific shutdown delegate to connection with id " + (!ConnectionInfo.ConnectionEstablished ? "NA" : this.ConnectionInfo.NetworkIdentifier.ToString()));
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed connection specific shutdown delegate to connection with " + ConnectionInfo);
             }
         }
     }

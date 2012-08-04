@@ -57,7 +57,7 @@ namespace NetworkCommsDotNet
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                         {
-                            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler().");
                         }
                         else
                         {
@@ -192,7 +192,7 @@ namespace NetworkCommsDotNet
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
                         {
-                            //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 1");
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingDataSyncWorker().");
                         }
                         else
                         {
@@ -322,7 +322,7 @@ namespace NetworkCommsDotNet
                     //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
                     lock (sendLocker)
                     {
-                        //if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionEndPoint.Address + ":" + ConnectionEndPoint.Port + (connectionEstablished ? " (" + ConnectionId + ")." : "."));
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
 
                         //Send a single 0 byte
                         tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);

@@ -30,8 +30,8 @@ namespace DebugTests
 
             try
             {
-                Console.SetBufferSize(130, 500);
-                Console.SetWindowSize(130, 25);
+                Console.SetBufferSize(180, 500);
+                Console.SetWindowSize(180, 25);
             }
             catch (Exception) { }
 

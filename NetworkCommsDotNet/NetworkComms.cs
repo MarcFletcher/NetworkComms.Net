@@ -57,13 +57,7 @@ namespace NetworkCommsDotNet
         public static string[] PreferredIPPrefixs
         {
             get { return preferredIPPrefixs; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
-
-                preferredIPPrefixs = value;
-            }
+            set { preferredIPPrefixs = value; }
         }
 
         /// <summary>
@@ -77,20 +71,14 @@ namespace NetworkCommsDotNet
         public static string[] AllowedAdaptorNames
         {
             get { return allowedAdaptorNames; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change PreferredIPPRefix once already initialised. Shutdown comms, change value and restart.");
-
-                allowedAdaptorNames = value;
-            }
+            set { allowedAdaptorNames = value; }
         }
 
         /// <summary>
         /// Returns all possible ipV4 addresses. Considers networkComms.PreferredIPPrefix and networkComms.PreferredAdaptorName. If preferredIPPRefix has been set ranks be descending preference. i.e. Most preffered at [0].
         /// </summary>
         /// <returns></returns>
-        public static List<IPAddress> AllAllowedLocalIPs()
+        public static List<IPAddress> AllAvailableLocalIPs()
         {
             //This is probably the most awesome linq expression ever
             //It loops through every known network adaptor and tries to pull out any 
@@ -134,34 +122,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Custom comparer for v4 IPs. Used to determine localIP
-        /// </summary>
-        class IPComparer : IEqualityComparer<string>
-        {
-            // Products are equal if their names and product numbers are equal.
-            public bool Equals(string x, string y)
-            {
-                //Check whether the compared objects reference the same data.
-                if (Object.ReferenceEquals(x, y)) return true;
-
-                //Check whether any of the compared objects is null.
-                if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
-                    return false;
-
-                return (y.StartsWith(x) || x.StartsWith(y));
-            }
-
-            // If Equals() returns true for a pair of objects 
-            // then GetHashCode() must return the same value for these objects.
-
-            public int GetHashCode(string ipAddress)
-            {
-                return ipAddress.GetHashCode();
-            }
-
-        }
-
-        /// <summary>
         /// The port networkComms is operating on
         /// </summary>
         static int defaultListenPort = 10000;
@@ -172,46 +132,7 @@ namespace NetworkCommsDotNet
         public static int DefaultListenPort
         {
             get { return defaultListenPort; }
-            set
-            {
-                //Need a quick check to see if we are already listening before trying to change the comms port.
-                lock (globalDictAndDelegateLocker)
-                {
-                    //If we are trying to set the port to it's current value then nothing needs to happen.
-                    if (value != defaultListenPort)
-                    {
-                        if (isListening)
-                            throw new CommsSetupException("Unable to change CommsPort once already listening. Shutdown comms, change port and restart.");
-
-                        defaultListenPort = value;
-                    }
-                }
-            }
-        }
-
-        static bool enableNagleAlgorithmForEstablishedConnections = false;
-
-        /// <summary>
-        /// By default networkComms.net disables all usage of the nagle algorithm. If you wish it to be used for established connections set this property to true.
-        /// </summary>
-        public static bool EnableNagleAlgorithmForEstablishedConnections
-        {
-            get { return enableNagleAlgorithmForEstablishedConnections; }
-            set
-            {
-                //Need a quick check to see if we are already listening before trying to change the comms port.
-                lock (globalDictAndDelegateLocker)
-                {
-                    //If we are trying to set the port to it's current value then nothing needs to happen.
-                    if (value != enableNagleAlgorithmForEstablishedConnections)
-                    {
-                        if (isListening)
-                            throw new CommsSetupException("Unable to set EnableNagleAlgorithmForEstablishedConnections once already listening. Shutdown comms, set and restart.");
-
-                        enableNagleAlgorithmForEstablishedConnections = value;
-                    }
-                }
-            }
+            set { defaultListenPort = value; }
         }
 
         /// <summary>
@@ -288,6 +209,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static long InterfaceLinkSpeed { get; set; }
 
+        internal static volatile bool commsShutdown;
+
         /// <summary>
         /// The number of millisconds over which to take an instance load (CurrentNetworkLoad). Default is 200ms but use atleast 100ms to get reliable values.
         /// </summary>
@@ -300,30 +223,30 @@ namespace NetworkCommsDotNet
         /// Calculates the network load every NetworkLoadUpdateWindowMS
         /// </summary>
         private static void NetworkLoadWorker()
-        { 
-            throw new NotImplementedException(); 
-        }
-        #endregion
-
-        #region Current Comms State
-        internal static volatile bool commsInitialised = false;
-        internal static volatile bool endListen = false;
-        internal static volatile bool commsShutdown = false;
-        internal static volatile bool isListening = false;
-
-        /// <summary>
-        /// An internal random number object for any randomisation requirements
-        /// </summary>
-        internal static Random randomGen = new Random();
-
-        /// <summary>
-        /// Returns true if network comms is currently accepting new incoming connections
-        /// </summary>
-        public static bool IsListening
         {
-            get { return isListening; }
-            private set { isListening = value; }
+            //Get the right interface
+            NetworkInterface[] interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces()
+                                                  select outer).ToArray();
+
+            //We need to make sure we have managed to get an adaptor
+            if (interfacesToUse == null) throw new CommunicationException("Unable to locate correct network adaptor.");
+
+            do
+            {
+                try
+                {
+                    //we need to look at the load across all adaptors, by default we will probably choose the adaptor with the highest usage
+
+                    throw new NotImplementedException();
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, "NetworkLoadWorker");
+                }
+            } while (!commsShutdown);
         }
+
+        internal static Random randomGen = new Random();
         #endregion
 
         #region Established Connections
@@ -346,35 +269,6 @@ namespace NetworkCommsDotNet
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
         /// </summary>
         internal static Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>> oldConnectionIdToConnectionInfo = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>>();
-
-        /// <summary>
-        /// The interval between keep alive polls of all serverside connections
-        /// </summary>
-        internal static int connectionKeepAlivePollIntervalSecs = 30;
-
-        private static Thread ConnectionKeepAliveThread;
-
-        /// <summary>
-        /// The last time serverside connections were polled
-        /// </summary>
-        internal static DateTime lastConnectionKeepAlivePoll;
-
-        /// <summary>
-        /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive
-        /// </summary>
-        public static int ConnectionKeepAlivePollIntervalSecs
-        {
-            get 
-            {
-                lock (globalDictAndDelegateLocker)
-                    return connectionKeepAlivePollIntervalSecs; 
-            }
-            set
-            {
-                lock (globalDictAndDelegateLocker)
-                    connectionKeepAlivePollIntervalSecs = value;
-            }
-        }
         #endregion
 
         #region Incoming Data and Connection Config
@@ -394,13 +288,7 @@ namespace NetworkCommsDotNet
         public static bool ConnectionListenModeUseSync
         {
             get { return connectionListenModeUseSync; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change connectionListenModeUseSync once already initialised. Shutdown comms, change mode and restart.");
-
-                connectionListenModeUseSync = value;
-            }
+            set { connectionListenModeUseSync = value; }
         }
 
         /// <summary>
@@ -409,24 +297,8 @@ namespace NetworkCommsDotNet
         public static bool ListenOnAllAllowedInterfaces
         {
             get { return listenOnAllAllowedInterfaces; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change listenOnAllInterfaces once already initialised. Shutdown comms, change mode and restart.");
-
-                listenOnAllAllowedInterfaces = value;
-            }
+            set { listenOnAllAllowedInterfaces = value; }
         }
-
-        /// <summary>
-        /// New incoming connection listeners
-        /// </summary>
-        static Thread newIncomingListenThread;
-
-        /// <summary>
-        /// Lists which handle the incoming connections. Originally this was used as a single but this allows networkComms.net to listen across multiple adaptors
-        /// </summary>
-        static List<TcpListener> tcpListenerList;
 
         /// <summary>
         /// Send and receive buffer sizes. These values are chosen to prevent the buffers ending up on the Large Object Heap
@@ -440,13 +312,7 @@ namespace NetworkCommsDotNet
         public static int ReceiveBufferSizeBytes
         {
             get { return receiveBufferSizeBytes; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change receiveBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
-
-                receiveBufferSizeBytes = value;
-            }
+            set { receiveBufferSizeBytes = value; }
         }
 
         /// <summary>
@@ -455,13 +321,7 @@ namespace NetworkCommsDotNet
         public static int SendBufferSizeBytes
         {
             get { return sendBufferSizeBytes; }
-            set
-            {
-                if (isListening || commsInitialised)
-                    throw new CommsSetupException("Unable to change sendBufferSizeBytes once already initialised. Shutdown comms, change and restart.");
-
-                sendBufferSizeBytes = value;
-            }
+            set { sendBufferSizeBytes = value; }
         }
         #endregion
 
@@ -502,7 +362,7 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
-        #region PacketType Config and Handlers
+        #region PacketType Config and Global Handlers
         /// <summary>
         /// A reference copy of all reservedPacketTypeNames
         /// </summary>
@@ -576,12 +436,14 @@ namespace NetworkCommsDotNet
 
             public object DeSerialize(byte[] incomingBytes, SendReceiveOptions options)
             {
-                return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.Compressor);
+                if (incomingBytes == null || incomingBytes.Length == 0) return null;
+                else
+                    return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.Compressor);
             }
 
             public void Process(PacketHeader packetHeader, ConnectionInfo connectionInfo, object obj)
             {
-                innerDelegate(packetHeader, connectionInfo, (T)obj);
+                innerDelegate(packetHeader, connectionInfo, (obj == null ? default(T) : (T)obj));
             }
 
             public bool Equals(IPacketTypeHandlerDelegateWrapper other)
@@ -597,9 +459,225 @@ namespace NetworkCommsDotNet
                 return other as PacketHandlerCallBackDelegate<T> == innerDelegate;
             }
         }
+
+        /// <summary>
+        /// Add a new incoming packet handler. Multiple handlers for the same packet type are allowed
+        /// </summary>
+        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
+        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
+        /// <param name="packetTypeStrSerializer">A specific serializer to use instead of default</param>
+        /// <param name="packetTypeStrCompressor">A specific compressor to use instead of default</param>
+        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                //Add the custom serializer and compressor if necessary
+                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.Compressor != null)
+                {
+                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                    {
+                        //Make sure if we already have an existing entry that it matches with the provided
+                        if (globalIncomingPacketUnwrappers[packetTypeStr].Options != sendReceiveOptions)
+                            throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
+                    }
+                    else
+                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
+                }
+                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.Compressor != null)
+                    throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
+                else
+                {
+                    //If we have not specified the serialiser and compressor we assume to be using defaults
+                    //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
+                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specific serializer and compressor instances. Please ensure the same instances are provided in this call to AppendPacketHandler.");
+                }
+
+                //Ad the handler to the list
+                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    //Make sure we avoid duplicates
+                    PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
+                    bool delegateAlreadyExists = (from current in globalIncomingPacketHandlers[packetTypeStr] where current == toCompareDelegate select current).Count() > 0;
+                    if (delegateAlreadyExists)
+                        throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
+
+                    globalIncomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer));
+                }
+                else
+                    globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
+
+                if (loggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
+            }
+        }
+
+        /// <summary>
+        /// Add a new incoming packet handler using default serializer and compressor. Multiple handlers for the same packet type are allowed
+        /// </summary>
+        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
+        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
+        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
+        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
+        {
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, DefaultSendReceiveOptions);
+        }
+
+        /// <summary>
+        /// Removes the provided delegate for the specified packet type
+        /// </summary>
+        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
+        /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
+        public static void RemoveGlobalIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    //Remove any instances of this handler from the delegates
+                    //The bonus here is if the delegate has not been added we continue quite happily
+                    IPacketTypeHandlerDelegateWrapper toRemove = null;
+
+                    foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                        {
+                            toRemove = handler;
+                            break;
+                        }
+                    }
+
+                    if (toRemove != null)
+                        globalIncomingPacketHandlers[packetTypeStr].Remove(toRemove);
+
+                    if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
+                    {
+                        globalIncomingPacketHandlers.Remove(packetTypeStr);
+
+                        //Remove any entries in the unwrappers dict as well as we are done with this packetTypeStr
+                        if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                            globalIncomingPacketUnwrappers.Remove(packetTypeStr);
+
+                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
+                    }
+                    else
+                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all delegates for the provided packet type
+        /// </summary>
+        /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
+        public static void RemoveAllCustomGlobalPacketHandlers(string packetTypeStr)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                //We don't need to check for potentially removing a critical reserved packet handler here because those cannot be removed.
+                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    globalIncomingPacketHandlers.Remove(packetTypeStr);
+
+                    if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all delegates for all packet types
+        /// </summary>
+        public static void RemoveAllCustomGlobalPacketHandlers()
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
+
+                if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
+            }
+        }
+
+        /// <summary>
+        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
+        /// </summary>
+        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
+        /// <param name="sourceConnectionId">The source connection id</param>
+        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
+        /// <param name="serializer">Override serializer</param>
+        /// <param name="compressor">Override compressor</param>
+        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
+        {
+            try
+            {
+                //We take a copy of the handlers list incase it is modified outside of the lock
+                List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
+                lock (globalDictAndDelegateLocker)
+                    if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
+                        handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(globalIncomingPacketHandlers[packetHeader.PacketType]);
+
+                if (handlersCopy == null && !IgnoreUnknownPacketTypes)
+                {
+                    //We may get here if we have not added any custom delegates for reserved packet types
+                    if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
+                    {
+                        //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
+                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                    }
+
+                    return;
+                }
+                else if (handlersCopy == null && IgnoreUnknownPacketTypes)
+                    //If we have received and unknown packet type and we are choosing to ignore them we just finish here
+                    return;
+                else
+                {
+                    //Idiot check
+                    if (handlersCopy.Count == 0)
+                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
+
+                    //If we find a global packet unwrapper for this packetType we used those options
+                    lock (globalDictAndDelegateLocker)
+                    {
+                        if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
+                            options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
+                    }
+
+                    //Deserialise the object only once
+                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
+
+                    //Pass the data onto the handler and move on.
+                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
+
+                    //Pass the object to all necessary delgates
+                    //We need to use a copy because we may modify the original delegate list during processing
+                    foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
+                    {
+                        try
+                        {
+                            wrapper.Process(packetHeader, connectionInfo, returnObject);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //If anything goes wrong here all we can really do is log the exception
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+            }
+        }
         #endregion
 
-        #region Connection Shutdown
+        #region Connection Comms Establish and Shutdown
         /// <summary>
         /// Delegate method for connection shutdown delegates.
         /// </summary>
@@ -610,242 +688,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static ConnectionEstablishShutdownDelegate globalConnectionShutdownDelegates;
         internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegates;
-        #endregion
 
-        #region Timeouts
-        internal static int connectionEstablishTimeoutMS = 30000;
-        internal static int packetConfirmationTimeoutMS = 5000;
-        internal static int connectionAliveTestTimeoutMS = 1000;
+        public static event EventHandler<EventArgs> OnCommsShutdown;
 
-        /// <summary>
-        /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established
-        /// </summary
-        public static int ConnectionEstablishTimeoutMS
-        {
-            get { return connectionEstablishTimeoutMS; }
-            set { connectionEstablishTimeoutMS = value; }
-        }
-
-        /// <summary>
-        /// Time to wait in milliseconds before throwing an exception when waiting for confirmation of packet receipt
-        /// </summary>
-        public static int PacketConfirmationTimeoutMS
-        {
-            get { return packetConfirmationTimeoutMS; }
-            set { packetConfirmationTimeoutMS = value; }
-        }
-
-        /// <summary>
-        /// Time to wait in milliseconds before assuming a remote connection is dead when doing a connection test
-        /// </summary>
-        public static int ConnectionAliveTestTimeoutMS
-        {
-            get { return connectionAliveTestTimeoutMS; }
-            set { connectionAliveTestTimeoutMS = value; }
-        }
-        #endregion
-
-        #region Logging
-        internal static bool loggingEnabled = false;
-        internal static ILog logger = LogManager.GetCurrentClassLogger();
-
-        /// <summary>
-        /// Access the networkComms logger externally. Allows logging from external sources
-        /// </summary>
-        public static ILog Logger
-        {
-            get { return logger; }
-        }
-
-        /// <summary>
-        /// Enable logging in networkComms using the provided logging adaptor
-        /// </summary>
-        /// <param name="loggingAdaptor"></param>
-        public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                loggingEnabled = true;
-                Common.Logging.LogManager.Adapter = loggingAdaptor;
-                logger = LogManager.GetCurrentClassLogger();
-            }
-        }
-
-        /// <summary>
-        /// Disable logging in networkComms
-        /// </summary>
-        public static void DisableLogging()
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                loggingEnabled = false;
-                Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
-            }
-        }
-        #endregion
-
-        #region Serializers and Compressors
-
-        private static Dictionary<Type, ISerialize> allKnownSerializers = WrappersHelper.Instance.GetAllSerializes();
-        private static Dictionary<Type, ICompress> allKnownCompressors = WrappersHelper.Instance.GetAllCompressors();
-
-        /// <summary>
-        /// The following are used for internal comms objects, packet headers, connection establishment etc. 
-        /// We generally seem to increase the size of our data if compressing small objects (~50kb)
-        /// Given the typical header size is 40kb we might as well not compress these objects.
-        /// </summary>
-        internal static SendReceiveOptions InternalFixedSendReceiveOptions { get; set; }
-
-        /// <summary>
-        /// Default options for sending and receiving in the absence of specific values
-        /// </summary>
-        public static SendReceiveOptions DefaultSendReceiveOptions { get; set; }
-        #endregion
-
-        #region Public Usage Methods
-
-        #region Misc Utility
-        /// <summary>
-        /// Close all established connections
-        /// </summary>
-        public static void CloseAllConnections()
-        {
-            CloseAllConnections(new string[] { });
-        }
-
-        /// <summary>
-        /// Close all established connections with some provided exceptions.
-        /// </summary>
-        /// <param name="closeAllExceptTheseConnectionsByIP">If a connection has a matching ip address it wont be closed</param>
-        public static void CloseAllConnections(string[] closeAllExceptTheseConnectionsByIP)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Locker for LogError() which ensures thread safe operation.
-        /// </summary>
-        static object errorLocker = new object();
-
-        /// <summary>
-        /// Appends provided logString to end of fileName.txt
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="logString"></param>
-        public static void AppendStringToLogFile(string fileName, string logString)
-        {
-            try
-            {
-                lock (errorLocker)
-                {
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
-                        sw.WriteLine(logString);
-                }
-            }
-            catch (Exception)
-            {
-                //If an error happens here, such as if the file is locked then we lucked out.
-            }
-        }
-
-        /// <summary>
-        /// Logs provided exception to a file to assist troubleshooting.
-        /// </summary>
-        public static string LogError(Exception ex, string fileAppendStr, string optionalCommentStr = "")
-        {
-            string fileName;
-
-            lock (errorLocker)
-            {
-                if (loggingEnabled) logger.Fatal(fileAppendStr + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex); 
-
-#if iOS
-                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
-#else
-                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
-#endif
-
-                try
-                {
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
-                    {
-                        if (optionalCommentStr != "")
-                        {
-                            sw.WriteLine("Comment: " + optionalCommentStr);
-                            sw.WriteLine("");
-                        }
-
-                        if (ex.GetBaseException() != null)
-                            sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                        if (ex.InnerException != null)
-                            sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
-
-                        if (ex.StackTrace != null)
-                        {
-                            sw.WriteLine("");
-                            sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    //This should never really happen, but just incase.
-                }
-            }
-
-            return fileName;
-        }
-
-        /// <summary>
-        /// Checks all current connections to make sure they are active. If any problems occur the connection will be closed.
-        /// </summary>
-        /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time is proportional to total number of connections.</param>
-        /// <param name="lastTrafficTimePassSeconds">Will not test connections which have a lastSeen time within provided number of seconds</param>
-        public static void TestAllConnectionsAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds=0)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Pings the provided connection and returns true if the ping was succesfull, returns false otherwise. Usefull to see if an ip address is listening for connections.
-        /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <param name="port"></param>
-        /// <param name="pingTimeoutMS"></param>
-        /// <returns></returns>
-        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS)
-        {
-            long pingTimeMS;
-            return PingConnection(ipAddress, port, pingTimeoutMS, out pingTimeMS);
-        }
-
-        /// <summary>
-        /// Pings the provided connection and returns true if the ping was succesfull after setting pingTimeMS, returns false otherwise. Usefull to see if an ip address is listening for connections.
-        /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <param name="port"></param>
-        /// <param name="pingTimeoutMS"></param>
-        /// <param name="pingTimeMS"></param>
-        /// <returns></returns>
-        public static bool PingConnection(string ipAddress, int port, int pingTimeoutMS, out long pingTimeMS)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Return the MD5 hash of the provided byte array as a string
-        /// </summary>
-        /// <param name="bytesToMd5"></param>
-        /// <returns></returns>
-        public static string MD5Bytes(byte[] bytesToMd5)
-        {
-            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-","");
-        }
-        #endregion
-
-        #region PacketHandlers
         /// <summary>
         /// Add a new shutdown delegate which will be called for every connection as it is closes.
         /// </summary>
@@ -927,315 +772,30 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a new incoming packet handler. Multiple handlers for the same packet type are allowed
-        /// </summary>
-        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
-        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
-        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
-        /// <param name="packetTypeStrSerializer">A specific serializer to use instead of default</param>
-        /// <param name="packetTypeStrCompressor">A specific compressor to use instead of default</param>
-        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                //Add the custom serializer and compressor if necessary
-                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.Compressor != null)
-                {
-                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                    {
-                        //Make sure if we already have an existing entry that it matches with the provided
-                        if (globalIncomingPacketUnwrappers[packetTypeStr].Options != sendReceiveOptions)
-                            throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
-                    }
-                    else
-                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
-                }
-                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.Compressor != null)
-                    throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
-                else
-                {
-                    //If we have not specified the serialiser and compressor we assume to be using defaults
-                    //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
-                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specific serializer and compressor instances. Please ensure the same instances are provided in this call to AppendPacketHandler.");
-                }
-
-                //Ad the handler to the list
-                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
-                {
-                    //Make sure we avoid duplicates
-                    PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
-                    bool delegateAlreadyExists = (from current in globalIncomingPacketHandlers[packetTypeStr] where current == toCompareDelegate select current).Count() > 0;
-                    if (delegateAlreadyExists)
-                        throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
-
-                    globalIncomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer));
-                }
-                else
-                    globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
-
-                if (loggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
-            }
-        }
-
-        /// <summary>
-        /// Add a new incoming packet handler using default serializer and compressor. Multiple handlers for the same packet type are allowed
-        /// </summary>
-        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
-        /// <param name="packetTypeStr">Packet type for which this delegate should be used</param>
-        /// <param name="packetHandlerDelgatePointer">The delegate to use</param>
-        /// <param name="enableAutoListen">If true will enable comms listening after delegate has been added</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
-        {
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, InternalFixedSendReceiveOptions);
-        }
-
-        /// <summary>
-        /// Removes the provided delegate for the specified packet type
-        /// </summary>
-        /// <typeparam name="T">The object type expected by packetHandlerDelgatePointer</typeparam>
-        /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
-        /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
-        public static void RemoveGlobalIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
-                {
-                    //Create the compare object
-                    //PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
-
-                    //Remove any instances of this handler from the delegates
-                    //The bonus here is if the delegate has not been added we continue quite happily
-                    IPacketTypeHandlerDelegateWrapper toRemove = null;
-
-                    foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
-                    {
-                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
-                        {
-                            toRemove = handler;
-                            break;
-                        }
-                    }
-
-                    if (toRemove != null)
-                        globalIncomingPacketHandlers[packetTypeStr].Remove(toRemove);
-
-                    if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
-                    {
-                        globalIncomingPacketHandlers.Remove(packetTypeStr);
-
-                        //Remove any entries in the unwrappers dict as well as we are done with this packetTypeStr
-                        if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                            globalIncomingPacketUnwrappers.Remove(packetTypeStr);
-
-                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
-                    }
-                    else
-                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Removes all delegates for the provided packet type
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public static void RemoveAllCustomGlobalPacketHandlers(string packetTypeStr)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                //We don't need to check for potentially removing a critical reserved packet handler here because those cannot be removed.
-                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
-                {
-                    globalIncomingPacketHandlers.Remove(packetTypeStr);
-
-                    if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Removes all delegates for all packet types
-        /// </summary>
-        public static void RemoveAllCustomGlobalPacketHandlers()
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
-
-                if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
-           } 
-        }
-
-        /// <summary>
-        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
-        /// </summary>
-        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
-        /// <param name="sourceConnectionId">The source connection id</param>
-        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        /// <param name="serializer">Override serializer</param>
-        /// <param name="compressor">Override compressor</param>
-        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
-        {
-            try
-            {
-                //We take a copy of the handlers list incase it is modified outside of the lock
-                List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
-                lock (globalDictAndDelegateLocker)
-                    if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
-                        handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(globalIncomingPacketHandlers[packetHeader.PacketType]);
-
-                if (handlersCopy == null && !IgnoreUnknownPacketTypes)
-                {
-                    //We may get here if we have not added any custom delegates for reserved packet types
-                    if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
-                    {
-                        //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
-                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerError_" + packetHeader.PacketType);
-                    }
-
-                    return;
-                }
-                else if (handlersCopy == null && IgnoreUnknownPacketTypes)
-                    //If we have received and unknown packet type and we are choosing to ignore them we just finish here
-                    return;
-                else
-                {
-                    //Idiot check
-                    if (handlersCopy.Count == 0)
-                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                    //If we find a global packet unwrapper for this packetType we used those options
-                    if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
-                        options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
-
-                    //Deserialise the object only once
-                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
-
-                    //Pass the data onto the handler and move on.
-                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
-
-                    //Pass the object to all necessary delgates
-                    //We need to use a copy because we may modify the original delegate list during processing
-                    foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
-                    {
-                        try
-                        {
-                            wrapper.Process(packetHeader, connectionInfo, returnObject);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
-                            NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                //If anything goes wrong here all we can really do is log the exception
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
-                NetworkComms.LogError(ex, "PacketHandlerError_" + packetHeader.PacketType);
-            }
-        }
-        #endregion
-
-        #region Information
-
-        public static event EventHandler<EventArgs> OnCommsShutdown;
-
-        /// <summary>
         /// Shutdown all connections and clean up communciation objects. If any comms activity has taken place this should be called on application close
         /// </summary>
-        public static void ShutdownComms()
+        public static void Shutdown()
         {
-            if (OnCommsShutdown != null)
-                OnCommsShutdown(null, new EventArgs());
-
-            //Signal everything we are shutting down
             commsShutdown = true;
-            endListen = true;
 
             try
             {
-                //We need to start by closing all connections before we stop the incoming listen thread to try and prevent the TIME_WAIT problem
-                RemoveAllCustomGlobalPacketHandlers();
-                CloseAllConnections();
-
-                try
-                {
-                    //lock (globalDictAndDelegateLocker)
-                    //{
-                        //We need to make sure everything has shutdown before this method returns
-                        if (isListening && newIncomingListenThread != null)// && (newIncomingListenThread.ThreadState == System.Threading.ThreadState.Running || newIncomingListenThread.ThreadState == System.Threading.ThreadState.WaitSleepJoin))
-                        {
-                            if (!newIncomingListenThread.Join(PacketConfirmationTimeoutMS))
-                            {
-                                //If we are still waiting for a close it may be stuck on AcceptTCPClient
-                                if (tcpListenerList != null)
-                                {
-                                    try
-                                    {
-                                        foreach (var listener in tcpListenerList)
-                                        {
-                                            try
-                                            {
-                                                if (listener != null) listener.Stop();
-                                            }
-                                            catch (Exception) { }
-                                        }
-                                    }
-                                    catch (Exception) { }
-                                    finally
-                                    {
-                                        //Once we have stopped all listeners we set the list to null incase we want to resart listening
-                                        tcpListenerList = null;
-                                    }
-                                }
-
-                                //We now wait for a further time. If it is still stuck it gets nuked
-                                if (!newIncomingListenThread.Join(PacketConfirmationTimeoutMS * 10))
-                                {
-                                    newIncomingListenThread.Abort();
-                                    globalDictAndDelegateLocker = new object();
-
-                                    throw new TimeoutException("Timeout waiting for network comms to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". Incoming connection listen thread aborted.");
-                                }
-                            }
-                        }
-                    //}
-                }
-                finally
-                {
-                    //One last attempt at closing any still existing connections
-                    CloseAllConnections();
-                }
-
-                if (loggingEnabled) logger.Info("Network comms has shutdown");
-            }
-            catch (CommsException)
-            {
-
+                TCPConnection.Shutdown();
+                //UDPConnection.Shutdown();
             }
             catch (Exception ex)
             {
                 LogError(ex, "CommsShutdownError");
             }
 
-            //We need to wait for the polling thread to close here
             try
             {
-                if (ConnectionKeepAliveThread != null)
-                {
-                    if (!ConnectionKeepAliveThread.Join(PacketConfirmationTimeoutMS * 10))
-                    {
-                        ConnectionKeepAliveThread.Abort();
-                        throw new TimeoutException("Timeout waiting for connectionKeepAlivePollThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". connectionKeepAlivePollThread status = "+ ConnectionKeepAliveThreadState() +" connectionKeepAlivePollThread thread aborted. Number of connections = "+TotalNumConnections()+".");
-                    }
-                }
+                if (OnCommsShutdown != null) OnCommsShutdown(null, new EventArgs());
+                CloseAllConnections();
+            }
+            catch (CommsException)
+            {
+
             }
             catch (Exception ex)
             {
@@ -1249,7 +809,7 @@ namespace NetworkCommsDotNet
                     if (!NetworkLoadThread.Join(NetworkLoadUpdateWindowMS * 2))
                     {
                         NetworkLoadThread.Abort();
-                        throw new TimeoutException("Timeout waiting for NetworkLoadThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. commsShutdown state is " + commsShutdown.ToString() + ", endListen state is " + endListen.ToString() + ", isListening stats is " + isListening.ToString() + ". NetworkLoadThread thread aborted.");
+                        throw new TimeoutException("Timeout waiting for NetworkLoadThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. ");
                     }
                 }
             }
@@ -1258,18 +818,216 @@ namespace NetworkCommsDotNet
                 LogError(ex, "CommsShutdownError");
             }
 
-            commsInitialised = false;
             commsShutdown = false;
-            endListen = false;
+            if (loggingEnabled) logger.Info("Network comms has shutdown");
         }
+        #endregion
+
+        #region Timeouts
+        internal static int connectionEstablishTimeoutMS = 30000;
+        internal static int packetConfirmationTimeoutMS = 5000;
+        internal static int connectionAliveTestTimeoutMS = 1000;
+
+        /// <summary>
+        /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established
+        /// </summary
+        public static int ConnectionEstablishTimeoutMS
+        {
+            get { return connectionEstablishTimeoutMS; }
+            set { connectionEstablishTimeoutMS = value; }
+        }
+
+        /// <summary>
+        /// Time to wait in milliseconds before throwing an exception when waiting for confirmation of packet receipt
+        /// </summary>
+        public static int PacketConfirmationTimeoutMS
+        {
+            get { return packetConfirmationTimeoutMS; }
+            set { packetConfirmationTimeoutMS = value; }
+        }
+
+        /// <summary>
+        /// Time to wait in milliseconds before assuming a remote connection is dead when doing a connection test
+        /// </summary>
+        public static int ConnectionAliveTestTimeoutMS
+        {
+            get { return connectionAliveTestTimeoutMS; }
+            set { connectionAliveTestTimeoutMS = value; }
+        }
+        #endregion
+
+        #region Logging
+        internal static bool loggingEnabled = false;
+        internal static ILog logger = LogManager.GetCurrentClassLogger();
+
+        /// <summary>
+        /// Access the networkComms logger externally. Allows logging from external sources
+        /// </summary>
+        public static ILog Logger
+        {
+            get { return logger; }
+        }
+
+        /// <summary>
+        /// Enable logging in networkComms using the provided logging adaptor
+        /// </summary>
+        /// <param name="loggingAdaptor"></param>
+        public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                loggingEnabled = true;
+                Common.Logging.LogManager.Adapter = loggingAdaptor;
+                logger = LogManager.GetCurrentClassLogger();
+            }
+        }
+
+        /// <summary>
+        /// Disable logging in networkComms
+        /// </summary>
+        public static void DisableLogging()
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                loggingEnabled = false;
+                Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
+            }
+        }
+
+        /// <summary>
+        /// Locker for LogError() which ensures thread safe operation.
+        /// </summary>
+        static object errorLocker = new object();
+
+        /// <summary>
+        /// Appends provided logString to end of fileName.txt
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="logString"></param>
+        public static void AppendStringToLogFile(string fileName, string logString)
+        {
+            try
+            {
+                lock (errorLocker)
+                {
+                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
+                        sw.WriteLine(logString);
+                }
+            }
+            catch (Exception)
+            {
+                //If an error happens here, such as if the file is locked then we lucked out.
+            }
+        }
+
+        /// <summary>
+        /// Logs provided exception to a file to assist troubleshooting.
+        /// </summary>
+        public static string LogError(Exception ex, string fileAppendStr, string optionalCommentStr = "")
+        {
+            string fileName;
+
+            lock (errorLocker)
+            {
+                if (loggingEnabled) logger.Fatal(fileAppendStr + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
+
+#if iOS
+                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
+#else
+                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
+#endif
+
+                try
+                {
+                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
+                    {
+                        if (optionalCommentStr != "")
+                        {
+                            sw.WriteLine("Comment: " + optionalCommentStr);
+                            sw.WriteLine("");
+                        }
+
+                        if (ex.GetBaseException() != null)
+                            sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
+
+                        if (ex.InnerException != null)
+                            sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
+
+                        if (ex.StackTrace != null)
+                        {
+                            sw.WriteLine("");
+                            sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    //This should never really happen, but just incase.
+                }
+            }
+
+            return fileName;
+        }
+        #endregion
+
+        #region Serializers and Compressors
+        private static Dictionary<Type, ISerialize> allKnownSerializers = WrappersHelper.Instance.GetAllSerializes();
+        private static Dictionary<Type, ICompress> allKnownCompressors = WrappersHelper.Instance.GetAllCompressors();
+
+        /// <summary>
+        /// The following are used for internal comms objects, packet headers, connection establishment etc. 
+        /// We generally seem to increase the size of our data if compressing small objects (~50kb)
+        /// Given the typical header size is 40kb we might as well not compress these objects.
+        /// </summary>
+        internal static SendReceiveOptions InternalFixedSendReceiveOptions { get; set; }
+
+        /// <summary>
+        /// Default options for sending and receiving in the absence of specific values
+        /// </summary>
+        public static SendReceiveOptions DefaultSendReceiveOptions { get; set; }
+        #endregion
+
+        #region Public Usage Methods
+
+        #region Misc Utility
+        /// <summary>
+        /// Checks all current connections to make sure they are active. If any problems occur the connection will be closed.
+        /// </summary>
+        /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time is proportional to total number of connections.</param>
+        /// <param name="lastTrafficTimePassSeconds">Will not test connections which have a lastSeen time within provided number of seconds</param>
+        private static void CheckAllConnectionsAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds = 0)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Return the MD5 hash of the provided byte array as a string
+        /// </summary>
+        /// <param name="bytesToMd5"></param>
+        /// <returns></returns>
+        public static string MD5Bytes(byte[] bytesToMd5)
+        {
+            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+            return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-","");
+        }
+        #endregion
+
+        #region Information
 
         /// <summary>
         /// Returns an array of ConnectionInfo for every currently established connection
         /// </summary>
         /// <returns></returns>
-        public static ConnectionInfo[] AllEstablishedConnections()
+        public static ConnectionInfo[] AllConnectionInfo()
         {
-            throw new NotImplementedException();
+            lock(globalDictAndDelegateLocker)
+            {
+                return (from current in allConnectionsByEndPoint 
+                        select current.Value.Values.Select(connection => 
+                        { 
+                            return connection.ConnectionInfo; 
+                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToArray();
+            }
         }
 
         /// <summary>
@@ -1279,19 +1037,21 @@ namespace NetworkCommsDotNet
         public static int TotalNumConnections()
         {
             lock (globalDictAndDelegateLocker)
-            {
-                return allConnectionsByEndPoint.Count;
-            }
+                return (from current in allConnectionsByEndPoint select current.Value.Count).Sum();
         }
 
         /// <summary>
-        /// Return the total current number of connections in network comms which originate from the provided ip
+        /// Return the total current number of connections where the remoteEndPoint matches the provided ip address
         /// </summary>
         /// <param name="matchIP">IP address in the format "192.168.0.1"</param>
         /// <returns></returns>
-        public static int TotalNumConnections(string matchIP)
+        public static int TotalNumConnections(IPAddress matchIP)
         {
-            throw new NotImplementedException();
+            lock (globalDictAndDelegateLocker)
+            {
+                return (from current in allConnectionsByEndPoint
+                        select current.Value.Count(connection => { return connection.Value.ConnectionInfo.RemoteEndPoint.Address.Equals(matchIP); })).Sum();
+            }
         }
         #endregion
 
@@ -1647,10 +1407,6 @@ namespace NetworkCommsDotNet
         
         #endregion SendReceiveObjectSpecific
 
-        #endregion Public Usage Methods
-
-        #region Private Setup, Connection and Shutdown
-
         static NetworkComms()
         {
             NetworkLoadUpdateWindowMS = 200;
@@ -1660,74 +1416,57 @@ namespace NetworkCommsDotNet
             DefaultSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>(), ThreadPriority.Normal);
         }
 
-
-        /// <summary>
-        /// New incoming connection listen worker thread
-        /// </summary>
-        private static void IncomingConnectionListenThread()
+        public static void CloseAllConnections()
         {
-            throw new NotImplementedException();
+            CloseAllConnections(new IPEndPoint[0], ConnectionType.Undefined);
         }
 
-        /// <summary>
-        /// A thread that ensures all established connections are maintained
-        /// </summary>
-        private static void ConnectionKeepAliveThreadWorker()
+        public static void CloseAllConnections(ConnectionType connectionType)
         {
-            if (loggingEnabled) logger.Debug("Connection keep alive polling thread has started.");
-            DateTime lastPollCheck = DateTime.Now;
-
-            do
-            {
-                try
-                {
-                    //We have a short sleep here so that we can exit the thread fairly quickly if we need too
-                    Thread.Sleep(100);
-
-                    //Any connections which we have not seen in the last poll interval get tested using a null packet
-                    if ((DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs)
-                    {
-                        ConnectionKeepAlivePoll();
-                        lastPollCheck = DateTime.Now;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError(ex, "KeepAlivePollError");
-                }
-            } while (!commsShutdown);
-
-            //connectionKeepAlivePollThread = null;
+            CloseAllConnections(new IPEndPoint[0], connectionType);
         }
 
-        /// <summary>
-        /// Returns the threadState of the IncomingConnectionListenThread
-        /// </summary>
-        /// <returns></returns>
-        public static System.Threading.ThreadState IncomingConnectionListenThreadState()
+        public static void CloseAllConnections(IPEndPoint[] closeAllExceptTheseEndPoints, ConnectionType connectionType)
         {
-            lock(globalDictAndDelegateLocker)
+            List<Connection> connectionsToClose;
+
+            lock (globalDictAndDelegateLocker)
             {
-                if (newIncomingListenThread != null)
-                    return newIncomingListenThread.ThreadState;
-                else
-                    return System.Threading.ThreadState.Unstarted;
+                connectionsToClose = (from current in allConnectionsByEndPoint.Values
+                                      select (from inner in current
+                                              where (connectionType == ConnectionType.Undefined ? true : inner.Key == connectionType)
+                                              where !closeAllExceptTheseEndPoints.Contains(inner.Value.ConnectionInfo.RemoteEndPoint)
+                                              select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToList();
             }
+
+            foreach (Connection connection in connectionsToClose)
+                connection.CloseConnection(false, -6);
         }
 
         /// <summary>
-        /// Returns the threadState of the ConnectionKeepAlivePollThread
+        /// Retrieve all connections of the provided type
         /// </summary>
+        /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static System.Threading.ThreadState ConnectionKeepAliveThreadState()
+        public static List<Connection> RetrieveConnection(ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
             {
-                if (ConnectionKeepAliveThread != null)
-                    return ConnectionKeepAliveThread.ThreadState;
-                else
-                    return System.Threading.ThreadState.Unstarted;
+                return (from current in allConnectionsByEndPoint.Values
+                        select (from inner in current
+                                where (connectionType == ConnectionType.Undefined ? true : inner.Key == connectionType)
+                                select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => {return entry != null;}).ToList();
             }
+        }
+
+        /// <summary>
+        /// Retrieve all connections
+        /// </summary>
+        /// <param name="connectionType"></param>
+        /// <returns></returns>
+        public static List<Connection> RetrieveConnection()
+        {
+            return RetrieveConnection(ConnectionType.Undefined);
         }
 
         /// <summary>
@@ -1802,7 +1541,7 @@ namespace NetworkCommsDotNet
         internal static bool RemoveConnectionReference(Connection connection, bool maintainConnectionInfoHistory = true)
         {
             //We don't have the connection identifier until the connection has been established.
-            if (!connection.ConnectionInfo.ConnectionEstablished)
+            if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
                 return false;
 
             if (connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
@@ -1964,23 +1703,6 @@ namespace NetworkCommsDotNet
                     allConnectionsById.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<Connection>>() { { connection.ConnectionInfo.ConnectionType, new List<Connection>() {connection}} });
             }
         }
-
-        /// <summary>
-        /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
-        /// </summary>
-        /// <param name="returnImmediately"></param>
-        private static void ConnectionKeepAlivePoll(bool returnImmediately = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Opens a local port for incoming connections
-        /// </summary>
-        private static void OpenIncomingPorts()
-        {
-            throw new NotImplementedException();
-        }
-        #endregion Private Setup, Connection and Shutdown
+        #endregion
     }
 }

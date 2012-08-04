@@ -71,7 +71,6 @@ namespace NetworkCommsDotNet
                     if (packetBuilder.FirstByte() == 0)
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff(), loop index - " + loopCounter);
-                        //LastTrafficTime = DateTime.Now;
 
                         packetBuilder.ClearNTopBytes(1);
 
@@ -165,15 +164,6 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 16);
             }
-        }
-
-        /// <summary>
-        /// Handle an incoming CheckSumFailResend packet type
-        /// </summary>
-        /// <param name="packetDataSection"></param>
-        protected void CheckSumFailResendHandler(byte[] packetDataSection)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -277,6 +267,34 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 3);
             }
+        }
+
+        /// <summary>
+        /// Handle an incoming CheckSumFailResend packet type
+        /// </summary>
+        /// <param name="packetDataSection"></param>
+        protected void CheckSumFailResendHandler(byte[] packetDataSection)
+        {
+            //If we have been asked to resend a packet then we just go through the list and resend it.
+            OldSentPacket packetToReSend;
+            lock (sentPacketsLocker)
+            {
+                string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<string>(packetDataSection, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
+
+                if (sentPackets.ContainsKey(checkSumRequested))
+                    packetToReSend = sentPackets[checkSumRequested];
+                else
+                    throw new CheckSumException("There was no packet sent with a matching check sum");
+            }
+
+            //If we have already tried resending the packet 10 times something has gone horribly wrong
+            if (packetToReSend.SendCount > 10) throw new CheckSumException("Packet sent resulted in a catastropic checksum check exception.");
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... resending packet due to MD5 mismatch.");
+
+            //Increment send count and then resend
+            packetToReSend.IncrementSendCount();
+            SendPacket(packetToReSend.Packet);
         }
     }
 }

@@ -26,7 +26,7 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// When a packet is broken into multiple variable chunks this class allows us to rebuild the entire object before continuing
+    /// When a packet is broken into multiple variable sized chunks this class allows us to rebuild the original unbroken packet
     /// </summary>
     public class ConnectionPacketBuilder
     {

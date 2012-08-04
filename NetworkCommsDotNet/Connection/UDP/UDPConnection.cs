@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Net.Sockets;
+using System.Net;
 
 namespace NetworkCommsDotNet
 {
@@ -43,6 +44,16 @@ namespace NetworkCommsDotNet
         }
 
         protected override void StartIncomingDataListen()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static void CloseAllConnections(EndPoint[] closeAllExceptTheseEndPoints)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal static void Shutdown()
         {
             throw new NotImplementedException();
         }

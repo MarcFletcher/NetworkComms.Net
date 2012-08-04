@@ -99,8 +99,7 @@ namespace NetworkCommsDotNet
 
                     DateTime establishStartTime = DateTime.Now;
 
-                    if (NetworkComms.commsShutdown)
-                        throw new ConnectionSetupException("Attempting to establish new connection while comms is shutting down.");
+                    //if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to establish new connection while comms is shutting down.");
 
                     EstablishConnectionSpecific();
 
@@ -175,7 +174,7 @@ namespace NetworkCommsDotNet
 
                 //We first try to establish everything within this lock in one go
                 //If we can't quite complete the establish we have to come out of the lock at try to sort the problem
-                bool connectionEstablishedSuccess = ConnectionSetupHandlerInner(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+                bool connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
 
                 //If we were not succesfull at establishing the connection we need to sort it out!
                 if (!connectionEstablishedSuccess && !connectionSetupException)
@@ -186,7 +185,7 @@ namespace NetworkCommsDotNet
                     {
                         //If we have a clash by endPoint we test the existing connection
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
-                        if (existingConnection.ConnectionAliveState(1000))
+                        if (existingConnection.CheckConnectionAlive(1000))
                         {
                             //If the existing connection comes back as alive we don't allow this one to go any further
                             //This might happen if two peers try to connect to each other at the same time
@@ -199,7 +198,7 @@ namespace NetworkCommsDotNet
                     if (!connectionSetupException)
                     {
                         //Once we have tried to sort the problem we can try to finish the establish one last time
-                        connectionEstablishedSuccess = ConnectionSetupHandlerInner(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+                        connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
 
                         //If we still failed then that's it for this establish
                         if (!connectionEstablishedSuccess && !connectionSetupException)
@@ -221,7 +220,7 @@ namespace NetworkCommsDotNet
         /// <param name="possibleClashConnectionWithPeer_ByIdentifier"></param>
         /// <param name="possibleClashConnectionWithPeer_ByEndPoint"></param>
         /// <returns></returns>
-        private bool ConnectionSetupHandlerInner(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
+        private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
         {
             try
             {
