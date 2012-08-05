@@ -31,7 +31,17 @@ namespace NetworkCommsDotNet
 
         public Packet(string packetTypeStr, object packetObject, SendReceiveOptions options)
         {
-            if (packetTypeStr == null || packetTypeStr == "")
+            Constructor(packetTypeStr, null, packetObject, options);
+        }
+
+        public Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
+        {
+            Constructor(sendingPacketTypeStr, requestReturnPacketTypeStr, packetObject, options);
+        }
+
+        private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
+        {
+            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "")
                 throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
 
             //We can gain performance if we are just sending a byte array directly
@@ -47,32 +57,6 @@ namespace NetworkCommsDotNet
                 else
                     this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.Compressor);
             }
-
-            //We only calculate the checkSum if we are going to use it
-            string hashStr = "";
-            if (NetworkComms.EnablePacketCheckSumValidation)
-                hashStr = NetworkComms.MD5Bytes(packetData);
-
-            this.packetHeader = new PacketHeader(packetTypeStr, options.ReceiveConfirmationRequired, hashStr, packetData.Length, pureBytesInPayload);
-
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
-        }
-
-        public Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
-        {
-            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "")
-                throw new ArgumentNullException("The provided sendingPacketTypeStr can not be zero length or null.");
-
-            if (requestReturnPacketTypeStr == null || requestReturnPacketTypeStr == "")
-                throw new ArgumentNullException("The provided requestReturnPacketTypeStr can not be zero length or null.");
-
-            //We can gain performance if we are just sending a byte array directly
-            bool pureBytesInPayload = false;
-            IThreadSafeSerialise packetObjectInt = packetObject as IThreadSafeSerialise;
-            if (packetObjectInt != null)
-                this.packetData = packetObjectInt.ThreadSafeSerialise();
-            else
-                this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.Compressor);
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = "";

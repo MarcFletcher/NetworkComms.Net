@@ -33,32 +33,22 @@ namespace NetworkCommsDotNet
         int payloadPacketSize;
         [ProtoMember(2)]
         string packetTypeStr;
-        [ProtoMember(3)]
+        [ProtoMember(7)] //Set as ProtoMember(7) so that hopefully protobuf puts at the end of the wireframe saving space if null (this is an assumption)
         string requestedReturnPacketTypeStr;
-        [ProtoMember(4)]
+        [ProtoMember(3)]
         bool receiveConfirmationRequired;
-        [ProtoMember(5)]
+        [ProtoMember(4)]
         string checkSumHash;
-        [ProtoMember(6)]
+        [ProtoMember(5)]
         DateTime packetCreationTime;
 
-        [ProtoMember(7)]
+        [ProtoMember(6)]
         bool pureBytesInPayload;
 
         /// <summary>
         /// Blank constructor for deserialisation using protobuf
         /// </summary>
         private PacketHeader() { }
-
-        public PacketHeader(string packetTypeStr, bool receiveConfirmationRequired, string checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
-        {
-            this.packetTypeStr = packetTypeStr;
-            this.receiveConfirmationRequired = receiveConfirmationRequired;
-            this.checkSumHash = checkSumHash;
-            this.payloadPacketSize = payloadPacketSize;
-            this.pureBytesInPayload = pureBytesInPayload;
-            this.packetCreationTime = DateTime.Now;
-        }
 
         public PacketHeader(string packetTypeStr, string requestedReturnPacketTypeStr, bool receiveConfirmationRequired, string checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
         {

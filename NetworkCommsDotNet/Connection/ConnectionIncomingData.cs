@@ -246,10 +246,10 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
 
                     //We trigger connection specific handlers first
-                    TriggerPacketHandler(packetHeader, ConnectionInfo, packetDataSection, ConnectionDefaultSendReceiveOptions);
+                    bool connectionSpecificHandlersTriggered = TriggerPacketHandler(packetHeader, ConnectionInfo, packetDataSection, ConnectionDefaultSendReceiveOptions);
 
                     //We trigger global handlers second
-                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, ConnectionInfo, packetDataSection, ConnectionDefaultSendReceiveOptions);
+                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, ConnectionInfo, packetDataSection, ConnectionDefaultSendReceiveOptions, connectionSpecificHandlersTriggered);
 
                     //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME

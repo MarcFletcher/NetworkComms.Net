@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionInfo"></param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
-            dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
             packetBuilder = new ConnectionPacketBuilder();
 
             ConnectionInfo = connectionInfo;
@@ -185,12 +185,12 @@ namespace NetworkCommsDotNet
                     {
                         //If we have a clash by endPoint we test the existing connection
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
-                        if (existingConnection.CheckConnectionAlive(1000))
+                        if (existingConnection.ConnectionAlive(1000))
                         {
                             //If the existing connection comes back as alive we don't allow this one to go any further
                             //This might happen if two peers try to connect to each other at the same time
                             connectionSetupException = true;
-                            connectionSetupExceptionStr = " ... existing live connection at provided end point for this connection (" + ConnectionInfo + "), no need for a second.  ";
+                            connectionSetupExceptionStr = " ... existing live connection at provided end point for this connection (" + ConnectionInfo + "), there should be no need for a second.";
                         }
                     }
 

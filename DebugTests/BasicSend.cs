@@ -19,7 +19,7 @@ namespace DebugTests
 
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming message from " + connectionInfo.ToString() + " saying '" + message  +"'.");});
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming message from " + connectionInfo + " saying '" + message  +"'.");});
             
             //Print the ip address and comms port we are listening on.
             //If the ip address has not been auto detected correctly, either

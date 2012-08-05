@@ -38,23 +38,22 @@ namespace NetworkCommsDotNet
         static Thread connectionKeepAliveWorker;
 
         /// <summary>
-        /// The interval between keep alive polls of all serverside connections
+        /// Private static TCP constructor which sets any TCP connection defaults
         /// </summary>
-        static int connectionKeepAlivePollIntervalSecs = 30;
+        static TCPConnection()
+        {
+            ConnectionKeepAlivePollIntervalSecs = 30;
+        }
 
         /// <summary>
         /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive poll
         /// </summary>
-        public static int ConnectionKeepAlivePollIntervalSecs
-        {
-            get { return connectionKeepAlivePollIntervalSecs; }
-            set { connectionKeepAlivePollIntervalSecs = value; }
-        }
+        public static int ConnectionKeepAlivePollIntervalSecs { get; set; }
 
         /// <summary>
         /// By default networkComms.net disables all usage of the nagle algorithm. If you wish it to be used for established connections set this property to true.
         /// </summary>
-        public static bool EnableNagleAlgorithmForNewEstablishedConnections { get; set; }
+        public static bool EnableNagleAlgorithmForNewConnections { get; set; }
 
         /// <summary>
         /// Accept new TCP connections on default IP's and Port's
@@ -197,6 +196,8 @@ namespace NetworkCommsDotNet
 
         private static void ConnectionKeepAliveWorker()
         {
+            shutdownTCPWorkerThreads = false;
+
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("TCP Connection keep alive polling thread has started.");
             DateTime lastPollCheck = DateTime.Now;
 
@@ -248,14 +249,14 @@ namespace NetworkCommsDotNet
                                 //We check the last incoming traffic time
                                 //In scenarios where the client is sending us lots of data there is no need to poll
                                 if ((DateTime.Now - allTCPConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
-                                    allTCPConnections[innerIndex].SendNullPacket();
+                                    ((TCPConnection)allTCPConnections[innerIndex]).SendNullPacket();
                             }
                             else
                             {
                                 //If we are client side we wait upto an additional 3 seconds to do the poll
                                 //This means the server will probably beat us
                                 if ((DateTime.Now - allTCPConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
-                                    allTCPConnections[innerIndex].SendNullPacket();
+                                    ((TCPConnection)allTCPConnections[innerIndex]).SendNullPacket();
                             }
                         }
                     }
@@ -287,6 +288,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void IncomingConnectionWorker()
         {
+            shutdownTCPWorkerThreads = false;
+
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("TCP IncomingConnectionWorker thread started.");
 
             try
@@ -315,7 +318,7 @@ namespace NetworkCommsDotNet
 
                         //We will only pause if we didnt get any new connections
                         if (!pickedUpNewConnection && !shutdownTCPWorkerThreads)
-                            Thread.Sleep(200);
+                            Thread.Sleep(100);
                     }
                     catch (ConfirmationTimeoutException)
                     {
@@ -355,9 +358,6 @@ namespace NetworkCommsDotNet
             {
                 //We try to close all of the tcpListeners
                 CloseAndRemoveAllLocalConnectionListeners();
-
-                //If we get this far we have definately stopped accepting new connections
-                shutdownTCPWorkerThreads = false;
             }
 
             //newIncomingListenThread = null;

@@ -55,6 +55,11 @@ namespace NetworkCommsDotNet
             {
                 SendCount++;
             }
+
+            public override string ToString()
+            {
+                return "[" + Packet.PacketHeader.PacketCreationTime.ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length +" bytes.";
+            }
         }
 
         /// <summary>
@@ -80,17 +85,9 @@ namespace NetworkCommsDotNet
             SendPacket(new Packet(sendingPacketType, objectToSend, options));
         }
 
-        /// <summary>
-        /// Sends the provided object with the connection default options and waits for return object
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <returns>The expected return object</returns>
-        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, ConnectionDefaultSendReceiveOptions); }
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null); }
+
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, null, null); }
 
         /// <summary>
         /// Sends the provided object with the provided options and waits for return object.
@@ -101,9 +98,9 @@ namespace NetworkCommsDotNet
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
-        /// <param name="options">Send receive options to use</param>
+        /// <param name="sendOptions">Send receive options to use</param>
         /// <returns>The expected return object</returns>
-        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions options)
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions sendOptions, SendReceiveOptions receiveOptions)
         {
             returnObjectType returnObject = default(returnObjectType);
 
@@ -126,12 +123,13 @@ namespace NetworkCommsDotNet
             };
             #endregion
 
-            if (options == null) options = ConnectionDefaultSendReceiveOptions;
+            if (sendOptions == null) sendOptions = ConnectionDefaultSendReceiveOptions;
+            if (receiveOptions == null) receiveOptions = ConnectionDefaultSendReceiveOptions;
 
             AppendShutdownHandler(SendReceiveShutDownDelegate);
-            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, options, false);
+            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions, false);
 
-            Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, options);
+            Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions);
             SendPacket(sendPacket);
 
             //We wait for the return data here
@@ -239,27 +237,36 @@ namespace NetworkCommsDotNet
         protected abstract void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0);
 
         /// <summary>
-        /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
+        /// Uses the current connection and returns a bool dependant on the remote end responding within the default NetworkComms.ConnectionAliveTestTimeoutMS
         /// </summary>
         /// <returns></returns>
-        public bool CheckConnectionAlive(int aliveRespondTimeoutMS) 
+        public bool ConnectionAlive()
         {
-            long responseTime;
-            return CheckConnectionAlive(aliveRespondTimeoutMS, out responseTime);
+            return ConnectionAlive(NetworkComms.ConnectionAliveTestTimeoutMS);
         }
 
         /// <summary>
         /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
         /// </summary>
         /// <returns></returns>
-        public bool CheckConnectionAlive(int aliveRespondTimeoutMS, out long responseTimeMS)
+        public bool ConnectionAlive(int aliveRespondTimeoutMS) 
+        {
+            long responseTime;
+            return ConnectionAlive(aliveRespondTimeoutMS, out responseTime);
+        }
+
+        /// <summary>
+        /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
+        /// </summary>
+        /// <returns></returns>
+        public bool ConnectionAlive(int aliveRespondTimeoutMS, out long responseTimeMS)
         {
             System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
             responseTimeMS = -1;
 
             if (!ConnectionInfo.ConnectionEstablished)
             {
-                if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.connectionEstablishTimeoutMS)
+                if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
                 {
                     CloseConnection(false, -1);
                     return false;
@@ -272,12 +279,12 @@ namespace NetworkCommsDotNet
                 try
                 {
                     timer.Start();
-                    bool returnValue = SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, false, NetworkComms.InternalFixedSendReceiveOptions);
+                    bool returnValue = SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, false, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
                     timer.Stop();
 
                     responseTimeMS = timer.ElapsedMilliseconds;
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms.");
 
                     return returnValue;
                 }
@@ -344,7 +351,7 @@ namespace NetworkCommsDotNet
                     {
                         //We only want to keep packets when they are under some provided theshold
                         //otherwise this becomes a quick 'memory leak'
-                        if (packet.PacketData.Length < NetworkComms.checkSumMismatchSentPacketCacheMaxByteLimit)
+                        if (packet.PacketData.Length < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
                         {
                             lock (sentPacketsLocker)
                                 if (!sentPackets.ContainsKey(packet.PacketHeader.CheckSumHash))
@@ -378,7 +385,7 @@ namespace NetworkCommsDotNet
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... waiting for receive confirmation packet.");
 
-                        if (!(confirmationWaitSignal.WaitOne(NetworkComms.packetConfirmationTimeoutMS)))
+                        if (!(confirmationWaitSignal.WaitOne(NetworkComms.PacketConfirmationTimeoutMS)))
                             throw new ConfirmationTimeoutException("Confirmation packet timeout.");
 
                         if (remotePeerDisconnectedDuringWait)
@@ -425,10 +432,5 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet"></param>
         protected abstract void SendPacketSpecific(Packet packet);
-
-        /// <summary>
-        /// Send a null packet 'new byte[] {0}' to the remoteEndPoint. Usefull for keeping connections from timing out.
-        /// </summary>
-        internal abstract void SendNullPacket();
     }
 }

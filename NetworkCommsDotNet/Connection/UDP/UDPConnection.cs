@@ -38,11 +38,6 @@ namespace NetworkCommsDotNet
             throw new NotImplementedException();
         }
 
-        internal override void SendNullPacket()
-        {
-            throw new NotImplementedException();
-        }
-
         protected override void StartIncomingDataListen()
         {
             throw new NotImplementedException();

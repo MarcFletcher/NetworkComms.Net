@@ -15,6 +15,8 @@ namespace DebugTests
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
 
+            NetworkComms.EnablePacketCheckSumValidation = true;
+
             if (true)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
@@ -24,15 +26,10 @@ namespace DebugTests
                 foreach (var entry in TCPConnection.CurrentLocalEndPoints())
                     Console.WriteLine("  " + entry.Address + ":" + entry.Port);
 
-                Console.WriteLine("\nReady for incoming connections.");
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connectionInfo); });
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("SRtest", (header, connectionInfo, message) => { NetworkComms.RetrieveConnection(connectionInfo).SendObject("SRresponse", "test good!"); });
 
-                int value = 0;
-                while (value < 10)
-                {
-                    Console.WriteLine("Load {0}kB/sec.", (NetworkComms.AverageNetworkLoad(2) * NetworkComms.InterfaceLinkSpeed) / 8192);
-                    Thread.Sleep(1000);
-                    value++;
-                }
+                Console.WriteLine("\nReady for incoming connections.");
 
                 Console.ReadKey(true);
 
@@ -41,6 +38,18 @@ namespace DebugTests
             else
             {
                 TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.200", 10000));
+
+                Thread.Sleep(5000);
+                conn.SendObject("NullMessage");
+                Thread.Sleep(5000);
+
+                if (conn.ConnectionAlive())
+                    Console.WriteLine("Success");
+                else
+                    Console.WriteLine("Cry!");
+
+                Thread.Sleep(5000);
+                Console.WriteLine(conn.SendReceiveObject<string>("SRtest", "SRresponse", 1000));
 
                 //NetworkComms.CloseAllConnections(new IPEndPoint[] { new IPEndPoint(IPAddress.Parse("131.111.73.200"), 10000) }, ConnectionType.TCP);
 

@@ -78,7 +78,7 @@ namespace NetworkCommsDotNet
                                     dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
                                 else
                                     //If we have nothing to reuse we allocate a new buffer
-                                    dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+                                    dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
 
                                 totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
@@ -124,7 +124,7 @@ namespace NetworkCommsDotNet
                         else
                         {
                             //If we have nothing to reuse we allocate a new buffer
-                            dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
                             totalBytesRead = 0;
                         }
 
@@ -176,7 +176,7 @@ namespace NetworkCommsDotNet
                         dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
                     else
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.receiveBufferSizeBytes];
+                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length
@@ -313,7 +313,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
         /// </summary>
-        internal override void SendNullPacket()
+        internal void SendNullPacket()
         {
             try
             {

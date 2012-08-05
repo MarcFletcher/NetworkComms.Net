@@ -134,8 +134,8 @@ namespace NetworkCommsDotNet
             //NOTE: This did not seem to work reliably so was replaced with the keepAlive packet feature
             //this.tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
-            tcpClient.ReceiveBufferSize = NetworkComms.receiveBufferSizeBytes;
-            tcpClient.SendBufferSize = NetworkComms.sendBufferSizeBytes;
+            tcpClient.ReceiveBufferSize = NetworkComms.ReceiveBufferSizeBytes;
+            tcpClient.SendBufferSize = NetworkComms.SendBufferSizeBytes;
 
             //This disables the 'nagle alogrithm'
             //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
@@ -158,7 +158,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
                 //Wait for the client to send its identification
-                if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 if (connectionSetupException)
@@ -169,7 +169,7 @@ namespace NetworkCommsDotNet
 
                 //Once we have the clients id we send our own
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkNodeIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
             }
             else
             {
@@ -179,10 +179,10 @@ namespace NetworkCommsDotNet
                 //If we are listening we include our local listen port as well
                 //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
 
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.localNetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkNodeIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
-                if (!connectionSetupWait.WaitOne(NetworkComms.connectionEstablishTimeoutMS))
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
@@ -197,7 +197,7 @@ namespace NetworkCommsDotNet
 
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
             //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
-            if (EnableNagleAlgorithmForNewEstablishedConnections)
+            if (EnableNagleAlgorithmForNewConnections)
             {
                 tcpClient.NoDelay = false;
                 tcpClient.Client.NoDelay = false;
@@ -223,7 +223,7 @@ namespace NetworkCommsDotNet
                 WaitHandle connectionWait = ar.AsyncWaitHandle;
                 try
                 {
-                    if (!ar.AsyncWaitHandle.WaitOne(NetworkComms.connectionEstablishTimeoutMS, false))
+                    if (!ar.AsyncWaitHandle.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
                     {
                         tcpClient.Close();
                         connectSuccess = false;
@@ -255,7 +255,7 @@ namespace NetworkCommsDotNet
 
             lock (delegateLocker)
             {
-                if (NetworkComms.connectionListenModeUseSync)
+                if (NetworkComms.ConnectionListenModeUseSync)
                 {
                     if (incomingDataListenThread == null)
                     {
