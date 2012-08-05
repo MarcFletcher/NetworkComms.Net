@@ -58,6 +58,8 @@ namespace NetworkCommsDotNet
         /// <param name="packetBuilder"></param>
         protected void IncomingPacketHandleHandOff(ConnectionPacketBuilder packetBuilder)
         {
+            //ThreadPriority is NetworkComms.timeCriticalThreadPriority
+
             try
             {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesRead + " bytes read.");

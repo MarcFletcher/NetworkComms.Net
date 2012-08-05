@@ -147,7 +147,7 @@ namespace NetworkCommsDotNet
             //Start listening for incoming data
             StartIncomingDataListen();
 
-            IPEndPoint existingListener = TCPConnection.ExistingConnectionListener(ConnectionInfo.LocalEndPoint.Address);
+            IPEndPoint existingListener = TCPConnection.ExistingLocalConnectionListener(ConnectionInfo.LocalEndPoint.Address);
 
             //If we are server side and we have just received an incoming connection we need to return a conneciton id
             //This id will be used in all future connections from this machine
@@ -260,6 +260,7 @@ namespace NetworkCommsDotNet
                     if (incomingDataListenThread == null)
                     {
                         incomingDataListenThread = new Thread(IncomingDataSyncWorker);
+                        //Incoming data always gets handled in a time critical fashion
                         incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
                         incomingDataListenThread.Name = "IncomingDataListener";
                         incomingDataListenThread.Start();

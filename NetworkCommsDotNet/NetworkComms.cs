@@ -149,7 +149,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the current instance network usage, as a value between 0 and 1. Outgoing and incoming usage are investigated and the larger of the two is used. Triggers load analysis upon first call.
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value from either incoming and outgoing data load across any network adaptor. Triggers load analysis upon first call.
         /// </summary>
         public static double CurrentNetworkLoad
         {
@@ -180,7 +180,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Retuns an averaged version of CurrentNetworkLoad, as a value between 0 and 1, upto a maximum window of 254 seconds. Triggers load analysis upon first call.
+        /// Retuns an averaged version of CurrentNetworkLoad, as a value between 0 and 1, for upto a time window of 254 seconds. Triggers load analysis upon first call.
         /// </summary>
         /// <param name="secondsToAverage"></param>
         /// <returns></returns>
@@ -205,7 +205,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// The detected interface link speed, this can be used in conjunction with networkLoad to determine bandwidth usage.
+        /// The interface link speed in bits/sec to use for load calculations.
         /// </summary>
         public static long InterfaceLinkSpeed { get; set; }
 
@@ -224,20 +224,47 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void NetworkLoadWorker()
         {
-            //Get the right interface
+            //Get all interfaces
             NetworkInterface[] interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces()
                                                   select outer).ToArray();
 
-            //We need to make sure we have managed to get an adaptor
-            if (interfacesToUse == null) throw new CommunicationException("Unable to locate correct network adaptor.");
+            long[] startSent, startRecieved, endSent, endRecieved;
 
             do
             {
                 try
                 {
                     //we need to look at the load across all adaptors, by default we will probably choose the adaptor with the highest usage
+                    DateTime startTime = DateTime.Now;
 
-                    throw new NotImplementedException();
+                    IPv4InterfaceStatistics[] stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
+                    startSent = (from current in stats select current.BytesSent).ToArray();
+                    startRecieved = (from current in stats select current.BytesReceived).ToArray();
+
+                    Thread.Sleep(NetworkLoadUpdateWindowMS);
+
+                    stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
+                    endSent = (from current in stats select current.BytesSent).ToArray();
+                    endRecieved = (from current in stats select current.BytesReceived).ToArray();
+
+                    DateTime endTime = DateTime.Now;
+
+                    List<double> outUsage = new List<double>();
+                    List<double> inUsage = new List<double>();
+                    for(int i=0; i<startSent.Length; i++)
+                    {
+                        outUsage.Add((double)(endSent[i] - startSent[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
+                        inUsage.Add((double)(endRecieved[i] - startRecieved[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
+                    }
+
+                    double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
+
+                    //Limit to one
+                    CurrentNetworkLoad = (loadValue > 1 ? 1 : loadValue);
+                    currentNetworkLoadValues.AddValue(CurrentNetworkLoad);
+
+                    //We can only have upto 255 seconds worth of data in the average list
+                    currentNetworkLoadValues.TrimList((int)(255000.0 / NetworkLoadUpdateWindowMS));
                 }
                 catch (Exception ex)
                 {
@@ -774,13 +801,13 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Shutdown all connections and clean up communciation objects. If any comms activity has taken place this should be called on application close
         /// </summary>
-        public static void Shutdown()
+        public static void Shutdown(int threadShutdownTimeoutMS = 1000)
         {
             commsShutdown = true;
 
             try
             {
-                TCPConnection.Shutdown();
+                TCPConnection.Shutdown(threadShutdownTimeoutMS);
                 //UDPConnection.Shutdown();
             }
             catch (Exception ex)
@@ -806,10 +833,10 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkLoadThread != null)
                 {
-                    if (!NetworkLoadThread.Join(NetworkLoadUpdateWindowMS * 2))
+                    if (!NetworkLoadThread.Join(threadShutdownTimeoutMS))
                     {
                         NetworkLoadThread.Abort();
-                        throw new TimeoutException("Timeout waiting for NetworkLoadThread thread to shutdown after " + PacketConfirmationTimeoutMS * 10 + " ms. ");
+                        throw new CommsSetupShutdownException("Timeout waiting for NetworkLoadThread thread to shutdown after " + threadShutdownTimeoutMS + " ms. ");
                     }
                 }
             }
@@ -990,16 +1017,6 @@ namespace NetworkCommsDotNet
         #region Public Usage Methods
 
         #region Misc Utility
-        /// <summary>
-        /// Checks all current connections to make sure they are active. If any problems occur the connection will be closed.
-        /// </summary>
-        /// <param name="returnImmediately">If true method will run as task and return immediately, otherwise return time is proportional to total number of connections.</param>
-        /// <param name="lastTrafficTimePassSeconds">Will not test connections which have a lastSeen time within provided number of seconds</param>
-        private static void CheckAllConnectionsAliveStatus(bool returnImmediately = false, int lastTrafficTimePassSeconds = 0)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Return the MD5 hash of the provided byte array as a string
         /// </summary>

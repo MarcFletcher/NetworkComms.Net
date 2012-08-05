@@ -73,7 +73,7 @@ namespace NetworkCommsDotNet
                         {
                             AddNewLocalConnectionListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
                         }
-                        catch (CommsSetupException)
+                        catch (CommsSetupShutdownException)
                         {
 
                         }
@@ -99,7 +99,7 @@ namespace NetworkCommsDotNet
             lock (staticTCPConnectionLocker)
             {
                 if (tcpListenerDict.ContainsKey(newLocalEndPoint))
-                    throw new CommsSetupException("Provided newLocalEndPoint already exists in tcpListenerDict.");
+                    throw new CommsSetupShutdownException("Provided newLocalEndPoint already exists in tcpListenerDict.");
 
                 TcpListener newListenerInstance;
 
@@ -119,12 +119,12 @@ namespace NetworkCommsDotNet
                     else
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
-                        throw new CommsSetupException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
 
                 if (tcpListenerDict.ContainsKey((IPEndPoint)newListenerInstance.LocalEndpoint))
-                    throw new CommsSetupException("Unable to add new TCP listenerInstance to tcpListenerDict as there is an existing entry.");
+                    throw new CommsSetupShutdownException("Unable to add new TCP listenerInstance to tcpListenerDict as there is an existing entry.");
                 else
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
@@ -156,11 +156,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an endPoint corresponding to a possible listener on the provided ipAddress. If not listening returns null.
+        /// Returns an endPoint corresponding to a possible local listener on the provided ipAddress. If not listening on provided IP returns null.
         /// </summary>
         /// <param name="ipAddress"></param>
         /// <returns></returns>
-        public static IPEndPoint ExistingConnectionListener(IPAddress ipAddress)
+        public static IPEndPoint ExistingLocalConnectionListener(IPAddress ipAddress)
         {
             lock (staticTCPConnectionLocker)
                 return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();

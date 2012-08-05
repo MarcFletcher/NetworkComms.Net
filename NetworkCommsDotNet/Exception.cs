@@ -107,9 +107,9 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// An error occured while trying to setup networkComms.net
     /// </summary>
-    public class CommsSetupException : CommsException
+    public class CommsSetupShutdownException : CommsException
     {
-        public CommsSetupException(string msg)
+        public CommsSetupShutdownException(string msg)
             : base(msg)
         {
 

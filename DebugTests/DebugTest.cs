@@ -26,6 +26,14 @@ namespace DebugTests
 
                 Console.WriteLine("\nReady for incoming connections.");
 
+                int value = 0;
+                while (value < 10)
+                {
+                    Console.WriteLine("Load {0}kB/sec.", (NetworkComms.AverageNetworkLoad(2) * NetworkComms.InterfaceLinkSpeed) / 8192);
+                    Thread.Sleep(1000);
+                    value++;
+                }
+
                 Console.ReadKey(true);
 
                 NetworkComms.Shutdown();

@@ -36,6 +36,7 @@ namespace NetworkCommsDotNet
         /// <param name="ar"></param>
         void IncomingPacketHandler(IAsyncResult ar)
         {
+            //Incoming data always gets handled in a timeCritical fashion at this point
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
 
             //int bytesRead;
