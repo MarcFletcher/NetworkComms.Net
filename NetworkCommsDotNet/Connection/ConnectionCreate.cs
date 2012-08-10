@@ -115,7 +115,7 @@ namespace NetworkCommsDotNet
 
                     //Call the establish delegate if one is set
                     if (NetworkComms.globalConnectionEstablishDelegates != null)
-                        NetworkComms.globalConnectionEstablishDelegates(ConnectionInfo);
+                        NetworkComms.globalConnectionEstablishDelegates(this);
                 }
             }
             catch (SocketException e)

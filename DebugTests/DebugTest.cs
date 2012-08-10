@@ -26,8 +26,8 @@ namespace DebugTests
                 foreach (var entry in TCPConnection.CurrentLocalEndPoints())
                     Console.WriteLine("  " + entry.Address + ":" + entry.Port);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connectionInfo); });
-                NetworkComms.AppendGlobalIncomingPacketHandler<int>("SRtest", (header, connectionInfo, message) => { NetworkComms.RetrieveConnection(connectionInfo).SendObject("SRresponse", "test good!"); });
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connection, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connection.ConnectionInfo); });
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("SRtest", (header, connection, message) => { connection.SendObject("SRresponse", "test good!"); });
 
                 Console.WriteLine("\nReady for incoming connections.");
 

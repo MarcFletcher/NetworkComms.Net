@@ -792,7 +792,7 @@ namespace NetworkCommsDotNet
             /// <typeparam name="I">Interface that should be provided for RPC</typeparam>
             /// <param name="timeout">If specified each RPC object created will be destroyed if it is unused for a time, in ms, specified by timeout</param>
             /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
-            public static void RegisterTypeForPrivateRemoteCall<T, I>(int timeout = int.MaxValue, bool enableAutoListen = true) where T : I, new()
+            public static void RegisterTypeForPrivateRemoteCall<T, I>(int timeout = int.MaxValue) where T : I, new()
             {
                 lock (locker)
                 {
@@ -825,7 +825,7 @@ namespace NetworkCommsDotNet
             /// <param name="instance">Instance to register for RPC</param>
             /// <param name="instanceName">Name of the instance to be used by clients for RPC</param>
             /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
-            public static void RegisterInstanceForPublicRemoteCall<T, I>(T instance, string instanceName, bool enableAutoListen = true) where T : I
+            public static void RegisterInstanceForPublicRemoteCall<T, I>(T instance, string instanceName) where T : I
             {
                 lock (locker)
                 {
@@ -950,11 +950,11 @@ namespace NetworkCommsDotNet
 
             #region RPC Network comms handlers
 
-            private static void NewInstanceRPCHandler<T, I>(PacketHeader header, ConnectionInfo connectionInfo, string instanceName) where T : I, new()
+            private static void NewInstanceRPCHandler<T, I>(PacketHeader header, Connection connection, string instanceName) where T : I, new()
             {
                 lock (locker)
                 {
-                    var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connectionInfo.NetworkIdentifier.ToString()).GetHashCode() ^ salt))));
+                    var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connection.ConnectionInfo.NetworkIdentifier.ToString()).GetHashCode() ^ salt))));
 
                     if (!RPCObjects.ContainsKey(instanceId))
                         RPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]));
@@ -975,11 +975,11 @@ namespace NetworkCommsDotNet
                         addedHandlers.Add(typeof(I).ToString() + "-RPC-CALL", callDel);
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION", connectionInfo.NetworkIdentifier, false, instanceId);
+                    connection.SendObject(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION", instanceId);
                 }
             }
 
-            private static void RetrieveNamedRPCHandler<T, I>(PacketHeader header, ConnectionInfo connectionInfo, string instanceName) where T : I
+            private static void RetrieveNamedRPCHandler<T, I>(PacketHeader header, Connection connection, string instanceName) where T : I
             {
                 lock (locker)
                 {
@@ -992,11 +992,11 @@ namespace NetworkCommsDotNet
                         var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", connectionInfo.NetworkIdentifier, false, instanceId);
+                    connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", instanceId);
                 }
             }
 
-            private static void RetrieveByIDRPCHandler<T, I>(PacketHeader header, ConnectionInfo connectionInfo, string instanceId) where T : I
+            private static void RetrieveByIDRPCHandler<T, I>(PacketHeader header, Connection connection, string instanceId) where T : I
             {
                 lock (locker)
                 {
@@ -1007,11 +1007,11 @@ namespace NetworkCommsDotNet
                         var nothing = RPCObjects[instanceId].RPCObject;
                     }
 
-                    NetworkComms.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", connectionInfo.NetworkIdentifier, false, instanceId);
+                    connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", instanceId);
                 }
             }
 
-            private static void RunRPCFunctionHandler<T, I>(PacketHeader header, ConnectionInfo connectionInfo, RemoteCallWrapper wrapper) where T : I
+            private static void RunRPCFunctionHandler<T, I>(PacketHeader header, Connection connection, RemoteCallWrapper wrapper) where T : I
             {
                 I instance = default(I);
                 MethodInfo funcRef = typeof(I).GetMethod(wrapper.name);
@@ -1027,7 +1027,7 @@ namespace NetworkCommsDotNet
                 {
                     wrapper.result = null;
                     wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + "Invalid instanceID" + "\n\nEND SERVER SIDE EXCEPTION\n\n";
-                    NetworkComms.SendObject(header.PacketType, connectionInfo.NetworkIdentifier, false, wrapper);
+                    connection.SendObject(header.PacketType, wrapper);
                     return;
                 }
 
@@ -1049,8 +1049,7 @@ namespace NetworkCommsDotNet
                     wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + e.ToString() + "\n\nEND SERVER SIDE EXCEPTION\n\n";
                 }
 
-                NetworkComms.SendObject(header.PacketType, connectionInfo.NetworkIdentifier, false, wrapper);
-
+                connection.SendObject(header.PacketType, wrapper);
             }
 
             #endregion

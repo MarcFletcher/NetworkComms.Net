@@ -335,7 +335,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Delegate method for all custom incoming packet handlers.
         /// </summary>
-        public delegate void PacketHandlerCallBackDelegate<T>(PacketHeader packetHeader, ConnectionInfo connectionInfo, T incomingObject);
+        public delegate void PacketHandlerCallBackDelegate<T>(PacketHeader packetHeader, Connection connection, T incomingObject);
 
         /// <summary>
         /// Dictionary of all custom packetHandlers. Key is packetType.
@@ -376,7 +376,7 @@ namespace NetworkCommsDotNet
         {
             object DeSerialize(byte[] incomingBytes, SendReceiveOptions options);
 
-            void Process(PacketHeader packetHeader, ConnectionInfo connectionInfo, object obj);
+            void Process(PacketHeader packetHeader, Connection connection, object obj);
             bool EqualsDelegate(Delegate other);
         }
 
@@ -396,9 +396,9 @@ namespace NetworkCommsDotNet
                     return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.Compressor);
             }
 
-            public void Process(PacketHeader packetHeader, ConnectionInfo connectionInfo, object obj)
+            public void Process(PacketHeader packetHeader, Connection connection, object obj)
             {
-                innerDelegate(packetHeader, connectionInfo, (obj == null ? default(T) : (T)obj));
+                innerDelegate(packetHeader, connection, (obj == null ? default(T) : (T)obj));
             }
 
             public bool Equals(IPacketTypeHandlerDelegateWrapper other)
@@ -563,7 +563,7 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
         /// <param name="serializer">Override serializer</param>
         /// <param name="compressor">Override compressor</param>
-        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
+        public static void TriggerGlobalPacketHandler(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
         {
             try
             {
@@ -613,7 +613,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            wrapper.Process(packetHeader, connectionInfo, returnObject);
+                            wrapper.Process(packetHeader, connection, returnObject);
                         }
                         catch (Exception ex)
                         {
@@ -636,7 +636,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Delegate method for connection shutdown delegates.
         /// </summary>
-        public delegate void ConnectionEstablishShutdownDelegate(ConnectionInfo connectionInfo);
+        public delegate void ConnectionEstablishShutdownDelegate(Connection connection);
 
         /// <summary>
         /// A multicast delegate pointer for any connection shutdown delegates.

@@ -54,23 +54,14 @@ namespace NetworkCommsDotNet
         protected Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>>();
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
-        /// <param name="sourceConnectionId">The source connection id</param>
-        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        /// <param name="serializer">Override serializer</param>
-        /// <param name="compressor">Override compressor</param>
-
-        /// <summary>
         /// Trigger all packet type delegates with the provided parameters. Providing options will override any defaults.
         /// </summary>
         /// <param name="packetHeader">The packetHeader for which all delegates should be triggered with</param>
-        /// <param name="connectionInfo">The source connectionInfo</param>
+        /// <param name="connection">The source connectionInfo</param>
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
         /// <param name="options">The incoming sendReceiveOptions to use overriding defaults</param>
         /// <returns>Returns true if connection specific handlers were executed.</returns>
-        public bool TriggerPacketHandler(PacketHeader packetHeader, ConnectionInfo connectionInfo, byte[] incomingObjectBytes, SendReceiveOptions options)
+        public bool TriggerPacketHandler(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options)
         {
             try
             {
@@ -110,7 +101,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            wrapper.Process(packetHeader, connectionInfo, returnObject);
+                            wrapper.Process(packetHeader, connection, returnObject);
                         }
                         catch (Exception ex)
                         {

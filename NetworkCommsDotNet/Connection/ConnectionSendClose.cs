@@ -108,14 +108,14 @@ namespace NetworkCommsDotNet
             AutoResetEvent returnWaitSignal = new AutoResetEvent(false);
 
             #region SendReceiveDelegate
-            NetworkComms.PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnectionInfo, incomingObject) =>
+            NetworkComms.PacketHandlerCallBackDelegate<returnObjectType> SendReceiveDelegate = (packetHeader, sourceConnection, incomingObject) =>
             {
                 returnObject = incomingObject;
                 returnWaitSignal.Set();
             };
 
             //We use the following delegate to quickly force a response timeout if the remote end disconnects
-            NetworkComms.ConnectionEstablishShutdownDelegate SendReceiveShutDownDelegate = (sourceConnectionInfo) =>
+            NetworkComms.ConnectionEstablishShutdownDelegate SendReceiveShutDownDelegate = (sourceConnection) =>
             {
                 remotePeerDisconnectedDuringWait = true;
                 returnObject = default(returnObjectType);
@@ -208,14 +208,14 @@ namespace NetworkCommsDotNet
                 if (firstClose && ConnectionSpecificShutdownDelegate != null)
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
-                    ConnectionSpecificShutdownDelegate(this.ConnectionInfo);
+                    ConnectionSpecificShutdownDelegate(this);
                 }
 
                 //Last but not least we call any global connection shutdown delegates
                 if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
-                    NetworkComms.globalConnectionShutdownDelegates(this.ConnectionInfo);
+                    NetworkComms.globalConnectionShutdownDelegates(this);
                 }
             }
             catch (Exception ex)
