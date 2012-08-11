@@ -51,6 +51,7 @@
     <Compile Include="Connection\ConnectionDelegatesHandlers.cs" />
     <Compile Include="Connection\ConnectionIncomingData.cs" />
     <Compile Include="Connection\ConnectionType.cs" />
+    <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />
     <Compile Include="Connection\UDP\UDPLevel.cs" />
     <Compile Include="Tools\Adler32.cs" />
     <Compile Include="Connection\ConnectionSendClose.cs" />

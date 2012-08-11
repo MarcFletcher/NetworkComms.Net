@@ -10,7 +10,7 @@ namespace DebugTests
 {
     static class DebugTest
     {
-        public static void Go()
+        public static void GoTCP()
         {
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
@@ -55,6 +55,24 @@ namespace DebugTests
 
                 //bool success = conn.CheckConnectionAlive(1000);
                 Thread.Sleep(6000000);
+            }
+        }
+
+        public static void GoUDP()
+        {
+            if (true)
+            {
+                UDPConnection.SendObject("udpTest", "this is udp bitches!!", new IPEndPoint(IPAddress.Parse("131.111.73.200"), NetworkComms.DefaultListenPort));
+            }
+            else
+            {
+                UDPConnection.AddNewLocalConnectionListener();
+
+                Console.WriteLine("\nReady for incoming udp connections.");
+
+                Console.ReadKey(true);
+
+                NetworkComms.Shutdown();
             }
         }
     }

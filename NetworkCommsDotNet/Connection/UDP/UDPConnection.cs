@@ -8,7 +8,7 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     //Maximum packet size is theoretically 65,507 bytes
-    public class UDPConnection : Connection
+    public partial class UDPConnection : Connection
     {
         UdpClient udpClient;
 
