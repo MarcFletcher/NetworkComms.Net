@@ -35,9 +35,8 @@ namespace NetworkCommsDotNet
             SendReceiveOptions options = obj as SendReceiveOptions;
             if (options == null) return false;
             else
-            {
-                return options.Compressor == Compressor && options.Serializer == Serializer;
-            }
+                //We don't compare receive handle priority here as that can be different for the same packet types
+                return options.Compressor == Compressor && options.Serializer == Serializer && options.ReceiveConfirmationRequired==ReceiveConfirmationRequired;
         }
     }
 }

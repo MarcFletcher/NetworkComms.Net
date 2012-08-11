@@ -121,18 +121,28 @@ namespace NetworkCommsDotNet
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
 
+                            SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader.PacketType);
+
                             //Build the necessary task input data
-                            object[] completedData = new object[2];
+                            object[] completedData = new object[3];
                             completedData[0] = topPacketHeader;
                             completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
+                            completedData[2] = incomingPacketSendReceiveOptions;
 
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
+                            //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
                             {
                                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
-                                //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                                 CompleteIncomingPacketWorker(completedData);
+                            }
+                            else if (incomingPacketSendReceiveOptions.ReceiveHandlePriority != ThreadPriority.Normal)
+                            {
+                                Thread newHandleThread = new Thread(CompleteIncomingPacketWorker);
+                                newHandleThread.Priority = incomingPacketSendReceiveOptions.ReceiveHandlePriority;
+                                newHandleThread.Name = "CompleteIncomingPacketWorker-" + topPacketHeader.PacketType;
+                                newHandleThread.Start(completedData);
                             }
                             else
                             {
@@ -196,6 +206,9 @@ namespace NetworkCommsDotNet
                 byte[] packetDataSection = completedData[1] as byte[];
                 if (packetDataSection == null) throw new NullReferenceException("Type cast to byte[] failed in CompleteIncomingPacketWorker.");
 
+                SendReceiveOptions packetSendReceiveOptions = completedData[2] as SendReceiveOptions;
+                if (packetSendReceiveOptions == null) throw new NullReferenceException("Type cast to SendReceiveOptions failed in CompleteIncomingPacketWorker.");
+
                 //We only look at the check sum if we want to and if it has been set by the remote end
                 if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.CheckSumHash.Length > 0)
                 {
@@ -246,10 +259,10 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
 
                     //We trigger connection specific handlers first
-                    bool connectionSpecificHandlersTriggered = TriggerPacketHandler(packetHeader, this, packetDataSection, ConnectionDefaultSendReceiveOptions);
+                    bool connectionSpecificHandlersTriggered = TriggerPacketHandler(packetHeader, this, packetDataSection, packetSendReceiveOptions);
 
                     //We trigger global handlers second
-                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, this, packetDataSection, ConnectionDefaultSendReceiveOptions, connectionSpecificHandlersTriggered);
+                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, this, packetDataSection, packetSendReceiveOptions, connectionSpecificHandlersTriggered);
 
                     //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME

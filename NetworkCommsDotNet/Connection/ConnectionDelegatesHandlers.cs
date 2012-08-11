@@ -54,7 +54,46 @@ namespace NetworkCommsDotNet
         protected Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<NetworkComms.IPacketTypeHandlerDelegateWrapper>>();
 
         /// <summary>
-        /// Trigger all packet type delegates with the provided parameters. Providing options will override any defaults.
+        /// Returns the sendReceiveOptions to be used for the provided incoming packetTypeStr. Ensures there will not be a compressor/serialiser clash for different delegate levels.
+        /// </summary>
+        /// <param name="packetTypeStr"></param>
+        /// <returns></returns>
+        protected SendReceiveOptions IncomingPacketSendReceiveOptions(string packetTypeStr)
+        {
+            //Are there connection specific or global packet handlers?
+            bool connectionSpecificHandlers = false;
+            lock (delegateLocker) connectionSpecificHandlers = incomingPacketHandlers.ContainsKey(packetTypeStr);
+
+            bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(packetTypeStr);
+
+            //Look at the connection specific and global send receive options?
+            SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(packetTypeStr);
+            if (connectionSpecificOptions == null) connectionSpecificOptions = ConnectionDefaultSendReceiveOptions;
+
+            SendReceiveOptions globalOptions = NetworkComms.PacketTypeGlobalUnwrapperOptions(packetTypeStr);
+            if (globalOptions == null) globalOptions = NetworkComms.DefaultSendReceiveOptions;
+
+            //Return the one with the highest thready priority
+            if (connectionSpecificHandlers && globalHandlers)
+            {
+                if (!connectionSpecificOptions.Equals(globalOptions))
+                    throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '"+packetTypeStr+"'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
+
+                //We return which ever has the higher handle priority
+                if (connectionSpecificOptions.ReceiveHandlePriority > globalOptions.ReceiveHandlePriority)
+                    return connectionSpecificOptions;
+                else
+                    return globalOptions;
+            }
+            else if (connectionSpecificHandlers)
+                return connectionSpecificOptions;
+            else
+                //If just globalHandlers is set (or indeed no handlers atall we just return the global options
+                return globalOptions;
+        }
+
+        /// <summary>
+        /// Trigger all packet type delegates with the provided parameters. Returns true if connection specific handlers were executed.
         /// </summary>
         /// <param name="packetHeader">The packetHeader for which all delegates should be triggered with</param>
         /// <param name="connection">The source connectionInfo</param>
@@ -65,6 +104,8 @@ namespace NetworkCommsDotNet
         {
             try
             {
+                if (options == null) throw new PacketHandlerException("Provided sendReceiveOptions should not be null for packetType " + packetHeader.PacketType);
+
                 //We take a copy of the handlers list incase it is modified outside of the lock
                 List<NetworkComms.IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
                 lock (delegateLocker)
@@ -77,17 +118,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     //Idiot check
-                    if (handlersCopy.Count == 0)
-                        throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                    //If we find a global packet unwrapper for this packetType we used those options
-                    lock (delegateLocker)
-                    {
-                        if (incomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
-                            options = incomingPacketUnwrappers[packetHeader.PacketType].Options;
-                    }
-
-                    if (options == null) options = ConnectionDefaultSendReceiveOptions;
+                    if (handlersCopy.Count == 0) throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
                     //Deserialise the object only once
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
@@ -119,6 +150,26 @@ namespace NetworkCommsDotNet
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Returns the packet type unwrapper sendReceiveOptions. If no specific options are registered returns null
+        /// </summary>
+        /// <param name="packetTypeStr"></param>
+        /// <param name="defaultOptions"></param>
+        /// <returns></returns>
+        public SendReceiveOptions PacketTypeUnwrapperOptions(string packetTypeStr)
+        {
+            SendReceiveOptions options = null;
+
+            //If we find a global packet unwrapper for this packetType we used those options
+            lock (delegateLocker)
+            {
+                if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                    options = incomingPacketUnwrappers[packetTypeStr].Options;
+            }
+
+            return options;
         }
 
         /// <summary>

@@ -556,7 +556,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Trigger all packet type delegates with the provided parameters. Providing serializer and compressor will override any defaults.
+        /// Trigger all packet type delegates with the provided parameters.
         /// </summary>
         /// <param name="packetHeader">Packet type for which all delegates should be triggered</param>
         /// <param name="sourceConnectionId">The source connection id</param>
@@ -567,6 +567,8 @@ namespace NetworkCommsDotNet
         {
             try
             {
+                if (options == null) throw new PacketHandlerException("Provided sendReceiveOptions should not be null for packetType " + packetHeader.PacketType);
+
                 //We take a copy of the handlers list incase it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
                 lock (globalDictAndDelegateLocker)
@@ -593,13 +595,6 @@ namespace NetworkCommsDotNet
                     //Idiot check
                     if (handlersCopy.Count == 0)
                         throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                    //If we find a global packet unwrapper for this packetType we used those options
-                    lock (globalDictAndDelegateLocker)
-                    {
-                        if (globalIncomingPacketUnwrappers.ContainsKey(packetHeader.PacketType))
-                            options = globalIncomingPacketUnwrappers[packetHeader.PacketType].Options;
-                    }
 
                     //Deserialise the object only once
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
@@ -629,6 +624,37 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
                 NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
             }
+        }
+
+        /// <summary>
+        /// Returns the packet type unwrapper sendReceiveOptions. If no specific options are registered returns null.
+        /// </summary>
+        /// <param name="packetTypeStr"></param>
+        /// <param name="defaultOptions"></param>
+        /// <returns></returns>
+        public static SendReceiveOptions PacketTypeGlobalUnwrapperOptions(string packetTypeStr)
+        {
+            SendReceiveOptions options = null;
+
+            //If we find a global packet unwrapper for this packetType we used those options
+            lock (globalDictAndDelegateLocker)
+            {
+                if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                    options = globalIncomingPacketUnwrappers[packetTypeStr].Options;
+            }
+
+            return options;
+        }
+
+        /// <summary>
+        /// Returns true if a global packet handler exists for the provided packet type
+        /// </summary>
+        /// <param name="packetTypeStr"></param>
+        /// <returns></returns>
+        public static bool GlobalIncomingPacketHandlerExists(string packetTypeStr)
+        {
+            lock (globalDictAndDelegateLocker)
+                return globalIncomingPacketHandlers.ContainsKey(packetTypeStr);
         }
         #endregion
 

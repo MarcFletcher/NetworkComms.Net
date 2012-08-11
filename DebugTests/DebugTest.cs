@@ -17,7 +17,7 @@ namespace DebugTests
 
             NetworkComms.EnablePacketCheckSumValidation = true;
 
-            if (true)
+            if (false)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
                 TCPConnection.AddNewLocalConnectionListener();
