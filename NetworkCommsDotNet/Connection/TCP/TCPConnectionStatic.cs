@@ -58,7 +58,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Accept new TCP connections on default IP's and Port's
         /// </summary>
-        public static void AddNewLocalConnectionListener()
+        public static void AddNewLocalListener()
         {
             List<IPAddress> localIPs = NetworkComms.AllAvailableLocalIPs();
 
@@ -70,7 +70,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            AddNewLocalConnectionListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
+                            AddNewLocalListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -86,14 +86,14 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                AddNewLocalConnectionListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
+                AddNewLocalListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
         }
 
         /// <summary>
         /// Accept new TCP connections on specified IP and port
         /// </summary>
         /// <param name="newLocalEndPoint"></param>
-        public static void AddNewLocalConnectionListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
             {
@@ -128,7 +128,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
                     tcpListenerDict.Add((IPEndPoint)newListenerInstance.LocalEndpoint, newListenerInstance);
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new localEndPoint - " + newLocalEndPoint.Address + ":" + newLocalEndPoint.Port);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new TCP localEndPoint - " + newLocalEndPoint.Address + ":" + newLocalEndPoint.Port);
                 }
             }
 
@@ -139,12 +139,12 @@ namespace NetworkCommsDotNet
         /// Accept new TCP connections on specified IP's and port's
         /// </summary>
         /// <param name="localEndPoint"></param>
-        public static void AddNewLocalConnectionListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    AddNewLocalConnectionListener(endPoint, useRandomPortFailOver);
+                    AddNewLocalListener(endPoint, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -159,7 +159,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="ipAddress"></param>
         /// <returns></returns>
-        public static IPEndPoint ExistingLocalConnectionListener(IPAddress ipAddress)
+        public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
         {
             lock (staticTCPConnectionLocker)
                 return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();

@@ -12,7 +12,7 @@ using log4net.Layout;
 using log4net.Appender;
 using System.Threading;
 using System.IO;
-using DistributedFileSystem;
+//using DistributedFileSystem;
 
 namespace DebugTests
 {

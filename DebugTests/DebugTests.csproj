@@ -56,10 +56,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
-      <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
-      <Name>DistributedFileSystem</Name>
-    </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
       <Name>NetworkCommsDotNet</Name>

@@ -20,7 +20,7 @@ namespace DebugTests
             if (false)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
-                TCPConnection.AddNewLocalConnectionListener();
+                TCPConnection.AddNewLocalListener();
 
                 Console.WriteLine("Listening on:");
                 foreach (var entry in TCPConnection.CurrentLocalEndPoints())
@@ -62,17 +62,17 @@ namespace DebugTests
         {
             if (true)
             {
-                UDPConnection.SendObject("udpTest", "this is udp bitches!!", new IPEndPoint(IPAddress.Parse("131.111.73.200"), NetworkComms.DefaultListenPort));
-            }
-            else
-            {
-                UDPConnection.AddNewLocalConnectionListener();
+                UDPConnection.AddNewLocalListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
 
                 Console.WriteLine("\nReady for incoming udp connections.");
 
                 Console.ReadKey(true);
 
                 NetworkComms.Shutdown();
+            }
+            else
+            {
+                UDPConnection.SendObject("udpTest", new byte[65400], new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
             }
         }
     }
