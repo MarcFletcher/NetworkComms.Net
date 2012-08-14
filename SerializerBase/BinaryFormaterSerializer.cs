@@ -26,7 +26,6 @@ namespace SerializerBase
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
-    [Export(typeof(ISerialize))]    
     public class BinaryFormaterSerializer : ISerialize
     {
         static ISerialize instance;

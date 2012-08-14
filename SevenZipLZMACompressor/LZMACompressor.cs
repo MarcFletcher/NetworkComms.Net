@@ -26,8 +26,7 @@ namespace SevenZipLZMACompressor
 {
     /// <summary>
     /// Compressor utilizing LZMA algorithm from 7Zip http://www.7-zip.org/    
-    /// </summary>
-    [Export(typeof(ICompress))]
+    /// </summary>    
     public class LZMACompressor : ICompress
     {
         static ICompress instance;

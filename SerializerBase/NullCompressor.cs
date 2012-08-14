@@ -25,8 +25,7 @@ namespace SerializerBase
 {
     /// <summary>
     /// Compressor that does no compression. Simply appends the size of the input data on compression and strips this information on decompression
-    /// </summary>
-    [Export(typeof(ICompress))]
+    /// </summary>    
     public class NullCompressor : ICompress
     {
         static ICompress instance;

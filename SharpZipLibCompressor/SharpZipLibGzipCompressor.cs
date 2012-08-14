@@ -27,7 +27,6 @@ namespace SharpZipLibCompressor
     /// <summary>
     /// Compresor using Gzip compression from SharpZipLib http://www.icsharpcode.net/opensource/sharpziplib/
     /// </summary>
-    [Export(typeof(ICompress))]
     public class SharpZipLibGzipCompressor : ICompress
     {
         static ICompress instance;

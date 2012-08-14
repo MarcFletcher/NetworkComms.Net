@@ -27,7 +27,6 @@ namespace QuickLZCompressor
     /// <summary>
     /// Compressor that utilizes native quicklz compression provided by QuickLZ library at http://www.quicklz.com/
     /// </summary>
-    [Export(typeof(ICompress))]
     public class QuickLZ : ICompress
     {
         private static string DllDir = Path.Combine(Path.GetTempPath(), "QuickLZTemp");

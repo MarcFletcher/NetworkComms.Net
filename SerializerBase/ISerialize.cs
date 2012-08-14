@@ -18,16 +18,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {    
+    [InheritedExport(typeof(ISerialize))]
     public abstract class ISerialize
     {
-        protected static ISerialize GetInstance<T>() where T : ISerialize
-        {   
-            return WrappersHelper.Instance.GetAllSerializes()[typeof(T)];
-        }
+        protected static T GetInstance<T>() where T : ISerialize
+        {
+            //this forces helper static constructor to be called
+            var instance = WrappersHelper.Instance.GetSerializer<T>() as T;
 
+            if (instance == null)
+            {
+                //if the instance is null the type was not added as part of composition
+                //create a new instance of T and add it to helper as a serializer
+
+                instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
+                WrappersHelper.Instance.AddSerializer(instance);
+            }
+
+            return instance;
+        }
+                        
         /// <summary>
         /// Converts objectToSerialize to an array of bytes using the compression provided by compressor
         /// </summary>
@@ -52,6 +66,9 @@ namespace SerializerBase
             return (T)DeserialiseDataObjectInt(receivedObjectBytes, typeof(T), compressor);            
         }
 
+        /// <summary>
+        /// Returns a unique identifier for the serializer type.  Used in automatic serialization/compression detection
+        /// </summary>
         public abstract byte Identifier { get; }
         
         protected abstract byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor);

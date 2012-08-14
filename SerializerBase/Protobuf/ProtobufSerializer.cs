@@ -28,8 +28,6 @@ namespace SerializerBase.Protobuf
     /// <summary>
     /// Serializer using ProtoBuf.Net
     /// </summary>
-    [Export(typeof(ISerialize))]    
-    [PartCreationPolicy(System.ComponentModel.Composition.CreationPolicy.Shared)]
     public class ProtobufSerializer : ISerialize
     {        
         private static int metaDataTimeoutMS = 150000;

@@ -8,8 +8,7 @@ namespace SerializerBase
 {
     /// <summary>
     /// Only usefull for serializing primitive arrays to bytes. Will throw an exception otherwise
-    /// </summary>
-    [Export(typeof(ISerialize))]    
+    /// </summary>    
     public class NullSerializer : ISerialize
     {
         static ISerialize instance;

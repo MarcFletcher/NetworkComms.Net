@@ -18,16 +18,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {
+    [InheritedExport(typeof(ICompress))]
     public abstract class ICompress
     {
-        protected static ICompress GetInstance<T>() where T : ICompress
+        protected static T GetInstance<T>() where T : ICompress
         {
-            return WrappersHelper.Instance.GetAllCompressors()[typeof(T)];
+            //this forces helper static constructor to be called and gets us an instance if composition worked
+            var instance = WrappersHelper.Instance.GetCompressor<T>() as T;
+
+            if (instance == null)
+            {
+                //if the instance is null the type was not added as part of composition
+                //create a new instance of T and add it to helper as a compressor
+
+                instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
+                WrappersHelper.Instance.AddCompressor(instance);
+            }
+
+            return instance;
         }
 
+        /// <summary>
+        /// Returns a unique identifier for the compressor type. Used in automatic serialization/compression detection
+        /// </summary>
         public abstract byte Identifier { get; }
 
         /// <summary>

@@ -87,8 +87,10 @@ namespace SerializerBase
         [ImportMany(typeof(ICompress))]
         private IEnumerable<ICompress> compressors = null;
 
-        private Dictionary<Type, ISerialize> Serializers = new Dictionary<Type, ISerialize>();
-        private Dictionary<Type, ICompress> Compressors = new Dictionary<Type, ICompress>();
+        private Dictionary<Type, ISerialize> SerializersByType = new Dictionary<Type, ISerialize>();
+        private Dictionary<byte, ISerialize> SerializersByID = new Dictionary<byte, ISerialize>();
+        private Dictionary<Type, ICompress> CompressorsByType = new Dictionary<Type, ICompress>();
+        private Dictionary<byte, ICompress> CompressorsByID = new Dictionary<byte, ICompress>();
 
         static WrappersHelper instance;
         
@@ -101,38 +103,102 @@ namespace SerializerBase
 
         public Dictionary<Type, ISerialize> GetAllSerializes()
         {
-            return Serializers;
+            return SerializersByType;
         }
 
         public ISerialize GetSerializer<T>() where T : ISerialize
         {
-            return Serializers[typeof(T)];
+            if (SerializersByType.ContainsKey(typeof(T)))
+                return SerializersByType[typeof(T)];
+            else
+                return null;
+        }
+
+        public ISerialize GetSerializer(byte Id)
+        {
+            if (SerializersByID.ContainsKey(Id))
+                return SerializersByID[Id];
+            else
+                return null;
         }
 
         public Dictionary<Type, ICompress> GetAllCompressors()
-        {
-            return Compressors;
+        {            
+            return CompressorsByType;
         }
 
         public ICompress GetCompressor<T>() where T : ICompress
         {
-            return Compressors[typeof(T)];
+            if (CompressorsByType.ContainsKey(typeof(T)))
+                return CompressorsByType[typeof(T)];
+            else
+                return null;
+        }
+
+        public ICompress GetCompressor(byte Id)
+        {
+            if (CompressorsByID.ContainsKey(Id))
+                return CompressorsByID[Id];
+            else
+                return null;
+        }
+
+        public void AddCompressor(ICompress instance)
+        {
+            if (CompressorsByType.ContainsKey(instance.GetType()))
+                if (CompressorsByType[instance.GetType()] != instance)
+                    throw new Exception();
+                else
+                    return;
+
+            CompressorsByType.Add(instance.GetType(), instance);
+            CompressorsByID.Add(instance.Identifier, instance);
+        }
+
+        public void AddSerializer(ISerialize instance)
+        {
+            if (SerializersByType.ContainsKey(instance.GetType()))
+                if (SerializersByType[instance.GetType()] != instance)
+                    throw new Exception();
+                else
+                    return;
+
+            SerializersByType.Add(instance.GetType(), instance);
+            SerializersByID.Add(instance.Identifier, instance);
         }
 
         private WrappersHelper()
-        {            
+        {
             //An aggregate catalog that combines multiple catalogs
             var catalog = new AggregateCatalog();
 
+            //We're going to try and guess where we might have serializers and compressors.  We will look in all currently loaded assemblies
+            //and all dll and exe files in the application root directory and subdirectories
+
             //Add all the currently loaded assemblies
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass => catalog.Catalogs.Add(new AssemblyCatalog(ass)));
+
+            var allDirectories = Directory.GetDirectories(Directory.GetCurrentDirectory(), "*", SearchOption.AllDirectories);
+
             //Adds all the parts found in dlls in the same localtion
-            catalog.Catalogs.Add(new DirectoryCatalog(".//", "*.dll"));
+            catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.dll"));
             //Adds all the parts found in exe in the same localtion
-            catalog.Catalogs.Add(new DirectoryCatalog(".//", "*.exe"));
+            catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.exe"));
+
+            for (int i = 0; i < allDirectories.Length; i++)
+            {
+                if (Directory.GetFiles(allDirectories[i], "*.exe", SearchOption.TopDirectoryOnly).Union(
+                    Directory.GetFiles(allDirectories[i], "*.dll", SearchOption.TopDirectoryOnly)).Count() != 0)
+                {
+                    //Adds all the parts found in dlls in the same localtion
+                    catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.dll"));
+                    //Adds all the parts found in exe in the same localtion
+                    catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.exe"));
+                }
+            }
 
             _container = new CompositionContainer(catalog);
-                        
+
             //Fill the imports of this object
             try
             {
@@ -141,10 +207,13 @@ namespace SerializerBase
             catch (CompositionException compositionException)
             {
                 Console.WriteLine(compositionException.ToString());
-            }           
+            }
 
-            Serializers = serializers.Distinct(SerializerComparer.Instance).ToDictionary(l => l.GetType(), l => l);
-            Compressors = compressors.Distinct(CompressorComparer.Instance).ToDictionary(l => l.GetType(), l => l);
+            SerializersByType = serializers.Distinct(SerializerComparer.Instance).ToDictionary(l => l.GetType(), l => l);
+            CompressorsByType = compressors.Distinct(CompressorComparer.Instance).ToDictionary(l => l.GetType(), l => l);
+
+            SerializersByID = SerializersByType.ToDictionary(s => s.Value.Identifier, s => s.Value);
+            CompressorsByID = CompressorsByType.ToDictionary(c => c.Value.Identifier, c => c.Value);
         }
     }
 }
