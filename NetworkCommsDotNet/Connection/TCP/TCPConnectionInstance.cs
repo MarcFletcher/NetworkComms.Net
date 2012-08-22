@@ -34,7 +34,7 @@ namespace NetworkCommsDotNet
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar"></param>
-        void IncomingPacketHandler(IAsyncResult ar)
+        void IncomingTCPPacketHandler(IAsyncResult ar)
         {
             //Incoming data always gets handled in a timeCritical fashion at this point
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
@@ -128,7 +128,7 @@ namespace NetworkCommsDotNet
                             totalBytesRead = 0;
                         }
 
-                        netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingPacketHandler, netStream);
+                        netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
                     }
                 }
                 else
@@ -157,7 +157,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Synchronous incoming connection data worker
         /// </summary>
-        void IncomingDataSyncWorker()
+        void IncomingTCPDataSyncWorker()
         {
             bool dataAvailable = false;
 

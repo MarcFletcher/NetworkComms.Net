@@ -127,7 +127,7 @@ namespace NetworkCommsDotNet
             if (receiveOptions == null) receiveOptions = ConnectionDefaultSendReceiveOptions;
 
             AppendShutdownHandler(SendReceiveShutDownDelegate);
-            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions, false);
+            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
             Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions);
             SendPacket(sendPacket);
@@ -342,7 +342,7 @@ namespace NetworkCommsDotNet
                     //Add the confirmation handler if required
                     if (packet.PacketHeader.ReceiveConfirmationRequired)
                     {
-                        AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions, false);
+                        AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions);
                         AppendShutdownHandler(ConfirmationShutDownDelegate);
                     }
 

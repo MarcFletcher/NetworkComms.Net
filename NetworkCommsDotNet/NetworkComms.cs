@@ -1237,6 +1237,10 @@ namespace NetworkCommsDotNet
         /// <param name="connection"></param>
         internal static void AddConnectionByEndPointReference(Connection connection, IPEndPoint endPointToUse = null)
         {
+            //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
+            if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
+                return;
+
             if (connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
@@ -1248,7 +1252,7 @@ namespace NetworkCommsDotNet
                 if (ConnectionExists(endPointToUse, connection.ConnectionInfo.ConnectionType))
                 {
                     if (RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType) != connection)
-                        throw new ConnectionSetupException("A difference connection already exists with " + connection.ConnectionInfo);
+                        throw new ConnectionSetupException("A different connection already exists with " + connection.ConnectionInfo);
                     else
                     {
                         //We have just tried to add the same reference twice, no need to do anything this time around

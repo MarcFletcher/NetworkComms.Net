@@ -62,7 +62,12 @@ namespace DebugTests
         {
             if (true)
             {
-                UDPConnection.AddNewLocalListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("udpTest", (header, connection, message) => 
+                {
+                    Console.WriteLine("Received UDP data.");
+                    connection.SendObject("udpResponse", "test good!"); 
+                });
+                UDPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nReady for incoming udp connections.");
 
@@ -72,7 +77,15 @@ namespace DebugTests
             }
             else
             {
-                UDPConnection.SendObject("udpTest", new byte[65400], new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
+                //UDPConnection.AddNewLocalListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort + 1), true);
+
+                //NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
+                //{
+                //    Console.WriteLine("Received UDP response. Remote end said -'" + message +"'.");
+                //});
+
+                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
+                Thread.Sleep(10000);
             }
         }
     }

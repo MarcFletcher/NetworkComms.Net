@@ -259,7 +259,7 @@ namespace NetworkCommsDotNet
                 {
                     if (incomingDataListenThread == null)
                     {
-                        incomingDataListenThread = new Thread(IncomingDataSyncWorker);
+                        incomingDataListenThread = new Thread(IncomingTCPDataSyncWorker);
                         //Incoming data always gets handled in a time critical fashion
                         incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
                         incomingDataListenThread.Name = "IncomingDataListener";
@@ -267,7 +267,7 @@ namespace NetworkCommsDotNet
                     }
                 }
                 else
-                    tcpClientNetworkStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingPacketHandler), tcpClientNetworkStream);
+                    tcpClientNetworkStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), tcpClientNetworkStream);
             }
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Listening for incoming data from " + ConnectionInfo);

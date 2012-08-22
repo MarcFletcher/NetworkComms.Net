@@ -181,7 +181,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStrSerializer"></param>
         /// <param name="packetTypeStrCompressor"></param>
         /// <param name="enableAutoListen"></param>
-        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options, bool enableAutoListen = true)
+        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options)
         {
             lock (delegateLocker)
             {

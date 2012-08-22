@@ -122,13 +122,15 @@ namespace NetworkCommsDotNet
                     }
                 }
 
-                if (tcpListenerDict.ContainsKey((IPEndPoint)newListenerInstance.LocalEndpoint))
+                IPEndPoint ipEndPointUsed = (IPEndPoint)newListenerInstance.LocalEndpoint;
+
+                if (tcpListenerDict.ContainsKey(ipEndPointUsed))
                     throw new CommsSetupShutdownException("Unable to add new TCP listenerInstance to tcpListenerDict as there is an existing entry.");
                 else
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
-                    tcpListenerDict.Add((IPEndPoint)newListenerInstance.LocalEndpoint, newListenerInstance);
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new TCP localEndPoint - " + newLocalEndPoint.Address + ":" + newLocalEndPoint.Port);
+                    tcpListenerDict.Add(ipEndPointUsed, newListenerInstance);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
                 }
             }
 
