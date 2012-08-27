@@ -22,7 +22,9 @@ using System.Net;
 
 namespace NetworkCommsDotNet
 {
-    //Provides a threadsafe wrapper around a udpClient object
+    /// <summary>
+    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections
+    /// </summary>
     public class UdpClientThreadSafe
     {
         UdpClient udpClient;

@@ -57,13 +57,41 @@ namespace NetworkCommsDotNet
         {
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
-            UDPConnection connection;
+            UDPConnection connection = null;
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
                 if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, ConnectionType.UDP))
                     connection = (UDPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP);
                 else
+                {
+                    //If we are listening on what will be the outgoing adaptor we send with that client to ensure if our connection info is handed off we are connectable by others
+                    if (existingConnection == null)
+                    {
+                        try
+                        {
+                            Socket testSocket = new Socket(connectionInfo.RemoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                            testSocket.Connect(connectionInfo.RemoteEndPoint);
+
+                            lock (udpClientListenerLocker)
+                            {
+                                IPEndPoint existingLocalEndPoint = ExistingLocalListener(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                                if (existingLocalEndPoint != null)
+                                {
+                                    existingConnection = udpConnectionListeners[existingLocalEndPoint];
+
+                                    //If we are using an existing listener there is no need to listen for packets
+                                    listenForReturnPackets = false;
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port + ". Will create an isolated udp connection instead.");
+                        }
+                    }
+
                     connection = new UDPConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, existingConnection);
+                }
             }
 
             return connection;

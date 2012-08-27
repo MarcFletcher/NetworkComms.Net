@@ -30,14 +30,13 @@ namespace NetworkCommsDotNet
         UdpClientThreadSafe udpClientThreadSafe;
         UDPLevel udpLevel;
 
-        //This is a dedicated connection object bound to a specific endPoint
-        bool isSpecificUDPConnection;
+        //An isolated udp connection will only accept incoming packets coming from the specified RemoteEndPoint.
+        bool isIsolatedUDPConnection = false;
 
         protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPLevel level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
             udpLevel = level;
-            isSpecificUDPConnection = false;
 
             if (listenForIncomingPackets && existingConnection != null)
                 throw new Exception("Unable to listen for incoming packets if an existing client has been provided. This is to prevent possible multiple accidently listens on the same client.");
@@ -50,14 +49,14 @@ namespace NetworkCommsDotNet
                 else
                 {
                     //If this is a specific connection we link to a default end point here
-                    isSpecificUDPConnection = true;
+                    isIsolatedUDPConnection = true;
 
                     if (ConnectionInfo.LocalEndPoint == null)
                         udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(new IPEndPoint(IPAddress.Any, 0)));
                     else
                         udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(ConnectionInfo.LocalEndPoint));
 
-                    //By calling connect we disacard packets from anything other then the provided remoteEndPoint on our localEndPoint
+                    //By calling connect we discard packets from anything other then the provided remoteEndPoint on our localEndPoint
                     udpClientThreadSafe.Connect(ConnectionInfo.RemoteEndPoint);
                 }
 
@@ -91,7 +90,7 @@ namespace NetworkCommsDotNet
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
-            if (isSpecificUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any)))
+            if (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any)))
                 udpClientThreadSafe.CloseClient();
         }
 
@@ -164,7 +163,7 @@ namespace NetworkCommsDotNet
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
-            if (isSpecificUDPConnection)
+            if (isIsolatedUDPConnection)
             {
                 //This connection was created for a specific remoteEndPoint so we can handle the data internally
                 packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
@@ -202,7 +201,7 @@ namespace NetworkCommsDotNet
 
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
-                    if (isSpecificUDPConnection)
+                    if (isIsolatedUDPConnection)
                     {
                         //This connection was created for a specific remoteEndPoint so we can handle the data internally
                         packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);

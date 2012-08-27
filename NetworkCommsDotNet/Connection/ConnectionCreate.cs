@@ -268,5 +268,10 @@ namespace NetworkCommsDotNet
 
             return false;
         }
+
+        public override string ToString()
+        {
+            return ConnectionInfo.ToString();
+        }
     }
 }
