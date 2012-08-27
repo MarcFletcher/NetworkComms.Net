@@ -33,6 +33,8 @@ namespace NetworkCommsDotNet
         List<byte[]> packets = new List<byte[]>();
         List<int> packetActualBytes = new List<int>();
 
+        object locker = new object();
+
         int totalBytesRead = 0;
         int totalBytesExpected = 0;
 
@@ -51,8 +53,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         public int TotalBytesExpected
         {
-            get { return totalBytesExpected; }
-            set { totalBytesExpected = value; }
+            get { lock(locker) return totalBytesExpected; }
+            set { lock (locker) totalBytesExpected = value; }
         }
 
         /// <summary>
@@ -61,61 +63,64 @@ namespace NetworkCommsDotNet
         /// <param name="numBytesToRemove"></param>
         public void ClearNTopBytes(int numBytesToRemove)
         {
-            if (numBytesToRemove > 0)
+            lock (locker)
             {
-                if (numBytesToRemove > totalBytesRead)
-                    throw new CommunicationException("Attempting to remove more bytes than exist in the ConnectionPacketBuilder");
-
-                int bytesRemoved = 0;
-
-                //We will always remove bytes in order of the entries
-                for (int i = 0; i < packets.Count; i++)
+                if (numBytesToRemove > 0)
                 {
-                    if (packetActualBytes[i] > numBytesToRemove - bytesRemoved)
-                    {
-                        //Remove the necessary bytes from this packet and rebuild
-                        //New array length is the original length minus the amount we need to remove
-                        byte[] newPacketByteArray = new byte[packetActualBytes[i] - (numBytesToRemove - bytesRemoved)];
-                        Buffer.BlockCopy(packets[i], numBytesToRemove - bytesRemoved, newPacketByteArray, 0, newPacketByteArray.Length);
+                    if (numBytesToRemove > totalBytesRead)
+                        throw new CommunicationException("Attempting to remove more bytes than exist in the ConnectionPacketBuilder");
 
-                        bytesRemoved += packetActualBytes[i] - newPacketByteArray.Length;
-                        packets[i] = newPacketByteArray;
-                        packetActualBytes[i] = newPacketByteArray.Length;
+                    int bytesRemoved = 0;
 
-                        //Stop removing data here
-                        break;
-                    }
-                    else if (i > packets.Count - 1)
+                    //We will always remove bytes in order of the entries
+                    for (int i = 0; i < packets.Count; i++)
                     {
-                        //When i == (packet.Count - 1) I would expect the above if condition to always be true
-                        throw new CommunicationException("This should be impossible.");
+                        if (packetActualBytes[i] > numBytesToRemove - bytesRemoved)
+                        {
+                            //Remove the necessary bytes from this packet and rebuild
+                            //New array length is the original length minus the amount we need to remove
+                            byte[] newPacketByteArray = new byte[packetActualBytes[i] - (numBytesToRemove - bytesRemoved)];
+                            Buffer.BlockCopy(packets[i], numBytesToRemove - bytesRemoved, newPacketByteArray, 0, newPacketByteArray.Length);
+
+                            bytesRemoved += packetActualBytes[i] - newPacketByteArray.Length;
+                            packets[i] = newPacketByteArray;
+                            packetActualBytes[i] = newPacketByteArray.Length;
+
+                            //Stop removing data here
+                            break;
+                        }
+                        else if (i > packets.Count - 1)
+                        {
+                            //When i == (packet.Count - 1) I would expect the above if condition to always be true
+                            throw new CommunicationException("This should be impossible.");
+                        }
+                        else
+                        {
+                            //If we want to remove this entire packet we can just set the list reference to null
+                            bytesRemoved += packetActualBytes[i];
+                            packets[i] = null;
+                            packetActualBytes[i] = -1;
+                        }
                     }
-                    else
-                    {
-                        //If we want to remove this entire packet we can just set the list reference to null
-                        bytesRemoved += packetActualBytes[i];
-                        packets[i] = null;
-                        packetActualBytes[i] = -1;
-                    }
+
+                    if (bytesRemoved != numBytesToRemove)
+                        throw new CommunicationException("bytesRemoved should really equal the requested numBytesToRemove");
+
+                    //Reset the totalBytesRead
+                    totalBytesRead -= bytesRemoved;
+
+                    //Get rid of any null packets
+                    packets = (from current in packets
+                               where current != null
+                               select current).ToList();
+
+                    packetActualBytes = (from current in packetActualBytes
+                                         where current > -1
+                                         select current).ToList();
+
+                    //This is a really bad place to put a garbage collection as it hammers the CPU
+                    //GC.Collect();
                 }
-
-                if (bytesRemoved != numBytesToRemove)
-                    throw new CommunicationException("bytesRemoved should really equal the requested numBytesToRemove");
-
-                //Reset the totalBytesRead
-                totalBytesRead -= bytesRemoved;
-
-                //Get rid of any null packets
-                packets = (from current in packets
-                           where current != null
-                           select current).ToList();
-
-                packetActualBytes = (from current in packetActualBytes
-                                     where current > -1
-                                     select current).ToList();
-
-                //This is a really bad place to put a garbage collection as it hammers the CPU
-                //GC.Collect();
             }
         }
 
@@ -126,10 +131,13 @@ namespace NetworkCommsDotNet
         /// <param name="packet"></param>
         public void AddPacket(int packetBytes, byte[] packet)
         {
-            totalBytesRead += packetBytes;
+            lock (locker)
+            {
+                totalBytesRead += packetBytes;
 
-            packets.Add(packet);
-            packetActualBytes.Add(packetBytes);
+                packets.Add(packet);
+                packetActualBytes.Add(packetBytes);
+            }
         }
 
         /// <summary>
@@ -139,22 +147,25 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public byte[] RemoveMostRecentPacket(ref int lastPacketBytesRead)
         {
-            if (packets.Count > 0)
+            lock (locker)
             {
-                int lastPacketIndex = packets.Count - 1;
+                if (packets.Count > 0)
+                {
+                    int lastPacketIndex = packets.Count - 1;
 
-                lastPacketBytesRead = packetActualBytes[lastPacketIndex];
-                byte[] returnArray = packets[lastPacketIndex];
+                    lastPacketBytesRead = packetActualBytes[lastPacketIndex];
+                    byte[] returnArray = packets[lastPacketIndex];
 
-                totalBytesRead -= packetActualBytes[lastPacketIndex];
+                    totalBytesRead -= packetActualBytes[lastPacketIndex];
 
-                packets.RemoveAt(lastPacketIndex);
-                packetActualBytes.RemoveAt(lastPacketIndex);
+                    packets.RemoveAt(lastPacketIndex);
+                    packetActualBytes.RemoveAt(lastPacketIndex);
 
-                return returnArray;
+                    return returnArray;
+                }
+                else
+                    throw new Exception("Unable to remove most recent packet as packet list is empty.");
             }
-            else
-                throw new Exception("Unable to remove most recent packet as packet list is empty.");
         }
 
         /// <summary>
@@ -163,7 +174,8 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public int CurrentPacketCount()
         {
-            return packets.Count;
+            lock (locker)
+                return packets.Count;
         }
 
         /// <summary>
@@ -172,13 +184,16 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public int NumUnusedBytesMostRecentPacket()
         {
-            if (packets.Count > 0)
+            lock (locker)
             {
-                int lastPacketIndex = packets.Count - 1;
-                return packets[lastPacketIndex].Length - packetActualBytes[lastPacketIndex];
+                if (packets.Count > 0)
+                {
+                    int lastPacketIndex = packets.Count - 1;
+                    return packets[lastPacketIndex].Length - packetActualBytes[lastPacketIndex];
+                }
+                else
+                    throw new Exception("Unable to return requested size as packet list is empty.");
             }
-            else
-                throw new Exception("Unable to return requested size as packet list is empty.");
         }
 
         /// <summary>
@@ -187,7 +202,8 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public byte FirstByte()
         {
-            return packets[0][0];
+            lock (locker)
+                return packets[0][0];
         }
 
         /// <summary>
@@ -196,16 +212,19 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public byte[] GetAllData()
         {
-            byte[] returnArray = new byte[totalBytesRead];
-
-            int currentStart = 0;
-            for (int i = 0; i < packets.Count; i++)
+            lock (locker)
             {
-                Buffer.BlockCopy(packets[i], 0, returnArray, currentStart, packetActualBytes[i]);
-                currentStart += packetActualBytes[i];
-            }
+                byte[] returnArray = new byte[totalBytesRead];
 
-            return returnArray;
+                int currentStart = 0;
+                for (int i = 0; i < packets.Count; i++)
+                {
+                    Buffer.BlockCopy(packets[i], 0, returnArray, currentStart, packetActualBytes[i]);
+                    currentStart += packetActualBytes[i];
+                }
+
+                return returnArray;
+            }
         }
 
         /// <summary>
@@ -216,63 +235,66 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public byte[] ReadDataSection(int startIndex, int length)
         {
-            byte[] returnArray = new byte[length];
-            int runningTotal = 0, writeTotal = 0;
-            int startingPacketIndex;
-
-            int firstPacketStartIndex = 0;
-            //First find the correct starting packet
-            for (startingPacketIndex = 0; startingPacketIndex < packets.Count; startingPacketIndex++)
+            lock (locker)
             {
-                if (startIndex - runningTotal <= packetActualBytes[startingPacketIndex])
-                {
-                    firstPacketStartIndex = startIndex - runningTotal;
-                    break;
-                }
-                else
-                    runningTotal += packetActualBytes[startingPacketIndex];
-            }
+                byte[] returnArray = new byte[length];
+                int runningTotal = 0, writeTotal = 0;
+                int startingPacketIndex;
 
-            //Copy the bytes of interest
-            for (int i = startingPacketIndex; i < packets.Count; i++)
-            {
-                if (i == startingPacketIndex)
+                int firstPacketStartIndex = 0;
+                //First find the correct starting packet
+                for (startingPacketIndex = 0; startingPacketIndex < packets.Count; startingPacketIndex++)
                 {
-                    if (length > packetActualBytes[i] - firstPacketStartIndex)
-                        //If we want from some starting point to the end of the packet
-                        Buffer.BlockCopy(packets[i], firstPacketStartIndex, returnArray, writeTotal, packetActualBytes[i] - firstPacketStartIndex);
-                    else
+                    if (startIndex - runningTotal <= packetActualBytes[startingPacketIndex])
                     {
-                        //We only want part of the packet
-                        Buffer.BlockCopy(packets[i], firstPacketStartIndex, returnArray, writeTotal, length);
-                        writeTotal += length;
-                        break;
-                    }
-
-                    writeTotal = packetActualBytes[i] - firstPacketStartIndex;
-                }
-                else
-                {
-                    //We are no longer on the first packet
-                    if (packetActualBytes[i] + writeTotal >= length)
-                    {
-                        //We have reached the last packet of interest
-                        Buffer.BlockCopy(packets[i], 0, returnArray, writeTotal, length - writeTotal);
-                        writeTotal += length - writeTotal;
+                        firstPacketStartIndex = startIndex - runningTotal;
                         break;
                     }
                     else
+                        runningTotal += packetActualBytes[startingPacketIndex];
+                }
+
+                //Copy the bytes of interest
+                for (int i = startingPacketIndex; i < packets.Count; i++)
+                {
+                    if (i == startingPacketIndex)
                     {
-                        Buffer.BlockCopy(packets[i], 0, returnArray, writeTotal, packetActualBytes[i]);
-                        writeTotal += packetActualBytes[i];
+                        if (length > packetActualBytes[i] - firstPacketStartIndex)
+                            //If we want from some starting point to the end of the packet
+                            Buffer.BlockCopy(packets[i], firstPacketStartIndex, returnArray, writeTotal, packetActualBytes[i] - firstPacketStartIndex);
+                        else
+                        {
+                            //We only want part of the packet
+                            Buffer.BlockCopy(packets[i], firstPacketStartIndex, returnArray, writeTotal, length);
+                            writeTotal += length;
+                            break;
+                        }
+
+                        writeTotal = packetActualBytes[i] - firstPacketStartIndex;
+                    }
+                    else
+                    {
+                        //We are no longer on the first packet
+                        if (packetActualBytes[i] + writeTotal >= length)
+                        {
+                            //We have reached the last packet of interest
+                            Buffer.BlockCopy(packets[i], 0, returnArray, writeTotal, length - writeTotal);
+                            writeTotal += length - writeTotal;
+                            break;
+                        }
+                        else
+                        {
+                            Buffer.BlockCopy(packets[i], 0, returnArray, writeTotal, packetActualBytes[i]);
+                            writeTotal += packetActualBytes[i];
+                        }
                     }
                 }
+
+                if (writeTotal != length)
+                    throw new Exception("Not enough data available in packetBuilder to complete request.");
+
+                return returnArray;
             }
-
-            if (writeTotal != length)
-                throw new Exception("Not enough data available in packetBuilder to complete request.");
-
-            return returnArray;
         }
     }
 }

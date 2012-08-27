@@ -43,9 +43,30 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPLevel level, bool establishIfRequired = true)
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPLevel level, bool listenForReturnPackets = true)
         {
-            throw new NotImplementedException();
+            return CreateConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+        }
+
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets = true)
+        {
+            return CreateConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
+        }
+
+        internal static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets, UDPConnection existingConnection)
+        {
+            connectionInfo.ConnectionType = ConnectionType.UDP;
+
+            UDPConnection connection;
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, ConnectionType.UDP))
+                    connection = (UDPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP);
+                else
+                    connection = new UDPConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, existingConnection);
+            }
+
+            return connection;
         }
 
         /// <summary>
@@ -153,9 +174,46 @@ namespace NetworkCommsDotNet
                 return (from current in udpConnectionListeners.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
         }
 
-        private static void IncomingUDPPacketWorker()
+        internal static void Shutdown()
         {
-            //This is the sync udp receive thread
+            //Close any established udp listeners
+            try
+            {
+                CloseAndRemoveAllLocalConnectionListeners();
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "UDPCommsShutdownError");
+            }
+        }
+
+        private static void CloseAndRemoveAllLocalConnectionListeners()
+        {
+            lock (udpClientListenerLocker)
+            {
+                try
+                {
+                    foreach (var connection in udpConnectionListeners.Values)
+                    {
+                        try
+                        {
+                            connection.CloseConnection(false, -6);
+                        }
+                        catch (Exception) { }
+                    }
+                }
+                catch (Exception) { }
+                finally
+                {
+                    //Once we have stopped all listeners we set the list to null incase we want to resart listening
+                    udpConnectionListeners = new Dictionary<IPEndPoint, UDPConnection>();
+                }
+            }
+        }
+
+        public static void SendObject(string sendingPacketType, object objectToSend, string ipAddress, int port)
+        {
+            SendObject(sendingPacketType, objectToSend, new IPEndPoint(IPAddress.Parse(ipAddress), port));
         }
 
         /// <summary>

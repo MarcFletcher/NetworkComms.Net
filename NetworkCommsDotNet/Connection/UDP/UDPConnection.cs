@@ -19,6 +19,8 @@ using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
+using System.IO;
+using System.Threading;
 
 namespace NetworkCommsDotNet
 {
@@ -49,7 +51,13 @@ namespace NetworkCommsDotNet
                 {
                     //If this is a specific connection we link to a default end point here
                     isSpecificUDPConnection = true;
-                    udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(ConnectionInfo.LocalEndPoint));
+
+                    if (ConnectionInfo.LocalEndPoint == null)
+                        udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(new IPEndPoint(IPAddress.Any, 0)));
+                    else
+                        udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(ConnectionInfo.LocalEndPoint));
+
+                    //By calling connect we disacard packets from anything other then the provided remoteEndPoint on our localEndPoint
                     udpClientThreadSafe.Connect(ConnectionInfo.RemoteEndPoint);
                 }
 
@@ -64,12 +72,12 @@ namespace NetworkCommsDotNet
                 if (!existingConnection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
                     throw new Exception("If an existing udpClient is provided it must be unbound to a specific remoteEndPoint");
 
-                //Using an exiting client allows us to keep sending from the same local port for multiple connections
+                //Using an exiting client allows us to send from the same port as for the provided existing connection
                 this.udpClientThreadSafe = existingConnection.udpClientThreadSafe;
             }
 
             //We can update the localEndPoint so that it is correct
-            if (ConnectionInfo.LocalEndPoint.Port == 0)
+            if (ConnectionInfo.LocalEndPoint == null || ConnectionInfo.LocalEndPoint.Port == 0)
                 ConnectionInfo.UpdateLocalEndPointInfo(udpClientThreadSafe.LocalEndPoint);
         }
 
@@ -77,7 +85,7 @@ namespace NetworkCommsDotNet
         {
             //There is generally no establish for a UDP connection
             if (udpLevel > 0)
-                throw new NotImplementedException("Future version of networkComms will support udp levels correctly");
+                throw new NotImplementedException("A future version of networkComms will support additional udp levels.");
         }
 
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
@@ -135,7 +143,15 @@ namespace NetworkCommsDotNet
         protected override void StartIncomingDataListen()
         {
             if (NetworkComms.ConnectionListenModeUseSync)
-                throw new NotImplementedException("Not yet implemented!");
+            {
+                if (incomingDataListenThread == null)
+                {
+                    incomingDataListenThread = new Thread(IncomingUDPPacketWorker);
+                    incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
+                    incomingDataListenThread.Name = "IncomingDataListener";
+                    incomingDataListenThread.Start();
+                }
+            }
             else
                 udpClientThreadSafe.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), udpClientThreadSafe);
         }
@@ -150,7 +166,7 @@ namespace NetworkCommsDotNet
 
             if (isSpecificUDPConnection)
             {
-                //This connection was created a specific connection so we can handle the data internally
+                //This connection was created for a specific remoteEndPoint so we can handle the data internally
                 packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
                 IncomingPacketHandleHandOff(packetBuilder);
             }
@@ -158,14 +174,7 @@ namespace NetworkCommsDotNet
             {
                 //Look for an existing connection, if one does not exist we will create it
                 //This ensures that all further processing knows about the correct endPoint
-                UDPConnection connection;
-                lock (NetworkComms.globalDictAndDelegateLocker)
-                {
-                    if (NetworkComms.ConnectionExists(endPoint, ConnectionType.UDP))
-                        connection = (UDPConnection)NetworkComms.RetrieveConnection(endPoint, ConnectionType.UDP);
-                    else
-                        connection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
-                }
+                UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this); 
 
                 //We pass the data off to the specific connection
                 connection.packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
@@ -179,16 +188,67 @@ namespace NetworkCommsDotNet
             client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
         }
 
-        public static void CloseAllConnections(EndPoint[] closeAllExceptTheseEndPoints)
+        protected void IncomingUDPPacketWorker()
         {
-            throw new NotImplementedException();
-        }
+            try
+            {
+                while (true)
+                {
+                    if (ConnectionInfo.ConnectionShutdown)
+                        break;
 
-        internal static void Shutdown()
-        {
-            //Close any established udp listeners
+                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                    byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
-            throw new NotImplementedException();
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+
+                    if (isSpecificUDPConnection)
+                    {
+                        //This connection was created for a specific remoteEndPoint so we can handle the data internally
+                        packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                        IncomingPacketHandleHandOff(packetBuilder);
+                    }
+                    else
+                    {
+                        //Look for an existing connection, if one does not exist we will create it
+                        //This ensures that all further processing knows about the correct endPoint
+                        UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+
+                        //We pass the data off to the specific connection
+                        connection.packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                        connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+
+                        if (connection.packetBuilder.CurrentPacketCount() > 0)
+                            throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                    }
+                }
+            }
+            //On any error here we close the connection
+            catch (NullReferenceException)
+            {
+                CloseConnection(true, 20);
+            }
+            catch (IOException)
+            {
+                CloseConnection(true, 21);
+            }
+            catch (ObjectDisposedException)
+            {
+                CloseConnection(true, 22);
+            }
+            catch (SocketException)
+            {
+                CloseConnection(true, 23);
+            }
+            catch (InvalidOperationException)
+            {
+                CloseConnection(true, 24);
+            }
+
+            //Clear the listen thread object because the thread is about to end
+            incomingDataListenThread = null;
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
     }
 }

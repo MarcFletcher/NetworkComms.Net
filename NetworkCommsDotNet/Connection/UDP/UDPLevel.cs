@@ -24,7 +24,7 @@ namespace NetworkCommsDotNet
     [Flags]
     public enum UDPLevel
     {
-        None = 0x0,
-        EstablishHandshake = 0x1,
+        None = 0x0, //Network comms 2.0 will only support the most basic udp features
+        EstablishHandshake = 0x1, //This will probably be the first feature implemented post 2.0
     }
 }

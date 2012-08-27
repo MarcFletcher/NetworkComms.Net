@@ -759,19 +759,11 @@ namespace NetworkCommsDotNet
         {
             commsShutdown = true;
 
-            try
-            {
-                TCPConnection.Shutdown(threadShutdownTimeoutMS);
-                //UDPConnection.Shutdown();
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, "CommsShutdownError");
-            }
+            TCPConnection.Shutdown(threadShutdownTimeoutMS);
+            UDPConnection.Shutdown();
 
             try
             {
-                if (OnCommsShutdown != null) OnCommsShutdown(null, new EventArgs());
                 CloseAllConnections();
             }
             catch (CommsException)
@@ -793,6 +785,15 @@ namespace NetworkCommsDotNet
                         throw new CommsSetupShutdownException("Timeout waiting for NetworkLoadThread thread to shutdown after " + threadShutdownTimeoutMS + " ms. ");
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "CommsShutdownError");
+            }
+
+            try
+            {
+                if (OnCommsShutdown != null) OnCommsShutdown(null, new EventArgs());
             }
             catch (Exception ex)
             {
@@ -1116,7 +1117,19 @@ namespace NetworkCommsDotNet
         public static Connection RetrieveConnection(IPEndPoint IPEndPoint, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
-                return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+            {
+                //return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+                //return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint select current.Value[connectionType]).FirstOrDefault();
+                if (allConnectionsByEndPoint.ContainsKey(IPEndPoint))
+                {
+                    if (allConnectionsByEndPoint[IPEndPoint].ContainsKey(connectionType))
+                        return allConnectionsByEndPoint[IPEndPoint][connectionType];
+                    else
+                        return null;
+                }
+                else
+                    return null;
+            }
         }
 
         /// <summary>

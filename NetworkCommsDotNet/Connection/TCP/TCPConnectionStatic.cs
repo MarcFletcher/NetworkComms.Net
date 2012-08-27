@@ -386,7 +386,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "CommsShutdownError");
+                NetworkComms.LogError(ex, "TCPCommsShutdownError");
             }
         }
 

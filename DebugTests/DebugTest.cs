@@ -77,15 +77,15 @@ namespace DebugTests
             }
             else
             {
-                //UDPConnection.AddNewLocalListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort + 1), true);
+                UDPConnection.AddNewLocalListener();
 
-                //NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
-                //{
-                //    Console.WriteLine("Received UDP response. Remote end said -'" + message +"'.");
-                //});
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
+                {
+                    Console.WriteLine("Received UDP response. Remote end said -'" + message + "'.");
+                });
 
-                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
-                Thread.Sleep(10000);
+                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("131.111.73.200"), NetworkComms.DefaultListenPort));
+                Thread.Sleep(10000000);
             }
         }
     }

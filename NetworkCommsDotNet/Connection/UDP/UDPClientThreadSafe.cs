@@ -26,6 +26,7 @@ namespace NetworkCommsDotNet
     public class UdpClientThreadSafe
     {
         UdpClient udpClient;
+        bool isConnected;
         object locker = new object();
 
         public UdpClientThreadSafe(UdpClient udpClient)
@@ -36,13 +37,26 @@ namespace NetworkCommsDotNet
         public void Send(byte[] dgram, int bytes, IPEndPoint endPoint)
         {
             lock (locker)
-                udpClient.Send(dgram, bytes, endPoint);
+            {
+                if (isConnected)
+                {
+                    if (!endPoint.Equals(udpClient.Client.RemoteEndPoint))
+                        throw new CommunicationException("Attempted to send UDP packet to an endPoint other than that to which this UDP client is specifically connected.");
+                    else
+                        udpClient.Send(dgram, bytes);
+                }
+                else
+                    udpClient.Send(dgram, bytes, endPoint);
+            }
         }
 
         public void Connect(IPEndPoint endPoint)
         {
             lock (locker)
+            {
+                isConnected = true;
                 udpClient.Connect(endPoint);
+            }
         }
 
         public void AllowNatTraversal(bool allowed)
@@ -76,6 +90,12 @@ namespace NetworkCommsDotNet
             }
         }
 
+        public byte[] Receive(ref IPEndPoint remoteEP)
+        {
+            //We are best of avoiding a lock here as this call will block until data is recieved
+            return udpClient.Receive(ref remoteEP);
+        }
+
         public IAsyncResult BeginReceive(AsyncCallback requestCallback, object state)
         {
             lock (locker)
@@ -103,6 +123,15 @@ namespace NetworkCommsDotNet
             {
                 lock (locker)
                     return (IPEndPoint)udpClient.Client.LocalEndPoint;
+            }
+        }
+
+        public bool DataAvailable
+        {
+            get
+            {
+                lock (locker)
+                    return udpClient.Available > 0;
             }
         }
     }
