@@ -432,5 +432,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet"></param>
         protected abstract void SendPacketSpecific(Packet packet);
+
+        protected abstract void SendNullPacket();
     }
 }

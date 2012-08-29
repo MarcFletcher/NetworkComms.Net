@@ -50,6 +50,7 @@
     <Compile Include="Connection\ConnectionCreate.cs" />
     <Compile Include="Connection\ConnectionDelegatesHandlers.cs" />
     <Compile Include="Connection\ConnectionIncomingData.cs" />
+    <Compile Include="Connection\ConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionType.cs" />
     <Compile Include="Connection\UDP\UDPClientThreadSafe.cs" />
     <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />

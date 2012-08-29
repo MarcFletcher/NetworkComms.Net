@@ -313,7 +313,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
         /// </summary>
-        internal void SendNullPacket()
+        protected override void SendNullPacket()
         {
             try
             {

@@ -759,6 +759,7 @@ namespace NetworkCommsDotNet
         {
             commsShutdown = true;
 
+            Connection.Shutdown(threadShutdownTimeoutMS);
             TCPConnection.Shutdown(threadShutdownTimeoutMS);
             UDPConnection.Shutdown();
 

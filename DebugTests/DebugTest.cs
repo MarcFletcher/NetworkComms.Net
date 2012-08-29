@@ -67,6 +67,12 @@ namespace DebugTests
                     Console.WriteLine("Received UDP data.");
                     connection.SendObject("udpResponse", "test good!"); 
                 });
+
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("broadcast", (header, connection, message) =>
+                {
+                    Console.WriteLine("Received UDP broadcast.");
+                });
+
                 UDPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nReady for incoming udp connections.");
@@ -77,6 +83,9 @@ namespace DebugTests
             }
             else
             {
+                //THis is a general UDP broadcast, broadcasts are not forwarded across vpns
+                UDPConnection.SendObject("broadcast", new byte[10], "255.255.255.255", 10000);
+
                 UDPConnection.AddNewLocalListener();
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
@@ -84,7 +93,7 @@ namespace DebugTests
                     Console.WriteLine("Received UDP response. Remote end said -'" + message + "'.");
                 });
 
-                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("131.111.73.200"), NetworkComms.DefaultListenPort));
+                //UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("192.168.0.120"), 10000));
                 Thread.Sleep(10000000);
             }
         }

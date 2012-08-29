@@ -33,22 +33,8 @@ namespace NetworkCommsDotNet
         static object staticTCPConnectionLocker = new object();
         static Dictionary<IPEndPoint, TcpListener> tcpListenerDict = new Dictionary<IPEndPoint, TcpListener>();
 
-        static volatile bool shutdownTCPWorkerThreads = false;
+        static volatile bool shutdownIncomingConnectionWorkerThread = false;
         static Thread newIncomingConnectionWorker;
-        static Thread connectionKeepAliveWorker;
-
-        /// <summary>
-        /// Private static TCP constructor which sets any TCP connection defaults
-        /// </summary>
-        static TCPConnection()
-        {
-            ConnectionKeepAlivePollIntervalSecs = 30;
-        }
-
-        /// <summary>
-        /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive poll
-        /// </summary>
-        public static int ConnectionKeepAlivePollIntervalSecs { get; set; }
 
         /// <summary>
         /// By default networkComms.net disables all usage of the nagle algorithm. If you wish it to be used for established connections set this property to true.
@@ -183,92 +169,6 @@ namespace NetworkCommsDotNet
                 return tcpListenerDict.Count > 0;
         }
 
-        private static void TriggerConnectionKeepAliveThread()
-        {
-            lock (staticTCPConnectionLocker)
-            {
-                if (connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped)
-                {
-                    connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
-                    connectionKeepAliveWorker.Name = "TCPConnectionKeepAliveWorker";
-                    connectionKeepAliveWorker.Start();
-                }
-            }
-        }
-
-        private static void ConnectionKeepAliveWorker()
-        {
-            shutdownTCPWorkerThreads = false;
-
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("TCP Connection keep alive polling thread has started.");
-            DateTime lastPollCheck = DateTime.Now;
-
-            do
-            {
-                try
-                {
-                    //We have a short sleep here so that we can exit the thread fairly quickly if we need too
-                    Thread.Sleep(100);
-
-                    //Any connections which we have not seen in the last poll interval get tested using a null packet
-                    if (ConnectionKeepAlivePollIntervalSecs < int.MaxValue && (DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs)
-                    {
-                        AllConnectionsSendNullPacketKeepAlive();
-                        lastPollCheck = DateTime.Now;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    NetworkComms.LogError(ex, "TCPKeepAlivePollError");
-                }
-            } while (!shutdownTCPWorkerThreads);
-        }
-
-        /// <summary>
-        /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
-        /// </summary>
-        /// <param name="returnImmediately"></param>
-        private static void AllConnectionsSendNullPacketKeepAlive(bool returnImmediately = false)
-        {
-            //Loop through all connections and test the alive state
-            List<Connection> allTCPConnections = NetworkComms.RetrieveConnection(ConnectionType.TCP);
-
-            List<Task> connectionCheckTasks = new List<Task>();
-
-            for (int i = 0; i < allTCPConnections.Count; i++)
-            {
-                int innerIndex = i;
-
-                connectionCheckTasks.Add(Task.Factory.StartNew(new Action(() =>
-                {
-                    try
-                    {
-                        //If the connection is server side we poll preferentially
-                        if (allTCPConnections[innerIndex] != null)
-                        {
-                            if (allTCPConnections[innerIndex].ConnectionInfo.ServerSide)
-                            {
-                                //We check the last incoming traffic time
-                                //In scenarios where the client is sending us lots of data there is no need to poll
-                                if ((DateTime.Now - allTCPConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
-                                    ((TCPConnection)allTCPConnections[innerIndex]).SendNullPacket();
-                            }
-                            else
-                            {
-                                //If we are client side we wait upto an additional 3 seconds to do the poll
-                                //This means the server will probably beat us
-                                if ((DateTime.Now - allTCPConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
-                                    ((TCPConnection)allTCPConnections[innerIndex]).SendNullPacket();
-                            }
-                        }
-                    }
-                    catch (Exception) { }
-                })));
-            }
-
-            if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
-        }
-
         /// <summary>
         /// Start the IncomingConnectionWorker if required
         /// </summary>
@@ -290,7 +190,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void IncomingConnectionWorker()
         {
-            shutdownTCPWorkerThreads = false;
+            shutdownIncomingConnectionWorkerThread = false;
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("TCP IncomingConnectionWorker thread started.");
 
@@ -308,7 +208,7 @@ namespace NetworkCommsDotNet
 
                         foreach (var listener in currentTCPListeners)
                         {
-                            if (listener.Pending() && !shutdownTCPWorkerThreads)
+                            if (listener.Pending() && !shutdownIncomingConnectionWorkerThread)
                             {
                                 pickedUpNewConnection = true;
 
@@ -319,7 +219,7 @@ namespace NetworkCommsDotNet
                         }
 
                         //We will only pause if we didnt get any new connections
-                        if (!pickedUpNewConnection && !shutdownTCPWorkerThreads)
+                        if (!pickedUpNewConnection && !shutdownIncomingConnectionWorkerThread)
                             Thread.Sleep(100);
                     }
                     catch (ConfirmationTimeoutException)
@@ -350,7 +250,7 @@ namespace NetworkCommsDotNet
                                 NetworkComms.LogError(ex, "CommsSetupError");
                         }
                     }
-                } while (!shutdownTCPWorkerThreads);
+                } while (!shutdownIncomingConnectionWorkerThread);
             }
             catch (Exception ex)
             {
@@ -373,15 +273,12 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                shutdownTCPWorkerThreads = true;
+                shutdownIncomingConnectionWorkerThread = true;
 
                 CloseAndRemoveAllLocalConnectionListeners();
 
                 //If the worker thread does not shutdown in the required time we kill it
                 if (newIncomingConnectionWorker != null && !newIncomingConnectionWorker.Join(threadShutdownTimeoutMS))
-                    newIncomingConnectionWorker.Abort();
-
-                if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Join(threadShutdownTimeoutMS))
                     newIncomingConnectionWorker.Abort();
             }
             catch (Exception ex)

@@ -94,6 +94,8 @@ namespace NetworkCommsDotNet
                 }
             }
 
+            TriggerConnectionKeepAliveThread();
+
             return connection;
         }
 
@@ -189,6 +191,24 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
                 }
             }
+
+            TriggerConnectionKeepAliveThread();
+        }
+
+        /// <summary>
+        /// Returns a list of all current udp local end point listeners
+        /// </summary>
+        /// <returns></returns>
+        public static List<IPEndPoint> CurrentLocalEndPoints()
+        {
+            lock (udpClientListenerLocker)
+                return udpConnectionListeners.Keys.ToList();
+        }
+
+        public static bool ListeningForConnections()
+        {
+            lock (udpClientListenerLocker)
+                return udpConnectionListeners.Count > 0;
         }
 
         /// <summary>

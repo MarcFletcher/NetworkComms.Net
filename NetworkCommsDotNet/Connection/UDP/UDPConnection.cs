@@ -139,6 +139,24 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 
+        protected override void SendNullPacket()
+        {
+            try
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
+
+                //Send a single 0 byte
+                udpClientThreadSafe.Send(new byte[] { 0 }, 1, ConnectionInfo.RemoteEndPoint);
+
+                //Update the traffic time after we have written to netStream
+                ConnectionInfo.UpdateLastTrafficTime();
+            }
+            catch (Exception)
+            {
+                CloseConnection(true, 19);
+            }
+        }
+
         protected override void StartIncomingDataListen()
         {
             if (NetworkComms.ConnectionListenModeUseSync)
