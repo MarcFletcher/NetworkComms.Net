@@ -167,6 +167,44 @@ namespace SerializerBase
             SerializersByID.Add(instance.Identifier, instance);
         }
 
+        public long CreateSerializerDataProcessorIdentifier(Serializer serializer, List<DataProcessor> dataProcessors)
+        {
+            long res = 0;
+                        
+            res |= serializer.Identifier;
+            res <<= 8;
+
+            if (dataProcessors != null && dataProcessors.Count != 0)
+            {
+                if (dataProcessors.Count > 7)
+                    throw new InvalidOperationException("Cannot specify more than 7 data processors for automatic serialization detection");
+
+                for (int i = 0; i < dataProcessors.Count; i++)
+                {
+                    res |= dataProcessors[i].Identifier;
+                    res <<= 8;
+                }
+            }
+
+            return res;
+        }
+
+        public void GetSerializerDataProcessorsFromIdentifier(long id, out Serializer serializer, out List<DataProcessor> dataProcessors)
+        {
+            serializer = GetSerializer((byte)(id >> 56));
+
+            dataProcessors = new List<DataProcessor>();
+
+            for (int i = 6; i >= 0; i--)
+            {
+                long mask = 0xFF;
+                byte processorId = (byte)((id & (mask << (8 * i))) >> (8 * i));
+
+                if (processorId != 0)
+                    dataProcessors.Add(GetDataProcessor(processorId));
+            }
+        }
+
         private ProcessorManager()
         {
             //An aggregate catalog that combines multiple catalogs

@@ -58,39 +58,75 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetTypeStr"></param>
         /// <returns></returns>
-        private SendReceiveOptions IncomingPacketSendReceiveOptions(string packetTypeStr)
+        private SendReceiveOptions IncomingPacketSendReceiveOptions(PacketHeader header)
         {
             //Are there connection specific or global packet handlers?
             bool connectionSpecificHandlers = false;
-            lock (delegateLocker) connectionSpecificHandlers = incomingPacketHandlers.ContainsKey(packetTypeStr);
+            lock (delegateLocker) connectionSpecificHandlers = incomingPacketHandlers.ContainsKey(header.PacketType);
 
-            bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(packetTypeStr);
+            bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(header.PacketType);
 
             //Look at the connection specific and global send receive options?
-            SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(packetTypeStr);
+            SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(header.PacketType);
             if (connectionSpecificOptions == null) connectionSpecificOptions = ConnectionDefaultSendReceiveOptions;
 
-            SendReceiveOptions globalOptions = NetworkComms.PacketTypeGlobalUnwrapperOptions(packetTypeStr);
+            SendReceiveOptions globalOptions = NetworkComms.PacketTypeGlobalUnwrapperOptions(header.PacketType);
             if (globalOptions == null) globalOptions = NetworkComms.DefaultSendReceiveOptions;
 
             //Return the one with the highest thready priority
             if (connectionSpecificHandlers && globalHandlers)
             {
                 if (!connectionSpecificOptions.OptionsCompatable(globalOptions))
-                    throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '"+packetTypeStr+"'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
+                    throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '" + header.PacketType + "'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
 
+                //We need to combine options in this case using the connection specific option in preference if both are present
                 var combinedOptions = new Dictionary<string, string>(globalOptions.Options);
-
+                
                 foreach (var pair in connectionSpecificOptions.Options)
                     combinedOptions[pair.Key] = pair.Value;
 
+                //If the header specifies a serializer and data processors we will autodetect those
+                if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
+                {
+                    Serializer serializer;
+                    List<DataProcessor> dataProcessors;
+
+                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    return new SendReceiveOptions(serializer, dataProcessors, combinedOptions);
+                }
+
+                //Otherwise we will use options that were specified
                 return new SendReceiveOptions(connectionSpecificOptions.Serializer, connectionSpecificOptions.DataProcessors, combinedOptions);
             }
             else if (connectionSpecificHandlers)
+            {
+                //If the header specifies a serializer and data processors we will autodetect those
+                if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
+                {
+                    Serializer serializer;
+                    List<DataProcessor> dataProcessors;
+
+                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    return new SendReceiveOptions(serializer, dataProcessors, connectionSpecificOptions.Options);
+                }
+
                 return connectionSpecificOptions;
+            }
             else
+            {
+                //If the header specifies a serializer and data processors we will autodetect those
+                if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
+                {
+                    Serializer serializer;
+                    List<DataProcessor> dataProcessors;
+
+                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
+                }
+
                 //If just globalHandlers is set (or indeed no handlers atall we just return the global options
                 return globalOptions;
+            }
         }
 
         /// <summary>

@@ -67,6 +67,9 @@ namespace NetworkCommsDotNet
                 options.Options.ContainsKey("ReceiveConfirmationRequired") ? bool.Parse(options.Options["ReceiveConfirmationRequired"]) : false,
                 hashStr);
 
+            //Add an identifier specifying the serializers and processors we have used
+            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, ProcessorManager.Instance.CreateSerializerDataProcessorIdentifier(options.Serializer, options.DataProcessors));
+
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }
 

@@ -134,6 +134,16 @@ namespace NetworkCommsDotNet
             return stringItems[options];
         }
 
+        public void SetOption(PacketHeaderLongItems option, long Value)
+        {
+            longItems[option] = Value;
+        }
+
+        public void SetOption(PacketHeaderStringItems option, string Value)
+        {
+            stringItems[option] = Value;
+        }
+
         #endregion
     }
 }

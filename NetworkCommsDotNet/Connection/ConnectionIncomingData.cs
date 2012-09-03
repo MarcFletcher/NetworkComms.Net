@@ -124,7 +124,7 @@ namespace NetworkCommsDotNet
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
 
-                            SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader.PacketType);
+                            SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
 
                             //Build the necessary task input data
                             object[] completedData = new object[3];
