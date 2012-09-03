@@ -55,15 +55,17 @@ namespace NetworkCommsDotNet
                 if (packetObjectInt != null)
                     this.packetData = packetObjectInt.ThreadSafeSerialise();
                 else
-                    this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.Compressor);
+                    this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
             }
 
             //We only calculate the checkSum if we are going to use it
-            string hashStr = "";
+            string hashStr = null;
             if (NetworkComms.EnablePacketCheckSumValidation)
                 hashStr = NetworkComms.MD5Bytes(packetData);
 
-            this.packetHeader = new PacketHeader(sendingPacketTypeStr, requestReturnPacketTypeStr, options.ReceiveConfirmationRequired, hashStr, packetData.Length, pureBytesInPayload);
+            this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, requestReturnPacketTypeStr,  
+                options.Options.ContainsKey("ReceiveConfirmationRequired") ? bool.Parse(options.Options["ReceiveConfirmationRequired"]) : false,
+                hashStr);
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }
@@ -91,7 +93,7 @@ namespace NetworkCommsDotNet
         public byte[] SerialiseHeader(SendReceiveOptions options)
         {
             //We need to start of by serialising the header
-            byte[] serialisedHeader = options.Serializer.SerialiseDataObject(packetHeader, options.Compressor);
+            byte[] serialisedHeader = options.Serializer.SerialiseDataObject(packetHeader, options.DataProcessors, null);
 
             //Define our return array which includes byte[0] as the header size
             byte[] returnArray = new byte[1 + serialisedHeader.Length];

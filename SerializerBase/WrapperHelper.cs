@@ -9,9 +9,9 @@ using System.IO;
 
 namespace SerializerBase
 {
-    public sealed class WrappersHelper
+    public sealed class ProcessorManager
     {
-        class SerializerComparer : IEqualityComparer<ISerialize>
+        class SerializerComparer : IEqualityComparer<Serializer>
         {
             public static SerializerComparer Instance { get; private set; }
 
@@ -21,7 +21,7 @@ namespace SerializerBase
 
             #region IEqualityComparer<ISerialize> Members
 
-            public bool Equals(ISerialize x, ISerialize y)
+            public bool Equals(Serializer x, Serializer y)
             {
                 if (x.Identifier == y.Identifier)
                 {
@@ -37,7 +37,7 @@ namespace SerializerBase
                     return false;
             }
 
-            public int GetHashCode(ISerialize obj)
+            public int GetHashCode(Serializer obj)
             {
                 return obj.Identifier.GetHashCode() ^ obj.GetType().GetHashCode();
             }
@@ -45,17 +45,17 @@ namespace SerializerBase
             #endregion
         }
 
-        class CompressorComparer : IEqualityComparer<ICompress>
+        class DataProcessorComparer : IEqualityComparer<DataProcessor>
         {
-            public static CompressorComparer Instance { get; private set; }
+            public static DataProcessorComparer Instance { get; private set; }
 
-            static CompressorComparer() { Instance = new CompressorComparer(); }
+            static DataProcessorComparer() { Instance = new DataProcessorComparer(); }
 
-            public CompressorComparer() { }
+            public DataProcessorComparer() { }
 
             #region IEqualityComparer<ICompress> Members
 
-            public bool Equals(ICompress x, ICompress y)
+            public bool Equals(DataProcessor x, DataProcessor y)
             {
                 if (x.Identifier == y.Identifier)
                 {
@@ -71,7 +71,7 @@ namespace SerializerBase
                     return false;
             }
 
-            public int GetHashCode(ICompress obj)
+            public int GetHashCode(DataProcessor obj)
             {
                 return obj.Identifier.GetHashCode() ^ obj.GetType().GetHashCode();
             }
@@ -81,32 +81,32 @@ namespace SerializerBase
 
         private CompositionContainer _container;
 
-        [ImportMany(typeof(ISerialize))]
-        private IEnumerable<ISerialize> serializers = null;
+        [ImportMany(typeof(Serializer))]
+        private IEnumerable<Serializer> serializers = null;
 
-        [ImportMany(typeof(ICompress))]
-        private IEnumerable<ICompress> compressors = null;
+        [ImportMany(typeof(DataProcessor))]
+        private IEnumerable<DataProcessor> compressors = null;
 
-        private Dictionary<Type, ISerialize> SerializersByType = new Dictionary<Type, ISerialize>();
-        private Dictionary<byte, ISerialize> SerializersByID = new Dictionary<byte, ISerialize>();
-        private Dictionary<Type, ICompress> CompressorsByType = new Dictionary<Type, ICompress>();
-        private Dictionary<byte, ICompress> CompressorsByID = new Dictionary<byte, ICompress>();
+        private Dictionary<Type, Serializer> SerializersByType = new Dictionary<Type, Serializer>();
+        private Dictionary<byte, Serializer> SerializersByID = new Dictionary<byte, Serializer>();
+        private Dictionary<Type, DataProcessor> DataProcessorsByType = new Dictionary<Type, DataProcessor>();
+        private Dictionary<byte, DataProcessor> DataProcessorsByID = new Dictionary<byte, DataProcessor>();
 
-        static WrappersHelper instance;
+        static ProcessorManager instance;
         
-        public static WrappersHelper Instance { get { return instance; } }
+        public static ProcessorManager Instance { get { return instance; } }
 
-        static WrappersHelper()
+        static ProcessorManager()
         {
-            instance = new WrappersHelper();
+            instance = new ProcessorManager();
         }
 
-        public Dictionary<Type, ISerialize> GetAllSerializes()
+        public Dictionary<Type, Serializer> GetAllSerializes()
         {
             return SerializersByType;
         }
 
-        public ISerialize GetSerializer<T>() where T : ISerialize
+        public Serializer GetSerializer<T>() where T : Serializer
         {
             if (SerializersByType.ContainsKey(typeof(T)))
                 return SerializersByType[typeof(T)];
@@ -114,7 +114,7 @@ namespace SerializerBase
                 return null;
         }
 
-        public ISerialize GetSerializer(byte Id)
+        public Serializer GetSerializer(byte Id)
         {
             if (SerializersByID.ContainsKey(Id))
                 return SerializersByID[Id];
@@ -122,52 +122,52 @@ namespace SerializerBase
                 return null;
         }
 
-        public Dictionary<Type, ICompress> GetAllCompressors()
+        public Dictionary<Type, DataProcessor> GetAllDataProcessors()
         {            
-            return CompressorsByType;
+            return DataProcessorsByType;
         }
 
-        public ICompress GetCompressor<T>() where T : ICompress
+        public DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
-            if (CompressorsByType.ContainsKey(typeof(T)))
-                return CompressorsByType[typeof(T)];
+            if (DataProcessorsByType.ContainsKey(typeof(T)))
+                return DataProcessorsByType[typeof(T)];
             else
                 return null;
         }
 
-        public ICompress GetCompressor(byte Id)
+        public DataProcessor GetDataProcessor(byte Id)
         {
-            if (CompressorsByID.ContainsKey(Id))
-                return CompressorsByID[Id];
+            if (DataProcessorsByID.ContainsKey(Id))
+                return DataProcessorsByID[Id];
             else
                 return null;
         }
 
-        public void AddCompressor(ICompress instance)
+        public void AddDataProcessor(DataProcessor instance)
         {
-            if (CompressorsByType.ContainsKey(instance.GetType()))
-                if (CompressorsByType[instance.GetType()] != instance)
+            if (DataProcessorsByType.ContainsKey(instance.GetType()))
+                if (DataProcessorsByType[instance.GetType()] != instance)
                     throw new Exception();
                 else
                     return;
 
-            CompressorsByType.Add(instance.GetType(), instance);
-            CompressorsByID.Add(instance.Identifier, instance);
+            DataProcessorsByType.Add(instance.GetType(), instance);
+            DataProcessorsByID.Add(instance.Identifier, instance);
         }
 
-        public void AddSerializer(ISerialize instance)
+        public void AddSerializer(Serializer instance)
         {
             if (SerializersByType.ContainsKey(instance.GetType()))
                 if (SerializersByType[instance.GetType()] != instance)
                     throw new Exception();
                 else
                     return;
-
+            
             SerializersByType.Add(instance.GetType(), instance);
             SerializersByID.Add(instance.Identifier, instance);
         }
 
-        private WrappersHelper()
+        private ProcessorManager()
         {
             //An aggregate catalog that combines multiple catalogs
             var catalog = new AggregateCatalog();
@@ -209,11 +209,20 @@ namespace SerializerBase
                 Console.WriteLine(compositionException.ToString());
             }
 
-            SerializersByType = serializers.Distinct(SerializerComparer.Instance).ToDictionary(l => l.GetType(), l => l);
-            CompressorsByType = compressors.Distinct(CompressorComparer.Instance).ToDictionary(l => l.GetType(), l => l);
+            var serializersToAdd = serializers.Distinct(SerializerComparer.Instance).Where(s => !SerializersByType.ContainsKey(s.GetType())).ToArray();
+            var dataProcessorsToAdd = compressors.Distinct(DataProcessorComparer.Instance).Where(c => !DataProcessorsByType.ContainsKey(c.GetType())).ToArray();
 
-            SerializersByID = SerializersByType.ToDictionary(s => s.Value.Identifier, s => s.Value);
-            CompressorsByID = CompressorsByType.ToDictionary(c => c.Value.Identifier, c => c.Value);
+            foreach (var instance in serializersToAdd)
+            {
+                SerializersByType.Add(instance.GetType(), instance);
+                SerializersByID.Add(instance.Identifier, instance);
+            }
+
+            foreach (var instance in dataProcessorsToAdd)
+            {
+                DataProcessorsByType.Add(instance.GetType(), instance);
+                DataProcessorsByID.Add(instance.Identifier, instance);
+            }                        
         }
     }
 }

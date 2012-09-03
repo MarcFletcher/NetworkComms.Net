@@ -26,15 +26,15 @@ namespace SerializerBase
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
-    public class BinaryFormaterSerializer : ISerialize
+    public class BinaryFormaterSerializer : Serializer
     {
-        static ISerialize instance;
+        static Serializer instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
-        public static ISerialize Instance
+        public static Serializer Instance
         {
             get
             {
@@ -56,45 +56,20 @@ namespace SerializerBase
         /// </summary>
         /// <typeparam name="T">Type paramter of objectToSerialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize.  Must be marked Serializable</param>
-        /// <param name="compressor">The compression provider to use</param>
+        /// <param name="dataProcessors">The list of dataProcessors to use on the serialized data</param>
+        /// <param name="options">An options dictionary for the data processors</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
-        {
-            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, compressor);
-
-            if (baseRes != null)
-                return baseRes;
-
+        protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
+        {            
             BinaryFormatter formatter = new BinaryFormatter();
-
-            using (MemoryStream mem = new MemoryStream())
-            {
-                formatter.Serialize(mem, objectToSerialise);
-                mem.Seek(0, 0);
-                return compressor.CompressDataStream(mem);
-            }        
+            formatter.Serialize(ouputStream, objectToSerialise);
+            ouputStream.Seek(0, 0);
         }
 
-        /// <summary>
-        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor and BinaryFormatter
-        /// </summary>
-        /// <typeparam name="T">Type parameter of the resultant object</typeparam>
-        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
-        /// <param name="compressor">Compression provider to use</param>
-        /// <returns>The deserialized object</returns>
-        protected override object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor)
+        protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
-            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, resultType, compressor);
-
-            if (baseRes != null)
-                return baseRes;
-
             BinaryFormatter formatter = new BinaryFormatter();
-            MemoryStream stream = new MemoryStream();
-            compressor.DecompressToStream(receivedObjectBytes, stream);
-            stream.Seek(0,0);
-
-            return formatter.Deserialize(stream);
+            return formatter.Deserialize(inputStream);
         }
 
         #endregion

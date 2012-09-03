@@ -28,22 +28,27 @@ namespace SerializerBase.Protobuf
     /// <summary>
     /// Serializer using ProtoBuf.Net
     /// </summary>
-    public class ProtobufSerializer : ISerialize
+    public class ProtobufSerializer : Serializer
     {        
         private static int metaDataTimeoutMS = 150000;
 
-        static ISerialize instance;
+        static Serializer instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
-        public static ISerialize Instance
+        public static Serializer Instance
         {
             get
             {
                 if (instance == null)
+                {
                     instance = GetInstance<ProtobufSerializer>();
+
+                    //Increase timeout to prevent errors when CPU busy
+                    RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
+                }
 
                 return instance;
             }
@@ -60,23 +65,12 @@ namespace SerializerBase.Protobuf
         /// </summary>
         /// <typeparam name="T">Type paramter of objectToSerialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize.  Must be marked with ProtoContract and members to serialize marked as protoMembers</param>
-        /// <param name="compressor">The compression provider to use</param>
+        /// <param name="dataProcessors">The compression provider to use</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        protected override byte[] SerialiseDataObjectInt(object objectToSerialise, ICompress compressor)
-        {
-            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, compressor);
-
-            if (baseRes != null)
-                return baseRes;
-
-            //Increase timeout to prevent errors when CPU busy
-            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
-
-            MemoryStream memIn = new MemoryStream();            
-            Serializer.NonGeneric.Serialize(memIn, objectToSerialise);
-            memIn.Seek(0, 0); 
-          
-            return compressor.CompressDataStream(memIn);
+        protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
+        {               
+            ProtoBuf.Serializer.NonGeneric.Serialize(ouputStream, objectToSerialise);
+            ouputStream.Seek(0, 0);           
         }
 
         /// <summary>
@@ -86,21 +80,9 @@ namespace SerializerBase.Protobuf
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="compressor">Compression provider to use</param>
         /// <returns>The deserialized object</returns>
-        protected override object DeserialiseDataObjectInt(byte[] receivedObjectBytes, Type resultType, ICompress compressor)
+        protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
-            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, resultType, compressor);
-            
-            if (baseRes != null)
-                return baseRes;
-
-            //Increase timeout to prevent errors when CPU busy
-            RuntimeTypeModel.Default.MetadataTimeoutMilliseconds = metaDataTimeoutMS;
-
-            MemoryStream stream = new MemoryStream();            
-            compressor.DecompressToStream(receivedObjectBytes, stream);
-            stream.Seek(0, 0);
-
-            return Serializer.NonGeneric.Deserialize(resultType, stream);
+            return ProtoBuf.Serializer.NonGeneric.Deserialize(resultType, inputStream);
         }
 
         #endregion

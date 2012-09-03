@@ -27,15 +27,15 @@ namespace SharpZipLibCompressor
     /// <summary>
     /// Compresor using Gzip compression from SharpZipLib http://www.icsharpcode.net/opensource/sharpziplib/
     /// </summary>
-    public class SharpZipLibGzipCompressor : ICompress
+    public class SharpZipLibGzipCompressor : DataProcessor
     {
-        static ICompress instance;
+        static DataProcessor instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetCompressor")]
-        public static ICompress Instance
+        public static DataProcessor Instance
         {
             get
             {
@@ -55,21 +55,15 @@ namespace SharpZipLibCompressor
         /// </summary>
         /// <param name="inStream">Stream contaiing data to compress</param>
         /// <returns>Compressed data appended with uncompressed data size</returns>
-        public override byte[] CompressDataStream(Stream inStream)
+        public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
-            using (MemoryStream realOutStream = new MemoryStream())
+            using (GZipOutputStream gzStream = new GZipOutputStream(outStream))
             {
-                using (GZipOutputStream outStream = new GZipOutputStream(realOutStream))
-                {
-                    outStream.IsStreamOwner = false;
-                    inStream.CopyTo(outStream);
-                }
+                gzStream.IsStreamOwner = false;
+                inStream.CopyTo(gzStream);
+            }
 
-                ulong nBytes = (ulong)inStream.Length;
-                realOutStream.Write(BitConverter.GetBytes(nBytes), 0, 8);
-
-                return realOutStream.ToArray();
-            }            
+            writtenBytes = outStream.Position;
         }
 
         /// <summary>
@@ -77,17 +71,12 @@ namespace SharpZipLibCompressor
         /// </summary>
         /// <param name="inBytes">Compressed data from CompressDataStream</param>
         /// <param name="outputStream">Stream to output uncompressed data to</param>
-        public override void DecompressToStream(byte[] inBytes, Stream outputStream)
+        public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
-            using (MemoryStream memIn = new MemoryStream(inBytes, 0, inBytes.Length - 8, false))
-            {
-                using (GZipInputStream zip = new GZipInputStream(memIn))
-                {
-                    zip.CopyTo(outputStream);
-                }
+            using (GZipInputStream zip = new GZipInputStream(inStream))
+                zip.CopyTo(outStream);
 
-                outputStream.Seek(0, 0);
-            }
+            writtenBytes = outStream.Position;
         }
     }
 }

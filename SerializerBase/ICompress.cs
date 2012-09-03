@@ -22,13 +22,13 @@ using System.ComponentModel.Composition;
 
 namespace SerializerBase
 {
-    [InheritedExport(typeof(ICompress))]
-    public abstract class ICompress
+    [InheritedExport(typeof(DataProcessor))]
+    public abstract class DataProcessor
     {
-        protected static T GetInstance<T>() where T : ICompress
+        protected static T GetInstance<T>() where T : DataProcessor
         {
             //this forces helper static constructor to be called and gets us an instance if composition worked
-            var instance = WrappersHelper.Instance.GetCompressor<T>() as T;
+            var instance = ProcessorManager.Instance.GetDataProcessor<T>() as T;
 
             if (instance == null)
             {
@@ -36,7 +36,7 @@ namespace SerializerBase
                 //create a new instance of T and add it to helper as a compressor
 
                 instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
-                WrappersHelper.Instance.AddCompressor(instance);
+                ProcessorManager.Instance.AddDataProcessor(instance);
             }
 
             return instance;
@@ -47,19 +47,28 @@ namespace SerializerBase
         /// </summary>
         public abstract byte Identifier { get; }
 
-        /// <summary>
-        /// Compress data held in a stream.  Last 8 bytes of output should contain uncompressed size of data as a ulong
-        /// </summary>
-        /// <param name="inStream">Input stream holding data to compress.  Stream must support reading and seeking</param>
-        /// <returns>Compressed data.  Last 8 bytes should contain uncompressed size of data as a ulong</returns>
-        public abstract byte[] CompressDataStream(Stream inStream);
+        ///// <summary>
+        ///// Compress data held in a stream.  Last 8 bytes of output should contain uncompressed size of data as a ulong
+        ///// </summary>
+        ///// <param name="inStream">Input stream holding data to compress.  Stream must support reading and seeking</param>
+        ///// <returns>Compressed data.  Last 8 bytes should contain uncompressed size of data as a ulong</returns>
+        //public abstract byte[] CompressDataStreamToArray(Stream inStream, Dictionary<string, string> options);
         
+        ///// <summary>
+        ///// Decompress data to a stream.  Last 8 bytes of inBytes should contain uncompressed size of data as a ulong
+        ///// </summary>
+        ///// <param name="inBytes">Data to decompress. Last 8 bytes should contain uncompressed size of data as a ulong</param>
+        ///// <param name="outputStream"></param>
+        //public abstract void DecompressToStream(byte[] inBytes, Stream outputStream, Dictionary<string, string> options);
+
         /// <summary>
-        /// Decompress data to a stream.  Last 8 bytes of inBytes should contain uncompressed size of data as a ulong
+        /// Processes data held in a stream
         /// </summary>
-        /// <param name="inBytes">Data to decompress. Last 8 bytes should contain uncompressed size of data as a ulong</param>
-        /// <param name="outputStream"></param>
-        public abstract void DecompressToStream(byte[] inBytes, Stream outputStream);        
-       
+        /// <param name="inStream"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public abstract void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes);
+
+        public abstract void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes);
     }
 }

@@ -21,64 +21,76 @@ using ProtoBuf;
 using System.IO;
 using SerializerBase;
 
+using Serializer = SerializerBase.Serializer;
+
 namespace NetworkCommsDotNet
 {
+    public enum PacketHeaderLongItems : byte
+    {
+        PayloadPacketSize,
+        SerializerProcessors,
+        PacketCreationTime,
+    }
+
+    public enum PacketHeaderStringItems : byte
+    {
+        PacketType,
+        ReceiveConfirmationRequired,
+        RequestedReturnPactetType,
+        CheckSumHash,
+    }
+
     /// <summary>
     /// Definintion of the network comms packet header.
     /// </summary>
     [ProtoContract]
-    public class PacketHeader
+    public sealed class PacketHeader
     {
         [ProtoMember(1)]
-        int payloadPacketSize;
+        Dictionary<PacketHeaderLongItems, long> longItems;
         [ProtoMember(2)]
-        string packetTypeStr;
-        [ProtoMember(7)] //Set as ProtoMember(7) so that hopefully protobuf puts at the end of the wireframe saving space if null (this is an assumption)
-        string requestedReturnPacketTypeStr;
-        [ProtoMember(3)]
-        bool receiveConfirmationRequired;
-        [ProtoMember(4)]
-        string checkSumHash;
-        [ProtoMember(5)]
-        DateTime packetCreationTime;
-
-        [ProtoMember(6)]
-        bool pureBytesInPayload;
-
+        Dictionary<PacketHeaderStringItems, string> stringItems;
+        
         /// <summary>
         /// Blank constructor for deserialisation using protobuf
         /// </summary>
         private PacketHeader() { }
-
-        public PacketHeader(string packetTypeStr, string requestedReturnPacketTypeStr, bool receiveConfirmationRequired, string checkSumHash, int payloadPacketSize, bool pureBytesInPayload)
+        
+        public PacketHeader(string packetTypeStr, long payloadPacketSize, string requestedReturnPacketTypeStr = null, bool receiveConfirmationRequired = false, string checkSumHash = null, bool includeConstructionTime = false)
         {
-            this.packetTypeStr = packetTypeStr;
-            this.requestedReturnPacketTypeStr = requestedReturnPacketTypeStr;
-            this.receiveConfirmationRequired = receiveConfirmationRequired;
-            this.checkSumHash = checkSumHash;
-            this.payloadPacketSize = payloadPacketSize;
-            this.pureBytesInPayload = pureBytesInPayload;
-            this.packetCreationTime = DateTime.Now;
+            longItems = new Dictionary<PacketHeaderLongItems, long>();
+            stringItems = new Dictionary<PacketHeaderStringItems, string>();
+
+            stringItems.Add(PacketHeaderStringItems.PacketType, packetTypeStr);
+            longItems.Add(PacketHeaderLongItems.PayloadPacketSize, payloadPacketSize);
+            
+            if (requestedReturnPacketTypeStr != null)
+                stringItems.Add(PacketHeaderStringItems.RequestedReturnPactetType, requestedReturnPacketTypeStr);
+
+            if (receiveConfirmationRequired)
+                stringItems.Add(PacketHeaderStringItems.ReceiveConfirmationRequired, "");
+
+            if (checkSumHash != null)
+                stringItems.Add(PacketHeaderStringItems.CheckSumHash, checkSumHash);
+
+            if (includeConstructionTime)
+                longItems.Add(PacketHeaderLongItems.PacketCreationTime, DateTime.Now.Ticks);
         }
 
-        internal PacketHeader(byte[] packetData, ISerialize serializer, ICompress compressor)
+        internal PacketHeader(byte[] packetData, SendReceiveOptions sendReceiveOptions)
         {
             try
             {
                 if (packetData.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 
-                PacketHeader tempObject = serializer.DeserialiseDataObject<PacketHeader>(packetData, compressor);
-                if (tempObject == null)
+                PacketHeader tempObject = sendReceiveOptions.Serializer.DeserialiseDataObject<PacketHeader>(packetData, sendReceiveOptions.DataProcessors, sendReceiveOptions.Options);
+                if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.PayloadPacketSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else
                 {
-                    payloadPacketSize = tempObject.PayloadPacketSize;
-                    packetTypeStr = tempObject.PacketType;
-                    receiveConfirmationRequired = tempObject.ReceiveConfirmationRequired;
-                    checkSumHash = tempObject.CheckSumHash;
-                    pureBytesInPayload = tempObject.PureBytesInPayload;
-                    packetCreationTime = tempObject.PacketCreationTime;
+                    stringItems = tempObject.stringItems.ToDictionary(s => s.Key, s=> String.Copy(s.Value));
+                    longItems = tempObject.longItems.ToDictionary(s => s.Key, s => s.Value);
                 }
             }
             catch (Exception ex)
@@ -87,40 +99,39 @@ namespace NetworkCommsDotNet
             }
         }
 
+        
         #region Get & Set
+
         public int PayloadPacketSize
         {
-            get { return payloadPacketSize; }
+            get { return (int)longItems[PacketHeaderLongItems.PayloadPacketSize]; }
+            private set { longItems[PacketHeaderLongItems.PayloadPacketSize] = value; }
         }
 
         public string PacketType
         {
-            get { return packetTypeStr; }
+            get { return stringItems[PacketHeaderStringItems.PacketType]; }
+            private set { stringItems[PacketHeaderStringItems.PacketType] = value; }
         }
 
-        public string RequestedReturnPacketTypeStr
+        public bool ContainsOption(PacketHeaderStringItems option)
         {
-            get { return requestedReturnPacketTypeStr; }
+            return stringItems.ContainsKey(option);
         }
 
-        public bool ReceiveConfirmationRequired
+        public bool ContainsOption(PacketHeaderLongItems option)
         {
-            get { return receiveConfirmationRequired; }
+            return longItems.ContainsKey(option);
         }
 
-        public string CheckSumHash
+        public long GetOption(PacketHeaderLongItems option)
         {
-            get { return checkSumHash; }
+            return longItems[option];
         }
 
-        public bool PureBytesInPayload
+        public string GetOption(PacketHeaderStringItems options)
         {
-            get { return pureBytesInPayload; }
-        }
-
-        public DateTime PacketCreationTime
-        {
-            get { return packetCreationTime; }
+            return stringItems[options];
         }
 
         #endregion
