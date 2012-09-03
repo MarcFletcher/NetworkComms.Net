@@ -56,8 +56,13 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            InternalFixedSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<NullCompressor>(), ThreadPriority.Normal);
-            DefaultSendReceiveOptions = new SendReceiveOptions(false, WrappersHelper.Instance.GetSerializer<ProtobufSerializer>(), WrappersHelper.Instance.GetCompressor<SevenZipLZMACompressor.LZMACompressor>(), ThreadPriority.Normal);
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
+                new List<DataProcessor>(),
+                new Dictionary<string, string>());
+
+            DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
+                new List<DataProcessor>() { ProcessorManager.Instance.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
+                new Dictionary<string, string>());
         }
 
         #region Local Host Information
@@ -387,7 +392,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.Compressor != null)
+                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.DataProcessors != null)
                 {
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
@@ -398,7 +403,7 @@ namespace NetworkCommsDotNet
                     else
                         globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
                 }
-                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.Compressor != null)
+                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.DataProcessors != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
@@ -901,8 +906,8 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-        private static Dictionary<Type, ISerialize> allKnownSerializers = WrappersHelper.Instance.GetAllSerializes();
-        private static Dictionary<Type, ICompress> allKnownCompressors = WrappersHelper.Instance.GetAllCompressors();
+        private static Dictionary<Type, Serializer> allKnownSerializers = ProcessorManager.Instance.GetAllSerializes();
+        private static Dictionary<Type, DataProcessor> allKnownCompressors = ProcessorManager.Instance.GetAllDataProcessors();
 
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
@@ -1341,7 +1346,13 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         /// <summary>
@@ -1357,7 +1368,13 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
         }
 
@@ -1372,7 +1389,13 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));            
         }
 
         /// <summary>
@@ -1387,7 +1410,13 @@ namespace NetworkCommsDotNet
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         /// <summary>
@@ -1402,7 +1431,13 @@ namespace NetworkCommsDotNet
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
-            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         #endregion SendObjectDefault
@@ -1418,10 +1453,17 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializer, compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
+
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
         }
 
@@ -1437,10 +1479,16 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializer, compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
         }
 
@@ -1454,10 +1502,16 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializer, compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
         }
 
         /// <summary>
@@ -1471,10 +1525,16 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializer, compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));   
         }
 
         /// <summary>
@@ -1487,11 +1547,17 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, ISerialize serializer, ICompress compressor)
+        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
-            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializer, compressor, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
         }
         #endregion
 
@@ -1513,7 +1579,13 @@ namespace NetworkCommsDotNet
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority), DefaultSendReceiveOptions);
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1534,7 +1606,13 @@ namespace NetworkCommsDotNet
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority), DefaultSendReceiveOptions);
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1552,7 +1630,13 @@ namespace NetworkCommsDotNet
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority), DefaultSendReceiveOptions);
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1571,7 +1655,13 @@ namespace NetworkCommsDotNet
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority), DefaultSendReceiveOptions);
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1590,7 +1680,13 @@ namespace NetworkCommsDotNet
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
-            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.Compressor, DefaultSendReceiveOptions.ReceiveHandlePriority), DefaultSendReceiveOptions);
+
+            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                options["ReceiveConfirmationRequired"] = (true).ToString();
+
+            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         #endregion SendReceiveObjectDefault
@@ -1612,11 +1708,24 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializerOutgoing, compressorOutgoing, DefaultSendReceiveOptions.ReceiveHandlePriority), new SendReceiveOptions(false, serializerIncoming, compressorIncoming, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
+
+            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
+                returnOptions.Remove("ReceiveConfirmationRequired");
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
+                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
+                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));
         }
 
         /// <summary>
@@ -1637,11 +1746,24 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializerOutgoing, compressorOutgoing, DefaultSendReceiveOptions.ReceiveHandlePriority), new SendReceiveOptions(false, serializerIncoming, compressorIncoming, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
+
+            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
+                returnOptions.Remove("ReceiveConfirmationRequired");
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
+                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
+                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));                        
         }
 
         /// <summary>
@@ -1660,10 +1782,23 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializerOutgoing, compressorOutgoing, DefaultSendReceiveOptions.ReceiveHandlePriority), new SendReceiveOptions(false, serializerIncoming, compressorIncoming, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
+
+            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
+                returnOptions.Remove("ReceiveConfirmationRequired");
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
+                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
+                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));
         }
 
         /// <summary>
@@ -1683,10 +1818,23 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializerOutgoing, compressorOutgoing, DefaultSendReceiveOptions.ReceiveHandlePriority), new SendReceiveOptions(false, serializerIncoming, compressorIncoming, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
+
+            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
+                returnOptions.Remove("ReceiveConfirmationRequired");
+
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
+                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
+                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));            
         }
 
         /// <summary>
@@ -1705,11 +1853,24 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ISerialize serializerOutgoing, ICompress compressorOutgoing, ISerialize serializerIncoming, ICompress compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
-            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(receiveConfirmationRequired, serializerOutgoing, compressorOutgoing, DefaultSendReceiveOptions.ReceiveHandlePriority), new SendReceiveOptions(false, serializerIncoming, compressorIncoming, DefaultSendReceiveOptions.ReceiveHandlePriority));
+
+            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (receiveConfirmationRequired)
+                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
+
+            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
+
+            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
+                returnOptions.Remove("ReceiveConfirmationRequired");
+
+            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
+                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
+                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));            
         }
         #endregion SendReceiveObjectSpecific
         #endregion

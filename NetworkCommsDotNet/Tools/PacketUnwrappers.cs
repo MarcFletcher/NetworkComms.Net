@@ -65,7 +65,7 @@ namespace NetworkCommsDotNet
         {
             if (incomingBytes == null || incomingBytes.Length == 0) return null;
             else
-                return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.Compressor);
+                return options.Serializer.DeserialiseDataObject<T>(incomingBytes, options.DataProcessors, options.Options);
         }
 
         public void Process(PacketHeader packetHeader, Connection connection, object obj)
