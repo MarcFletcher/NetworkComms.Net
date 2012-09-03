@@ -31,7 +31,7 @@ namespace NetworkCommsDotNet
     public abstract partial class Connection
     {
         /// <summary>
-        /// Information related to this connection.
+        /// Connection information related to this connection.
         /// </summary>
         public ConnectionInfo ConnectionInfo { get; protected set; }
 
@@ -67,7 +67,7 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("A connection already exists with " + ConnectionInfo);
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
-            NetworkComms.AddConnectionByEndPointReference(this);
+            NetworkComms.AddConnectionByReferenceEndPoint(this);
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace NetworkCommsDotNet
 
                     //Once the above has been done the last step is to allow other threads to use the connection
                     ConnectionInfo.NoteCompleteConnectionEstablish();
-                    NetworkComms.AddConnectionByIdentifierReference(this);
+                    NetworkComms.AddConnectionReferenceByIdentifier(this);
                     connectionEstablishWait.Set();
 
                     //Call the establish delegate if one is set
@@ -253,7 +253,7 @@ namespace NetworkCommsDotNet
                         else
                         {
                             //Update the connection info
-                            NetworkComms.UpdateConnectionByEndPointReference(this, remoteConnectionInfo.LocalEndPoint);
+                            NetworkComms.UpdateConnectionReferenceByEndPoint(this, remoteConnectionInfo.LocalEndPoint);
                             ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo);
 
                             return true;
@@ -269,6 +269,10 @@ namespace NetworkCommsDotNet
             return false;
         }
 
+        /// <summary>
+        /// Returns ConnectionInfo.ToString
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
         {
             return ConnectionInfo.ToString();

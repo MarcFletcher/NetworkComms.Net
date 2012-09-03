@@ -35,7 +35,7 @@ namespace NetworkCommsDotNet
         static Thread connectionKeepAliveWorker;
 
         /// <summary>
-        /// Private static TCP constructor which sets any TCP connection defaults
+        /// Private static TCP constructor which sets any connection defaults
         /// </summary>
         static Connection()
         {
@@ -47,6 +47,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static int ConnectionKeepAlivePollIntervalSecs { get; set; }
 
+        /// <summary>
+        /// Starts the connectionKeepAliveWorker thread if it is not already started
+        /// </summary>
         protected static void TriggerConnectionKeepAliveThread()
         {
             lock (staticConnectionLocker)
@@ -60,6 +63,9 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        /// A single static worker thread which keeps connections alive
+        /// </summary>
         private static void ConnectionKeepAliveWorker()
         {
             shutdownWorkerThreads = false;
@@ -136,7 +142,11 @@ namespace NetworkCommsDotNet
             if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
         }
 
-        public static void Shutdown(int threadShutdownTimeoutMS = 1000)
+        /// <summary>
+        /// Shutdown any static connection components
+        /// </summary>
+        /// <param name="threadShutdownTimeoutMS"></param>
+        internal static void ShutdownBase(int threadShutdownTimeoutMS = 1000)
         {
             try
             {

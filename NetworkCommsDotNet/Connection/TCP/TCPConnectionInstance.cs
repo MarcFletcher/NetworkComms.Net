@@ -242,7 +242,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Closes a connection
+        /// Closes the TCP connection
         /// </summary>
         /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
         /// <param name="logLocation">Optional debug parameter.</param>
@@ -284,13 +284,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided packet to the remote peer
+        /// Sends the provided packet to the remote end point
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <param name="packetData"></param>
-        /// <param name="destinationIPAddress"></param>
-        /// <param name="receiveConfirmationRequired"></param>
-        /// <returns></returns>
+        /// <param name="packet"></param>
         protected override void SendPacketSpecific(Packet packet)
         {
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write

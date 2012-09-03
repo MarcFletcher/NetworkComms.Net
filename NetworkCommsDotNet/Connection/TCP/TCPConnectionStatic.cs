@@ -37,12 +37,12 @@ namespace NetworkCommsDotNet
         static Thread newIncomingConnectionWorker;
 
         /// <summary>
-        /// By default networkComms.net disables all usage of the nagle algorithm. If you wish it to be used for established connections set this property to true.
+        /// By default usage of the nagle algorithm is disabled. If you wish it to be used for established connections set this property to true.
         /// </summary>
         public static bool EnableNagleAlgorithmForNewConnections { get; set; }
 
         /// <summary>
-        /// Accept new TCP connections on default IP's and Port's
+        /// Accept new incoming TCP connections on default IP's and Port's
         /// </summary>
         public static void AddNewLocalListener()
         {
@@ -76,9 +76,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Accept new TCP connections on specified IP and port
+        /// Accept new incoming TCP connections on specified IPEndPoint
         /// </summary>
-        /// <param name="newLocalEndPoint"></param>
+        /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
         public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
@@ -124,9 +125,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Accept new TCP connections on specified IP's and port's
+        /// Accept new TCP connections on specified IPEndPoints
         /// </summary>
-        /// <param name="localEndPoint"></param>
+        /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random</param>
         public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
@@ -154,7 +156,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of all current tcp local end point listeners
+        /// Returns a list of all current TCP local IPEndPoint listeners
         /// </summary>
         /// <returns></returns>
         public static List<IPEndPoint> CurrentLocalEndPoints()
@@ -163,6 +165,10 @@ namespace NetworkCommsDotNet
                 return tcpListenerDict.Keys.ToList();
         }
 
+        /// <summary>
+        /// Returns true if there is atleast one local TCP listeners
+        /// </summary>
+        /// <returns></returns>
         public static bool ListeningForConnections()
         {
             lock (staticTCPConnectionLocker)
@@ -287,6 +293,9 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        /// Close down all local TCP listeners
+        /// </summary>
         private static void CloseAndRemoveAllLocalConnectionListeners()
         {
             lock (staticTCPConnectionLocker)

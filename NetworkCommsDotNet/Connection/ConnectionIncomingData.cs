@@ -50,6 +50,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected Thread incomingDataListenThread = null;
 
+        /// <summary>
+        /// A connection specific method which triggers any requisites for accepting incoming data
+        /// </summary>
         protected abstract void StartIncomingDataListen();
 
         /// <summary>
@@ -259,10 +262,10 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
 
                     //We trigger connection specific handlers first
-                    bool connectionSpecificHandlersTriggered = TriggerPacketHandler(packetHeader, this, packetDataSection, packetSendReceiveOptions);
+                    bool connectionSpecificHandlersTriggered = TriggerSpecificPacketHandlers(packetHeader, packetDataSection, packetSendReceiveOptions);
 
                     //We trigger global handlers second
-                    NetworkComms.TriggerGlobalPacketHandler(packetHeader, this, packetDataSection, packetSendReceiveOptions, connectionSpecificHandlersTriggered);
+                    NetworkComms.TriggerGlobalPacketHandlers(packetHeader, this, packetDataSection, packetSendReceiveOptions, connectionSpecificHandlersTriggered);
 
                     //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME

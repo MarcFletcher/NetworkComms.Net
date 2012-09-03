@@ -28,11 +28,25 @@ namespace NetworkCommsDotNet
     public partial class UDPConnection : Connection
     {
         UdpClientThreadSafe udpClientThreadSafe;
+
+        /// <summary>
+        /// The level at which this connection operates
+        /// </summary>
         UDPLevel udpLevel;
 
-        //An isolated udp connection will only accept incoming packets coming from the specified RemoteEndPoint.
+        /// <summary>
+        /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
+        /// </summary>
         bool isIsolatedUDPConnection = false;
 
+        /// <summary>
+        /// Constructor for a UDP connection
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <param name="defaultSendReceiveOptions"></param>
+        /// <param name="level"></param>
+        /// <param name="listenForIncomingPackets"></param>
+        /// <param name="existingConnection"></param>
         protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPLevel level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
@@ -80,6 +94,9 @@ namespace NetworkCommsDotNet
                 ConnectionInfo.UpdateLocalEndPointInfo(udpClientThreadSafe.LocalEndPoint);
         }
 
+        /// <summary>
+        /// Establish this UDP connection. This will become more relevant as additional udp levels are supported.
+        /// </summary>
         protected override void EstablishConnectionSpecific()
         {
             //There is generally no establish for a UDP connection
@@ -87,6 +104,11 @@ namespace NetworkCommsDotNet
                 throw new NotImplementedException("A future version of networkComms will support additional udp levels.");
         }
 
+        /// <summary>
+        /// Close this UDP connection
+        /// </summary>
+        /// <param name="closeDueToError"></param>
+        /// <param name="logLocation"></param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
@@ -94,6 +116,10 @@ namespace NetworkCommsDotNet
                 udpClientThreadSafe.CloseClient();
         }
 
+        /// <summary>
+        /// Send a packet to the RemoteEndPoint specified in the ConnectionInfo
+        /// </summary>
+        /// <param name="packet"></param>
         protected override void SendPacketSpecific(Packet packet)
         {
             if (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
@@ -118,6 +144,11 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 
+        /// <summary>
+        /// Send a packet to the specified ipEndPoint. The ability to do this is a perculiarty of UDP owing to its connectionless design.
+        /// </summary>
+        /// <param name="packet"></param>
+        /// <param name="ipEndPoint"></param>
         private void SendPacketSpecific(Packet packet, IPEndPoint ipEndPoint)
         {
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
@@ -139,24 +170,34 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 
+        /// <summary>
+        /// Sends a null packet using UDP
+        /// </summary>
         protected override void SendNullPacket()
         {
-            try
+            //We cant send a null packet to the IPAddress.Any address
+            if (!ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
+                try
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
 
-                //Send a single 0 byte
-                udpClientThreadSafe.Send(new byte[] { 0 }, 1, ConnectionInfo.RemoteEndPoint);
+                    //Send a single 0 byte
+                    udpClientThreadSafe.Send(new byte[] { 0 }, 1, ConnectionInfo.RemoteEndPoint);
 
-                //Update the traffic time after we have written to netStream
-                ConnectionInfo.UpdateLastTrafficTime();
-            }
-            catch (Exception)
-            {
-                CloseConnection(true, 19);
+                    //Update the traffic time after we have written to netStream
+                    ConnectionInfo.UpdateLastTrafficTime();
+                }
+                catch (Exception)
+                {
+                    CloseConnection(true, 19);
+                }
             }
         }
 
+        /// <summary>
+        /// Start listening for incoming udp data
+        /// </summary>
         protected override void StartIncomingDataListen()
         {
             if (NetworkComms.ConnectionListenModeUseSync)
@@ -173,6 +214,10 @@ namespace NetworkCommsDotNet
                 udpClientThreadSafe.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), udpClientThreadSafe);
         }
 
+        /// <summary>
+        /// Incoming data listen async method
+        /// </summary>
+        /// <param name="ar"></param>
         protected void IncomingUDPPacketHandler(IAsyncResult ar)
         {
             UdpClientThreadSafe client = (UdpClientThreadSafe)ar.AsyncState;
@@ -205,6 +250,9 @@ namespace NetworkCommsDotNet
             client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
         }
 
+        /// <summary>
+        /// Incoming data listen sync method
+        /// </summary>
         protected void IncomingUDPPacketWorker()
         {
             try

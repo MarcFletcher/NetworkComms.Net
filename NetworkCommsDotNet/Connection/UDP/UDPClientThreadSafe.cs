@@ -23,9 +23,9 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections
+    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections at any one time
     /// </summary>
-    public class UdpClientThreadSafe
+    class UdpClientThreadSafe
     {
         UdpClient udpClient;
         bool isConnected;

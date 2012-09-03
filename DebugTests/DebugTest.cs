@@ -60,7 +60,7 @@ namespace DebugTests
 
         public static void GoUDP()
         {
-            if (true)
+            if (false)
             {
                 NetworkComms.AppendGlobalIncomingPacketHandler<int>("udpTest", (header, connection, message) => 
                 {
@@ -84,7 +84,12 @@ namespace DebugTests
             else
             {
                 //THis is a general UDP broadcast, broadcasts are not forwarded across vpns
-                UDPConnection.SendObject("broadcast", new byte[10], "255.255.255.255", 10000);
+                //UDPConnection.SendObject("broadcast", new byte[10], "255.255.255.255", 10000);
+
+                UDPConnection testConnection = UDPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000), UDPLevel.None);
+
+                byte[] sendArray = new byte[65000];
+                testConnection.SendObject("udpTest", sendArray);
 
                 UDPConnection.AddNewLocalListener();
 
@@ -93,7 +98,7 @@ namespace DebugTests
                     Console.WriteLine("Received UDP response. Remote end said -'" + message + "'.");
                 });
 
-                //UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("192.168.0.120"), 10000));
+                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("131.111.73.213"), 10000));
                 Thread.Sleep(10000000);
             }
         }
