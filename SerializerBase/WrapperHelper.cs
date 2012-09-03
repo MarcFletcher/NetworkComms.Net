@@ -182,8 +182,13 @@ namespace SerializerBase
                 for (int i = 0; i < dataProcessors.Count; i++)
                 {
                     res |= dataProcessors[i].Identifier;
-                    res <<= 8;
+
+                    if (i != dataProcessors.Count - 1)
+                        res <<= 8;
                 }
+
+                if (dataProcessors.Count < sizeof(long) - 1)
+                    res <<= (8 * (sizeof(long) - 1 - dataProcessors.Count));
             }
 
             return res;
