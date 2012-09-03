@@ -38,16 +38,16 @@ namespace DebugTests
             Thread.CurrentThread.Name = "MainThread";
 
             //Configure the logger here
-            //NameValueCollection properties = new NameValueCollection();
-            //properties["configType"] = "FILE";
-            //properties["configFile"] = "log4net.config";
-            //DFS.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
-
             NameValueCollection properties = new NameValueCollection();
-            properties["showDateTime"] = "true";
-            properties["showLogName"] = "false";
-            properties["level"] = "All";
-            NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
+            properties["configType"] = "FILE";
+            properties["configFile"] = "log4net.config";
+            NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+
+            //NameValueCollection properties = new NameValueCollection();
+            //properties["showDateTime"] = "true";
+            //properties["showLogName"] = "false";
+            //properties["level"] = "All";
+            //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();

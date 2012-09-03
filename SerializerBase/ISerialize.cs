@@ -131,7 +131,7 @@ namespace SerializerBase
 
                         if (dataProcessors.Count > 1)
                         {
-                            for (int i = dataProcessors.Count - 1; i >= 0; i -= 2)
+                            for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
                             {
                                 inputStream.Seek(0, 0);
                                 tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
