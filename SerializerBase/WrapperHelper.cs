@@ -190,6 +190,8 @@ namespace SerializerBase
                 if (dataProcessors.Count < sizeof(long) - 1)
                     res <<= (8 * (sizeof(long) - 1 - dataProcessors.Count));
             }
+            else
+                res <<= (8 * (sizeof(long) - 2));
 
             return res;
         }

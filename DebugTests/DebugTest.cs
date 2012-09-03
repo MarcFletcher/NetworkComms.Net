@@ -17,7 +17,7 @@ namespace DebugTests
 
             NetworkComms.EnablePacketCheckSumValidation = true;
 
-            if (false)
+            if (true)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
                 TCPConnection.AddNewLocalListener();
@@ -37,7 +37,7 @@ namespace DebugTests
             }
             else
             {
-                TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.200", 10000));
+                TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000));
 
                 Thread.Sleep(5000);
                 conn.SendObject("NullMessage");
