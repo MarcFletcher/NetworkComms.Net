@@ -120,7 +120,7 @@ namespace SerializerBase
 
             using (MemoryStream inputStream = new MemoryStream(receivedObjectBytes))
             {
-                if (dataProcessors == null || dataProcessors.Count > 0)
+                if (dataProcessors == null || dataProcessors.Count == 0)
                     return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
                 else
                 {
