@@ -67,43 +67,51 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object with the connection default options
+        /// Send an object using the connection default SendReceiveOptions
         /// </summary>
-        /// <param name="sendingPacketType"></param>
-        /// <param name="objectToSend"></param>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send</param>
         public void SendObject(string sendingPacketType, object objectToSend) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions); }
 
         /// <summary>
-        /// Sends an empty packet using the provided packetType. Usefull for signalling.
-        /// </summary>
-        /// <param name="sendingPacketType"></param>
-        public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
-
-        /// <summary>
-        /// Send the provided object with the provided options
+        /// Send an object using the provided SendReceiveOptions
         /// </summary>
         /// <param name="sendingPacketType"></param>
         /// <param name="objectToSend"></param>
+        /// <param name="options"></param>
         public void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
         {
             SendPacket(new Packet(sendingPacketType, objectToSend, options));
         }
 
-        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null); }
+        /// <summary>
+        /// Send an empty packet using the provided packetType. Usefull for signalling.
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
 
+        /// <summary>
+        /// Send an object using the connection default SendReceiveOptions and wait for a returned object again using default SendReceiveOptions.
+        /// </summary>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <param name="sendObject">The object to send</param>
+        /// <returns></returns>
         public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, null, null); }
 
         /// <summary>
-        /// Sends the provided object with the provided options and waits for return object.
+        /// Send an object using the provided SendReceiveOptions and wait for a returned object using provided SendReceiveOptions.
         /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="sendOptions">Send receive options to use</param>
-        /// <returns>The expected return object</returns>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <param name="sendObject">The object to send</param>
+        /// <param name="sendOptions">SendReceiveOptions to use when sending</param>
+        /// <param name="receiveOptions">SendReceiveOptions used when receiving the return object</param>
+        /// <returns></returns>
         public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions sendOptions, SendReceiveOptions receiveOptions)
         {
             returnObjectType returnObject = default(returnObjectType);
@@ -131,7 +139,7 @@ namespace NetworkCommsDotNet
             if (receiveOptions == null) receiveOptions = ConnectionDefaultSendReceiveOptions;
 
             AppendShutdownHandler(SendReceiveShutDownDelegate);
-            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions, false);
+            AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
             Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions);
             SendPacket(sendPacket);
@@ -151,6 +159,16 @@ namespace NetworkCommsDotNet
             else
                 return returnObject;
         }
+
+        /// <summary>
+        /// Send an empty packet using the connection default SendReceiveOptions and wait for a returned object. Usefull to request an object when there is no need to send anything.
+        /// </summary>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <returns></returns>
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null); }
 
         /// <summary>
         /// Close the connection and trigger any associated shutdown delegates
@@ -241,7 +259,7 @@ namespace NetworkCommsDotNet
         protected abstract void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0);
 
         /// <summary>
-        /// Uses the current connection and returns a bool dependant on the remote end responding within the default NetworkComms.ConnectionAliveTestTimeoutMS
+        /// Uses the current connection and returns a bool dependant on the remote end responding to a SendReceiveObject call within the default NetworkComms.ConnectionAliveTestTimeoutMS
         /// </summary>
         /// <returns></returns>
         public bool ConnectionAlive()
@@ -250,7 +268,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
+        /// Uses the current connection and returns a bool dependant on the remote end responding to a SendReceiveObject call within the provided aliveRespondTimeoutMS
         /// </summary>
         /// <returns></returns>
         public bool ConnectionAlive(int aliveRespondTimeoutMS) 
@@ -260,8 +278,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Uses the current connection and returns a bool dependant on the remote end responding within the provided aliveRespondTimeoutMS
+        /// Uses the current connection and returns a bool dependant on the remote end responding to a SendReceiveObject call within the provided aliveRespondTimeoutMS
         /// </summary>
+        /// <param name="aliveRespondTimeoutMS"></param>
+        /// <param name="responseTimeMS">The number of milliseconds taken for a response to be recieved</param>
         /// <returns></returns>
         public bool ConnectionAlive(int aliveRespondTimeoutMS, out long responseTimeMS)
         {
@@ -301,7 +321,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided packet to the remoteEndPoint with any required validation, waiting etc.
+        /// Send the provided packet to the remoteEndPoint. Waits for recieve confirmation if required.
         /// </summary>
         /// <param name="packet"></param>
         protected void SendPacket(Packet packet)
@@ -346,7 +366,7 @@ namespace NetworkCommsDotNet
                     //Add the confirmation handler if required
                     if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                     {
-                        AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions, false);
+                        AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions);
                         AppendShutdownHandler(ConfirmationShutDownDelegate);
                     }
 
@@ -433,9 +453,14 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Specific implementation for sending packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
+        /// Connection specific implementation for sending packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
         /// </summary>
         /// <param name="packet"></param>
         protected abstract void SendPacketSpecific(Packet packet);
+
+        /// <summary>
+        /// Connection specific implementation for sending a null packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
+        /// </summary>
+        protected abstract void SendNullPacket();
     }
 }

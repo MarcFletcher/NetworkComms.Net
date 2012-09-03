@@ -138,6 +138,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Create a connectionInfo object for a new connection
+        /// </summary>
+        /// <param name="remoteNetworkIdentifier"></param>
+        /// <param name="clientIP"></param>
+        /// <param name="localPort"></param>
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
+        {
+            this.ServerSide = serverSide;
+            this.ConnectionType = connectionType;
+            this.RemoteEndPoint = remoteEndPoint;
+            this.LocalEndPoint = localEndPoint;
+            this.ConnectionCreationTime = DateTime.Now;
+        }
+
+        /// <summary>
         /// Create a connectionInfo object which can be used to inform a remote point of local information
         /// </summary>
         /// <param name="localNetworkIdentifier"></param>

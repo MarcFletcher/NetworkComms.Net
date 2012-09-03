@@ -21,10 +21,14 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// A UDP connection can support a very large flexibility of levels. The most basic is none which sends conectionless UDP packets all the way
+    /// upto an emulated TCP level. Future versions of networkComms will support an ever increasing number of levels.
+    /// </summary>
     [Flags]
     public enum UDPLevel
     {
-        None = 0x0,
-        EstablishHandshake = 0x1,
+        None = 0x0, //Network comms 2.0 will only support the most basic udp level
+        //EstablishHandshake = 0x1, //This will probably be the first feature implemented post 2.0
     }
 }

@@ -41,10 +41,10 @@ namespace NetworkCommsDotNet
         NetworkStream tcpClientNetworkStream;
 
         /// <summary>
-        /// Create a connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// Create a TCP connection with the provided connectionInfo. If there is an existing connection that is returned instead.
         /// </summary>
-        /// <param name="connectionInfo"></param>
-        /// <param name="establishIfRequired"></param>
+        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
+        /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end before method returns</param>
         /// <returns></returns>
         public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
@@ -52,10 +52,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Create a connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
         /// </summary>
-        /// <param name="connectionInfo"></param>
-        /// <param name="establishIfRequired"></param>
+        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
+        /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
+        /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end before method returns</param>
         /// <returns></returns>
         public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
@@ -63,10 +64,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Internal create which has the possibility of an existing TcpClient
+        /// Internal TCP connection create.
         /// </summary>
         /// <param name="connectionInfo"></param>
-        /// <param name="tcpClient"></param>
+        /// <param name="defaultSendReceiveOptions"></param>
+        /// <param name="tcpClient">If this is an incoming connection we will already have the tcpClient</param>
         /// <param name="establishIfRequired"></param>
         /// <returns></returns>
         internal static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
@@ -114,7 +116,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Establish a connection with the provided TcpClient
+        /// Establish the connection
         /// </summary>
         /// <param name="sourceClient"></param>
         protected override void EstablishConnectionSpecific()
@@ -205,7 +207,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If we were not provided with a tcpClient on creation we need to establish that now
+        /// If we were not provided with a tcpClient on creation we need to create one
         /// </summary>
         private void ConnectTCPClient()
         {
@@ -245,6 +247,9 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        /// Starts listening for incoming data on this TCP connection
+        /// </summary>
         protected override void StartIncomingDataListen()
         {
             if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP))
@@ -259,7 +264,7 @@ namespace NetworkCommsDotNet
                 {
                     if (incomingDataListenThread == null)
                     {
-                        incomingDataListenThread = new Thread(IncomingDataSyncWorker);
+                        incomingDataListenThread = new Thread(IncomingTCPDataSyncWorker);
                         //Incoming data always gets handled in a time critical fashion
                         incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
                         incomingDataListenThread.Name = "IncomingDataListener";
@@ -267,7 +272,7 @@ namespace NetworkCommsDotNet
                     }
                 }
                 else
-                    tcpClientNetworkStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingPacketHandler), tcpClientNetworkStream);
+                    tcpClientNetworkStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), tcpClientNetworkStream);
             }
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Listening for incoming data from " + ConnectionInfo);

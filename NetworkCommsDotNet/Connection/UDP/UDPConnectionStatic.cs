@@ -19,29 +19,123 @@ using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
+using System.Diagnostics;
 
 namespace NetworkCommsDotNet
 {
     public partial class UDPConnection : Connection
     {
+        /// <summary>
+        /// The local udp connection listeners
+        /// </summary>
+        static Dictionary<IPEndPoint, UDPConnection> udpConnectionListeners = new Dictionary<IPEndPoint, UDPConnection>();
         static object udpClientListenerLocker = new object();
-        static Dictionary<IPEndPoint, UdpClient> udpClientListeners = new Dictionary<IPEndPoint, UdpClient>();
+  
+        /// <summary>
+        /// The rogue udp connection is used for sending ONLY if no available locally bound client is available
+        /// </summary>
+        static UDPConnection udpRogueSender;
+        static object udpRogueSenderCreationLocker = new object();
 
-        static object udpClientSenderLocker = new object();
-        static UdpClient udpClientSender;
+        /// <summary>
+        /// The maximum datagram size limit for udp
+        /// </summary>
         const int maximumSingleDatagramSizeBytes = 65506;
 
+        /// <summary>
+        /// Static construtor which creates the rogue sender
+        /// </summary>
         static UDPConnection()
         {
-            lock (udpClientSenderLocker)
+            lock (udpRogueSenderCreationLocker)
             {
-                if (udpClientSender == null)
-                    udpClientSender = new UdpClient(new IPEndPoint(IPAddress.Any, 10500));
+                if (udpRogueSender == null)
+                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, false);
             }
         }
 
         /// <summary>
-        /// Listen for incoming udp connections on the default port across all adaptors
+        /// Create a UDP connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// </summary>
+        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
+        /// <param name="level">The UDP level to use for this connection</param>
+        /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
+        /// <returns></returns>
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPLevel level, bool listenForReturnPackets = true)
+        {
+            return CreateConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+        }
+
+        /// <summary>
+        /// Create a UDP connection with the provided connectionInfo and and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
+        /// </summary>
+        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
+        /// <param name="defaultSendRecieveOptions">The SendReceiveOptions to use as defaults for this connection</param>
+        /// <param name="level">The UDP level to use for this connection</param>
+        /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
+        /// <returns></returns>
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets = true)
+        {
+            return CreateConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
+        }
+
+        /// <summary>
+        /// Internal UDP creation method that performs the necessary tasks
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <param name="defaultSendRecieveOptions"></param>
+        /// <param name="level"></param>
+        /// <param name="listenForReturnPackets"></param>
+        /// <param name="existingConnection"></param>
+        /// <returns></returns>
+        internal static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets, UDPConnection existingConnection)
+        {
+            connectionInfo.ConnectionType = ConnectionType.UDP;
+
+            UDPConnection connection = null;
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, ConnectionType.UDP))
+                    connection = (UDPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP);
+                else
+                {
+                    //If we are listening on what will be the outgoing adaptor we send with that client to ensure if our connection info is handed off we are connectable by others
+                    if (existingConnection == null)
+                    {
+                        try
+                        {
+                            Socket testSocket = new Socket(connectionInfo.RemoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                            testSocket.Connect(connectionInfo.RemoteEndPoint);
+
+                            lock (udpClientListenerLocker)
+                            {
+                                IPEndPoint existingLocalEndPoint = ExistingLocalListener(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                                if (existingLocalEndPoint != null)
+                                {
+                                    existingConnection = udpConnectionListeners[existingLocalEndPoint];
+
+                                    //If we are using an existing listener there is no need to listen for packets
+                                    listenForReturnPackets = false;
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port + ". Will create an isolated udp connection instead.");
+                        }
+                    }
+
+                    connection = new UDPConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, existingConnection);
+                }
+            }
+
+            TriggerConnectionKeepAliveThread();
+
+            return connection;
+        }
+
+        /// <summary>
+        /// Listen for incoming UDP packets on the default listen port across all available IP's
         /// </summary>
         public static void AddNewLocalListener()
         {
@@ -74,28 +168,28 @@ namespace NetworkCommsDotNet
                 AddNewLocalListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
         }
 
+        /// <summary>
+        /// Listen for incoming UDP packets on specified IPEndPoint. 
+        /// </summary>
+        /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random</param>
         public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (udpClientListenerLocker)
             {
-                if (udpClientListeners.ContainsKey(newLocalEndPoint))
-                    throw new CommsSetupShutdownException("Provided newLocalEndPoint already exists in udpClientListeners.");
+                if (udpConnectionListeners.ContainsKey(newLocalEndPoint))
+                    throw new CommsSetupShutdownException("Provided newLocalEndPoint already exists in udpConnectionListeners.");
 
-                UdpClient newListenerInstance;
+                UDPConnection newListeningConnection;
 
                 try
                 {
-                    newListenerInstance = new UdpClient(newLocalEndPoint);
-                    newListenerInstance.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), newListenerInstance);
+                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, true);
                 }
                 catch (SocketException)
                 {
-                    //If the port we wanted is not available
                     if (useRandomPortFailOver)
-                    {
-                        newListenerInstance = new UdpClient(new IPEndPoint(newLocalEndPoint.Address, 0));
-                        newListenerInstance.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), newListenerInstance);
-                    }
+                        newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, true);
                     else
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
@@ -103,21 +197,25 @@ namespace NetworkCommsDotNet
                     }
                 }
 
-                if (udpClientListeners.ContainsKey((IPEndPoint)newListenerInstance.Client.LocalEndPoint))
-                    throw new CommsSetupShutdownException("Unable to add new UDP listenerInstance to udpClientListeners as there is an existing entry.");
+                IPEndPoint ipEndPointUsed = (IPEndPoint)newListeningConnection.udpClientThreadSafe.LocalEndPoint;
+
+                if (udpConnectionListeners.ContainsKey(ipEndPointUsed))
+                    throw new CommsSetupShutdownException("Unable to add new UDP listenerInstance to udpConnectionListeners as there is an existing entry.");
                 else
                 {
-                    //If we were succesfull we can add the new localEndPoint to our dict
-                    udpClientListeners.Add((IPEndPoint)newListenerInstance.Client.LocalEndPoint, newListenerInstance);
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new UDP localEndPoint - " + newLocalEndPoint.Address + ":" + newLocalEndPoint.Port);
+                    udpConnectionListeners.Add(ipEndPointUsed, newListeningConnection);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
                 }
             }
+
+            TriggerConnectionKeepAliveThread();
         }
 
         /// <summary>
-        /// Accept new TCP connections on specified IP's and port's
+        /// Listen for incoming UDP packets on specified IPEndPoints. 
         /// </summary>
-        /// <param name="localEndPoint"></param>
+        /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
         public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
@@ -134,6 +232,26 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns a list of all current UDP local IPEndPoint listeners
+        /// </summary>
+        /// <returns></returns>
+        public static List<IPEndPoint> CurrentLocalEndPoints()
+        {
+            lock (udpClientListenerLocker)
+                return udpConnectionListeners.Keys.ToList();
+        }
+
+        /// <summary>
+        /// Returns true if there is atleast one local UDP listeners
+        /// </summary>
+        /// <returns></returns>
+        public static bool ListeningForConnections()
+        {
+            lock (udpClientListenerLocker)
+                return udpConnectionListeners.Count > 0;
+        }
+
+        /// <summary>
         /// Returns an endPoint corresponding to a possible local listener on the provided ipAddress. If not listening on provided IP returns null.
         /// </summary>
         /// <param name="ipAddress"></param>
@@ -141,50 +259,98 @@ namespace NetworkCommsDotNet
         public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
         {
             lock (udpClientListenerLocker)
-                return (from current in udpClientListeners.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
+                return (from current in udpConnectionListeners.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
         }
 
-        private static void IncomingUDPPacketHandler(IAsyncResult ar)
+        /// <summary>
+        /// Shutdown everything UDP related
+        /// </summary>
+        internal static void Shutdown()
         {
-            UdpClient client = (UdpClient)ar.AsyncState;
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
-
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
-
-            //Listen for more udp packets!!
-            client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
+            //Close any established udp listeners
+            try
+            {
+                CloseAndRemoveAllLocalConnectionListeners();
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "UDPCommsShutdownError");
+            }
         }
 
-        private static void IncomingUDPPacketWorker()
+        /// <summary>
+        /// Close down all local UDP listeners
+        /// </summary>
+        private static void CloseAndRemoveAllLocalConnectionListeners()
         {
-            //This is the sync udp receive thread
+            lock (udpClientListenerLocker)
+            {
+                try
+                {
+                    foreach (var connection in udpConnectionListeners.Values)
+                    {
+                        try
+                        {
+                            connection.CloseConnection(false, -6);
+                        }
+                        catch (Exception) { }
+                    }
+                }
+                catch (Exception) { }
+                finally
+                {
+                    //Once we have stopped all listeners we set the list to null incase we want to resart listening
+                    udpConnectionListeners = new Dictionary<IPEndPoint, UDPConnection>();
+                }
+            }
         }
 
+        /// <summary>
+        /// Sends a single object to the provided IPAddress and Port. IMPORTANT NOTE: You must be listening for UDP packets if you want to collect any reply. 
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send.</param>
+        /// <param name="ipAddress">The destination IP address. Supports multicast addresses such as 192.168.0.255 etc</param>
+        /// <param name="port">The destination port.</param>
+        public static void SendObject(string sendingPacketType, object objectToSend, string ipAddress, int port)
+        {
+            SendObject(sendingPacketType, objectToSend, new IPEndPoint(IPAddress.Parse(ipAddress), port));
+        }
+
+        /// <summary>
+        /// Sends a single object to the provided endPoint. IMPORTANT NOTE: You must be listening for UDP packets if you want to collect any reply. 
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send</param>
+        /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint)
         {
-            //Packet sendPacket = new Packet(sendingPacketType, objectToSend, NetworkComms.DefaultSendReceiveOptions);
-            Packet sendPacket = new Packet(sendingPacketType, objectToSend, NetworkComms.InternalFixedSendReceiveOptions);
-            
-            //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
-            byte[] headerBytes = sendPacket.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            UDPConnection connectionToUse = udpRogueSender;
 
-            //We are limited in size for the isolated send
-            if (headerBytes.Length + sendPacket.PacketData.Length > maximumSingleDatagramSizeBytes)
-                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + sendPacket.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
+            //If we are listening on what will be the outgoing adaptor we send with that client to ensure reply packets are collected
+            //Determining this is annoyingly non-trivial
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a UDP packet of type '" + sendingPacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + sendPacket.PacketData.Length + " payload bytes.");
+            //For now we will use the following method and look to improve upon it in future
+            //Some very quick testing gave an average runtime of this method to be 0.12ms (1000 iterations) (perhaps not so bad after all)
+            try
+            {
+                Socket testSocket = new Socket(ipEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                testSocket.Connect(ipEndPoint);
 
-            //Prepare the single byte array to send
-            byte[] udpDatagram = new byte[headerBytes.Length + sendPacket.PacketData.Length];
+                lock (udpClientListenerLocker)
+                {
+                    IPEndPoint existingLocalEndPoint = ExistingLocalListener(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                    if (existingLocalEndPoint != null)
+                        connectionToUse = udpConnectionListeners[existingLocalEndPoint];
+                }
+            }
+            catch (Exception)
+            {
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
+            }
 
-            Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(sendPacket.PacketData, 0, udpDatagram, headerBytes.Length, sendPacket.PacketData.Length);
-
-            lock (udpClientSenderLocker)
-                udpClientSender.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
-
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + sendingPacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + sendPacket.PacketData.Length + " payload bytes.");
+            Packet sendPacket = new Packet(sendingPacketType, objectToSend, connectionToUse.ConnectionDefaultSendReceiveOptions);
+            connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
     }
 }

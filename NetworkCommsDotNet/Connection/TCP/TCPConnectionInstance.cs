@@ -34,7 +34,7 @@ namespace NetworkCommsDotNet
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar"></param>
-        void IncomingPacketHandler(IAsyncResult ar)
+        void IncomingTCPPacketHandler(IAsyncResult ar)
         {
             //Incoming data always gets handled in a timeCritical fashion at this point
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
@@ -128,7 +128,7 @@ namespace NetworkCommsDotNet
                             totalBytesRead = 0;
                         }
 
-                        netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingPacketHandler, netStream);
+                        netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
                     }
                 }
                 else
@@ -157,7 +157,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Synchronous incoming connection data worker
         /// </summary>
-        void IncomingDataSyncWorker()
+        void IncomingTCPDataSyncWorker()
         {
             bool dataAvailable = false;
 
@@ -242,7 +242,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Closes a connection
+        /// Closes the TCP connection
         /// </summary>
         /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
         /// <param name="logLocation">Optional debug parameter.</param>
@@ -284,13 +284,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided packet to the remote peer
+        /// Sends the provided packet to the remote end point
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <param name="packetData"></param>
-        /// <param name="destinationIPAddress"></param>
-        /// <param name="receiveConfirmationRequired"></param>
-        /// <returns></returns>
+        /// <param name="packet"></param>
         protected override void SendPacketSpecific(Packet packet)
         {
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
@@ -313,7 +309,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
         /// </summary>
-        internal void SendNullPacket()
+        protected override void SendNullPacket()
         {
             try
             {

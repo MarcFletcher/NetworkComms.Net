@@ -60,9 +60,20 @@ namespace DebugTests
 
         public static void GoUDP()
         {
-            if (true)
+            if (false)
             {
-                UDPConnection.AddNewLocalListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("udpTest", (header, connection, message) => 
+                {
+                    Console.WriteLine("Received UDP data.");
+                    connection.SendObject("udpResponse", "test good!"); 
+                });
+
+                NetworkComms.AppendGlobalIncomingPacketHandler<int>("broadcast", (header, connection, message) =>
+                {
+                    Console.WriteLine("Received UDP broadcast.");
+                });
+
+                UDPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nReady for incoming udp connections.");
 
@@ -72,7 +83,23 @@ namespace DebugTests
             }
             else
             {
-                UDPConnection.SendObject("udpTest", new byte[65400], new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkComms.DefaultListenPort));
+                //THis is a general UDP broadcast, broadcasts are not forwarded across vpns
+                //UDPConnection.SendObject("broadcast", new byte[10], "255.255.255.255", 10000);
+
+                UDPConnection testConnection = UDPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000), UDPLevel.None);
+
+                byte[] sendArray = new byte[65000];
+                testConnection.SendObject("udpTest", sendArray);
+
+                UDPConnection.AddNewLocalListener();
+
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
+                {
+                    Console.WriteLine("Received UDP response. Remote end said -'" + message + "'.");
+                });
+
+                UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("131.111.73.213"), 10000));
+                Thread.Sleep(10000000);
             }
         }
     }
