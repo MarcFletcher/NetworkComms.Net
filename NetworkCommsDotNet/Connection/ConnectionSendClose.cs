@@ -58,7 +58,11 @@ namespace NetworkCommsDotNet
 
             public override string ToString()
             {
-                return "[" + Packet.PacketHeader.PacketCreationTime.ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length +" bytes.";
+                if (Packet.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketCreationTime))
+                    return "[" + (new DateTime(Packet.PacketHeader.GetOption(PacketHeaderLongItems.PacketCreationTime))).ToShortTimeString() + "] " +
+                        Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
+                else
+                    return "[Unknown] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
             }
         }
 
@@ -340,7 +344,7 @@ namespace NetworkCommsDotNet
                 {
                     #region Prepare For Confirmation and Possible Validation
                     //Add the confirmation handler if required
-                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                     {
                         AppendIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate, NetworkComms.InternalFixedSendReceiveOptions, false);
                         AppendShutdownHandler(ConfirmationShutDownDelegate);
@@ -354,8 +358,12 @@ namespace NetworkCommsDotNet
                         if (packet.PacketData.Length < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
                         {
                             lock (sentPacketsLocker)
-                                if (!sentPackets.ContainsKey(packet.PacketHeader.CheckSumHash))
-                                    sentPackets.Add(packet.PacketHeader.CheckSumHash, new OldSentPacket(packet));
+                            {
+                                var hash = packet.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
+
+                                if (!sentPackets.ContainsKey(hash))
+                                    sentPackets.Add(hash, new OldSentPacket(packet));
+                            }
                         }
                     }
                     #endregion
@@ -366,22 +374,18 @@ namespace NetworkCommsDotNet
                     //If sent packets is greater than 40 we delete anything older than a minute
                     lock (sentPacketsLocker)
                     {
-                        if (sentPackets.Count > 40)
+                        int maxStoredPackets = 40;
+
+                        if (sentPackets.Count > maxStoredPackets)
                         {
-                            sentPackets = (from current in sentPackets.Values
-                                           where current.Packet.PacketHeader.PacketCreationTime < DateTime.Now.AddMinutes(-1)
-                                           select new
-                                           {
-                                               key = current.Packet.PacketHeader.CheckSumHash,
-                                               value = current
-                                           }).ToDictionary(p => p.key, p => p.value);
+                            sentPackets = sentPackets.Skip(sentPackets.Count - maxStoredPackets).ToDictionary(p => p.Key, p => p.Value);
                         }
                     }
                     #endregion
 
                     #region Wait For Confirmation If Required
                     //If we required receive confirmation we now wait for that confirmation
-                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) && bool.Parse(packet.PacketHeader.GetOption(PacketHeaderStringItems.ReceiveConfirmationRequired)))
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... waiting for receive confirmation packet.");
 
@@ -414,7 +418,8 @@ namespace NetworkCommsDotNet
                 }
                 finally
                 {
-                    if (packet.PacketHeader.ReceiveConfirmationRequired)
+                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) &&
+                        bool.Parse(packet.PacketHeader.GetOption(PacketHeaderStringItems.ReceiveConfirmationRequired)))
                     {
                         //Cleanup our delegates
                         RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate);

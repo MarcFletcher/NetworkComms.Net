@@ -98,7 +98,7 @@ namespace NetworkCommsDotNet
                         }
 
                         //We have enough for a header
-                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.InternalFixedSendReceiveOptions.Serializer, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
+                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.InternalFixedSendReceiveOptions);
 
                         //Idiot test
                         if (topPacketHeader.PacketType == null)
@@ -137,10 +137,15 @@ namespace NetworkCommsDotNet
                                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
                                 CompleteIncomingPacketWorker(completedData);
                             }
-                            else if (incomingPacketSendReceiveOptions.ReceiveHandlePriority != ThreadPriority.Normal)
+                            else if (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") && 
+                                incomingPacketSendReceiveOptions["ReceiveHandlePriority"] != Enum.GetName(typeof(ThreadPriority), ThreadPriority.Normal))
                             {
                                 Thread newHandleThread = new Thread(CompleteIncomingPacketWorker);
-                                newHandleThread.Priority = incomingPacketSendReceiveOptions.ReceiveHandlePriority;
+
+                                newHandleThread.Priority = incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ?
+                                    (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) :
+                                    ThreadPriority.Normal;
+                                
                                 newHandleThread.Name = "CompleteIncomingPacketWorker-" + topPacketHeader.PacketType;
                                 newHandleThread.Start(completedData);
                             }
@@ -210,10 +215,12 @@ namespace NetworkCommsDotNet
                 if (packetSendReceiveOptions == null) throw new NullReferenceException("Type cast to SendReceiveOptions failed in CompleteIncomingPacketWorker.");
 
                 //We only look at the check sum if we want to and if it has been set by the remote end
-                if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.CheckSumHash.Length > 0)
+                if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash))
                 {
+                    var packetHeaderHash = packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
+
                     //Validate the checkSumhash of the data
-                    if (packetHeader.CheckSumHash != NetworkComms.MD5Bytes(packetDataSection))
+                    if (packetHeaderHash != NetworkComms.MD5Bytes(packetDataSection))
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet header detected.");
 
@@ -221,7 +228,7 @@ namespace NetworkCommsDotNet
                         if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
 
                         //Instead of throwing an exception we can request the packet to be resent
-                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeader.CheckSumHash, NetworkComms.InternalFixedSendReceiveOptions);
+                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
                         SendPacket(returnPacket);
 
                         //We need to wait for the packet to be resent before going further
@@ -230,11 +237,14 @@ namespace NetworkCommsDotNet
                 }
 
                 //Remote end may have requested packet receive confirmation so we send that now
-                if (packetHeader.ReceiveConfirmationRequired)
+                if (packetHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
 
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetHeader.CheckSumHash, NetworkComms.InternalFixedSendReceiveOptions);
+                    var hash = packetHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
+
+
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), hash, NetworkComms.InternalFixedSendReceiveOptions);
                     SendPacket(returnPacket);
                 }
 
@@ -245,7 +255,10 @@ namespace NetworkCommsDotNet
                     CheckSumFailResendHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     ConnectionSetupHandler(packetDataSection);
-                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && (NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<bool>(packetDataSection, NetworkComms.InternalFixedSendReceiveOptions.Compressor)) == false)
+                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && 
+                    (NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<bool>(packetDataSection, 
+                        NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, 
+                        NetworkComms.InternalFixedSendReceiveOptions.Options)) == false)
                 {
                     //If we have received a ping packet from the originating source we reply with true
                     Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), true, NetworkComms.InternalFixedSendReceiveOptions);
@@ -294,7 +307,8 @@ namespace NetworkCommsDotNet
             OldSentPacket packetToReSend;
             lock (sentPacketsLocker)
             {
-                string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<string>(packetDataSection, NetworkComms.InternalFixedSendReceiveOptions.Compressor);
+                string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<string>(packetDataSection, 
+                    NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, NetworkComms.InternalFixedSendReceiveOptions.Options);
 
                 if (sentPackets.ContainsKey(checkSumRequested))
                     packetToReSend = sentPackets[checkSumRequested];

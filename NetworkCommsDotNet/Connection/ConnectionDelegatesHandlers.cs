@@ -76,14 +76,15 @@ namespace NetworkCommsDotNet
             //Return the one with the highest thready priority
             if (connectionSpecificHandlers && globalHandlers)
             {
-                if (!connectionSpecificOptions.Equals(globalOptions))
+                if (!connectionSpecificOptions.OptionsCompatable(globalOptions))
                     throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '"+packetTypeStr+"'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
 
-                //We return which ever has the higher handle priority
-                if (connectionSpecificOptions.ReceiveHandlePriority > globalOptions.ReceiveHandlePriority)
-                    return connectionSpecificOptions;
-                else
-                    return globalOptions;
+                var combinedOptions = new Dictionary<string, string>(globalOptions.Options);
+
+                foreach (var pair in connectionSpecificOptions.Options)
+                    combinedOptions[pair.Key] = pair.Value;
+
+                return new SendReceiveOptions(connectionSpecificOptions.Serializer, connectionSpecificOptions.DataProcessors, combinedOptions);
             }
             else if (connectionSpecificHandlers)
                 return connectionSpecificOptions;
@@ -186,7 +187,7 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (options.Serializer != null && options.Compressor != null)
+                if (options.Serializer != null && options.DataProcessors != null)
                 {
                     if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
@@ -197,7 +198,7 @@ namespace NetworkCommsDotNet
                     else
                         incomingPacketUnwrappers.Add(packetTypeStr, new NetworkComms.PacketTypeUnwrapper(packetTypeStr, options));
                 }
-                else if (options.Serializer != null ^ options.Compressor != null)
+                else if (options.Serializer != null ^ options.DataProcessors != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
