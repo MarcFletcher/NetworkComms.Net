@@ -294,14 +294,14 @@ namespace SerializerBase
 
                                     if (dataProcessors.Count % 2 == 0)
                                     {
-                                        tempStream2.SetLength(writtenBytes + 8);
+                                        tempStream2.SetLength(writtenBytes + 4);
                                         tempStream2.Seek(writtenBytes, 0);
                                         tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                         return tempStream2.ToArray();
                                     }
                                     else
                                     {
-                                        tempStream1.SetLength(writtenBytes + 8);
+                                        tempStream1.SetLength(writtenBytes + 4);
                                         tempStream1.Seek(writtenBytes, 0);
                                         tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                         return tempStream1.ToArray();
@@ -310,7 +310,7 @@ namespace SerializerBase
                             }
                             else
                             {
-                                tempStream1.SetLength(writtenBytes + 8);
+                                tempStream1.SetLength(writtenBytes + 4);
                                 tempStream1.Seek(writtenBytes, 0);
                                 tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 return tempStream1.ToArray();
