@@ -40,7 +40,11 @@ namespace DebugTests
                     Console.WriteLine("  " + entry.Address + ":" + entry.Port);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connection, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connection.ConnectionInfo); });
-                NetworkComms.AppendGlobalIncomingPacketHandler<string>("SRtest", (header, connection, message) => { connection.SendObject("SRresponse", "test good!"); });
+                NetworkComms.AppendGlobalIncomingPacketHandler<long[]>("SRtest", (header, connection, message) => 
+                {
+                    Console.WriteLine("Recieved long[] with values" + message.Aggregate("", (a, b) => { return a + ", " + b.ToString(); }));
+                    connection.SendObject("SRresponse", "test good!"); 
+                });
 
                 Console.WriteLine("\nReady for incoming connections.");
 
