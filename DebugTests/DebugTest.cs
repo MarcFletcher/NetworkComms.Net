@@ -14,11 +14,12 @@ namespace DebugTests
     {
         public static void GoTCP()
         {
+            Dictionary<string, string> optionsDic = new Dictionary<string, string>();
+            SerializerBase.RijndaelPSKEncrypter.AddPasswordToOptions(optionsDic, "password");
+
             SendReceiveOptions options = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(){ProcessorManager.Instance.GetDataProcessor<QuickLZCompressor.QuickLZ>(), 
-                                          ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, new Dictionary<string, string>());
-
-            SerializerBase.RijndaelPSKEncrypter.AddPasswordToOptions(options.Options, "password");
+                                          ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, optionsDic);
 
             NetworkComms.DefaultSendReceiveOptions = options;
 
