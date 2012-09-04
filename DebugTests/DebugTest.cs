@@ -16,21 +16,21 @@ namespace DebugTests
         
         public static void GoTCP()
         {
-            Dictionary<string, string> optionsDic = new Dictionary<string, string>();
-            SerializerBase.RijndaelPSKEncrypter.AddPasswordToOptions(optionsDic, "password");
+            //Dictionary<string, string> optionsDic = new Dictionary<string, string>();
+            //SerializerBase.RijndaelPSKEncrypter.AddPasswordToOptions(optionsDic, "password");
 
-            SendReceiveOptions options = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
-                new List<DataProcessor>(){ProcessorManager.Instance.GetDataProcessor<QuickLZCompressor.QuickLZ>(), 
-                                          ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, optionsDic);
+            //SendReceiveOptions options = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
+            //    new List<DataProcessor>(){ProcessorManager.Instance.GetDataProcessor<QuickLZCompressor.QuickLZ>(), 
+            //                              ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, optionsDic);
 
-            NetworkComms.DefaultSendReceiveOptions = options;
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(), null, null);
 
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
 
             NetworkComms.EnablePacketCheckSumValidation = true;
 
-            if (true)
+            if (false)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
                 TCPConnection.AddNewLocalListener();
@@ -54,24 +54,30 @@ namespace DebugTests
             }
             else
             {
-                TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000));
+                TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo("131.111.73.200", 10000));
 
-                Thread.Sleep(5000);
-                conn.SendObject("NullMessage");
-                Thread.Sleep(5000);
+                for (int i = 0; i < 60; i++)
+                {
+                    conn.ConnectionAlive();
+                    Thread.Sleep(1000);
+                }
 
-                if (conn.ConnectionAlive())
-                    Console.WriteLine("Success");
-                else
-                    Console.WriteLine("Cry!");
+                //Thread.Sleep(5000);
+                //conn.SendObject("NullMessage");
+                //Thread.Sleep(5000);
 
-                Thread.Sleep(5000);
-                Console.WriteLine(conn.SendReceiveObject<string>("SRtest", "SRresponse", 1000, sendArray));
+                //if (conn.ConnectionAlive())
+                //    Console.WriteLine("Success");
+                //else
+                //    Console.WriteLine("Cry!");
+
+                //Thread.Sleep(5000);
+                //Console.WriteLine(conn.SendReceiveObject<string>("SRtest", "SRresponse", 1000, sendArray));
 
                 //NetworkComms.CloseAllConnections(new IPEndPoint[] { new IPEndPoint(IPAddress.Parse("131.111.73.200"), 10000) }, ConnectionType.TCP);
 
                 //bool success = conn.CheckConnectionAlive(1000);
-                Thread.Sleep(6000000);
+                //Thread.Sleep(6000000);
             }
         }
 
