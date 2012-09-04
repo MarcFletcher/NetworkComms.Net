@@ -26,9 +26,9 @@ namespace SerializerBase
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
 
             var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16));
-
+            
             CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            inStream.CopyTo(outStream);
+            inStream.CopyTo(csEncrypt);
             inStream.Flush();
             csEncrypt.FlushFinalBlock();
 
@@ -41,10 +41,10 @@ namespace SerializerBase
 
             var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16));
 
-            CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            inStream.CopyTo(outStream);
+            CryptoStream csDecrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
+            inStream.CopyTo(csDecrypt);
             inStream.Flush();
-            csEncrypt.FlushFinalBlock();
+            csDecrypt.FlushFinalBlock();
 
             writtenBytes = outStream.Position; 
         }
