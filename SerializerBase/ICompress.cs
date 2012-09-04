@@ -47,28 +47,22 @@ namespace SerializerBase
         /// </summary>
         public abstract byte Identifier { get; }
 
-        ///// <summary>
-        ///// Compress data held in a stream.  Last 8 bytes of output should contain uncompressed size of data as a ulong
-        ///// </summary>
-        ///// <param name="inStream">Input stream holding data to compress.  Stream must support reading and seeking</param>
-        ///// <returns>Compressed data.  Last 8 bytes should contain uncompressed size of data as a ulong</returns>
-        //public abstract byte[] CompressDataStreamToArray(Stream inStream, Dictionary<string, string> options);
-        
-        ///// <summary>
-        ///// Decompress data to a stream.  Last 8 bytes of inBytes should contain uncompressed size of data as a ulong
-        ///// </summary>
-        ///// <param name="inBytes">Data to decompress. Last 8 bytes should contain uncompressed size of data as a ulong</param>
-        ///// <param name="outputStream"></param>
-        //public abstract void DecompressToStream(byte[] inBytes, Stream outputStream, Dictionary<string, string> options);
-
         /// <summary>
-        /// Processes data held in a stream
+        /// Processes data held in a stream and outputs it to another stream
         /// </summary>
-        /// <param name="inStream"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
+        /// <param name="inStream">An input stream containing data to be processed</param>
+        /// <param name="outStream">An output stream to which the processed data is written</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
+        /// <param name="writtenBytes">The size of the data written to the output stream</param>        
         public abstract void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes);
 
+        /// <summary>
+        /// Processes data, in reverse, that is held in a stream and outputs it to another stream
+        /// </summary>
+        /// <param name="inStream">An input stream containing data to be processed</param>
+        /// <param name="outStream">An output stream to which the processed data is written</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
+        /// <param name="writtenBytes">The size of the data written to the output stream</param>        
         public abstract void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes);
     }
 }

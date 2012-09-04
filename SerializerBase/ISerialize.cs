@@ -48,56 +48,78 @@ namespace SerializerBase
         /// </summary>
         /// <typeparam name="T">Type of object to serialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize</param>
-        /// <param name="dataProcessors">Compression provider to use</param>
+        /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in index order i.e. low index to high</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>Serialized array of bytes</returns>
         public byte[] SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            //Check to see if the array serializer returns anything
             var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 
+            //if the object was an array baseres will != null
             if (baseRes != null)
                 return baseRes;
 
-            using (MemoryStream outputStream = new MemoryStream())
+            //Create the first memory stream that will be used 
+            using (MemoryStream tempStream1 = new MemoryStream())
             {
-                SerialiseDataObjectInt(outputStream, objectToSerialise, options);
+                //Serialise the object using the overriden method
+                SerialiseDataObjectInt(tempStream1, objectToSerialise, options);
 
+                //If we have no data processing to do we can simply return the serialised bytes
                 if (dataProcessors == null || dataProcessors.Count == 0)
-                    return outputStream.ToArray();
+                    return tempStream1.ToArray();
                 else
                 {
-                    using (MemoryStream tempStream = new MemoryStream())
+                    //Otherwise we will need a second memory stream to process the data
+                    using (MemoryStream tempStream2 = new MemoryStream())
                     {
+                        //variable will store the number of bytes in the output stream at each processing stage
                         long writtenBytes;
-                        dataProcessors[0].ForwardProcessDataStream(outputStream, tempStream, options, out writtenBytes);
+                        //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
+                        //the most common usage case
+                        dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
 
+                        //If we have more than one processor we need to loop through them
                         if (dataProcessors.Count > 1)
                         {
+                            //Loop through the remaining processors two at a time.  Each loop processes data temp2 -> temp1 -> temp2
                             for (int i = 1; i < dataProcessors.Count; i += 2)
                             {
-                                tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
-                                outputStream.Seek(0, 0);
-                                dataProcessors[i].ForwardProcessDataStream(tempStream, outputStream, options, out writtenBytes);
+                                //Seek streams to zero and truncate the last output stream to the data size
+                                tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                tempStream1.Seek(0, 0);
+                                //Process the data
+                                dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
 
+                                //if the second of the pair exists
                                 if (i + 1 < dataProcessors.Count)
                                 {
-                                    tempStream.Seek(0, 0);
-                                    outputStream.Seek(0, 0); outputStream.SetLength(writtenBytes);
-                                    dataProcessors[i + 1].ForwardProcessDataStream(outputStream, tempStream, options, out writtenBytes);
+                                    //Seek streams to zero and truncate the last output stream to the data size
+                                    tempStream2.Seek(0, 0);
+                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                    //Process the data
+                                    dataProcessors[i + 1].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
                                 }
                             }
                         }
 
+                        //Depending on whether the number of processors is even or odd a different stream will hold the final data
                         if (dataProcessors.Count % 2 == 0)
                         {
-                            outputStream.Seek(0, 0);
-                            outputStream.SetLength(writtenBytes);
-                            return outputStream.ToArray();
+                            //Seek to the begining and truncate the output stream
+                            tempStream1.Seek(0, 0);
+                            tempStream1.SetLength(writtenBytes);
+                            //Return the resultant bytes
+                            return tempStream1.ToArray();
                         }
                         else
                         {
-                            tempStream.Seek(0, 0);
-                            tempStream.SetLength(writtenBytes);
-                            return tempStream.ToArray();
+                            //Seek to the begining and truncate the output stream
+                            tempStream2.Seek(0, 0);
+                            tempStream2.SetLength(writtenBytes);
+                            //Return the resultant bytes
+                            return tempStream2.ToArray();
                         }
                     }                    
                 }
@@ -109,53 +131,72 @@ namespace SerializerBase
         /// </summary>
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
-        /// <param name="dataProcessors">Compression provider to use</param>
+        /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in reverse order i.e. high index to low</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
             var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, typeof(T), dataProcessors, options);
 
             if (baseRes != null)
                 return (T)baseRes;
 
+            //Create a memory stream using the incoming bytes as the initial buffer
             using (MemoryStream inputStream = new MemoryStream(receivedObjectBytes))
             {
+                //If no data processing is required then we can just deserialise the object straight
                 if (dataProcessors == null || dataProcessors.Count == 0)
                     return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
                 else
                 {
+                    //Otherwise we will need another stream
                     using (MemoryStream tempStream = new MemoryStream())
                     {
+                        //variable will store the number of bytes in the output stream at each processing stage
                         long writtenBytes;
+                        //Data processing for deserialization is done in reverse so run the last element
                         dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
 
+                        //If we have more than 1 processor we will now run the remaining processors pair wise
                         if (dataProcessors.Count > 1)
                         {
+                            //Data processing for deserialization is done in reverse so run from a high index down in steps of 2. Each loop processes data temp -> input -> temp
                             for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
                             {
+                                //Seek streams to zero and truncate the last output stream to the data size
                                 inputStream.Seek(0, 0);
                                 tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
+                                //Process the data
                                 dataProcessors[i].ReverseProcessDataStream(tempStream, inputStream, options, out writtenBytes);
 
+                                //if the second processor exists run it
                                 if (i - 1 >= 0)
                                 {
+                                    //Seek streams to zero and truncate the last output stream to the data size
                                     inputStream.Seek(0, 0); inputStream.SetLength(writtenBytes);
                                     tempStream.Seek(0, 0);
+                                    //Process the data
                                     dataProcessors[i].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
                                 }
                             }
                         }
 
+                        //Depending on whether the number of processors is even or odd a different stream will hold the final data
                         if (dataProcessors.Count % 2 == 0)
                         {
+                            //Seek to the begining and truncate the output stream
                             inputStream.Seek(0, 0);
                             inputStream.SetLength(writtenBytes);
+                            //Return the resultant bytes
                             return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
                         }
                         else
                         {
+                            //Seek to the begining and truncate the output stream
                             tempStream.Seek(0, 0);
                             tempStream.SetLength(writtenBytes);
+                            //Return the resultant bytes
                             return (T)DeserialiseDataObjectInt(tempStream, typeof(T), options);
                         }
                     }
@@ -168,8 +209,21 @@ namespace SerializerBase
         /// </summary>
         public abstract byte Identifier { get; }
         
+        /// <summary>
+        /// Serialises an object to a stream using any relavent options provided
+        /// </summary>
+        /// <param name="ouputStream">The stream to serialise to</param>
+        /// <param name="objectToSerialise">The object to serialise</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
         protected abstract void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options);
 
+        /// <summary>
+        /// Deserialises the data in a stream to an object of the spcified type using any relavent provided options 
+        /// </summary>
+        /// <param name="inputStream">The stream containing the serialised object</param>
+        /// <param name="resultType">The return object Type</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
+        /// <returns>The deserialised object</returns>
         protected abstract object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options);
     }
 

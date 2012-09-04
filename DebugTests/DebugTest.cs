@@ -12,6 +12,8 @@ namespace DebugTests
 {
     static class DebugTest
     {
+        static long[] sendArray = new long[] { 43125, 65346345, 23147, 6457, 2345, 7657456, 5342564, 85678576, 3245, 87658, 3456, 589, 35456, 96879 };
+        
         public static void GoTCP()
         {
             Dictionary<string, string> optionsDic = new Dictionary<string, string>();
@@ -60,7 +62,7 @@ namespace DebugTests
                     Console.WriteLine("Cry!");
 
                 Thread.Sleep(5000);
-                Console.WriteLine(conn.SendReceiveObject<string>("SRtest", "SRresponse", 1000));
+                Console.WriteLine(conn.SendReceiveObject<string>("SRtest", "SRresponse", 1000, sendArray));
 
                 //NetworkComms.CloseAllConnections(new IPEndPoint[] { new IPEndPoint(IPAddress.Parse("131.111.73.200"), 10000) }, ConnectionType.TCP);
 
