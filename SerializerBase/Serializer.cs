@@ -29,7 +29,7 @@ namespace SerializerBase
         protected static T GetInstance<T>() where T : Serializer
         {
             //this forces helper static constructor to be called
-            var instance = ProcessorManager.Instance.GetSerializer<T>() as T;
+            var instance = ProcessorManager.GetSerializer<T>() as T;
 
             if (instance == null)
             {
@@ -37,7 +37,7 @@ namespace SerializerBase
                 //create a new instance of T and add it to helper as a serializer
 
                 instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
-                ProcessorManager.Instance.AddSerializer(instance);
+                ProcessorManager.AddSerializer(instance);
             }
 
             return instance;

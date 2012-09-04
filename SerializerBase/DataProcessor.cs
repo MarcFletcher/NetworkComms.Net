@@ -28,7 +28,7 @@ namespace SerializerBase
         protected static T GetInstance<T>() where T : DataProcessor
         {
             //this forces helper static constructor to be called and gets us an instance if composition worked
-            var instance = ProcessorManager.Instance.GetDataProcessor<T>() as T;
+            var instance = ProcessorManager.GetDataProcessor<T>() as T;
 
             if (instance == null)
             {
@@ -36,7 +36,7 @@ namespace SerializerBase
                 //create a new instance of T and add it to helper as a compressor
 
                 instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
-                ProcessorManager.Instance.AddDataProcessor(instance);
+                ProcessorManager.AddDataProcessor(instance);
             }
 
             return instance;

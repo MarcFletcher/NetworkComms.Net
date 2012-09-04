@@ -116,73 +116,73 @@ namespace SerializerBase
             instance = new ProcessorManager();
         }
 
-        public Dictionary<Type, Serializer> GetAllSerializes()
+        public static Dictionary<Type, Serializer> GetAllSerializes()
         {
-            return SerializersByType;
+            return instance.SerializersByType;
         }
 
-        public Serializer GetSerializer<T>() where T : Serializer
+        public static Serializer GetSerializer<T>() where T : Serializer
         {
-            if (SerializersByType.ContainsKey(typeof(T)))
-                return SerializersByType[typeof(T)];
+            if (instance.SerializersByType.ContainsKey(typeof(T)))
+                return instance.SerializersByType[typeof(T)];
             else
                 return null;
         }
 
-        public Serializer GetSerializer(byte Id)
+        public static Serializer GetSerializer(byte Id)
         {
-            if (SerializersByID.ContainsKey(Id))
-                return SerializersByID[Id];
+            if (instance.SerializersByID.ContainsKey(Id))
+                return instance.SerializersByID[Id];
             else
                 return null;
         }
 
-        public Dictionary<Type, DataProcessor> GetAllDataProcessors()
+        public static Dictionary<Type, DataProcessor> GetAllDataProcessors()
         {            
-            return DataProcessorsByType;
+            return instance.DataProcessorsByType;
         }
 
-        public DataProcessor GetDataProcessor<T>() where T : DataProcessor
+        public static DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
-            if (DataProcessorsByType.ContainsKey(typeof(T)))
-                return DataProcessorsByType[typeof(T)];
+            if (instance.DataProcessorsByType.ContainsKey(typeof(T)))
+                return instance.DataProcessorsByType[typeof(T)];
             else
                 return null;
         }
 
-        public DataProcessor GetDataProcessor(byte Id)
+        public static DataProcessor GetDataProcessor(byte Id)
         {
-            if (DataProcessorsByID.ContainsKey(Id))
-                return DataProcessorsByID[Id];
+            if (instance.DataProcessorsByID.ContainsKey(Id))
+                return instance.DataProcessorsByID[Id];
             else
                 return null;
         }
 
-        public void AddDataProcessor(DataProcessor instance)
+        public static void AddDataProcessor(DataProcessor dataProcessor)
         {
-            if (DataProcessorsByType.ContainsKey(instance.GetType()))
-                if (DataProcessorsByType[instance.GetType()] != instance)
+            if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType()))
+                if (instance.DataProcessorsByType[dataProcessor.GetType()] != dataProcessor)
                     throw new Exception();
                 else
                     return;
 
-            DataProcessorsByType.Add(instance.GetType(), instance);
-            DataProcessorsByID.Add(instance.Identifier, instance);
+            instance.DataProcessorsByType.Add(dataProcessor.GetType(), dataProcessor);
+            instance.DataProcessorsByID.Add(dataProcessor.Identifier, dataProcessor);
         }
 
-        public void AddSerializer(Serializer instance)
+        public static void AddSerializer(Serializer dataProcessor)
         {
-            if (SerializersByType.ContainsKey(instance.GetType()))
-                if (SerializersByType[instance.GetType()] != instance)
+            if (instance.SerializersByType.ContainsKey(dataProcessor.GetType()))
+                if (instance.SerializersByType[dataProcessor.GetType()] != dataProcessor)
                     throw new Exception();
                 else
                     return;
             
-            SerializersByType.Add(instance.GetType(), instance);
-            SerializersByID.Add(instance.Identifier, instance);
+            instance.SerializersByType.Add(dataProcessor.GetType(), dataProcessor);
+            instance.SerializersByID.Add(dataProcessor.Identifier, dataProcessor);
         }
 
-        public long CreateSerializerDataProcessorIdentifier(Serializer serializer, List<DataProcessor> dataProcessors)
+        public static long CreateSerializerDataProcessorIdentifier(Serializer serializer, List<DataProcessor> dataProcessors)
         {
             long res = 0;
                         
@@ -211,7 +211,7 @@ namespace SerializerBase
             return res;
         }
 
-        public void GetSerializerDataProcessorsFromIdentifier(long id, out Serializer serializer, out List<DataProcessor> dataProcessors)
+        public static void GetSerializerDataProcessorsFromIdentifier(long id, out Serializer serializer, out List<DataProcessor> dataProcessors)
         {
             serializer = GetSerializer((byte)(id >> 56));
 

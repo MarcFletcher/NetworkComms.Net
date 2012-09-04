@@ -23,12 +23,12 @@ namespace DebugTests
             //    new List<DataProcessor>(){ProcessorManager.Instance.GetDataProcessor<QuickLZCompressor.QuickLZ>(), 
             //                              ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, optionsDic);
 
-            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(), null, null);
+            //NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(), null, null);
 
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
 
-            NetworkComms.EnablePacketCheckSumValidation = true;
+            //NetworkComms.EnablePacketCheckSumValidation = true;
 
             if (false)
             {

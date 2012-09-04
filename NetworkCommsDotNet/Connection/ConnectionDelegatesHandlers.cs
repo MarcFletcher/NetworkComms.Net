@@ -91,7 +91,7 @@ namespace NetworkCommsDotNet
                     Serializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, combinedOptions);
                 }
 
@@ -106,7 +106,7 @@ namespace NetworkCommsDotNet
                     Serializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, connectionSpecificOptions.Options);
                 }
 
@@ -120,7 +120,7 @@ namespace NetworkCommsDotNet
                     Serializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.Instance.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
                 }
 

@@ -56,12 +56,12 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            InternalFixedSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(ProcessorManager.GetSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
 
-            DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
-                new List<DataProcessor>() { ProcessorManager.Instance.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
+            DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.GetSerializer<ProtobufSerializer>(),
+                new List<DataProcessor>() { ProcessorManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
                 new Dictionary<string, string>());
         }
 
@@ -906,8 +906,8 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-        private static Dictionary<Type, Serializer> allKnownSerializers = ProcessorManager.Instance.GetAllSerializes();
-        private static Dictionary<Type, DataProcessor> allKnownCompressors = ProcessorManager.Instance.GetAllDataProcessors();
+        private static Dictionary<Type, Serializer> allKnownSerializers = ProcessorManager.GetAllSerializes();
+        private static Dictionary<Type, DataProcessor> allKnownCompressors = ProcessorManager.GetAllDataProcessors();
 
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
