@@ -5,6 +5,8 @@ using System.Text;
 using NetworkCommsDotNet;
 using System.Threading;
 using System.Net;
+using SerializerBase;
+using SerializerBase.Protobuf;
 
 namespace DebugTests
 {
@@ -12,6 +14,14 @@ namespace DebugTests
     {
         public static void GoTCP()
         {
+            SendReceiveOptions options = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(),
+                new List<DataProcessor>(){ProcessorManager.Instance.GetDataProcessor<QuickLZCompressor.QuickLZ>(), 
+                                          ProcessorManager.Instance.GetDataProcessor<RijndaelPSKEncrypter>()}, new Dictionary<string, string>());
+
+            SerializerBase.RijndaelPSKEncrypter.AddPasswordToOptions(options.Options, "password");
+
+            NetworkComms.DefaultSendReceiveOptions = options;
+
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
 
