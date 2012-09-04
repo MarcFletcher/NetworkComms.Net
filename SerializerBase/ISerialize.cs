@@ -345,7 +345,7 @@ namespace SerializerBase
                     return (object)receivedObjectBytes;
                 if (elementType.IsPrimitive)
                 {
-                    int numElements = (int)(BitConverter.ToUInt64(receivedObjectBytes, receivedObjectBytes.Length - sizeof(int)));
+                    int numElements = (int)(BitConverter.ToUInt32(receivedObjectBytes, receivedObjectBytes.Length - sizeof(int)));
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
 
