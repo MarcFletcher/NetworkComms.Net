@@ -26,7 +26,7 @@ namespace ExamplesConsole
 {
     static class DFSTest
     {
-        static bool hostMode;
+        //static bool hostMode;
 
         /// <summary>
         /// The distributed file system (DFS) allows for the high performance distribution of large files

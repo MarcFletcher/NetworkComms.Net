@@ -22,6 +22,7 @@ using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
 using Common.Logging.Log4Net;
+using System.Net;
 
 namespace ExamplesConsole
 {
@@ -36,6 +37,8 @@ namespace ExamplesConsole
         static Type toSendType;
         static object toSendObject;
 
+        static ConnectionType connectionTypeToUse;
+
         public static void RunExample()
         {
             Console.WriteLine("Launching advanced object send example ...");
@@ -47,50 +50,60 @@ namespace ExamplesConsole
             //Ask user if they want to enable comms logging
             SelectLogging();
 
-            //Set the default serialiser and compressor for network comms to use
-            Console.WriteLine("\nNOTE: Make sure both clients are configured in the same way if you want this to work.");
-            NetworkComms.DefaultSerializer = SelectDataSerializer();
-            NetworkComms.DefaultCompressor = SelectDataProcessors();
+            Console.WriteLine("\nNOTE: From this point on make sure both clients are configured in the same way if you want the example to work.");
+
+            //Choose between TCP or UDP
+            SelectConnectionType();
+
+            //Choose the serialiser and processors which network comms will use
+            DataSerializer dataSerializer;
+            SelectDataSerializer(out dataSerializer);
+            
+            List<DataProcessor> dataProcessors;
+            Dictionary<string,string> dataProcessorOptions;
+            SelectDataProcessors(out dataProcessors, out dataProcessorOptions);
+
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(dataSerializer, dataProcessors, dataProcessorOptions);
 
             SelectListeningPort();
 
             //Add a packet handler for dealing with incoming connections.  Fuction will be called when a packet is received with the specified type.  We also here specify the type of object
             //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
-            NetworkComms.AppendIncomingPacketHandler<int[]>("ArrayInt",
-                (header, conectionId, array) =>
+            NetworkComms.AppendGlobalIncomingPacketHandler<int[]>("ArrayInt",
+                (header, connection, array) =>
                 {
-                    Console.WriteLine("\nReceived integer array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                    Console.WriteLine("\nReceived integer array from " + connection.ToString());
 
                     for (int i = 0; i < array.Length; i++)
                         Console.WriteLine(i.ToString() + " - " + array[i].ToString());
                 });
 
             //As above but this time we expect a string[], and use a different packet type to distinguish the difference 
-            NetworkComms.AppendIncomingPacketHandler<string[]>("ArrayString",
-                (header, conectionId, array) =>
+            NetworkComms.AppendGlobalIncomingPacketHandler<string[]>("ArrayString",
+                (header, connection, array) =>
                 {
-                    Console.WriteLine("\nReceived string array from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                    Console.WriteLine("\nReceived string array from " + connection);
 
                     for (int i = 0; i < array.Length; i++)
                         Console.WriteLine(i.ToString() + " - " + array[i]);
                 });
 
             //Our custom object packet handler will be different depending on which serializer we have chosen
-            if (NetworkComms.DefaultSerializer.GetType() == typeof(SerializerBase.Protobuf.ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
             {
-                NetworkComms.AppendIncomingPacketHandler<ProtobufCustomObject>("CustomObject",
-                                (header, conectionId, customObject) =>
+                NetworkComms.AppendGlobalIncomingPacketHandler<ProtobufCustomObject>("CustomObject",
+                                (header, connection, customObject) =>
                                 {
-                                    Console.WriteLine("\nReceived custom protobuf object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                                    Console.WriteLine("\nReceived custom protobuf object from " + connection);
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
             else
             {
-                NetworkComms.AppendIncomingPacketHandler<BinaryFormatterCustomObject>("CustomObject",
-                                (header, conectionId, customObject) =>
+                NetworkComms.AppendGlobalIncomingPacketHandler<BinaryFormatterCustomObject>("CustomObject",
+                                (header, connection, customObject) =>
                                 {
-                                    Console.WriteLine("\nReceived custom binary formatter object from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP + ":" + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientPort);
+                                    Console.WriteLine("\nReceived custom binary formatter object from " + connection);
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
@@ -99,8 +112,14 @@ namespace ExamplesConsole
             //                End of interesting stuff                       //
             //***************************************************************//
 
-            Console.WriteLine("Listening for incoming objects on " + NetworkComms.LocalIP + ":" + NetworkComms.CommsPort.ToString() + "." +
-                "\nPress any key if you want to send something from this client.");
+            Console.WriteLine("Listening for incoming objects on:");
+            
+            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? TCPConnection.CurrentLocalEndPoints() : UDPConnection.CurrentLocalEndPoints());
+            
+            foreach(IPEndPoint localEndPoint in localListeningEndPoints)
+                Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+
+            Console.WriteLine("\nPress any key if you want to send something from this client.");
 
             while (true)
             {
@@ -118,16 +137,27 @@ namespace ExamplesConsole
                 //              Start of interesting stuff                       //
                 //***************************************************************//
 
+                Connection connectionToUse;
+
+                //Create the connectionInfo object which tracks all connection information values
+                ConnectionInfo connectionInfo = new ConnectionInfo(serverIP, serverPort);
+
+                //Create the connection
+                if (connectionTypeToUse == ConnectionType.TCP)
+                    connectionToUse = TCPConnection.CreateConnection(connectionInfo);
+                else
+                    connectionToUse = UDPConnection.CreateConnection(connectionInfo, UDPLevel.None);
+
                 //Send the object
                 if (toSendType == typeof(Array))
                 {
                     if (toSendObject.GetType().GetElementType() == typeof(int))
-                        NetworkComms.SendObject("ArrayInt", serverIP, serverPort, false, toSendObject);
+                        connectionToUse.SendObject("ArrayInt", toSendObject);
                     else
-                        NetworkComms.SendObject("ArrayString", serverIP, serverPort, false, toSendObject);
+                        connectionToUse.SendObject("ArrayString", toSendObject);
                 }
                 else
-                    NetworkComms.SendObject("CustomObject", serverIP, serverPort, false, toSendObject);
+                    connectionToUse.SendObject("CustomObject", toSendObject);
 
                 //***************************************************************//
                 //                End of interesting stuff                       //
@@ -143,7 +173,7 @@ namespace ExamplesConsole
             //***************************************************************//
 
             //Make sure you call shutdown when finished to clean up.
-            NetworkComms.ShutdownComms();
+            NetworkComms.Shutdown();
 
             //***************************************************************//
             //                End of interesting stuff                       //
@@ -184,6 +214,32 @@ namespace ExamplesConsole
             }
         }
 
+        private static void SelectConnectionType()
+        {
+            Console.WriteLine("\nPlease select a connection type:\n1 - TCP\n2 - UDP\n");
+
+            int selectedType;
+            while (true)
+            {
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedType);
+                if (parseSucces && selectedType <= 2) break;
+                Console.WriteLine("Invalid connection type choice. Please try again.");
+            }
+
+            if (selectedType == 1)
+            {
+                Console.WriteLine(" ... selected TCP.\n");
+                connectionTypeToUse = ConnectionType.TCP;
+            }
+            else if (selectedType == 2)
+            {
+                Console.WriteLine(" ... selected UDP.\n");
+                connectionTypeToUse = ConnectionType.UDP;
+            }
+            else
+                throw new Exception("Unable to determine selected connection type.");
+        }
+
         /// <summary>
         /// Delegate which can be used to log comms method
         /// </summary>
@@ -196,7 +252,7 @@ namespace ExamplesConsole
         /// <summary>
         /// Allows to choose different serializers
         /// </summary>
-        private static DataSerializer SelectDataSerializer()
+        private static void SelectDataSerializer(out DataSerializer dataSerializer)
         {
             Console.WriteLine("\nPlease select a serializer:\n1 - Protobuf (High Performance, Versatile)\n2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n");
 
@@ -211,12 +267,12 @@ namespace ExamplesConsole
             if (selectedSerializer == 1)
             {
                 Console.WriteLine(" ... selected protobuf serializer.\n");
-                return SerializerBase.Protobuf.ProtobufSerializer.Instance;
+                dataSerializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
             }
             else if (selectedSerializer == 2)
             {
                 Console.WriteLine(" ... selected binary formatter serializer.\n");
-                return SerializerBase.BinaryFormaterSerializer.Instance;
+                dataSerializer = DPSManager.GetDataSerializer<BinaryFormaterSerializer>();
             }
             else
                 throw new Exception("Unable to determine selected serializer.");
@@ -225,40 +281,57 @@ namespace ExamplesConsole
         /// <summary>
         /// Allows to choose different compressors
         /// </summary>
-        private static List<DataProcessor> SelectDataProcessors()
+        private static void SelectDataProcessors(out List<DataProcessor> dataProcessors, out Dictionary<string, string> dataProcessorOptions)
         {
-            Console.WriteLine("Please select a compressor:\n1 - None\n2 - LZMA (Slow Speed, Best Compression)\n3 - GZip (Good Speed, Good Compression)\n4 - QuickLZ (Best Speed, Basic Compression)\n");
+            dataProcessors = new List<DataProcessor>();
+            dataProcessorOptions = new Dictionary<string, string>();
 
-            int selectedCompressor;
+            #region Possible Compressor
+            Console.WriteLine("Would you like to include data compression?\n1 - No\n2 - Yes\n");
+            
+            int includeCompression;
             while (true)
             {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedCompressor);
-                if (parseSucces && selectedCompressor <= 4 && selectedCompressor > 0) break;
-                Console.WriteLine("Invalid compressor choice. Please try again.");
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out includeCompression);
+                if (parseSucces && includeCompression <= 2 && includeCompression > 0) break;
+                Console.WriteLine("Invalid choice. Please try again.");
             }
 
-            if (selectedCompressor == 1)
+            if (includeCompression == 2)
             {
-                Console.WriteLine(" ... selected null compressor.\n");
-                return SerializerBase.NullCompressor.Instance;
+                Console.WriteLine("Please select a compressor:\n1 - LZMA (Slow Speed, Best Compression)\n2 - GZip (Good Speed, Good Compression)\n3 - QuickLZ (Best Speed, Basic Compression)\n");
+
+                int selectedCompressor;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedCompressor);
+                    if (parseSucces && selectedCompressor <= 3 && selectedCompressor > 0) break;
+                    Console.WriteLine("Invalid compressor choice. Please try again.");
+                }
+
+                if (selectedCompressor == 1)
+                {
+                    Console.WriteLine(" ... selected LZMA compressor.\n");
+                    dataProcessors.Add(DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>());
+                }
+                else if (selectedCompressor == 2)
+                {
+                    Console.WriteLine(" ... selected GZip compressor.\n");
+                    dataProcessors.Add(DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>());
+                }
+                else if (selectedCompressor == 3)
+                {
+                    Console.WriteLine(" ... selected QuickLZ compressor.\n");
+                    dataProcessors.Add(DPSManager.GetDataProcessor<QuickLZCompressor.QuickLZ>());
+                }
+                else
+                    throw new Exception("Unable to determine selected compressor.");
             }
-            else if (selectedCompressor == 2)
-            {
-                Console.WriteLine(" ... selected LZMA compressor.\n");
-                return SevenZipLZMACompressor.LZMACompressor.Instance;
-            }
-            else if (selectedCompressor == 3)
-            {
-                Console.WriteLine(" ... selected GZip compressor.\n");
-                return SharpZipLibCompressor.SharpZipLibGzipCompressor.Instance;
-            }
-            else if (selectedCompressor == 4)
-            {
-                Console.WriteLine(" ... selected QuickLZ compressor.\n");
-                return QuickLZCompressor.QuickLZ.Instance;
-            }
-            else
-                throw new Exception("Unable to determine selected compressor.");
+            #endregion
+
+            #region Possible Encryption
+
+            #endregion
         }
 
         /// <summary>
@@ -288,11 +361,12 @@ namespace ExamplesConsole
                     Console.WriteLine("Invalid choice. Please try again.");
                 }
 
-                NetworkComms.CommsPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + NetworkComms.CommsPort + " has been set.\n");
+                //Change the port comms will listen on
+                NetworkComms.DefaultListenPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + NetworkComms.DefaultListenPort + " has been set.\n");
             }
             else
-                Console.WriteLine(" ... default listen port number "+NetworkComms.CommsPort+" of will be used.\n");
+                Console.WriteLine(" ... default listen port number " + NetworkComms.DefaultListenPort + " of will be used.\n");
         }
 
         /// <summary>
@@ -303,7 +377,7 @@ namespace ExamplesConsole
             Console.Write("\nPlease select something to send:\n" +
                 "1 - Array of ints or strings)\n");
 
-            if (NetworkComms.DefaultSerializer.GetType() == typeof(SerializerBase.Protobuf.ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
                 Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");
             else
                 Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
@@ -432,7 +506,7 @@ namespace ExamplesConsole
             Console.WriteLine("\nPlease enter a string to store in stringValue:");
             stringValue = Console.ReadLine();
 
-            if (NetworkComms.DefaultSerializer.GetType() == typeof(SerializerBase.Protobuf.ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
             {
                 ProtobufCustomObject customObject = new ProtobufCustomObject(intValue, stringValue);
                 return customObject;

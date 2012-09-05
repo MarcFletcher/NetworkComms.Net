@@ -211,9 +211,11 @@ namespace ExamplesConsole
                 SetupRPCUsage();
 
                 //Print out something at the server end to show that we are listening
-                Console.WriteLine("Listening for connections on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
-                Console.WriteLine("Press any key then enter to quit.\n");
-                Console.ReadLine();
+                Console.WriteLine("Listening for connections on:");
+                foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+
+                Console.WriteLine("\nPress 'any' key to quit.");
+                Console.ReadKey(true);
 
                 //When we are done we must close down comms
                 //This will clear all server side RPC object, delegates, handlers etc
@@ -221,7 +223,7 @@ namespace ExamplesConsole
                 //RemoteProcedureCalls.Server.RemovePublicRPCObject(object instanceName);
                 //RemoteProcedureCalls.Server.RemovePrivateRPCObjectType<T, I>();
 
-                NetworkComms.ShutdownComms();
+                NetworkComms.Shutdown();
             }
 
             /// <summary>
@@ -311,7 +313,7 @@ namespace ExamplesConsole
                 }
                 finally
                 {
-                    NetworkComms.ShutdownComms();
+                    NetworkComms.Shutdown();
                 }
             }
 
