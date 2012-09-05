@@ -25,8 +25,8 @@ namespace ExamplesConsole
     {
         static void Main(string[] args)
         {
-            Console.SetBufferSize(110, 200);
-            Console.SetWindowSize(110, 25);
+            Console.SetBufferSize(120, 200);
+            Console.SetWindowSize(120, 25);
             Thread.CurrentThread.Name = "MainThread";
 
             Console.WriteLine("Initiating networkComms.net examples.\n");

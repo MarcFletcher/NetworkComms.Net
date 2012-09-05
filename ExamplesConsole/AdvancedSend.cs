@@ -108,6 +108,11 @@ namespace ExamplesConsole
                                 });
             }
 
+            if (connectionTypeToUse == ConnectionType.TCP)
+                TCPConnection.AddNewLocalListener();
+            else
+                UDPConnection.AddNewLocalListener();
+
             //***************************************************************//
             //                End of interesting stuff                       //
             //***************************************************************//
@@ -228,12 +233,12 @@ namespace ExamplesConsole
 
             if (selectedType == 1)
             {
-                Console.WriteLine(" ... selected TCP.\n");
+                Console.WriteLine(" ... selected TCP.");
                 connectionTypeToUse = ConnectionType.TCP;
             }
             else if (selectedType == 2)
             {
-                Console.WriteLine(" ... selected UDP.\n");
+                Console.WriteLine(" ... selected UDP.");
                 connectionTypeToUse = ConnectionType.UDP;
             }
             else

@@ -17,8 +17,6 @@ namespace ExamplesConsole
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
-
-            NetworkComms.ListenOnAllAllowedInterfaces = true;
             TCPConnection.AddNewLocalListener();
 
             //Print the IP addresses and ports we are listening on.
