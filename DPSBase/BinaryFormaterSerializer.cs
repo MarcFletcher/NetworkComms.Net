@@ -21,20 +21,20 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.ComponentModel.Composition;
 
-namespace SerializerBase
+namespace DPSBase
 {
     /// <summary>
     /// Serializer that uss .Net built in BinaryFormatter
     /// </summary>
-    public class BinaryFormaterSerializer : Serializer
+    public class BinaryFormaterSerializer : DataSerializer
     {
-        static Serializer instance;
+        static DataSerializer instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
-        public static Serializer Instance
+        public static DataSerializer Instance
         {
             get
             {

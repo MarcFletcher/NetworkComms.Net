@@ -23,22 +23,22 @@ using System.Runtime.InteropServices;
 using ProtoBuf.Meta;
 using System.ComponentModel.Composition;
 
-namespace SerializerBase.Protobuf
+namespace DPSBase
 {
     /// <summary>
     /// Serializer using ProtoBuf.Net
     /// </summary>
-    public class ProtobufSerializer : Serializer
+    public class ProtobufSerializer : DataSerializer
     {        
         private static int metaDataTimeoutMS = 150000;
 
-        static Serializer instance;
+        static DataSerializer instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
-        public static Serializer Instance
+        public static DataSerializer Instance
         {
             get
             {

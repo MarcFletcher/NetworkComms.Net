@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
-using SerializerBase;
+using DPSBase;
 using System.IO;
 using System.ComponentModel.Composition;
 

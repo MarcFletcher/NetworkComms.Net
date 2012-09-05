@@ -20,7 +20,7 @@ using System.Text;
 using System.IO;
 using System.ComponentModel.Composition;
 
-namespace SerializerBase
+namespace DPSBase
 {
     [InheritedExport(typeof(DataProcessor))]
     public abstract class DataProcessor
@@ -28,7 +28,7 @@ namespace SerializerBase
         protected static T GetInstance<T>() where T : DataProcessor
         {
             //this forces helper static constructor to be called and gets us an instance if composition worked
-            var instance = ProcessorManager.GetDataProcessor<T>() as T;
+            var instance = DPSManager.GetDataProcessor<T>() as T;
 
             if (instance == null)
             {
@@ -36,7 +36,7 @@ namespace SerializerBase
                 //create a new instance of T and add it to helper as a compressor
 
                 instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
-                ProcessorManager.AddDataProcessor(instance);
+                DPSManager.AddDataProcessor(instance);
             }
 
             return instance;

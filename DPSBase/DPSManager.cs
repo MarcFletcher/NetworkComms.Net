@@ -18,15 +18,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ComponentModel.Composition.Hosting;
-using SerializerBase;
+using DPSBase;
 using System.ComponentModel.Composition;
 using System.IO;
 
-namespace SerializerBase
+namespace DPSBase
 {
-    public sealed class ProcessorManager
+    public sealed class DPSManager
     {
-        class SerializerComparer : IEqualityComparer<Serializer>
+        class SerializerComparer : IEqualityComparer<DataSerializer>
         {
             public static SerializerComparer Instance { get; private set; }
 
@@ -36,7 +36,7 @@ namespace SerializerBase
 
             #region IEqualityComparer<ISerialize> Members
 
-            public bool Equals(Serializer x, Serializer y)
+            public bool Equals(DataSerializer x, DataSerializer y)
             {
                 if (x.Identifier == y.Identifier)
                 {
@@ -52,7 +52,7 @@ namespace SerializerBase
                     return false;
             }
 
-            public int GetHashCode(Serializer obj)
+            public int GetHashCode(DataSerializer obj)
             {
                 return obj.Identifier.GetHashCode() ^ obj.GetType().GetHashCode();
             }
@@ -96,32 +96,32 @@ namespace SerializerBase
 
         private CompositionContainer _container;
 
-        [ImportMany(typeof(Serializer))]
-        private IEnumerable<Serializer> serializers = null;
+        [ImportMany(typeof(DataSerializer))]
+        private IEnumerable<DataSerializer> serializers = null;
 
         [ImportMany(typeof(DataProcessor))]
         private IEnumerable<DataProcessor> compressors = null;
 
-        private Dictionary<Type, Serializer> SerializersByType = new Dictionary<Type, Serializer>();
-        private Dictionary<byte, Serializer> SerializersByID = new Dictionary<byte, Serializer>();
+        private Dictionary<Type, DataSerializer> SerializersByType = new Dictionary<Type, DataSerializer>();
+        private Dictionary<byte, DataSerializer> SerializersByID = new Dictionary<byte, DataSerializer>();
         private Dictionary<Type, DataProcessor> DataProcessorsByType = new Dictionary<Type, DataProcessor>();
         private Dictionary<byte, DataProcessor> DataProcessorsByID = new Dictionary<byte, DataProcessor>();
 
-        static ProcessorManager instance;
+        static DPSManager instance;
         
-        public static ProcessorManager Instance { get { return instance; } }
+        public static DPSManager Instance { get { return instance; } }
 
-        static ProcessorManager()
+        static DPSManager()
         {
-            instance = new ProcessorManager();
+            instance = new DPSManager();
         }
 
-        public static Dictionary<Type, Serializer> GetAllSerializes()
+        public static Dictionary<Type, DataSerializer> GetAllSerializes()
         {
             return instance.SerializersByType;
         }
 
-        public static Serializer GetSerializer<T>() where T : Serializer
+        public static DataSerializer GetSerializer<T>() where T : DataSerializer
         {
             if (instance.SerializersByType.ContainsKey(typeof(T)))
                 return instance.SerializersByType[typeof(T)];
@@ -129,7 +129,7 @@ namespace SerializerBase
                 return null;
         }
 
-        public static Serializer GetSerializer(byte Id)
+        public static DataSerializer GetSerializer(byte Id)
         {
             if (instance.SerializersByID.ContainsKey(Id))
                 return instance.SerializersByID[Id];
@@ -170,7 +170,7 @@ namespace SerializerBase
             instance.DataProcessorsByID.Add(dataProcessor.Identifier, dataProcessor);
         }
 
-        public static void AddSerializer(Serializer dataProcessor)
+        public static void AddSerializer(DataSerializer dataProcessor)
         {
             if (instance.SerializersByType.ContainsKey(dataProcessor.GetType()))
                 if (instance.SerializersByType[dataProcessor.GetType()] != dataProcessor)
@@ -182,7 +182,7 @@ namespace SerializerBase
             instance.SerializersByID.Add(dataProcessor.Identifier, dataProcessor);
         }
 
-        public static long CreateSerializerDataProcessorIdentifier(Serializer serializer, List<DataProcessor> dataProcessors)
+        public static long CreateSerializerDataProcessorIdentifier(DataSerializer serializer, List<DataProcessor> dataProcessors)
         {
             long res = 0;
                         
@@ -211,7 +211,7 @@ namespace SerializerBase
             return res;
         }
 
-        public static void GetSerializerDataProcessorsFromIdentifier(long id, out Serializer serializer, out List<DataProcessor> dataProcessors)
+        public static void GetSerializerDataProcessorsFromIdentifier(long id, out DataSerializer serializer, out List<DataProcessor> dataProcessors)
         {
             serializer = GetSerializer((byte)(id >> 56));
 
@@ -227,7 +227,7 @@ namespace SerializerBase
             }
         }
 
-        private ProcessorManager()
+        private DPSManager()
         {
             //An aggregate catalog that combines multiple catalogs
             var catalog = new AggregateCatalog();

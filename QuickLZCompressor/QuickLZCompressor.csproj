@@ -49,9 +49,9 @@
     <EmbeddedResource Include="Dlls\quicklz150_64_1.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>SerializerBase</Name>
+      <Name>DPSBase</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SerializerBase;
+using DPSBase;
 using System.Threading;
 
 namespace NetworkCommsDotNet
@@ -12,7 +12,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class SendReceiveOptions : ICloneable
     {
-        public Serializer Serializer { get; protected set; }
+        public DataSerializer Serializer { get; protected set; }
         public List<DataProcessor> DataProcessors { get; protected set; }
 
         private Dictionary<string, string> options;
@@ -42,7 +42,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public SendReceiveOptions(Serializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public SendReceiveOptions(DataSerializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {            
             this.Serializer = serializer;
             this.DataProcessors = dataProcessors;            

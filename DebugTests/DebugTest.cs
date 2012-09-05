@@ -5,8 +5,7 @@ using System.Text;
 using NetworkCommsDotNet;
 using System.Threading;
 using System.Net;
-using SerializerBase;
-using SerializerBase.Protobuf;
+using DPSBase;
 
 namespace DebugTests
 {

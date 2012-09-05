@@ -20,7 +20,7 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using SerializerBase;
+using DPSBase;
 using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
@@ -88,10 +88,10 @@ namespace NetworkCommsDotNet
                 //If the header specifies a serializer and data processors we will autodetect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
-                    Serializer serializer;
+                    DataSerializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    DPSManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, combinedOptions);
                 }
 
@@ -103,10 +103,10 @@ namespace NetworkCommsDotNet
                 //If the header specifies a serializer and data processors we will autodetect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
-                    Serializer serializer;
+                    DataSerializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    DPSManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, connectionSpecificOptions.Options);
                 }
 
@@ -117,10 +117,10 @@ namespace NetworkCommsDotNet
                 //If the header specifies a serializer and data processors we will autodetect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
-                    Serializer serializer;
+                    DataSerializer serializer;
                     List<DataProcessor> dataProcessors;
 
-                    ProcessorManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+                    DPSManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
                     return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
                 }
 

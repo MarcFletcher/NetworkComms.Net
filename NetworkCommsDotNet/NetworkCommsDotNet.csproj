@@ -77,9 +77,9 @@
     <Compile Include="Connection\UDP\UDPConnection.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>SerializerBase</Name>
+      <Name>DPSBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
       <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>

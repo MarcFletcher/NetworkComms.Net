@@ -19,9 +19,9 @@ using System.Linq;
 using System.Text;
 using ProtoBuf;
 using System.IO;
-using SerializerBase;
+using DPSBase;
 
-using Serializer = SerializerBase.Serializer;
+using Serializer = DPSBase.DataSerializer;
 
 namespace NetworkCommsDotNet
 {

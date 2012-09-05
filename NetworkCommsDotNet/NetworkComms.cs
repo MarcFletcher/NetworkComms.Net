@@ -21,8 +21,7 @@ using System.Net;
 using System.Threading;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using SerializerBase;
-using SerializerBase.Protobuf;
+using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
 using Common.Logging;
@@ -56,12 +55,12 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            InternalFixedSendReceiveOptions = new SendReceiveOptions(ProcessorManager.GetSerializer<ProtobufSerializer>(),
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
 
-            DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.GetSerializer<ProtobufSerializer>(),
-                new List<DataProcessor>() { ProcessorManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
+            DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetSerializer<ProtobufSerializer>(),
+                new List<DataProcessor>() { DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
                 new Dictionary<string, string>());
         }
 
@@ -906,8 +905,8 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-        private static Dictionary<Type, Serializer> allKnownSerializers = ProcessorManager.GetAllSerializes();
-        private static Dictionary<Type, DataProcessor> allKnownCompressors = ProcessorManager.GetAllDataProcessors();
+        private static Dictionary<Type, DataSerializer> allKnownSerializers = DPSManager.GetAllSerializes();
+        private static Dictionary<Type, DataProcessor> allKnownCompressors = DPSManager.GetAllDataProcessors();
 
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
@@ -1453,7 +1452,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
@@ -1479,7 +1478,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressor">The specific compressor delegate to use</param>
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
@@ -1502,7 +1501,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
@@ -1525,7 +1524,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
@@ -1547,7 +1546,7 @@ namespace NetworkCommsDotNet
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, Serializer serializer, DataProcessor compressor)
+        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
@@ -1708,7 +1707,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
@@ -1746,7 +1745,7 @@ namespace NetworkCommsDotNet
         /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
@@ -1782,7 +1781,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
@@ -1818,7 +1817,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
@@ -1853,7 +1852,7 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, Serializer serializerOutgoing, DataProcessor compressorOutgoing, Serializer serializerIncoming, DataProcessor compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
             List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");

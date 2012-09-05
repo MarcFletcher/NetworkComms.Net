@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SerializerBase;
+using DPSBase;
 using System.IO;
 using LZMA;
 using System.ComponentModel.Composition;

@@ -20,20 +20,20 @@ using System.Text;
 using System.ComponentModel.Composition;
 using System.IO;
 
-namespace SerializerBase
+namespace DPSBase
 {
     /// <summary>
     /// Only usefull for serializing primitive arrays to bytes. Will throw an exception otherwise
     /// </summary>    
-    public class NullSerializer : Serializer
+    public class NullSerializer : DataSerializer
     {
-        static Serializer instance;
+        static DataSerializer instance;
 
         /// <summary>
         /// Instance singleton
         /// </summary>        
         [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
-        public static Serializer Instance 
+        public static DataSerializer Instance 
         {
             get
             {

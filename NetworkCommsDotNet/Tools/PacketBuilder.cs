@@ -20,7 +20,7 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using SerializerBase;
+using DPSBase;
 using System.Net.Sockets;
 
 namespace NetworkCommsDotNet

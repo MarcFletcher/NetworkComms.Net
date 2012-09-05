@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SerializerBase;
+using DPSBase;
 
 namespace NetworkCommsDotNet
 {
@@ -50,13 +50,7 @@ namespace NetworkCommsDotNet
             if (packetObject == null)
                 this.packetData = new byte[0];
             else
-            {
-                IThreadSafeSerialise packetObjectInt = packetObject as IThreadSafeSerialise;
-                if (packetObjectInt != null)
-                    this.packetData = packetObjectInt.ThreadSafeSerialise();
-                else
-                    this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
-            }
+                this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;
@@ -68,7 +62,7 @@ namespace NetworkCommsDotNet
                 hashStr);
 
             //Add an identifier specifying the serializers and processors we have used
-            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, ProcessorManager.CreateSerializerDataProcessorIdentifier(options.Serializer, options.DataProcessors));
+            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.Serializer, options.DataProcessors));
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }

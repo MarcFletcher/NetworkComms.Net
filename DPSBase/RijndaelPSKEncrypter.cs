@@ -20,7 +20,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.IO;
 
-namespace SerializerBase
+namespace DPSBase
 {
     public class RijndaelPSKEncrypter : DataProcessor
     {        
