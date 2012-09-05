@@ -62,7 +62,7 @@ namespace DPSBase
         /// <param name="inStream">An input stream containing data to be processed</param>
         /// <param name="outStream">An output stream to which the processed data is written</param>
         /// <param name="options">Options dictionary for serialisation/data processing</param>
-        /// <param name="writtenBytes">The size of the data written to the output stream</param>        
+        /// <param name="writtenBytes">The size of the data written to the output stream</param>                
         public abstract void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes);
     }
 }

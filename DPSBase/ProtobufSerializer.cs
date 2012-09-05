@@ -26,7 +26,7 @@ using System.ComponentModel.Composition;
 namespace DPSBase
 {
     /// <summary>
-    /// Serializer using ProtoBuf.Net
+    /// DataSerializer using ProtoBuf.Net to serialize an object to bytes
     /// </summary>
     public class ProtobufSerializer : DataSerializer
     {        
@@ -35,9 +35,9 @@ namespace DPSBase
         static DataSerializer instance;
 
         /// <summary>
-        /// Instance singleton
+        /// Instance singleton used to access serializer instance.  Use instead <see cref="DPSManager.GetDataSerializer{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetSerializer<T>")]
         public static DataSerializer Instance
         {
             get
@@ -60,26 +60,14 @@ namespace DPSBase
 
         public override byte Identifier { get { return 1; } }
 
-        /// <summary>
-        /// Serializes objectToSerialize to a byte array using compression provided by compressor
-        /// </summary>
-        /// <typeparam name="T">Type paramter of objectToSerialize</typeparam>
-        /// <param name="objectToSerialise">Object to serialize.  Must be marked with ProtoContract and members to serialize marked as protoMembers</param>
-        /// <param name="dataProcessors">The compression provider to use</param>
-        /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
+        /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {               
             ProtoBuf.Serializer.NonGeneric.Serialize(ouputStream, objectToSerialise);
             ouputStream.Seek(0, 0);           
         }
 
-        /// <summary>
-        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor and ProtoBuf.Net
-        /// </summary>
-        /// <typeparam name="T">Type parameter of the resultant object</typeparam>
-        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
-        /// <param name="compressor">Compression provider to use</param>
-        /// <returns>The deserialized object</returns>
+        /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
             return ProtoBuf.Serializer.NonGeneric.Deserialize(resultType, inputStream);

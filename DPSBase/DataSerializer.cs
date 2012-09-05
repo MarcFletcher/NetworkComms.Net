@@ -29,7 +29,7 @@ namespace DPSBase
         protected static T GetInstance<T>() where T : DataSerializer
         {
             //this forces helper static constructor to be called
-            var instance = DPSManager.GetSerializer<T>() as T;
+            var instance = DPSManager.GetDataSerializer<T>() as T;
 
             if (instance == null)
             {

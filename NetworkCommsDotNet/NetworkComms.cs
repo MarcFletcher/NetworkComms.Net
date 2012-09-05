@@ -55,11 +55,11 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetSerializer<ProtobufSerializer>(),
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
 
-            DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetSerializer<ProtobufSerializer>(),
+            DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>() { DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
                 new Dictionary<string, string>());
         }
@@ -905,7 +905,7 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-        private static Dictionary<Type, DataSerializer> allKnownSerializers = DPSManager.GetAllSerializes();
+        private static Dictionary<Type, DataSerializer> allKnownSerializers = DPSManager.GetAllDataSerializes();
         private static Dictionary<Type, DataProcessor> allKnownCompressors = DPSManager.GetAllDataProcessors();
 
         /// <summary>

@@ -24,6 +24,9 @@ using System.IO;
 
 namespace DPSBase
 {
+    /// <summary>
+    /// Automatically detects and manages the use of DataSerializers and DataProcessors.  Any DataSerializer or DataProcessor in an assembly located in the working directory (including subdirectories) will be automatically detected
+    /// </summary>
     public sealed class DPSManager
     {
         class SerializerComparer : IEqualityComparer<DataSerializer>
@@ -109,19 +112,26 @@ namespace DPSBase
 
         static DPSManager instance;
         
-        public static DPSManager Instance { get { return instance; } }
-
         static DPSManager()
         {
             instance = new DPSManager();
         }
 
-        public static Dictionary<Type, DataSerializer> GetAllSerializes()
+        /// <summary>
+        /// Retrieves all <see cref="DataSerializer"/>s known to the DPSManager
+        /// </summary>
+        /// <returns>A dictionary whose key is the <see cref="System.Type"/> of the <see cref="DataSerializer"/> instance that is the value</returns>
+        public static Dictionary<Type, DataSerializer> GetAllDataSerializes()
         {
             return instance.SerializersByType;
         }
 
-        public static DataSerializer GetSerializer<T>() where T : DataSerializer
+        /// <summary>
+        /// Retrieves the singleton instance of the <see cref="DataSerializer"/> with <see cref="System.Type"/> T
+        /// </summary>
+        /// <typeparam name="T">The <see cref="System.Type"/> of the <see cref="DataSerializer"/> to retrieve </typeparam>
+        /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
+        public static DataSerializer GetDataSerializer<T>() where T : DataSerializer
         {
             if (instance.SerializersByType.ContainsKey(typeof(T)))
                 return instance.SerializersByType[typeof(T)];
@@ -129,6 +139,11 @@ namespace DPSBase
                 return null;
         }
 
+        /// <summary>
+        /// Retrieves the singleton instance of the <see cref="DataSerializer"/> corresponding to a given id
+        /// </summary>
+        /// <param name="Id">The identifier corresponding to the desired <see cref="DataSerializer"/></param>
+        /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
         public static DataSerializer GetSerializer(byte Id)
         {
             if (instance.SerializersByID.ContainsKey(Id))
@@ -137,11 +152,20 @@ namespace DPSBase
                 return null;
         }
 
+        /// <summary>
+        /// Retrieves all <see cref="DataProcessor"/>s known to the DPSManager
+        /// </summary>
+        /// <returns>A dictionary whose key is the <see cref="System.Type"/> of the <see cref="DataProcessor"/> instance that is the value</returns>
         public static Dictionary<Type, DataProcessor> GetAllDataProcessors()
         {            
             return instance.DataProcessorsByType;
         }
 
+        /// <summary>
+        /// Retrieves the singleton instance of the <see cref="DataProcessor"/> with <see cref="System.Type"/> T
+        /// </summary>
+        /// <typeparam name="T">The <see cref="System.Type"/> of the <see cref="DataProcessor"/> to retrieve </typeparam>
+        /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
             if (instance.DataProcessorsByType.ContainsKey(typeof(T)))
@@ -150,6 +174,11 @@ namespace DPSBase
                 return null;
         }
 
+        /// <summary>
+        /// Retrieves the singleton instance of the <see cref="DataProcessor"/> corresponding to a given id
+        /// </summary>
+        /// <param name="Id">The identifier corresponding to the desired <see cref="DataProcessor"/></param>
+        /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor(byte Id)
         {
             if (instance.DataProcessorsByID.ContainsKey(Id))
@@ -158,11 +187,16 @@ namespace DPSBase
                 return null;
         }
 
+        /// <summary>
+        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected
+        /// </summary>
+        /// <param name="dataProcessor"></param>
+        /// <exception cref="ArgumentException"></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
             if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType()))
                 if (instance.DataProcessorsByType[dataProcessor.GetType()] != dataProcessor)
-                    throw new Exception();
+                    throw new ArgumentException();
                 else
                     return;
 

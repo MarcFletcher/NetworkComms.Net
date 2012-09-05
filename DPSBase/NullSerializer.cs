@@ -30,9 +30,9 @@ namespace DPSBase
         static DataSerializer instance;
 
         /// <summary>
-        /// Instance singleton
-        /// </summary>        
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
+        /// Instance singleton used to access serializer instance.  Use instead <see cref="DPSManager.GetDataSerializer{T}"/>
+        /// </summary>
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetSerializer<T>")]
         public static DataSerializer Instance 
         {
             get
@@ -48,13 +48,16 @@ namespace DPSBase
 
         #region ISerialize Members
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 0; } }
 
+        /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {
             throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays");
         }
 
+        /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
             throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays");

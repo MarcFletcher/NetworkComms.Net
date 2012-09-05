@@ -24,16 +24,16 @@ using System.ComponentModel.Composition;
 namespace DPSBase
 {
     /// <summary>
-    /// Serializer that uss .Net built in BinaryFormatter
+    /// DataSerializer that uses .Net BinaryFormatter to perform object serialization
     /// </summary>
     public class BinaryFormaterSerializer : DataSerializer
     {
         static DataSerializer instance;
 
         /// <summary>
-        /// Instance singleton
+        /// Instance singleton used to access serializer instance.  Use instead <see cref="DPSManager.GetDataSerializer{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetSerializer")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetSerializer<T>")]
         public static DataSerializer Instance
         {
             get
@@ -49,16 +49,10 @@ namespace DPSBase
 
         #region ISerialize Members
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 2; } }
-        
-        /// <summary>
-        /// Serializes objectToSerialize to a byte array using compression provided by compressor
-        /// </summary>
-        /// <typeparam name="T">Type paramter of objectToSerialize</typeparam>
-        /// <param name="objectToSerialise">Object to serialize.  Must be marked Serializable</param>
-        /// <param name="dataProcessors">The list of dataProcessors to use on the serialized data</param>
-        /// <param name="options">An options dictionary for the data processors</param>
-        /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
+
+        /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {            
             BinaryFormatter formatter = new BinaryFormatter();
@@ -66,6 +60,7 @@ namespace DPSBase
             ouputStream.Seek(0, 0);
         }
 
+        /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
             BinaryFormatter formatter = new BinaryFormatter();
