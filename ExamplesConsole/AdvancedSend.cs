@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SerializerBase;
+using DPSBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
@@ -49,8 +49,8 @@ namespace ExamplesConsole
 
             //Set the default serialiser and compressor for network comms to use
             Console.WriteLine("\nNOTE: Make sure both clients are configured in the same way if you want this to work.");
-            NetworkComms.DefaultSerializer = SelectSerializer();
-            NetworkComms.DefaultCompressor = SelectCompressor();
+            NetworkComms.DefaultSerializer = SelectDataSerializer();
+            NetworkComms.DefaultCompressor = SelectDataProcessors();
 
             SelectListeningPort();
 
@@ -196,7 +196,7 @@ namespace ExamplesConsole
         /// <summary>
         /// Allows to choose different serializers
         /// </summary>
-        private static ISerialize SelectSerializer()
+        private static DataSerializer SelectDataSerializer()
         {
             Console.WriteLine("\nPlease select a serializer:\n1 - Protobuf (High Performance, Versatile)\n2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n");
 
@@ -225,7 +225,7 @@ namespace ExamplesConsole
         /// <summary>
         /// Allows to choose different compressors
         /// </summary>
-        private static ICompress SelectCompressor()
+        private static List<DataProcessor> SelectDataProcessors()
         {
             Console.WriteLine("Please select a compressor:\n1 - None\n2 - LZMA (Slow Speed, Best Compression)\n3 - GZip (Good Speed, Good Compression)\n4 - QuickLZ (Best Speed, Basic Compression)\n");
 

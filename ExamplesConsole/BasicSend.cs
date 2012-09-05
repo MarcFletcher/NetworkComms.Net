@@ -16,13 +16,16 @@ namespace ExamplesConsole
         {
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
-            NetworkComms.AppendIncomingPacketHandler<string>("Message", (header, conectionId, message) => { Console.WriteLine("\n  ... Incoming message from " + NetworkComms.ConnectionIdToConnectionInfo(conectionId).ClientIP.ToString() + " saying '" + message  +"'.");});
-            
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
+
+            NetworkComms.ListenOnAllAllowedInterfaces = true;
+            TCPConnection.AddNewLocalListener();
+
             //Print the ip address and comms port we are listening on.
             //If the ip address has not been auto detected correctly, either
             //  1 - Set the LocalIP property manually before calling NetworkComms.AppendIncomingPacketHandler
             //  2 - Specify some ip prefixs to help the auto detected by setting the NetworkComms.PreferredIPPrefix property
-            Console.WriteLine("Listening for messages on {0}:{1}", NetworkComms.LocalIP, NetworkComms.CommsPort.ToString());
+            Console.WriteLine("Listening for messages on {0}:{1}", NetworkComms., NetworkComms.DefaultListenPort);
             
             //We can loop here to allow any number of test messages to be sent and received
             while (true)
@@ -37,20 +40,19 @@ namespace ExamplesConsole
                 {
                     //Once we have a message we need to know where to send it
                     //Expecting user to enter ip address as 192.168.0.1:4000
-                    Console.WriteLine("Please enter the destination IP address and port, e.g 192.168.0.1:4000:");
+                    Console.WriteLine("Please enter the destination IP address and press enter, e.g 192.168.0.1:");
 
                     //Parse the provided destination information
                     //If the user entered using a bad format we are going to get an exception
-                    //Yes, we can count this as one line ;)
-                    string userEnteredStr = Console.ReadLine(); string serverIP = userEnteredStr.Split(':')[0]; int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
+                    string ipAddressStr = Console.ReadLine();
 
                     //Send the message to the provided destination, voila!
-                    NetworkComms.SendObject("Message", serverIP, serverPort, false, message);
+                    NetworkComms.SendObject("Message", ipAddressStr, message);
                 }
             }
 
             //We should always call shutdown on comms if we have used it
-            NetworkComms.ShutdownComms();
+            NetworkComms.Shutdown();
         }
     }
 }
