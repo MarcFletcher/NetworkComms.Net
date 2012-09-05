@@ -89,7 +89,7 @@ namespace ExamplesConsole
                 });
 
             //Our custom object packet handler will be different depending on which serializer we have chosen
-            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
             {
                 NetworkComms.AppendGlobalIncomingPacketHandler<ProtobufCustomObject>("CustomObject",
                                 (header, connection, customObject) =>
@@ -377,7 +377,7 @@ namespace ExamplesConsole
             Console.Write("\nPlease select something to send:\n" +
                 "1 - Array of ints or strings)\n");
 
-            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
                 Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");
             else
                 Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
@@ -506,7 +506,7 @@ namespace ExamplesConsole
             Console.WriteLine("\nPlease enter a string to store in stringValue:");
             stringValue = Console.ReadLine();
 
-            if (NetworkComms.DefaultSendReceiveOptions.Serializer.GetType() == typeof(ProtobufSerializer))
+            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
             {
                 ProtobufCustomObject customObject = new ProtobufCustomObject(intValue, stringValue);
                 return customObject;
