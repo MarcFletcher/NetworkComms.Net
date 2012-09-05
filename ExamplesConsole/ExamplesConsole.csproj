@@ -95,9 +95,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
-      <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
-      <Name>DistributedFileSystem</Name>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
+      <Name>DPSBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
@@ -106,10 +106,6 @@
     <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{B659339D-A958-4F33-96E6-3A0CCFCBC5C1}</Project>
       <Name>QuickLZCompressor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SerializerBase\SerializerBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>SerializerBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
       <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>
