@@ -25,7 +25,7 @@ using System.ComponentModel.Composition;
 namespace QuickLZCompressor
 {
     /// <summary>
-    /// Compressor that utilizes native quicklz compression provided by QuickLZ library at http://www.quicklz.com/
+    /// Compressor that utilizes native quicklz compression provided by the <see href="http://www.quicklz.com/">QuickLZ</see> library 
     /// </summary>
     public class QuickLZ : DataProcessor
     {
@@ -40,7 +40,7 @@ namespace QuickLZCompressor
         private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
 
         [DllImport("kernel32.dll")]
-        public static extern bool FreeLibrary(IntPtr hModule);
+        private static extern bool FreeLibrary(IntPtr hModule);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate IntPtr qlz_compress_del(IntPtr source, byte[] destination, IntPtr size, byte[] scratch);
@@ -70,9 +70,9 @@ namespace QuickLZCompressor
         static DataProcessor instance;
 
         /// <summary>
-        /// Instance singleton
+        /// Instance singleton used to access <see cref="DPSBase.DataProcessor"/> instance.  Obsolete, use instead <see cref="DPSBase.DPSManager.GetDataProcessor{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetCompressor")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetDataProcessor<T>")]
         public static DataProcessor Instance
         {
             get
@@ -137,6 +137,7 @@ namespace QuickLZCompressor
                 state_decompress = new byte[qlz_get_setting(2)];
         }
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 3; } }
 
         private void Compress(byte[] Source, byte[] dest, out int destLength)
@@ -182,16 +183,10 @@ namespace QuickLZCompressor
 
         #region ICompress Members
 
-        /// <summary>
-        /// Compresses data held in inStream to a byte array appended with the uncompressed size in bytes
-        /// </summary>
-        /// <param name="inStream">Stream containing the data to compress</param>
-        /// <returns>Array of compressed data appended with size of uncompressed data</returns>
+        /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
-        {
-            /// <summary>
-            /// Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.
-            /// </summary>
+        {            
+            // Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.            
             lock (compressDecompressLocker)
             {
                 byte[] inBytes = new byte[inStream.Length];
@@ -208,16 +203,10 @@ namespace QuickLZCompressor
             }
         }
 
-        /// <summary>
-        /// Decompresses data from inBytes array into outputStream
-        /// </summary>
-        /// <param name="inBytes">Compressed array from CompressDataStream method</param>
-        /// <param name="outputStream">Stream to decompress into</param>
+        /// <inheritdoc />
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
-        {
-            /// <summary>
-            /// Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.
-            /// </summary>
+        {            
+            // Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.            
             lock (compressDecompressLocker)
             {
                 byte[] inBytes = new byte[inStream.Length];

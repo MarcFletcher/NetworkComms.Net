@@ -22,10 +22,11 @@ using DPSBase;
 using System.ComponentModel.Composition;
 using System.IO;
 
+
 namespace DPSBase
 {
     /// <summary>
-    /// Automatically detects and manages the use of DataSerializers and DataProcessors.  Any DataSerializer or DataProcessor in an assembly located in the working directory (including subdirectories) will be automatically detected
+    /// Automatically detects and manages the use of DataSerializers and DataProcessors.  Any <see cref="DataSerializer"/> or <see cref="DataProcessor"/> in an assembly located in the working directory (including subdirectories) will be automatically detected
     /// </summary>
     public sealed class DPSManager
     {
@@ -144,7 +145,7 @@ namespace DPSBase
         /// </summary>
         /// <param name="Id">The identifier corresponding to the desired <see cref="DataSerializer"/></param>
         /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
-        public static DataSerializer GetSerializer(byte Id)
+        public static DataSerializer GetDataSerializer(byte Id)
         {
             if (instance.SerializersByID.ContainsKey(Id))
                 return instance.SerializersByID[Id];
@@ -188,15 +189,15 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected
+        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
         /// </summary>
-        /// <param name="dataProcessor"></param>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="dataProcessor">The <see cref="DataProcessor"/> to make the see <see cref="DPSManager"/> aware of</param>
+        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
             if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType()))
                 if (instance.DataProcessorsByType[dataProcessor.GetType()] != dataProcessor)
-                    throw new ArgumentException();
+                    throw new ArgumentException("A different DataProcessor of the same Type or Id has already been added to DPSManager");
                 else
                     return;
 
@@ -204,18 +205,31 @@ namespace DPSBase
             instance.DataProcessorsByID.Add(dataProcessor.Identifier, dataProcessor);
         }
 
-        public static void AddSerializer(DataSerializer dataProcessor)
+        /// <summary>
+        /// Allows the addition of <see cref="DataSerializer"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// </summary>
+        /// <param name="dataSerializer">The <see cref="DataSerializer"/> to make the see <see cref="DPSManager"/> aware of</param>
+        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
+        public static void AddDataSerializer(DataSerializer dataSerializer)
         {
-            if (instance.SerializersByType.ContainsKey(dataProcessor.GetType()))
-                if (instance.SerializersByType[dataProcessor.GetType()] != dataProcessor)
-                    throw new Exception();
+            if (instance.SerializersByType.ContainsKey(dataSerializer.GetType()))
+                if (instance.SerializersByType[dataSerializer.GetType()] != dataSerializer)
+                    throw new ArgumentException("A different DataSerializer of the same Type or Id has already been added to DPSManager");
                 else
                     return;
-            
-            instance.SerializersByType.Add(dataProcessor.GetType(), dataProcessor);
-            instance.SerializersByID.Add(dataProcessor.Identifier, dataProcessor);
+
+            instance.SerializersByType.Add(dataSerializer.GetType(), dataSerializer);
+            instance.SerializersByID.Add(dataSerializer.Identifier, dataSerializer);
         }
 
+        /// <summary>
+        /// Generates an <see cref="long"/> describing a <see cref="DataSerializer"/> and a set of <see cref="DataProcessor"/>s
+        /// </summary>
+        /// <param name="serializer">The <see cref="DataSerializer"/> to be used</param>
+        /// <param name="dataProcessors">A <see cref="System.Collections.Generic.List{DataProcessor}()"/> to be used.  The order of this </param>
+        /// <returns>A <see cref="long"/> describing the arguments</returns>
+        /// <exception cref="ArgumentException">Thrown is more than 7 <see cref="DataSerializer"/>s are used</exception>
+        /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be used when transmitting data using Networkcomms.net</remarks>
         public static long CreateSerializerDataProcessorIdentifier(DataSerializer serializer, List<DataProcessor> dataProcessors)
         {
             long res = 0;
@@ -226,7 +240,7 @@ namespace DPSBase
             if (dataProcessors != null && dataProcessors.Count != 0)
             {
                 if (dataProcessors.Count > 7)
-                    throw new InvalidOperationException("Cannot specify more than 7 data processors for automatic serialization detection");
+                    throw new ArgumentException("Cannot specify more than 7 data processors for automatic serialization detection");
 
                 for (int i = 0; i < dataProcessors.Count; i++)
                 {
@@ -245,9 +259,16 @@ namespace DPSBase
             return res;
         }
 
+        /// <summary>
+        /// Takes an identifier generated using <see cref="DPSManager.CreateSerializerDataProcessorIdentifier"/> and returns the <see cref="DataSerializer"/> and set of <see cref="DataProcessor"/>s used to generate the identifier
+        /// </summary>
+        /// <param name="id">The <see cref="long"/> describing the <see cref="DataSerializer"/> and a set of <see cref="DataProcessor"/>s</param>
+        /// <param name="serializer">The resultant <see cref="DataSerializer"/></param>
+        /// <param name="dataProcessors">A List of the resultant <see cref="DataProcessor"/>s</param>
+        /// <remarks>This method is used to extract the serialization method and any data processing that needs to be used when transmitting data using Networkcomms.net</remarks>
         public static void GetSerializerDataProcessorsFromIdentifier(long id, out DataSerializer serializer, out List<DataProcessor> dataProcessors)
         {
-            serializer = GetSerializer((byte)(id >> 56));
+            serializer = GetDataSerializer((byte)(id >> 56));
 
             dataProcessors = new List<DataProcessor>();
 

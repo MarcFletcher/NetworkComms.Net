@@ -24,7 +24,7 @@ using System.ComponentModel.Composition;
 namespace DPSBase
 {
     /// <summary>
-    /// DataSerializer that uses .Net BinaryFormatter to perform object serialization
+    /// DataSerializer that uses .Net <see cref="System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"/> to perform <see cref="object"/> serialization
     /// </summary>
     public class BinaryFormaterSerializer : DataSerializer
     {

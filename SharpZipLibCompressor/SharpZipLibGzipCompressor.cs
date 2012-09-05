@@ -25,16 +25,16 @@ using System.ComponentModel.Composition;
 namespace SharpZipLibCompressor
 {
     /// <summary>
-    /// Compresor using Gzip compression from SharpZipLib http://www.icsharpcode.net/opensource/sharpziplib/
+    /// Compresor using Gzip compression from <see href="http://www.icsharpcode.net/opensource/sharpziplib/">SharpZipLib</see>
     /// </summary>
     public class SharpZipLibGzipCompressor : DataProcessor
     {
         static DataProcessor instance;
 
         /// <summary>
-        /// Instance singleton
+        /// Instance singleton used to access <see cref="DPSBase.DataProcessor"/> instance.  Obsolete, use instead <see cref="DPSBase.DPSManager.GetDataProcessor{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetCompressor")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetDataProcessor<T>")]
         public static DataProcessor Instance
         {
             get
@@ -48,13 +48,10 @@ namespace SharpZipLibCompressor
 
         private SharpZipLibGzipCompressor() { }
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 2; } }
 
-        /// <summary>
-        /// Compresses data in inStream to a byte array appending uncompressed data size
-        /// </summary>
-        /// <param name="inStream">Stream contaiing data to compress</param>
-        /// <returns>Compressed data appended with uncompressed data size</returns>
+        /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             using (GZipOutputStream gzStream = new GZipOutputStream(outStream))
@@ -66,11 +63,7 @@ namespace SharpZipLibCompressor
             writtenBytes = outStream.Position;
         }
 
-        /// <summary>
-        /// Decompresses data from inBytes into outStream
-        /// </summary>
-        /// <param name="inBytes">Compressed data from CompressDataStream</param>
-        /// <param name="outputStream">Stream to output uncompressed data to</param>
+        /// <inheritdoc />
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             using (GZipInputStream zip = new GZipInputStream(inStream))

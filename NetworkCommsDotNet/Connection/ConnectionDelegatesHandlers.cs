@@ -96,7 +96,7 @@ namespace NetworkCommsDotNet
                 }
 
                 //Otherwise we will use options that were specified
-                return new SendReceiveOptions(connectionSpecificOptions.Serializer, connectionSpecificOptions.DataProcessors, combinedOptions);
+                return new SendReceiveOptions(connectionSpecificOptions.DataSerializer, connectionSpecificOptions.DataProcessors, combinedOptions);
             }
             else if (connectionSpecificHandlers)
             {
@@ -219,7 +219,7 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (options.Serializer != null && options.DataProcessors != null)
+                if (options.DataSerializer != null && options.DataProcessors != null)
                 {
                     if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
@@ -230,7 +230,7 @@ namespace NetworkCommsDotNet
                     else
                         incomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, options));
                 }
-                else if (options.Serializer != null ^ options.DataProcessors != null)
+                else if (options.DataSerializer != null ^ options.DataProcessors != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {

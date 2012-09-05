@@ -25,16 +25,16 @@ using System.ComponentModel.Composition;
 namespace SevenZipLZMACompressor
 {
     /// <summary>
-    /// Compressor utilizing LZMA algorithm from 7Zip http://www.7-zip.org/    
+    /// Compressor utilizing LZMA algorithm from <see href="http://www.7-zip.org/">7zip</see>
     /// </summary>    
     public class LZMACompressor : DataProcessor
     {
         static DataProcessor instance;
 
         /// <summary>
-        /// Instance singleton
+        /// Instance singleton used to access <see cref="DPSBase.DataProcessor"/> instance.  Obsolete, use instead <see cref="DPSBase.DPSManager.GetDataProcessor{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use WrappersHelper.GetCompressor")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetDataProcessor<T>")]
         public static DataProcessor Instance
         {
             get
@@ -48,24 +48,17 @@ namespace SevenZipLZMACompressor
 
         private LZMACompressor() { }
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 1; } }
 
-        /// <summary>
-        /// Compresses data in inStream to a byte array appending uncompressed data size
-        /// </summary>
-        /// <param name="inStream">Stream contaiing data to compress</param>
-        /// <returns>Compressed data appended with uncompressed data size</returns>
+        /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             SevenZipHelper.CompressToStream(inStream, outStream);
             writtenBytes = outStream.Position;
         }
 
-        /// <summary>
-        /// Decompresses data from inBytes into outStream
-        /// </summary>
-        /// <param name="inBytes">Compressed data from CompressDataStream</param>
-        /// <param name="outputStream">Stream to output uncompressed data to</param>
+        /// <inheritdoc />
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {            
             SevenZipHelper.DecompressStreamToStream(inStream, outStream);

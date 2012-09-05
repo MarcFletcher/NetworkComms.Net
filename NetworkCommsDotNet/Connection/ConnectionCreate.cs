@@ -159,7 +159,7 @@ namespace NetworkCommsDotNet
         private void ConnectionSetupHandler(byte[] packetDataSection)
         {
             //We should never be trying to handshake an established connection
-            ConnectionInfo remoteConnectionInfo = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection,
+            ConnectionInfo remoteConnectionInfo = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection,
                 NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, NetworkComms.InternalFixedSendReceiveOptions.Options);
 
             if (ConnectionInfo.ConnectionType != remoteConnectionInfo.ConnectionType)

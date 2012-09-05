@@ -259,7 +259,7 @@ namespace NetworkCommsDotNet
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     ConnectionSetupHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && 
-                    (NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<bool>(packetDataSection, 
+                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<bool>(packetDataSection, 
                         NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, 
                         NetworkComms.InternalFixedSendReceiveOptions.Options)) == false)
                 {
@@ -310,7 +310,7 @@ namespace NetworkCommsDotNet
             OldSentPacket packetToReSend;
             lock (sentPacketsLocker)
             {
-                string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.Serializer.DeserialiseDataObject<string>(packetDataSection, 
+                string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<string>(packetDataSection, 
                     NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, NetworkComms.InternalFixedSendReceiveOptions.Options);
 
                 if (sentPackets.ContainsKey(checkSumRequested))

@@ -22,6 +22,9 @@ using System.IO;
 
 namespace DPSBase
 {
+    /// <summary>
+    /// <see cref="DataProcessor"/> which encrypts/decrypts data using the Rijndael algorithm and a pre-shared password
+    /// </summary>
     public class RijndaelPSKEncrypter : DataProcessor
     {        
         private static readonly string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
@@ -31,12 +34,10 @@ namespace DPSBase
         
         private RijndaelPSKEncrypter() { }
 
-        public override byte Identifier
-        {
-            get { return 4; }
-        }
+        /// <inheritdoc />
+        public override byte Identifier { get { return 4; } }
 
-        
+        /// <inheritdoc />
         public override void ForwardProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
@@ -51,6 +52,7 @@ namespace DPSBase
             writtenBytes = outStream.Position; 
         }
 
+        /// <inheritdoc />
         public override void ReverseProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
@@ -65,6 +67,11 @@ namespace DPSBase
             writtenBytes = outStream.Position; 
         }
         
+        /// <summary>
+        /// Adds a password, using the correct key, to a Dicitonary
+        /// </summary>
+        /// <param name="options">The Dictionary to add the optoion to</param>
+        /// <param name="password">The password</param>        
         public static void AddPasswordToOptions(Dictionary<string, string> options, string password)
         {
             options[PasswordOption] = password;

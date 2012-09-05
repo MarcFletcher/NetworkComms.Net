@@ -26,7 +26,7 @@ using System.ComponentModel.Composition;
 namespace DPSBase
 {
     /// <summary>
-    /// DataSerializer using ProtoBuf.Net to serialize an object to bytes
+    /// <see cref="DataSerializer"/> using <see href="http://code.google.com/p/protobuf-net/">ProtoBuf-Net</see> to serialize an <see cref="object"/> to bytes
     /// </summary>
     public class ProtobufSerializer : DataSerializer
     {        
@@ -35,9 +35,9 @@ namespace DPSBase
         static DataSerializer instance;
 
         /// <summary>
-        /// Instance singleton used to access serializer instance.  Use instead <see cref="DPSManager.GetDataSerializer{T}"/>
+        /// Instance singleton used to access <see cref="DataSerializer"/> instance.  Use instead <see cref="DPSManager.GetDataSerializer{T}"/>
         /// </summary>
-        [Obsolete("Instance access via class obsolete, use DPSManager.GetSerializer<T>")]
+        [Obsolete("Instance access via class obsolete, use DPSManager.GetDataSerializer<T>")]
         public static DataSerializer Instance
         {
             get
@@ -58,6 +58,7 @@ namespace DPSBase
 
         #region ISerialize Members
 
+        /// <inheritdoc />
         public override byte Identifier { get { return 1; } }
 
         /// <inheritdoc />

@@ -50,7 +50,7 @@ namespace NetworkCommsDotNet
             if (packetObject == null)
                 this.packetData = new byte[0];
             else
-                this.packetData = options.Serializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
+                this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;
@@ -62,7 +62,7 @@ namespace NetworkCommsDotNet
                 hashStr);
 
             //Add an identifier specifying the serializers and processors we have used
-            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.Serializer, options.DataProcessors));
+            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
         }
@@ -90,7 +90,7 @@ namespace NetworkCommsDotNet
         public byte[] SerialiseHeader(SendReceiveOptions options)
         {
             //We need to start of by serialising the header
-            byte[] serialisedHeader = options.Serializer.SerialiseDataObject(packetHeader, options.DataProcessors, null);
+            byte[] serialisedHeader = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null);
 
             //Define our return array which includes byte[0] as the header size
             byte[] returnArray = new byte[1 + serialisedHeader.Length];

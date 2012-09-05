@@ -391,7 +391,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (sendReceiveOptions.Serializer != null && sendReceiveOptions.DataProcessors != null)
+                if (sendReceiveOptions.DataSerializer != null && sendReceiveOptions.DataProcessors != null)
                 {
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
@@ -402,7 +402,7 @@ namespace NetworkCommsDotNet
                     else
                         globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
                 }
-                else if (sendReceiveOptions.Serializer != null ^ sendReceiveOptions.DataProcessors != null)
+                else if (sendReceiveOptions.DataSerializer != null ^ sendReceiveOptions.DataProcessors != null)
                     throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
@@ -1351,7 +1351,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         /// <summary>
@@ -1373,7 +1373,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
             connectionId = conn.ConnectionInfo.NetworkIdentifier;
         }
 
@@ -1394,7 +1394,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));            
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));            
         }
 
         /// <summary>
@@ -1415,7 +1415,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
+            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         /// <summary>
@@ -1436,7 +1436,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options));
+            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
         }
 
         #endregion SendObjectDefault
@@ -1584,7 +1584,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1611,7 +1611,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1635,7 +1635,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1660,7 +1660,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
+            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1685,7 +1685,7 @@ namespace NetworkCommsDotNet
             if (receiveConfirmationRequired)
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
-            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.Serializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
+            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
         }
 
         #endregion SendReceiveObjectDefault

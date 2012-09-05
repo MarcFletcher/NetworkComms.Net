@@ -23,7 +23,7 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// Only usefull for serializing primitive arrays to bytes. Will throw an exception otherwise
+    /// Use only when serializing only primitive arrays to bytes. Will throw an exception otherwise
     /// </summary>    
     public class NullSerializer : DataSerializer
     {

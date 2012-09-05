@@ -84,7 +84,7 @@ namespace NetworkCommsDotNet
                 if (packetData.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 
-                PacketHeader tempObject = sendReceiveOptions.Serializer.DeserialiseDataObject<PacketHeader>(packetData, sendReceiveOptions.DataProcessors, sendReceiveOptions.Options);
+                PacketHeader tempObject = sendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetData, sendReceiveOptions.DataProcessors, sendReceiveOptions.Options);
                 if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.PayloadPacketSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else
