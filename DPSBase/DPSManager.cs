@@ -26,7 +26,7 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// Automatically detects and manages the use of DataSerializers and DataProcessors.  Any <see cref="DataSerializer"/> or <see cref="DataProcessor"/> in an assembly located in the working directory (including subdirectories) will be automatically detected
+    /// Automatically detects and manages the use of <see cref="DataSerializer"/> and <see cref="DataProcessor"/>s.  Any <see cref="DataSerializer"/> or <see cref="DataProcessor"/> in an assembly located in the working directory (including subdirectories) will be automatically detected
     /// </summary>
     public sealed class DPSManager
     {

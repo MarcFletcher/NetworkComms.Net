@@ -112,7 +112,7 @@ namespace NetworkCommsDotNet
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> is passed as a generic parameter and no <see cref="DPSBase.DataProcessor"/>s are used.  
         /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> as an argument which may be null
         /// </summary>
-        /// <param name="options"></param>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/></param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -120,10 +120,18 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1> : SendReceiveOptions 
         where DS : DataSerializer 
         where DP1 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and a single <see cref="DPSBase.DataProcessor"/> while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/> as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/></param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -132,11 +140,20 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
         where DP2 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 2 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -147,12 +164,22 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2, DP3> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
         where DP2 : DataProcessor
         where DP3 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 3 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -164,6 +191,12 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2, DP3, DP4> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
@@ -171,6 +204,11 @@ namespace NetworkCommsDotNet
         where DP3 : DataProcessor
         where DP4 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 4 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -183,6 +221,13 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2, DP3, DP4, DP5> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
@@ -191,6 +236,11 @@ namespace NetworkCommsDotNet
         where DP4 : DataProcessor
         where DP5 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 5 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -204,6 +254,14 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2, DP3, DP4, DP5, DP6> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
@@ -213,6 +271,11 @@ namespace NetworkCommsDotNet
         where DP5 : DataProcessor
         where DP6 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 6 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
@@ -227,6 +290,15 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="DP7">The type of the seventh <see cref="DPSBase.DataProcessor"/> to use</typeparam>
     public class SendRecieveOptions<DS, DP1, DP2, DP3, DP4, DP5, DP6, DP7> : SendReceiveOptions
         where DS : DataSerializer
         where DP1 : DataProcessor
@@ -237,6 +309,11 @@ namespace NetworkCommsDotNet
         where DP6 : DataProcessor
         where DP7 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 7 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s as an argument which may be null
+        /// </summary>
+        /// <param name="options">Additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {
