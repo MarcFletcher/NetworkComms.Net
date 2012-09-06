@@ -24,7 +24,7 @@ using System.IO;
 namespace DPSBase
 {    
     /// <summary>
-    /// Provides methods that convert an object into a byte[]
+    /// Provides methods that convert an <see cref="object"/> into a <see cref="byte"/>[]
     /// </summary>
     [InheritedExport(typeof(DataSerializer))]
     public abstract class DataSerializer

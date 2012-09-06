@@ -8,14 +8,21 @@ using System.Threading;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Provides flags for send and receive options such as serialisation, compression, encryption etc
+    /// Describes options for sending and receiving data such as serialisation method, compression, encryption etc
     /// </summary>
     public class SendReceiveOptions : ICloneable
     {
         private DataSerializer _dataSerializer;
         private List<DataProcessor> _dataProcessors;
 
+        /// <summary>
+        /// Gets the <see cref="DPSBase.DataSerializer"/> that should be used when sending information
+        /// </summary>
         public DataSerializer DataSerializer { get { return _dataSerializer; } protected set { _dataSerializer = value; } }
+
+        /// <summary>
+        /// Gets the <see cref="DPSBase.DataProcessor"/>s that should be used when sending information. <see cref="DPSBase.DataProcessor"/>s are applied in index order
+        /// </summary>
         public List<DataProcessor> DataProcessors 
         {
             get { return _dataProcessors; }
@@ -33,63 +40,61 @@ namespace NetworkCommsDotNet
         }
 
         private Dictionary<string, string> options;
+
+        /// <summary>
+        /// Gets the options that should be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s on object serialization and deserialization
+        /// </summary>
         public Dictionary<string, string> Options
         {
             get
             {
-                return options.ToDictionary(pair => String.Copy(pair.Key), pair => String.Copy(pair.Value));
+                return options;
             }
         }
-
-        public string this[string key]
-        {
-            get
-            {
-                if (options.ContainsKey(key))
-                    return options[key];
-                else
-                    return null;
-            }
-            set
-            {
-                if (options.ContainsKey(key))
-                    options[key] = value;
-                else
-                    options.Add(key, value);
-            }
-        }
-
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class with a specified <see cref="DPSBase.DataSerializer"/>, set of <see cref="DPSBase.DataProcessor"/>s and and other options
+        /// </summary>
+        /// <param name="serializer">The <see cref="DPSBase.DataSerializer"/> to use</param>
+        /// <param name="dataProcessors">The set of <see cref="DPSBase.DataProcessor"/>s to use.  The order in the list determines the order the <see cref="DPSBase.DataProcessor"/>s will be applied</param>
+        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DATAProcessor"/>s</param>
         public SendReceiveOptions(DataSerializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {            
             this.DataSerializer = serializer;
-            this.DataProcessors = dataProcessors;            
-            this.options = options;
+            this.DataProcessors = dataProcessors;
+
+            if (options != null)
+                this.options = options;
+            else
+                this.options = new Dictionary<string, string>();
         }
         
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class providing only options for the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s.  This constructor should only be used when adding packet handlers for incoming connections
+        /// </summary>
+        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DATAProcessor"/>s</param>
         public SendReceiveOptions(Dictionary<string, string> options)
         {
-            this.options = options;
+            if (options != null)
+                this.options = options;
+            else
+                this.options = new Dictionary<string, string>();
         }
 
+        /// <summary>
+        /// Determines whether the supplied <see cref="SendReceiveOptions"/> is compatible, from a serialization point of view, with this instance
+        /// </summary>
+        /// <param name="options">The <see cref="SendReceiveOptions"/> to compare against</param>
+        /// <returns>True if the options are compatible, false otherwise</returns>
+        /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DATAProcessor"/>s</remarks>
         public bool OptionsCompatable(SendReceiveOptions options)
         {
             return options.DataProcessors.SequenceEqual(DataProcessors) && options.DataSerializer == DataSerializer;                    
         }
 
-        public override bool Equals(object obj)
-        {
-            SendReceiveOptions sendRecieveOptions = obj as SendReceiveOptions;
-            if (sendRecieveOptions == null) return false;
-            else
-            {                
-                return sendRecieveOptions.DataProcessors == DataProcessors && sendRecieveOptions.DataSerializer == DataSerializer &&
-                    sendRecieveOptions.Options.Keys.OrderBy(s => s).SequenceEqual(Options.Keys.OrderBy(s => s)) &&
-                    sendRecieveOptions.Options.Values.OrderBy(s => s).SequenceEqual(Options.Values.OrderBy(s => s));
-            }
-        }
-
         #region ICloneable Members
 
+        /// <inheritdoc />
         public object Clone()
         {
             return new SendReceiveOptions(DataSerializer, DataProcessors, Options);
@@ -98,9 +103,16 @@ namespace NetworkCommsDotNet
         #endregion
     }
 
+    /// <inheritdoc />
+    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
     public class SendRecieveOptions<DS> : SendReceiveOptions 
         where DS : DataSerializer
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> is passed as a generic parameter and no <see cref="DPSBase.DataProcessor"/>s are used.  
+        /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> as an argument which may be null
+        /// </summary>
+        /// <param name="options"></param>
         public SendRecieveOptions(Dictionary<string, string> options)
             : base(options)
         {

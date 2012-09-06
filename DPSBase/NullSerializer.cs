@@ -23,7 +23,7 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// Use only when serializing only primitive arrays to bytes. Will throw an exception otherwise
+    /// Use only when serializing only primitive arrays. Will throw an exception otherwise
     /// </summary>    
     public class NullSerializer : DataSerializer
     {
@@ -54,13 +54,13 @@ namespace DPSBase
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {
-            throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays");
+            throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays of primitives");
         }
 
         /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
-            throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays");
+            throw new InvalidOperationException("Cannot use null serializer for objects that are not arrays of primitives");
         }
 
         #endregion
