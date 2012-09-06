@@ -335,7 +335,23 @@ namespace ExamplesConsole
             #endregion
 
             #region Possible Encryption
+            Console.WriteLine("Would you like to include data encryption?\n1 - No\n2 - Yes\n");
+            
+            int includeEncryption;
+            while (true)
+            {
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out includeEncryption);
+                if (parseSucces && includeEncryption <= 2 && includeEncryption > 0) break;
+                Console.WriteLine("Invalid choice. Please try again.");
+            }
 
+            if (includeEncryption == 2)
+            {
+                Console.Write("Please enter an encryption password and press enter: ");
+                string password = Console.ReadLine();
+                RijndaelPSKEncrypter.AddPasswordToOptions(dataProcessorOptions, password);
+                dataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
+            }
             #endregion
         }
 
