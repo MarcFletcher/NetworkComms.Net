@@ -790,8 +790,7 @@ namespace NetworkCommsDotNet
             /// </summary>
             /// <typeparam name="T">The type of object to create new instances of for RPC.  Must implement I</typeparam>
             /// <typeparam name="I">Interface that should be provided for RPC</typeparam>
-            /// <param name="timeout">If specified each RPC object created will be destroyed if it is unused for a time, in ms, specified by timeout</param>
-            /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
+            /// <param name="timeout">If specified each RPC object created will be destroyed if it is unused for a time, in ms, specified by timeout</param>            
             public static void RegisterTypeForPrivateRemoteCall<T, I>(int timeout = int.MaxValue) where T : I, new()
             {
                 lock (locker)

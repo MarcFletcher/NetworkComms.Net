@@ -45,7 +45,7 @@
     <ProjectSummary>Networking made easy, out of the box. Creating client-server applications in C# &amp;#39%3bshould&amp;#39%3b be a piece of cake. Without requiring any knowledge of networking, this high performance, lightweight, thread safe, general purpose, open source, communication library makes that possible. Please see our very short example to find out how. Made available under the terms of the GPL.</ProjectSummary>
     <RootNamespaceTitle>NetworkCommsDotNet</RootNamespaceTitle>
     <ComponentConfigurations>
-      <ComponentConfig id="Code Block Component" enabled="False">
+      <ComponentConfig id="Code Block Component" enabled="True">
         <component id="Code Block Component" type="SandcastleBuilder.Components.CodeBlockComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
 <!-- Base path for relative filenames in source attributes (optional) -->
 <basePath value="{@HtmlEncProjectFolder}" />
