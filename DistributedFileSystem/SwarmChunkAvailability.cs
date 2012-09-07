@@ -923,13 +923,14 @@ namespace DistributedFileSystem
         {
             try
             {
-                BeforeSerialise();
                 return DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<SwarmChunkAvailability>(this);
             }
-            finally
+            catch(Exception)
             {
                 AfterSerialise();
             }
+
+            return null;
         }
 
         [ProtoBeforeSerialization]
