@@ -32,6 +32,10 @@ namespace DPSBase
     {        
         private static int metaDataTimeoutMS = 150000;
 
+        private ProtobufSerializer() { }
+        
+        #region Depreciated
+
         static DataSerializer instance;
 
         /// <summary>
@@ -53,9 +57,9 @@ namespace DPSBase
                 return instance;
             }
         }
-        
-        private ProtobufSerializer() { }
 
+        #endregion
+        
         #region ISerialize Members
 
         /// <inheritdoc />
