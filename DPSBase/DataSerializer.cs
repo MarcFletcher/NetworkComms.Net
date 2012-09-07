@@ -50,9 +50,20 @@ namespace DPSBase
 
             return instance;
         }
-                        
+            
         /// <summary>
-        /// Converts objectToSerialize to an array of bytes using the compression provided by compressor
+        /// Converts objectToSerialize to an array of bytes. Uses no data processors.
+        /// </summary>
+        /// <typeparam name="T">Type of object to serialize</typeparam>
+        /// <param name="objectToSerialise">Object to serialize</param>
+        /// <returns>Serialized array of bytes</returns>
+        public byte[] SerialiseDataObject<T>(T objectToSerialise)
+        {
+            return SerialiseDataObject<T>(objectToSerialise, null, null);
+        }
+    
+        /// <summary>
+        /// Converts objectToSerialize to an array of bytes using the data processors and options provided.
         /// </summary>
         /// <typeparam name="T">Type of object to serialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize</param>
@@ -135,7 +146,18 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Converts array of bytes previously serialized and compressed using compressor to an object of provided type
+        /// Converts array of bytes previously serialized to an object of provided type. Assumes no data processors.
+        /// </summary>
+        /// <typeparam name="T">Type of object to deserialize to</typeparam>
+        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <returns>The deserialized object</returns>
+        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
+        {
+            return DeserialiseDataObject<T>(receivedObjectBytes, null, null);
+        }
+
+        /// <summary>
+        /// Converts array of bytes previously serialized and processed using data processors to an object of provided type
         /// </summary>
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
