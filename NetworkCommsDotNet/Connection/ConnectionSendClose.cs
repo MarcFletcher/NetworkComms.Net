@@ -303,14 +303,14 @@ namespace NetworkCommsDotNet
                 try
                 {
                     timer.Start();
-                    bool returnValue = SendReceiveObject<bool>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, false, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
+                    byte[] returnValue = SendReceiveObject<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, new byte[1] { 0 }, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
                     timer.Stop();
 
                     responseTimeMS = timer.ElapsedMilliseconds;
 
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms.");
 
-                    return returnValue;
+                    return returnValue[0] == 1;
                 }
                 catch (Exception)
                 {

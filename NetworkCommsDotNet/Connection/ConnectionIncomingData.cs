@@ -259,12 +259,12 @@ namespace NetworkCommsDotNet
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     ConnectionSetupHandler(packetDataSection);
                 else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && 
-                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<bool>(packetDataSection, 
+                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<byte[]>(packetDataSection, 
                         NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, 
-                        NetworkComms.InternalFixedSendReceiveOptions.Options)) == false)
+                        NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), true, NetworkComms.InternalFixedSendReceiveOptions);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] {1}, NetworkComms.InternalFixedSendReceiveOptions);
                     SendPacket(returnPacket);
                 }
 
