@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using NetworkCommsDotNet;
 
 namespace ExamplesConsole
 {
@@ -13,7 +14,7 @@ namespace ExamplesConsole
         static string lastServerIP = "";
         static int lastServerPort = -1;
 
-        public static void GetServerDetails(out string serverIP, out int serverPort)
+        public static void GetServerDetails(out ConnectionInfo connectionInfo)
         {
             if (lastServerIP != "")
                 Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:",lastServerIP,lastServerPort);
@@ -29,17 +30,18 @@ namespace ExamplesConsole
 
                     if (userEnteredStr.Trim() == "r" && lastServerIP != "")
                     {
-                        serverIP = lastServerIP;
-                        serverPort = lastServerPort;
+                        connectionInfo = new ConnectionInfo(lastServerIP, lastServerPort);
                         break;
                     }
                     else
                     {
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
+                        string serverIP = userEnteredStr.Split(':')[0];
+                        int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
 
                         lastServerIP = serverIP;
                         lastServerPort = serverPort;
+
+                        connectionInfo = new ConnectionInfo(serverIP, serverPort);
                         break;
                     }
                 }

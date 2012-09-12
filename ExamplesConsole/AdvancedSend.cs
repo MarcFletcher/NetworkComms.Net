@@ -1,19 +1,4 @@
-﻿//  Copyright 2011 Marc Fletcher, Matthew Dean
-//
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -135,17 +120,14 @@ namespace ExamplesConsole
                 CreateSendObject();
 
                 //Expecting user to enter ip address as 192.168.0.1:4000
-                string serverIP; int serverPort;
-                ExampleHelper.GetServerDetails(out serverIP, out serverPort);
+                ConnectionInfo connectionInfo;
+                ExampleHelper.GetServerDetails(out connectionInfo);
 
                 //***************************************************************//
                 //              Start of interesting stuff                       //
                 //***************************************************************//
 
                 Connection connectionToUse;
-
-                //Create the connectionInfo object which tracks all connection information values
-                ConnectionInfo connectionInfo = new ConnectionInfo(serverIP, serverPort);
 
                 //Create the connection
                 if (connectionTypeToUse == ConnectionType.TCP)

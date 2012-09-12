@@ -256,6 +256,15 @@ namespace NetworkCommsDotNet
                 lastTrafficTime = DateTime.Now;
         }
 
+        /// <summary>
+        /// Replaces the current networkIdentifier with that provided
+        /// </summary>
+        /// <param name="networkIdentifier"></param>
+        public void SetNetworkIdentifer(ShortGuid networkIdentifier)
+        {
+            NetworkIdentifier = networkIdentifier;
+        }
+
         public bool Equals(ConnectionInfo x, ConnectionInfo y)
         {
             return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString() && x.RemoteEndPoint.Equals(y.RemoteEndPoint));

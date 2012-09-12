@@ -96,6 +96,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
+      <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
+      <Name>DistributedFileSystem</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
       <Name>DPSBase</Name>
