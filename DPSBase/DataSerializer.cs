@@ -376,7 +376,8 @@ namespace DPSBase
                     return (object)receivedObjectBytes;
                 if (elementType.IsPrimitive)
                 {
-                    int numElements = (int)(BitConverter.ToUInt32(receivedObjectBytes, receivedObjectBytes.Length - sizeof(int)));
+                    int numElements = (dataProcessors == null || dataProcessors.Count == 0) ? (receivedObjectBytes.Length / Marshal.SizeOf(elementType)) :
+                        (int)(BitConverter.ToUInt32(receivedObjectBytes, receivedObjectBytes.Length - sizeof(int)));
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
 
@@ -389,7 +390,7 @@ namespace DPSBase
 
                         using (System.IO.UnmanagedMemoryStream finalOutputStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
                         {
-                            using (MemoryStream inputBytesStream = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length - sizeof(int)))
+                            using (MemoryStream inputBytesStream = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))))
                             {
                                 if (dataProcessors != null && dataProcessors.Count > 1)
                                 {
