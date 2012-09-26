@@ -22,18 +22,31 @@ using DPSBase;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Wrapper for the entire comms packet. Packet consists of header and data in serialised byte[] form.
+    /// Wrapper for <see cref="PacketHeader"/> and packetData.
     /// </summary>
     public class Packet
     {
         PacketHeader packetHeader;
         byte[] packetData;
 
+        /// <summary>
+        /// Create a new packet
+        /// </summary>
+        /// <param name="packetTypeStr">The sending packet type</param>
+        /// <param name="packetObject">The object to be sent</param>
+        /// <param name="options">The <see cref="SendReceiveOptions"/> to be used to create this packet</param>
         public Packet(string packetTypeStr, object packetObject, SendReceiveOptions options)
         {
             Constructor(packetTypeStr, null, packetObject, options);
         }
 
+        /// <summary>
+        /// Create a new packet
+        /// </summary>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="requestReturnPacketTypeStr">The expected return packet type</param>
+        /// <param name="packetObject">The object to be sent</param>
+        /// <param name="options">The <see cref="SendReceiveOptions"/> to be used to create this packet</param>
         public Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
         {
             Constructor(sendingPacketTypeStr, requestReturnPacketTypeStr, packetObject, options);
@@ -43,9 +56,6 @@ namespace NetworkCommsDotNet
         {
             if (sendingPacketTypeStr == null || sendingPacketTypeStr == "")
                 throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
-
-            //We can gain performance if we are just sending a byte array directly
-            bool pureBytesInPayload = false;
 
             if (packetObject == null)
                 this.packetData = new byte[0];

@@ -30,7 +30,7 @@ using System.Diagnostics;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// NetworkComms.net. C# networking made easy.
+    /// Top level interface for NetworkCommsDotNet library. Anything which is not connection specific generally happens within the NetworkComms class. e.g. Keeping track of all connections, global defaults and settings, serialisers and data processors etc.
     /// </summary>
     public static class NetworkComms
     {
@@ -355,11 +355,11 @@ namespace NetworkCommsDotNet
         static Dictionary<string, PacketTypeUnwrapper> globalIncomingPacketUnwrappers = new Dictionary<string, PacketTypeUnwrapper>();
 
         /// <summary>
-        /// Delegate template for incoming packet handlers.
+        /// Delegate for handling incoming packets. See AppendGlobalIncomingPacketHandler members.
         /// </summary>
-        /// <typeparam name="T">The type of incoming object</typeparam>
-        /// <param name="packetHeader">The header associated with the incoming packet</param>
-        /// <param name="connection">The connection with which the packet was recieved</param>
+        /// <typeparam name="T">The type of object which is expected for this handler</typeparam>
+        /// <param name="packetHeader">The <see cref="PacketHeader"/> of the incoming packet</param>
+        /// <param name="connection">The connection with which this packet was received</param>
         /// <param name="incomingObject">The incoming object of specified type T</param>
         public delegate void PacketHandlerCallBackDelegate<T>(PacketHeader packetHeader, Connection connection, T incomingObject);
 
@@ -620,8 +620,9 @@ namespace NetworkCommsDotNet
 
         #region Connection Establish and Shutdown
         /// <summary>
-        /// Delegate template for connection shutdown delegates.
+        /// Delegate which is executed when a connection is established or shutdown. See <see cref="AppendGlobalConnectionEstablishHandler"/> and <see cref="AppendGlobalConnectionCloseHandler"/>.
         /// </summary>
+        /// <param name="connection">The connection which has been established or shutdown.</param>
         public delegate void ConnectionEstablishShutdownDelegate(Connection connection);
 
         /// <summary>
@@ -682,7 +683,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Add a new connection establish delegate which will be called for every connection once it has been succesfully established.
         /// </summary>
-        /// <param name="connectionShutdownDelegate"></param>
+        /// <param name="connectionEstablishDelegate"></param>
         public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -699,7 +700,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Remove a connection establish delegate.
         /// </summary>
-        /// <param name="connectionShutdownDelegate"></param>
+        /// <param name="connectionEstablishDelegate"></param>
         public static void RemoveGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -776,7 +777,7 @@ namespace NetworkCommsDotNet
         #region Timeouts
         /// <summary>
         /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established. Default is 30000.
-        /// </summary
+        /// </summary>
         public static int ConnectionEstablishTimeoutMS { get; set; }
 
         /// <summary>

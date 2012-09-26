@@ -25,23 +25,56 @@ using Serializer = DPSBase.DataSerializer;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// Any <see cref="PacketHeader"/> options which are stored as a long.
+    /// </summary>
     public enum PacketHeaderLongItems : byte
     {
+        /// <summary>
+        /// The size of the packet data payload in bytes. This is a compulsory option.
+        /// </summary>
         PayloadPacketSize,
+
+        /// <summary>
+        /// The data serializer and data processor used to unwrap the payload. Used as flags.
+        /// </summary>
         SerializerProcessors,
+
+        /// <summary>
+        /// The creation time of the packet header.
+        /// </summary>
         PacketCreationTime,
     }
 
+    /// <summary>
+    /// Any <see cref="PacketHeader"/> options which are stored as a string.
+    /// </summary>
     public enum PacketHeaderStringItems : byte
     {
+        /// <summary>
+        /// The type of the packet. This is a compulsory option.
+        /// </summary>
         PacketType,
+
+        /// <summary>
+        /// Specifies if a recieve confirmation is required for this packet. String option as takes up less space for a boolean option.
+        /// </summary>
         ReceiveConfirmationRequired,
+
+        /// <summary>
+        /// The packet type which should be used for any return packet type.
+        /// </summary>
         RequestedReturnPactetType,
+
+        /// <summary>
+        /// A checksum corresponding to the payload data.
+        /// </summary>
         CheckSumHash,
     }
 
     /// <summary>
-    /// Definintion of the network comms packet header.
+    /// Contains information required to send, receive and correctly rebuild any objects sent via NetworkCommsDotNet.
+    /// Any data sent via NetworkCommsDotNet is always preceeded by a packetHeader.
     /// </summary>
     [ProtoContract]
     public sealed class PacketHeader
@@ -52,10 +85,19 @@ namespace NetworkCommsDotNet
         Dictionary<PacketHeaderStringItems, string> stringItems;
         
         /// <summary>
-        /// Blank constructor for deserialisation using protobuf
+        /// Blank constructor required for deserialisation
         /// </summary>
         private PacketHeader() { }
         
+        /// <summary>
+        /// Creates a new packetHeader
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type to be used.</param>
+        /// <param name="payloadPacketSize">The size on bytes of the payload</param>
+        /// <param name="requestedReturnPacketTypeStr">An optional field representing the expected return packet type</param>
+        /// <param name="receiveConfirmationRequired">An optional boolean stating that a recieve confirmation is required for this packet</param>
+        /// <param name="checkSumHash">An optional field representing the payload checksum</param>
+        /// <param name="includeConstructionTime">An optional boolean which if true will record the DateTime this packet was created</param>
         public PacketHeader(string packetTypeStr, long payloadPacketSize, string requestedReturnPacketTypeStr = null, bool receiveConfirmationRequired = false, string checkSumHash = null, bool includeConstructionTime = false)
         {
             longItems = new Dictionary<PacketHeaderLongItems, long>();
@@ -99,51 +141,84 @@ namespace NetworkCommsDotNet
             }
         }
 
-        
         #region Get & Set
-
+        /// <summary>
+        /// The total size in bytes of the payload.
+        /// </summary>
         public int PayloadPacketSize
         {
             get { return (int)longItems[PacketHeaderLongItems.PayloadPacketSize]; }
             private set { longItems[PacketHeaderLongItems.PayloadPacketSize] = value; }
         }
 
+        /// <summary>
+        /// The packet type.
+        /// </summary>
         public string PacketType
         {
             get { return stringItems[PacketHeaderStringItems.PacketType]; }
             private set { stringItems[PacketHeaderStringItems.PacketType] = value; }
         }
 
+        /// <summary>
+        /// Check if a string option has been set.
+        /// </summary>
+        /// <param name="option">The string option to be checked.</param>
+        /// <returns>Returns true if the provided string option has been set.</returns>
         public bool ContainsOption(PacketHeaderStringItems option)
         {
             return stringItems.ContainsKey(option);
         }
 
+        /// <summary>
+        /// Check if a long option has been set.
+        /// </summary>
+        /// <param name="option">The long option to be checked.</param>
+        /// <returns>Returns true if the provided long option has been set.</returns>
         public bool ContainsOption(PacketHeaderLongItems option)
         {
             return longItems.ContainsKey(option);
         }
 
+        /// <summary>
+        /// Get a long option.
+        /// </summary>
+        /// <param name="option">The option to get</param>
+        /// <returns>The requested long option</returns>
         public long GetOption(PacketHeaderLongItems option)
         {
             return longItems[option];
         }
 
+        /// <summary>
+        /// Get a string option
+        /// </summary>
+        /// <param name="options">The option to get</param>
+        /// <returns>The requested string option</returns>
         public string GetOption(PacketHeaderStringItems options)
         {
             return stringItems[options];
         }
 
+        /// <summary>
+        /// Set a long option with the provided value.
+        /// </summary>
+        /// <param name="option">The option to set</param>
+        /// <param name="Value">The option value</param>
         public void SetOption(PacketHeaderLongItems option, long Value)
         {
             longItems[option] = Value;
         }
 
+        /// <summary>
+        /// Set a string option with the provided value.
+        /// </summary>
+        /// <param name="option">The option to set</param>
+        /// <param name="Value">The option value</param>
         public void SetOption(PacketHeaderStringItems option, string Value)
         {
             stringItems[option] = Value;
         }
-
         #endregion
     }
 }

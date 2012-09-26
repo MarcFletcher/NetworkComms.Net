@@ -24,6 +24,9 @@ namespace ExamplesConsole
 
         static ConnectionType connectionTypeToUse;
 
+        /// <summary>
+        /// Run the AdvancedSend example.
+        /// </summary>
         public static void RunExample()
         {
             Console.WriteLine("Launching advanced object send example ...");
@@ -133,7 +136,7 @@ namespace ExamplesConsole
                 if (connectionTypeToUse == ConnectionType.TCP)
                     connectionToUse = TCPConnection.CreateConnection(connectionInfo);
                 else
-                    connectionToUse = UDPConnection.CreateConnection(connectionInfo, UDPLevel.None);
+                    connectionToUse = UDPConnection.CreateConnection(connectionInfo, UDPOptions.None);
 
                 //Send the object
                 if (toSendType == typeof(Array))
@@ -543,7 +546,6 @@ namespace ExamplesConsole
             /// </summary>
             /// <param name="intValue"></param>
             /// <param name="stringValue"></param>
-            /// <param name="listValue"></param>
             public ProtobufCustomObject(int intValue, string stringValue)
             {
                 this.IntValue = intValue;
@@ -561,11 +563,10 @@ namespace ExamplesConsole
             public string StringValue { get; private set; }
 
             /// <summary>
-            /// Constructor object for ProtobufCustomObject
+            /// Constructor object for BinaryFormatterCustomObject
             /// </summary>
             /// <param name="intValue"></param>
             /// <param name="stringValue"></param>
-            /// <param name="listValue"></param>
             public BinaryFormatterCustomObject(int intValue, string stringValue)
             {
                 this.IntValue = intValue;

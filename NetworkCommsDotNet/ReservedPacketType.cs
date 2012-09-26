@@ -20,16 +20,14 @@ using System.Text;
 
 namespace NetworkCommsDotNet
 {
-    public enum ReservedPacketType
+    /// <summary>
+    /// Reserved packetTypeStrs. Removing or modifying these will prevent network comms from working
+    /// </summary>
+    enum ReservedPacketType
     {
-        /// <summary>
-        /// Reserved packetTypeStrs. Removing/modifying these will prevent network comms from working
-        /// </summary>
-        #region Reserved
         Confirmation,
         CheckSumFailResend,
         AliveTestPacket,
         ConnectionSetup,
-        #endregion
     }
 }

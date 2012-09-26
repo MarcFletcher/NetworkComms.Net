@@ -25,9 +25,6 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// NetworkComms maintains a top level Connection object for shared methods
-    /// </summary>
     public abstract partial class Connection
     {
         /// <summary>
@@ -38,33 +35,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Maintains a list of sent packets for the purpose of confirmation and possible resends.
         /// </summary>
-        protected object sentPacketsLocker = new object();
-        protected Dictionary<string, OldSentPacket> sentPackets = new Dictionary<string, OldSentPacket>();
-        protected class OldSentPacket
-        {
-            public int SendCount { get; private set; }
-            public Packet Packet { get; private set; }
-
-            public OldSentPacket(Packet packet)
-            {
-                this.Packet = packet;
-                this.SendCount = 1;
-            }
-
-            public void IncrementSendCount()
-            {
-                SendCount++;
-            }
-
-            public override string ToString()
-            {
-                if (Packet.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketCreationTime))
-                    return "[" + (new DateTime(Packet.PacketHeader.GetOption(PacketHeaderLongItems.PacketCreationTime))).ToShortTimeString() + "] " +
-                        Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
-                else
-                    return "[Unknown] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
-            }
-        }
+        object sentPacketsLocker = new object();
+        Dictionary<string, SentPacket> sentPackets = new Dictionary<string, SentPacket>();
 
         /// <summary>
         /// Send an object using the connection default SendReceiveOptions
@@ -382,7 +354,7 @@ namespace NetworkCommsDotNet
                                 var hash = packet.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
 
                                 if (!sentPackets.ContainsKey(hash))
-                                    sentPackets.Add(hash, new OldSentPacket(packet));
+                                    sentPackets.Add(hash, new SentPacket(packet));
                             }
                         }
                     }

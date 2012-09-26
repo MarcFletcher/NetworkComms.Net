@@ -23,6 +23,9 @@ using System.Diagnostics;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</see> to communicate between peers.
+    /// </summary>
     public partial class UDPConnection : Connection
     {
         /// <summary>
@@ -50,7 +53,7 @@ namespace NetworkCommsDotNet
             lock (udpRogueSenderCreationLocker)
             {
                 if (udpRogueSender == null)
-                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, false);
+                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
             }
         }
 
@@ -61,7 +64,7 @@ namespace NetworkCommsDotNet
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
         /// <returns></returns>
-        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPLevel level, bool listenForReturnPackets = true)
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
         {
             return CreateConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
         }
@@ -74,7 +77,7 @@ namespace NetworkCommsDotNet
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
         /// <returns></returns>
-        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets = true)
+        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets = true)
         {
             return CreateConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
         }
@@ -88,7 +91,7 @@ namespace NetworkCommsDotNet
         /// <param name="listenForReturnPackets"></param>
         /// <param name="existingConnection"></param>
         /// <returns></returns>
-        internal static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPLevel level, bool listenForReturnPackets, UDPConnection existingConnection)
+        internal static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
         {
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
@@ -184,12 +187,12 @@ namespace NetworkCommsDotNet
 
                 try
                 {
-                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, true);
+                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
                 }
                 catch (SocketException)
                 {
                     if (useRandomPortFailOver)
-                        newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPLevel.None, true);
+                        newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
                     else
                     {
                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");

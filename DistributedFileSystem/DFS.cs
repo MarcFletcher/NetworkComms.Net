@@ -564,7 +564,7 @@ namespace DistributedFileSystem
             {
                 NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
             }
-            catch (CommsException ex)
+            catch (CommsException)
             {
 
             }
@@ -690,7 +690,7 @@ namespace DistributedFileSystem
                 //NetworkComms.SendObject("DFS_Setup", sourceConnectionId, false, portToReturn);
                 connection.SendObject("DFS_Setup", portToReturn);
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
 
             }
@@ -728,7 +728,7 @@ namespace DistributedFileSystem
                     //NetworkComms.SendObject("DFS_KnownPeersUpdate", sourceConnectionId, false, selectedItem.SwarmChunkAvailability.AllPeerEndPoints());
                     connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints());
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
                 //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
             }
@@ -798,7 +798,7 @@ namespace DistributedFileSystem
 
                 if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
                 //Crap an error has happened, let people know we probably don't have a good file
                 RemoveItem(assemblyConfig.ItemCheckSum);
@@ -834,7 +834,7 @@ namespace DistributedFileSystem
                     foreach(DistributedItem item in selectedItems)
                         DFS.PushItemToPeer(connection.ConnectionInfo.NetworkIdentifier, item, "");
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
                 //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
             }
@@ -1013,7 +1013,7 @@ namespace DistributedFileSystem
                     //NetworkComms.SendObject("DFS_ItemRemovalUpdate", sourceConnectionId, false, updateDetails.ItemCheckSum);
                     connection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum);
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
                 //Meh some comms error happened.
             }
@@ -1051,7 +1051,7 @@ namespace DistributedFileSystem
 
                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }
-            catch (CommsException e)
+            catch (CommsException)
             {
                 //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
             }

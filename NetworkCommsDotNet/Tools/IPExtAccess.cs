@@ -25,7 +25,7 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// External dll access. This will fail on a non windows system.
+    /// Used to determine a valid local IP address, using the Windows API, to provided targets. This method is only supported in a Windows environment.
     /// </summary>
     public static class IPExtAccess
     {
@@ -33,16 +33,15 @@ namespace NetworkCommsDotNet
         static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
 
         /// <summary>
-        /// Attempts to guess the best local ip address of this machine using dll hooks in Windows API and the provided targetIPAddress.
+        /// Attempts to guess the best local IP address of this machine for accessing the provided targetIP.
         /// </summary>
-        /// <returns>IP address or null if failed.</returns>
-        public static string AttemptBestIPAddressGuess(IPAddress targetIPAddress)
+        /// <param name="targetIPAddress">The target IP which should be used to determine the best adaptor. e.g. Either a local network or public IP address.</param>
+        /// <returns></returns>
+        public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
             try
             {
-                //We work out the best interface for connecting with the outside world
-                //If we are going to try and choose an ip address this one makes the most sense
-                //Using Google DNS server as reference IP
+                //We work out the best interface for connecting with the outside world using the provided target IP
                 UInt32 ipaddr = BitConverter.ToUInt32(targetIPAddress.GetAddressBytes(), 0);
 
                 UInt32 interfaceindex = 0;
@@ -56,7 +55,7 @@ namespace NetworkCommsDotNet
 
                 var ipAddressBest = (from current in bestInterface.GetIPProperties().UnicastAddresses
                                      where current.Address.AddressFamily == AddressFamily.InterNetwork
-                                     select current.Address).First().ToString();
+                                     select current.Address).First();
 
                 if (ipAddressBest != null)
                     return ipAddressBest;

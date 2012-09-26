@@ -26,7 +26,7 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// NetworkComms maintains a top level Connection object for shared methods
+    /// Global connection base class for NetworkCommsDotNet. Most user interactions happen using a connection object. Extended by <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
     /// </summary>
     public abstract partial class Connection
     {

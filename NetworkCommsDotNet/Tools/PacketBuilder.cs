@@ -26,48 +26,62 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// When a packet is broken into multiple variable sized chunks this class allows us to rebuild the original unbroken packet
+    /// Packet data is generally broken into multiple variable sized byte chunks or 'partial packets'. This class provides features to effortlessly rebuild whole packets.
     /// </summary>
-    public class ConnectionPacketBuilder
+    public class PacketBuilder
     {
         List<byte[]> packets = new List<byte[]>();
         List<int> packetActualBytes = new List<int>();
 
         object locker = new object();
 
-        int totalBytesRead = 0;
+        int totalBytesCached = 0;
         int totalBytesExpected = 0;
 
-        public int TotalBytesRead
-        {
-            get { return totalBytesRead; }
-        }
-
-        public ConnectionPacketBuilder()
+        /// <summary>
+        /// Create a new instance of the ConnectionPacketBuilder class
+        /// </summary>
+        public PacketBuilder()
         {
 
         }
 
         /// <summary>
-        /// The total number of bytes expected to complete a whole packet
+        /// The total number of cached bytes. This is the sum of all bytes across all cached partial packets. See <see cref="TotalPartialPacketCount"/>.
+        /// </summary>
+        public int TotalBytesCount
+        {
+            get { return totalBytesCached; }
+        }
+
+        /// <summary>
+        /// The total number of cached partial packets. This is different from <see cref="TotalBytesCount"/> because each partial packet may contain a variable number of bytes.
+        /// </summary>
+        public int TotalPartialPacketCount
+        {
+            get { lock (locker) return packets.Count; }
+        }
+
+        /// <summary>
+        /// The total number of bytes required to rebuild the next whole packet.
         /// </summary>
         public int TotalBytesExpected
         {
-            get { lock(locker) return totalBytesExpected; }
+            get { lock (locker) return totalBytesExpected; }
             set { lock (locker) totalBytesExpected = value; }
         }
 
         /// <summary>
-        /// Clears n bytes from recorded packets, starting at the beginning
+        /// Clear N bytes from cache, starting with oldest bytes first.
         /// </summary>
-        /// <param name="numBytesToRemove"></param>
+        /// <param name="numBytesToRemove">The total number of bytes to be removed.</param>
         public void ClearNTopBytes(int numBytesToRemove)
         {
             lock (locker)
             {
                 if (numBytesToRemove > 0)
                 {
-                    if (numBytesToRemove > totalBytesRead)
+                    if (numBytesToRemove > totalBytesCached)
                         throw new CommunicationException("Attempting to remove more bytes than exist in the ConnectionPacketBuilder");
 
                     int bytesRemoved = 0;
@@ -107,7 +121,7 @@ namespace NetworkCommsDotNet
                         throw new CommunicationException("bytesRemoved should really equal the requested numBytesToRemove");
 
                     //Reset the totalBytesRead
-                    totalBytesRead -= bytesRemoved;
+                    totalBytesCached -= bytesRemoved;
 
                     //Get rid of any null packets
                     packets = (from current in packets
@@ -125,15 +139,15 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Appends a new packet to the packetBuilder
+        /// Add a partial packet to the end of the cache.
         /// </summary>
         /// <param name="packetBytes"></param>
         /// <param name="packet"></param>
-        public void AddPacket(int packetBytes, byte[] packet)
+        public void AddPartialPacket(int packetBytes, byte[] packet)
         {
             lock (locker)
             {
-                totalBytesRead += packetBytes;
+                totalBytesCached += packetBytes;
 
                 packets.Add(packet);
                 packetActualBytes.Add(packetBytes);
@@ -141,11 +155,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the most recent added packet to the builder and removes it from the list.
-        /// Used to more efficiently ustilise allocated arrays.
+        /// Returns the most recently cached partial packet and removes it from the cache.
+        /// Used to more efficiently utilise allocated memory space.
         /// </summary>
         /// <returns></returns>
-        public byte[] RemoveMostRecentPacket(ref int lastPacketBytesRead)
+        public byte[] RemoveMostRecentPartialPacket(ref int lastPacketBytesRead)
         {
             lock (locker)
             {
@@ -156,7 +170,7 @@ namespace NetworkCommsDotNet
                     lastPacketBytesRead = packetActualBytes[lastPacketIndex];
                     byte[] returnArray = packets[lastPacketIndex];
 
-                    totalBytesRead -= packetActualBytes[lastPacketIndex];
+                    totalBytesCached -= packetActualBytes[lastPacketIndex];
 
                     packets.RemoveAt(lastPacketIndex);
                     packetActualBytes.RemoveAt(lastPacketIndex);
@@ -169,20 +183,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the number of packets currently in the packetbuilder
+        /// Returns the number of unused bytes in the most recently cached partial packet.
         /// </summary>
-        /// <returns></returns>
-        public int CurrentPacketCount()
-        {
-            lock (locker)
-                return packets.Count;
-        }
-
-        /// <summary>
-        /// Returns the number of unused bytes from the most recently added packet
-        /// </summary>
-        /// <returns></returns>
-        public int NumUnusedBytesMostRecentPacket()
+        /// <returns>The number of unused bytes in the most recently cached partial packet.</returns>
+        public int NumUnusedBytesMostRecentPartialPacket()
         {
             lock (locker)
             {
@@ -197,9 +201,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the value of the front byte.
+        /// Returns the value of the first cached byte.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The value of the first cached byte.</returns>
         public byte FirstByte()
         {
             lock (locker)
@@ -207,14 +211,14 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Copies all data in the packetbuilder into a new array and returns
+        /// Copies all cached bytes into a single array and returns. Original data is left unchanged.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>All cached data as a single byte[]</returns>
         public byte[] GetAllData()
         {
             lock (locker)
             {
-                byte[] returnArray = new byte[totalBytesRead];
+                byte[] returnArray = new byte[totalBytesCached];
 
                 int currentStart = 0;
                 for (int i = 0; i < packets.Count; i++)
@@ -228,11 +232,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Copies the requested number of bytes from the packetbuilder into a new array and returns
+        /// Copies the requested cached bytes into a single array and returns. Original data is left unchanged.
         /// </summary>
-        /// <param name="startIndex"></param>
-        /// <param name="length"></param>
-        /// <returns></returns>
+        /// <param name="startIndex">The inclusive byte index to use as the starting position.</param>
+        /// <param name="length">The total number of desired bytes.</param>
+        /// <returns>The requested bytes as a single array.</returns>
         public byte[] ReadDataSection(int startIndex, int length)
         {
             lock (locker)

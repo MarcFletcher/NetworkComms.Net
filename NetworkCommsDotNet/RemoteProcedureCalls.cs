@@ -147,7 +147,7 @@ namespace NetworkCommsDotNet
             /// calls on the same server side object 
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
-
+            /// <param name="connectionID">The connectionId to be used to create the proxy</param>
             /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
@@ -670,7 +670,8 @@ namespace NetworkCommsDotNet
             /// Private method for simplifying the remote procedure call.  I don't want to write this in IL!!
             /// </summary>
             /// <param name="connectionID"></param>
-            /// <param name="connectionName"></param>
+            /// <param name="handlerType"></param>
+            /// <param name="instanceId"></param>
             /// <param name="functionToCall"></param>
             /// <param name="args"></param>
             /// <returns></returns>
@@ -823,7 +824,6 @@ namespace NetworkCommsDotNet
             /// <typeparam name="I">The interface to be provided for RPC</typeparam>
             /// <param name="instance">Instance to register for RPC</param>
             /// <param name="instanceName">Name of the instance to be used by clients for RPC</param>
-            /// <param name="enableAutoListen">Specifies whether Network comms should automatically start listening for new connections</param>
             public static void RegisterInstanceForPublicRemoteCall<T, I>(T instance, string instanceName) where T : I
             {
                 lock (locker)

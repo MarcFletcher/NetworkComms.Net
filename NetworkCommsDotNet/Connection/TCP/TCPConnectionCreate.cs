@@ -25,9 +25,6 @@ using System.Threading.Tasks;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// A TCPConnection represents each established tcp connection between two peers.
-    /// </summary>
     public partial class TCPConnection : Connection
     {
         /// <summary>
@@ -118,7 +115,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Establish the connection
         /// </summary>
-        /// <param name="sourceClient"></param>
         protected override void EstablishConnectionSpecific()
         {
             if (tcpClient == null) ConnectTCPClient();

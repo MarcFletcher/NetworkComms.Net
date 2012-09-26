@@ -14,6 +14,10 @@ namespace ExamplesConsole
         static string lastServerIP = "";
         static int lastServerPort = -1;
 
+        /// <summary>
+        /// Request user to provide server details and returns the result as a <see cref="ConnectionInfo"/> object. Performs the necessary validation and prevents code duplication across examples.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
         public static void GetServerDetails(out ConnectionInfo connectionInfo)
         {
             if (lastServerIP != "")

@@ -25,15 +25,12 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// NetworkComms maintains a top level Connection object for shared methods
-    /// </summary>
     public abstract partial class Connection
     {
         /// <summary>
         /// The packet builder for this connection
         /// </summary>
-        protected ConnectionPacketBuilder packetBuilder;
+        protected PacketBuilder packetBuilder;
 
         /// <summary>
         /// The current incoming data buffer
@@ -59,13 +56,13 @@ namespace NetworkCommsDotNet
         /// Attempts to use the data provided in packetBuilder to recreate something usefull. If we don't have enough data yet that value is set in packetBuilder.
         /// </summary>
         /// <param name="packetBuilder"></param>
-        protected void IncomingPacketHandleHandOff(ConnectionPacketBuilder packetBuilder)
+        protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
         {
             //ThreadPriority is NetworkComms.timeCriticalThreadPriority
 
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesRead + " bytes read.");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCount + " bytes read.");
 
                 //Loop until we are finished with this packetBuilder
                 int loopCounter = 0;
@@ -83,7 +80,7 @@ namespace NetworkCommsDotNet
                         packetBuilder.TotalBytesExpected = 0;
 
                         //If we have run out of data completely then we can return immediately
-                        if (packetBuilder.TotalBytesRead == 0) return;
+                        if (packetBuilder.TotalBytesCount == 0) return;
                     }
                     else
                     {
@@ -91,7 +88,7 @@ namespace NetworkCommsDotNet
                         int packetHeaderSize = packetBuilder.FirstByte() + 1;
 
                         //Do we have enough data to build a header?
-                        if (packetBuilder.TotalBytesRead < packetHeaderSize)
+                        if (packetBuilder.TotalBytesCount < packetHeaderSize)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet header.");
 
@@ -109,7 +106,7 @@ namespace NetworkCommsDotNet
 
                         //We can now use the header to establish if we have enough payload data
                         //First case is when we have not yet received enough data
-                        if (packetBuilder.TotalBytesRead < packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        if (packetBuilder.TotalBytesCount < packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet payload.");
 
@@ -118,7 +115,7 @@ namespace NetworkCommsDotNet
                             return;
                         }
                         //Second case is we have enough data
-                        else if (packetBuilder.TotalBytesRead >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        else if (packetBuilder.TotalBytesCount >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
@@ -167,7 +164,7 @@ namespace NetworkCommsDotNet
                             packetBuilder.TotalBytesExpected = 0;
 
                             //If we have run out of data completely then we can return immediately
-                            if (packetBuilder.TotalBytesRead == 0) return;
+                            if (packetBuilder.TotalBytesCount == 0) return;
                         }
                         else
                             throw new CommunicationException("This should be impossible!");
@@ -307,7 +304,7 @@ namespace NetworkCommsDotNet
         protected void CheckSumFailResendHandler(byte[] packetDataSection)
         {
             //If we have been asked to resend a packet then we just go through the list and resend it.
-            OldSentPacket packetToReSend;
+            SentPacket packetToReSend;
             lock (sentPacketsLocker)
             {
                 string checkSumRequested = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<string>(packetDataSection, 

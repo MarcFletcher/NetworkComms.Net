@@ -9,8 +9,14 @@ using Common.Logging.Log4Net;
 
 namespace ExamplesConsole
 {
+    /// <summary>
+    /// An example which demonstrates <see href="http://en.wikipedia.org/wiki/Remote_procedure_call">Remote Procedure Calls</see> using NetworkCommsDotNet
+    /// </summary>
     public static class RPCExample
     {
+        /// <summary>
+        /// Run the example
+        /// </summary>
         public static void RunExample()
         {
             Console.WriteLine("Please select run mode:\nServer - 1\nClient - 2\n");
@@ -49,28 +55,71 @@ namespace ExamplesConsole
         public interface IMath
         {
             //We define some basic math operations here
+
+            /// <summary>
+            /// Multiply numbers together.
+            /// </summary>
+            /// <param name="a">Number a</param>
+            /// <param name="b">Number b</param>
+            /// <returns>Return a * b</returns>
             double Multiply(double a, double b);
+
+            /// <summary>
+            /// Add numbers together.
+            /// </summary>
+            /// <param name="a">Number a</param>
+            /// <param name="b">Number b</param>
+            /// <returns>Return a + b</returns>
             double Add(double a, double b);
+
+            /// <summary>
+            /// Subtract numbers.
+            /// </summary>
+            /// <param name="a">Number a</param>
+            /// <param name="b">Number b</param>
+            /// <returns>Return a - b</returns>
             double Subtract(double a, double b);
+
+            /// <summary>
+            /// Divide numbers.
+            /// </summary>
+            /// <param name="a">Number a</param>
+            /// <param name="b">Number b</param>
+            /// <returns>Return a / b</returns>
             double Divide(double a, double b);
 
-            //Define a non math operator
+            /// <summary>
+            /// A non math method. Which just returns the provided input
+            /// </summary>
+            /// <param name="input">The input to return</param>
+            /// <returns>Returns the input</returns>
             string Echo(string input);
 
-            //Do something that throws an exception
+            /// <summary>
+            /// Perform an operation which throws an exception
+            /// </summary>
             void ThrowTestException();
 
-            //Get a copy of the server object
+            /// <summary>
+            /// Get a copy of the server IMath object
+            /// </summary>
+            /// <returns></returns>
             IMath GetServerObjectCopy();
 
-            //Access something using an 'indexer'
-            //See http://msdn.microsoft.com/en-us/library/aa288465(v=vs.71).aspx for more information on indexers
+            /// <summary>
+            /// Access something using an <see href="http://msdn.microsoft.com/en-us/library/aa288465(v=vs.71).aspx">indexer</see>.
+            /// </summary>
+            /// <param name="index"></param>
+            /// <returns></returns>
             double this[int index]
             {
                 get;
                 set;
             }
 
+            /// <summary>
+            /// Get the last result.
+            /// </summary>
             double LastResult
             {
                 get;
@@ -186,10 +235,16 @@ namespace ExamplesConsole
                 }
             }
 
+            /// <summary>
+            /// Create an instance of ServerExampleInstance
+            /// </summary>
             public ServerExampleInstance()
             {
             }
 
+            /// <summary>
+            /// Run the example
+            /// </summary>
             public void Run()
             {
                 //Setup the RPC server side
@@ -251,11 +306,17 @@ namespace ExamplesConsole
         /// </summary>
         public class ClientExampleInstance : IRPCExampleInstance
         {
+            /// <summary>
+            /// Create an instance of ClientExampleInstance
+            /// </summary>
             public ClientExampleInstance()
             {
 
             }
 
+            /// <summary>
+            /// Run the example
+            /// </summary>
             public void Run()
             {
                 //Expecting user to enter ip address as 192.168.0.1:4000

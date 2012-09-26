@@ -22,13 +22,18 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A UDP connection can support a very large flexibility of levels. The most basic is none which sends conectionless UDP packets all the way
-    /// upto an emulated TCP level. Future versions of networkComms will support an ever increasing number of levels.
+    /// A UDP connection could support different combinations of features. i.e. From the most basic (None) which sends conectionless UDP packets
+    /// upto an emulated TCP. Future versions of NetworkCommsDotNet will support an ever increasing number of UDP features.
+    /// This enum is used to specifiy which of the available options should be used.
     /// </summary>
     [Flags]
-    public enum UDPLevel
+    public enum UDPOptions
     {
-        None = 0x0, //Network comms 2.0 will only support the most basic udp level
+        /// <summary>
+        /// The most basic UDP option. All UDP packets are sent contionless with no error handling
+        /// </summary>
+        None = 0x0,
+
         //EstablishHandshake = 0x1, //This will probably be the first feature implemented post 2.0
     }
 }

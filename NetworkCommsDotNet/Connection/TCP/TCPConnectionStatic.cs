@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A TCPConnection represents each established tcp connection between two peers.
+    /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
     /// </summary>
     public partial class TCPConnection : Connection
     {

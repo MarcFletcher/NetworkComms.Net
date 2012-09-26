@@ -25,11 +25,11 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// NetworkComms maintains a top level Connection object for shared methods
-    /// </summary>
     public abstract partial class Connection
     {
+        /// <summary>
+        /// Thread safety locker which is used when accessing <see cref="incomingPacketHandlers"/>, <see cref="incomingPacketUnwrappers"/> and <see cref="ConnectionSpecificShutdownDelegate"/>.
+        /// </summary>
         protected object delegateLocker = new object();
 
         /// <summary>
@@ -54,10 +54,10 @@ namespace NetworkCommsDotNet
         private Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
         /// <summary>
-        /// Returns the sendReceiveOptions to be used for the provided incoming packetTypeStr. Ensures there will not be a compressor/serialiser clash for different delegate levels.
+        /// Returns the <see cref="SendReceiveOptions"/> to be used for the provided <see cref="PacketHeader"/>. Ensures there will not be a serializer / data processor clash for different delegate levels.
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <returns></returns>
+        /// <param name="header">The <see cref="PacketHeader"/> options are desired.</param>
+        /// <returns>The requested <see cref="SendReceiveOptions"/></returns>
         private SendReceiveOptions IncomingPacketSendReceiveOptions(PacketHeader header)
         {
             //Are there connection specific or global packet handlers?

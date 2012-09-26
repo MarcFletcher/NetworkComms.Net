@@ -20,14 +20,23 @@ using System.Linq;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// The type of connection. CAUTION: CHANGES MADE HERE MAY BREAK FUNCTIONALITY
+    /// The type of connection.
     /// </summary>
     public enum ConnectionType : byte
     {
+        /// <summary>
+        /// An undefined connection type. This is used as the default value.
+        /// </summary>
         Undefined,
-        TCP,
-        //TCPEncrypted,
 
+        /// <summary>
+        /// A TCP connection type. Used by <see cref="TCPConnection"/>.
+        /// </summary>
+        TCP,
+
+        /// <summary>
+        /// A UDP connection type. Used by <see cref="UDPConnection"/>.
+        /// </summary>
         UDP,
 
         //We may support others in future such as SSH, FTP, SCP etc.

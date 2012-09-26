@@ -21,10 +21,14 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Base comms exception. Should you choose to catch all comms exceptions in a single catch block just catch(CommsException)
+    /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block  by using catch(CommsException)
     /// </summary>
     public abstract class CommsException : Exception
     {
+        /// <summary>
+        /// Create a new instance of CommsException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public CommsException(string msg)
             : base(msg)
         {
@@ -33,10 +37,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A checksum error has occured. Will only be thrown if NetworkComms.EnablePacketCheckSumValidation is true.
+    /// A checksum error has occured. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
     /// </summary>
     public class CheckSumException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of CheckSumException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public CheckSumException(string msg)
             : base(msg)
         {
@@ -45,10 +53,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A timeout has occured while waiting for a confirmation packet to be received.
+    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS.
     /// </summary>
     public class ConfirmationTimeoutException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of ConfirmationTimeoutException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public ConfirmationTimeoutException(string msg)
             : base(msg)
         {
@@ -57,10 +69,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A timout has occured while waiting for the expected return type. Thrown by SendReceiveObject.
+    /// A timeout has occured while waiting for an expected return object. Check for errors and or consider increasing the provided return timeout value.
     /// </summary>
     public class ExpectedReturnTimeoutException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of ExpectedReturnTimeoutException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public ExpectedReturnTimeoutException(string msg)
             : base(msg)
         {
@@ -73,6 +89,10 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class SerialisationException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of SerialisationException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public SerialisationException(string msg)
             : base(msg)
         {
@@ -85,6 +105,10 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class ConnectionSetupException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of ConnectionSetupException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public ConnectionSetupException(string msg)
             : base(msg)
         {
@@ -93,10 +117,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured while trying to establish a remote connection
+    /// An error occured while trying to establish a connection
     /// </summary>
     public class ConnectionShutdownException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of ConnectionShutdownException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public ConnectionShutdownException(string msg)
             : base(msg)
         {
@@ -105,10 +133,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured while trying to setup networkComms.net
+    /// An error occured while trying to setup or shutdown NetworkCommsDotNet
     /// </summary>
     public class CommsSetupShutdownException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of CommsSetupShutdownException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public CommsSetupShutdownException(string msg)
             : base(msg)
         {
@@ -117,10 +149,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error has occured while during communication.
+    /// An error occured while during communication which does not fall under other exception cases.
     /// </summary>
     public class CommunicationException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of CommunicationException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public CommunicationException(string msg)
             : base(msg)
         {
@@ -129,10 +165,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An unexpected incoming packetTypeStr has been received. Consider setting IgnoreUnknownPacketTypes to prevent this exception.
+    /// An unexpected incoming packetType has been received. Consider setting NetworkComms.IgnoreUnknownPacketTypes to true to prevent this exception.
     /// </summary>
     public class UnexpectedPacketTypeException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of UnexpectedPacketTypeException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public UnexpectedPacketTypeException(string msg)
             : base(msg)
         {
@@ -141,10 +181,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An invalid connectionId has been provided. Ensure the connection still exists.
+    /// An invalid connectionId has been provided.
     /// </summary>
     public class InvalidConnectionIdException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of InvalidConnectionIdException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public InvalidConnectionIdException(string msg)
             : base(msg)
         {
@@ -153,10 +197,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured involving a packetTypeStr data handler.
+    /// An error occured during a packetType data handler execution.
     /// </summary>
     public class PacketHandlerException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of PacketHandlerException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public PacketHandlerException(string msg)
             : base(msg)
         {
@@ -165,10 +213,14 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured involving an RPC method.
+    /// An error occured during an RPC (Remote Procedure Call) exchange.
     /// </summary>
     public class RPCException : CommsException
     {
+        /// <summary>
+        /// Create a new instance of RPCException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
         public RPCException(string msg)
             : base(msg)
         {

@@ -32,7 +32,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The level at which this connection operates
         /// </summary>
-        UDPLevel udpLevel;
+        UDPOptions udpLevel;
 
         /// <summary>
         /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
         /// <param name="level"></param>
         /// <param name="listenForIncomingPackets"></param>
         /// <param name="existingConnection"></param>
-        protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPLevel level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
+        protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
             udpLevel = level;
@@ -229,7 +229,7 @@ namespace NetworkCommsDotNet
             if (isIsolatedUDPConnection)
             {
                 //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                 IncomingPacketHandleHandOff(packetBuilder);
             }
             else
@@ -239,10 +239,10 @@ namespace NetworkCommsDotNet
                 UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this); 
 
                 //We pass the data off to the specific connection
-                connection.packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                 connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
-                if (connection.packetBuilder.CurrentPacketCount() > 0)
+                if (connection.packetBuilder.TotalPartialPacketCount > 0)
                     throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
             }
 
@@ -270,7 +270,7 @@ namespace NetworkCommsDotNet
                     if (isIsolatedUDPConnection)
                     {
                         //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                        packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                        packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                         IncomingPacketHandleHandOff(packetBuilder);
                     }
                     else
@@ -280,10 +280,10 @@ namespace NetworkCommsDotNet
                         UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
 
                         //We pass the data off to the specific connection
-                        connection.packetBuilder.AddPacket(receivedBytes.Length, receivedBytes);
+                        connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                         connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
-                        if (connection.packetBuilder.CurrentPacketCount() > 0)
+                        if (connection.packetBuilder.TotalPartialPacketCount > 0)
                             throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
                     }
                 }

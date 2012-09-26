@@ -25,9 +25,6 @@ using System.Threading.Tasks;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// A TCPConnection represents each established tcp connection between two peers.
-    /// </summary>
     public partial class TCPConnection : Connection
     {
         /// <summary>
@@ -56,7 +53,7 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
 
                         //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler().");
                         }
@@ -65,7 +62,7 @@ namespace NetworkCommsDotNet
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
 
                             //If there is more data to get then add it to the packets lists;
-                            packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                            packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
 
                             //If we have more data we might as well continue reading syncronously
                             while (dataAvailable)
@@ -74,8 +71,8 @@ namespace NetworkCommsDotNet
 
                                 //We need a buffer for our incoming data
                                 //First we try to reuse a previous buffer
-                                if (packetBuilder.CurrentPacketCount() > 0 && packetBuilder.NumUnusedBytesMostRecentPacket() > 0)
-                                    dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
+                                if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                                    dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                                 else
                                     //If we have nothing to reuse we allocate a new buffer
                                     dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
@@ -87,7 +84,7 @@ namespace NetworkCommsDotNet
                                     ConnectionInfo.UpdateLastTrafficTime();
 
                                     //If we have read a single byte which is 0 and we are not expecting other data
-                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
+                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
                                     {
                                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 2");
                                         //LastTrafficTime = DateTime.Now;
@@ -95,7 +92,7 @@ namespace NetworkCommsDotNet
                                     else
                                     {
                                         if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-                                        packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                                        packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                                         dataAvailable = netStream.DataAvailable;
                                     }
                                 }
@@ -105,7 +102,7 @@ namespace NetworkCommsDotNet
                         }
                     }
 
-                    if (packetBuilder.TotalBytesRead > 0 && packetBuilder.TotalBytesRead >= packetBuilder.TotalBytesExpected)
+                    if (packetBuilder.TotalBytesCount > 0 && packetBuilder.TotalBytesCount >= packetBuilder.TotalBytesExpected)
                     {
                         //Once we think we might have enough data we call the incoming packet handle handoff
                         //Should we have a complete packet this method will start the appriate task
@@ -119,8 +116,8 @@ namespace NetworkCommsDotNet
                     {
                         //We need a buffer for our incoming data
                         //First we try to reuse a previous buffer
-                        if (packetBuilder.CurrentPacketCount() > 0 && packetBuilder.NumUnusedBytesMostRecentPacket() > 0)
-                            dataBuffer = packetBuilder.RemoveMostRecentPacket(ref totalBytesRead);
+                        if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                            dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref totalBytesRead);
                         else
                         {
                             //If we have nothing to reuse we allocate a new buffer
@@ -172,8 +169,8 @@ namespace NetworkCommsDotNet
 
                     //We need a buffer for our incoming data
                     //First we try to reuse a previous buffer
-                    if (packetBuilder.CurrentPacketCount() > 0 && packetBuilder.NumUnusedBytesMostRecentPacket() > 0)
-                        dataBuffer = packetBuilder.RemoveMostRecentPacket(ref bufferOffset);
+                    if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                        dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                     else
                         //If we have nothing to reuse we allocate a new buffer
                         dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
@@ -191,14 +188,14 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
 
                         //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesRead == 0)
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingDataSyncWorker().");
                         }
                         else
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-                            packetBuilder.AddPacket(totalBytesRead, dataBuffer);
+                            packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                         }
                     }
                     else if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionShutdown))
@@ -209,7 +206,7 @@ namespace NetworkCommsDotNet
                     }
 
                     //If we have read some data and we have more or equal what was expected we attempt a data handoff
-                    if (packetBuilder.TotalBytesRead > 0 && packetBuilder.TotalBytesRead >= packetBuilder.TotalBytesExpected)
+                    if (packetBuilder.TotalBytesCount > 0 && packetBuilder.TotalBytesCount >= packetBuilder.TotalBytesExpected)
                         IncomingPacketHandleHandOff(packetBuilder);
                 }
             }

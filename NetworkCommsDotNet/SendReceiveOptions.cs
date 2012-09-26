@@ -23,7 +23,8 @@ using System.Threading;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Describes options for sending and receiving data such as serialisation method, compression, encryption etc
+    /// Contains options and flags for sending and receiving data such as serialisation method, data processors, encryption etc.
+    /// Several static constructors are provided to help create SendRecieveOptions in the most common formats.
     /// </summary>
     public class SendReceiveOptions : ICloneable
     {
@@ -72,7 +73,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="serializer">The <see cref="DPSBase.DataSerializer"/> to use</param>
         /// <param name="dataProcessors">The set of <see cref="DPSBase.DataProcessor"/>s to use.  The order in the list determines the order the <see cref="DPSBase.DataProcessor"/>s will be applied</param>
-        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DATAProcessor"/>s</param>
+        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendReceiveOptions(DataSerializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {            
             this.DataSerializer = serializer;
@@ -87,7 +88,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class providing only options for the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s.  This constructor should only be used when adding packet handlers for incoming connections
         /// </summary>
-        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DATAProcessor"/>s</param>
+        /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendReceiveOptions(Dictionary<string, string> options)
         {
             if (options != null)
@@ -101,7 +102,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="options">The <see cref="SendReceiveOptions"/> to compare against</param>
         /// <returns>True if the options are compatible, false otherwise</returns>
-        /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DATAProcessor"/>s</remarks>
+        /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DataProcessor"/>s</remarks>
         public bool OptionsCompatable(SendReceiveOptions options)
         {
             return options.DataProcessors.SequenceEqual(DataProcessors) && options.DataSerializer == DataSerializer;                    

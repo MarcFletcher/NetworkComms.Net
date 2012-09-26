@@ -13,6 +13,11 @@ namespace DebugTests
         static string lastServerIP = "";
         static int lastServerPort = -1;
 
+        /// <summary>
+        /// Request user provides server details and returns the result. Performs the necessary validation and prevents code duplication across examples.
+        /// </summary>
+        /// <param name="serverIP"></param>
+        /// <param name="serverPort"></param>
         public static void GetServerDetails(out string serverIP, out int serverPort)
         {
             if (lastServerIP != "")

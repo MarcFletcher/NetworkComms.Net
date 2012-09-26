@@ -39,16 +39,15 @@ namespace DebugTests
                 else
                 {
                     //Once we have a message we need to know where to send it
-                    //Expecting user to enter ip address as 192.168.0.1:4000
-                    Console.WriteLine("Please enter the destination IP address and port, e.g 192.168.0.1:4000:");
+                    //Expecting user to enter ip address as 192.168.0.1
+                    Console.WriteLine("Please enter the destination IP Address (Assumes default port), e.g 192.168.0.1:");
 
-                    //Parse the provided destination information
+                    //Parse the provided destination IP Address
                     //If the user entered using a bad format we are going to get an exception
-                    //Yes, we can count this as one line ;)
-                    string userEnteredStr = Console.ReadLine(); string serverIP = userEnteredStr.Split(':')[0]; int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
+                    string serverIP = Console.ReadLine();
 
                     //Send the message to the provided destination, voila!
-                    NetworkComms.SendObject("Message", serverIP, serverPort, false, message);
+                    NetworkComms.SendObject("Message", serverIP, message);
                 }
             }
 

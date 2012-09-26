@@ -84,7 +84,7 @@ namespace DistributedFileSystem
             //The md5 is based on not just the bytes but also the other parameters
             //using (MD5 md5 = new MD5CryptoServiceProvider())
             //    ItemCheckSum = BitConverter.ToString(md5.ComputeHash(itemBytes)).Replace("-", "");
-            ItemCheckSum = Adler32.GenerateCheckSum(itemBytes);
+            ItemCheckSum = Adler32Checksum.GenerateCheckSum(itemBytes);
             ItemBytesLength = itemBytes.Length;
             this.ItemBuildCascadeDepth = itemBuildCascadeDepth;
 
@@ -482,7 +482,7 @@ namespace DistributedFileSystem
                                     //Console.WriteLine("      ..({0}) chunk {1} requested from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
                                 }
                             }
-                            catch (CommsException ex)
+                            catch (CommsException)
                             {
                                 //If we can't connect to a peer we assume it's dead and don't try again
                                 SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
@@ -739,7 +739,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public bool LocalItemValid()
         {
-            if (ItemCheckSum == Adler32.GenerateCheckSum(ItemByteArray))
+            if (ItemCheckSum == Adler32Checksum.GenerateCheckSum(ItemByteArray))
             //if (true)
             {
                 return true;
@@ -762,7 +762,7 @@ namespace DistributedFileSystem
                 if (testBytes == null)
                     throw new Exception("Cant checksum a locked chunk.");
                 else
-                    returnValues[i] = Adler32.GenerateCheckSum(testBytes);
+                    returnValues[i] = Adler32Checksum.GenerateCheckSum(testBytes);
 
                 //LeaveChunkBytes(i);
             }

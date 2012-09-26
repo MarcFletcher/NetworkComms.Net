@@ -108,7 +108,7 @@ namespace DebugTests
                 //THis is a general UDP broadcast, broadcasts are not forwarded across vpns
                 //UDPConnection.SendObject("broadcast", new byte[10], "255.255.255.255", 10000);
 
-                UDPConnection testConnection = UDPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000), UDPLevel.None);
+                UDPConnection testConnection = UDPConnection.CreateConnection(new ConnectionInfo("131.111.73.213", 10000), UDPOptions.None);
 
                 byte[] sendArray = new byte[65000];
                 testConnection.SendObject("udpTest", sendArray);

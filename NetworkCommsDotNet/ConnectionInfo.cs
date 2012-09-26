@@ -23,7 +23,7 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Wrapper class for connection information.
+    /// Contains any information related to the configuration of a <see cref="Connection"/> object.
     /// </summary>
     [ProtoContract]
     public class ConnectionInfo : IEqualityComparer<ConnectionInfo>
@@ -45,6 +45,9 @@ namespace NetworkCommsDotNet
         [ProtoMember(4)]
         int localEndPointPort; //Only set on serialise
 
+        /// <summary>
+        /// True if the <see cref="RemoteEndPoint"/> is connectable.
+        /// </summary>
         [ProtoMember(5)]
         public bool IsConnectable { get; private set; }
 
@@ -63,14 +66,29 @@ namespace NetworkCommsDotNet
         /// </summary>
         public DateTime ConnectionEstablishedTime { get; private set; }
 
+        /// <summary>
+        /// The <see cref="IPEndPoint"/> corresponding to the local end of this connection.
+        /// </summary>
         public IPEndPoint LocalEndPoint { get; private set; }
 
+        /// <summary>
+        /// The <see cref="IPEndPoint"/> corresponding to the remote end of this connection.
+        /// </summary>
         public IPEndPoint RemoteEndPoint { get; private set; }
 
+        /// <summary>
+        /// True if the connection is currently being established.
+        /// </summary>
         public bool ConnectionEstablishing { get; private set; }
 
+        /// <summary>
+        /// True if the connection has been succesfully established.
+        /// </summary>
         public bool ConnectionEstablished { get; private set; }
 
+        /// <summary>
+        /// True if the connection has been shutdown.
+        /// </summary>
         public bool ConnectionShutdown { get; private set; }
 
         /// <summary>
@@ -86,8 +104,8 @@ namespace NetworkCommsDotNet
             private set { NetworkIdentifierStr = value; }
         }
 
-        protected DateTime lastTrafficTime;
-        protected object internalLocker = new object();
+        DateTime lastTrafficTime;
+        object internalLocker = new object();
 
         /// <summary>
         /// The DateTime corresponding to the time data was sent or received
@@ -111,12 +129,21 @@ namespace NetworkCommsDotNet
         /// </summary>
         private ConnectionInfo() { }
 
+        /// <summary>
+        /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="remoteEndPoint"></param>
         public ConnectionInfo(IPEndPoint remoteEndPoint)
         {
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
         }
 
+        /// <summary>
+        /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>.
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="port"></param>
         public ConnectionInfo(string ipAddress, int port)
         {
             this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(ipAddress),port);
@@ -124,11 +151,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Create a connectionInfo object for a new connection
+        /// Create a connectionInfo object for a new connection.
         /// </summary>
-        /// <param name="remoteNetworkIdentifier"></param>
-        /// <param name="clientIP"></param>
-        /// <param name="localPort"></param>
+        /// <param name="serverSide">True if this connection is being created serverSide</param>
+        /// <param name="connectionType">The type of connection</param>
+        /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint)
         {
             this.ServerSide = serverSide;
@@ -138,11 +165,12 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Create a connectionInfo object for a new connection
+        /// Create a connectionInfo object for a new connection.
         /// </summary>
-        /// <param name="remoteNetworkIdentifier"></param>
-        /// <param name="clientIP"></param>
-        /// <param name="localPort"></param>
+        /// <param name="serverSide">True if this connection is being created serverSide</param>
+        /// <param name="connectionType">The type of connection</param>
+        /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
+        /// <param name="localEndPoint">The localEndpoint of this connection</param>
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
         {
             this.ServerSide = serverSide;
@@ -155,8 +183,10 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a connectionInfo object which can be used to inform a remote point of local information
         /// </summary>
-        /// <param name="localNetworkIdentifier"></param>
-        /// <param name="localEndPoint"></param>
+        /// <param name="connectionType">The type of connection</param>
+        /// <param name="localNetworkIdentifier">The local network identifier</param>
+        /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
+        /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
         internal ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
         {
             this.ConnectionType = connectionType;
@@ -193,9 +223,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Set this connection info to established.
+        /// Set this connectionInfo as established.
         /// </summary>
-        /// <param name="remoteNetworkIdentifier"></param>
         internal void NoteCompleteConnectionEstablish()
         {
             lock (internalLocker)
@@ -238,8 +267,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// During a connection handShake we might be provided with more update information regarding endPoints, connectability and identifiers
         /// </summary>
-        /// <param name="remoteNetworkIdentifier"></param>
-        /// <param name="remoteEndPoint"></param>
+        /// <param name="handshakeInfo"><see cref="ConnectionInfo"/> provided by remoteEndPoint during connection handshake.</param>
         internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo)
         {
             NetworkIdentifier = handshakeInfo.NetworkIdentifier;
@@ -265,11 +293,22 @@ namespace NetworkCommsDotNet
             NetworkIdentifier = networkIdentifier;
         }
 
+        /// <summary>
+        /// Compares two <see cref="ConnectionInfo"/> objects and returns true if both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
         public bool Equals(ConnectionInfo x, ConnectionInfo y)
         {
             return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString() && x.RemoteEndPoint.Equals(y.RemoteEndPoint));
         }
 
+        /// <summary>
+        /// Returns a hashcode created by NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode()
+        /// </summary>
+        /// <param name="obj">The object for which a hashcode needs to be created</param>
+        /// <returns>the hashcode</returns>
         public int GetHashCode(ConnectionInfo obj)
         {
             return obj.NetworkIdentifier.GetHashCode() ^ obj.RemoteEndPoint.GetHashCode();

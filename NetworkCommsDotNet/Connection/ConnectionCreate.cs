@@ -25,9 +25,6 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// NetworkComms maintains a top level Connection object for shared methods
-    /// </summary>
     public abstract partial class Connection
     {
         /// <summary>
@@ -35,20 +32,33 @@ namespace NetworkCommsDotNet
         /// </summary>
         public ConnectionInfo ConnectionInfo { get; protected set; }
 
+        /// <summary>
+        /// A manual reset event which can be used to handle connection setup and establish.
+        /// </summary>
         protected ManualResetEvent connectionSetupWait = new ManualResetEvent(false);
+        /// <summary>
+        /// A manual reset event which can be used to handle connection setup and establish.
+        /// </summary>
         protected ManualResetEvent connectionEstablishWait = new ManualResetEvent(false);
 
+        /// <summary>
+        /// A boolean used to signal a connection setup exception.
+        /// </summary>
         protected volatile bool connectionSetupException = false;
+        /// <summary>
+        /// If <see cref="connectionSetupException"/> is true provides additional exception information.
+        /// </summary>
         protected string connectionSetupExceptionStr = "";
 
         /// <summary>
         /// Create a new connection object
         /// </summary>
-        /// <param name="connectionInfo"></param>
+        /// <param name="connectionInfo">ConnecitonInfo corresponding to the new connection</param>
+        /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
-            packetBuilder = new ConnectionPacketBuilder();
+            packetBuilder = new PacketBuilder();
 
             ConnectionInfo = connectionInfo;
 
@@ -218,9 +228,10 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Attempts to complete the connection establish with a minimum of locking to prevent possible deadlocking
         /// </summary>
-        /// <param name="possibleClashConnectionWithPeer_ByIdentifier"></param>
-        /// <param name="possibleClashConnectionWithPeer_ByEndPoint"></param>
-        /// <returns></returns>
+        /// <param name="remoteConnectionInfo"><see cref="ConnectionInfo"/> corresponding with remoteEndPoint</param>
+        /// <param name="possibleClashConnectionWithPeer_ByEndPoint">True if a connection already exists with provided remoteEndPoint</param>
+        /// <param name="existingConnection">A reference to an existing connection if it exists</param>
+        /// <returns>True if connection is successfully setup, otherwise false</returns>
         private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
         {
             try

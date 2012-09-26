@@ -109,7 +109,7 @@ namespace ExamplesConsole
                                 {
                                     TCPConnection.CreateConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
                                 }
-                                catch (Exception ex)
+                                catch (Exception)
                                 {
                                     Console.WriteLine("Exception telling client to shutdown. Probably already disconnected.");
                                 }
@@ -127,7 +127,7 @@ namespace ExamplesConsole
                                 {
                                     TCPConnection.CreateConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
                                 }
-                                catch (Exception ex)
+                                catch (Exception)
                                 {
                                     Console.WriteLine("Exception telling client to shutdown. Probably already disconnected.");
                                 }

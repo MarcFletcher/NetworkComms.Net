@@ -19,15 +19,17 @@ using System.Linq;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// An implemenaton of the Adler32 checksum algothrim. It's not a particularly accurate checksum compared with MD5 but it is about 10 times faster to compute.
+    /// Implemenaton of the <see href="http://en.wikipedia.org/wiki/Adler-32">Adler32</see> checksum algorithm. 
+    /// It is not a particularly reliable checksum compared with MD5 but it is about 10 times faster.
+    /// NetworkCommsDotNet uses MD5 as its default but this class is provided should speed be the more important factor.
     /// </summary>
-    public static class Adler32
+    public static class Adler32Checksum
     {
         /// <summary>
         /// Generate an Adler32 checksum value based on the provided byte array.
         /// </summary>
-        /// <param name="buffer"></param>
-        /// <returns></returns>
+        /// <param name="buffer">Buffer for which the checksum should be calculated.</param>
+        /// <returns>The checksum value</returns>
         public static long GenerateCheckSum(byte[] buffer)
         {
             uint BASE = 65521;
@@ -62,10 +64,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Generate an Adler32 checksum value based on the provided split byte array. Checksum calculated across each row from [0] forwards.
+        /// Generate a single Adler32 checksum value based on the provided byte arrays. Checksum calculated from splitBuffer[0] onwards.
         /// </summary>
-        /// <param name="splitBuffer"></param>
-        /// <returns></returns>
+        /// <param name="splitBuffer">Buffers for which the checksum should be calculated.</param>
+        /// <returns>The checksum value</returns>
         public static long GenerateCheckSum(byte[][] splitBuffer)
         {
             uint BASE = 65521;
