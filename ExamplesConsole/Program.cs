@@ -14,7 +14,7 @@ namespace ExamplesConsole
             Console.SetWindowSize(120, 25);
             Thread.CurrentThread.Name = "MainThread";
 
-            Console.WriteLine("Initiating networkComms.net examples.\n");
+            Console.WriteLine("Initiating NetworkCommsDotNet examples.\n");
 
             //All we do here is let the user choice a specific example
             Console.WriteLine("Please enter an example number:");

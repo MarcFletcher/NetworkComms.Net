@@ -21,7 +21,7 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A simple class to do math operations in networkComms.net
+    /// A simple class to do math operations in NetworkCommsDotNet
     /// </summary>
     class CommsMath
     {

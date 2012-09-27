@@ -20,7 +20,7 @@ using System.Linq;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// The type of connection.
+    /// The type of <see cref="Connection"/>.
     /// </summary>
     public enum ConnectionType : byte
     {

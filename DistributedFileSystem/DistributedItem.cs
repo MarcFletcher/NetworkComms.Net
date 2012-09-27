@@ -139,12 +139,12 @@ namespace DistributedFileSystem
             this.itemBuildComplete = new ManualResetEvent(false);
 
             //Make sure that the original source added this node to the swarm before providing the assemblyConfig
-            if (!SwarmChunkAvailability.PeerExistsInSwarm(NetworkComms.NetworkNodeIdentifier))
+            if (!SwarmChunkAvailability.PeerExistsInSwarm(NetworkComms.NetworkIdentifier))
                 throw new Exception("The current local node should have been added by the source.");
 
             //Bug fix incase we have just gotten the same file twice and the super node did not know that we dropped it
             //If the SwarmChunkAvailability thinks we have everything but our local version is not correct then clear our flags which will force rebuild
-            if (SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks) && !LocalItemValid())
+            if (SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkIdentifier, TotalNumChunks) && !LocalItemValid())
             {
                 SwarmChunkAvailability.ClearAllLocalAvailabilityFlags();
                 SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
@@ -285,7 +285,7 @@ namespace DistributedFileSystem
 
                                     //Determine if this chunk contains non super peers, if it does we will never contact the super peers (keeps load on super peers low)
                                     //We have non super peers if the number of peers who are not us and are not super peers is greater than 0
-                                    bool containsNonSuperPeers = (nonLocalChunkExistence[chunkRarity[i]].Count(entry => entry.Key.NetworkIdentifier != NetworkComms.NetworkNodeIdentifier && !entry.Value.SuperPeer) > 0);
+                                    bool containsNonSuperPeers = (nonLocalChunkExistence[chunkRarity[i]].Count(entry => entry.Key.NetworkIdentifier != NetworkComms.NetworkIdentifier && !entry.Value.SuperPeer) > 0);
 
                                     //If over half the number of swarm peers are completed we will use them rather than uncompleted peers
                                     bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
@@ -606,7 +606,7 @@ namespace DistributedFileSystem
                     {
                         //We no longer have the requst for this reply, no worries we can still use it
                         //If the checksums match, it includes data and we don't already have it
-                        if (ItemCheckSum == incomingReply.ItemCheckSum && incomingReply.ReplyState == ChunkReplyState.DataIncluded && !SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkNodeIdentifier, incomingReply.ChunkIndex))
+                        if (ItemCheckSum == incomingReply.ItemCheckSum && incomingReply.ReplyState == ChunkReplyState.DataIncluded && !SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, incomingReply.ChunkIndex))
                         {
                             //We pretend we made the request already
                             ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connection.ConnectionInfo);
@@ -686,7 +686,7 @@ namespace DistributedFileSystem
 
         public bool ChunkAvailableLocally(byte chunkIndex)
         {
-            return SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkNodeIdentifier, chunkIndex);
+            return SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, chunkIndex);
         }
 
         /// <summary>
@@ -697,7 +697,7 @@ namespace DistributedFileSystem
         public byte[] GetChunkBytes(byte chunkIndex)
         {
             //If we have made it this far we are returning data
-            if (SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkNodeIdentifier, chunkIndex))
+            if (SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, chunkIndex))
             {
                 lock (itemLocker) TotalChunkSupplyCount++;
 
@@ -791,7 +791,7 @@ namespace DistributedFileSystem
         public bool LocalItemComplete()
         {
             lock (itemLocker)
-                return SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks);
+                return SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkIdentifier, TotalNumChunks);
         }
 
         /// <summary>

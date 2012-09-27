@@ -200,7 +200,7 @@ namespace ExamplesConsole
                 Console.WriteLine(" ... logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
 
                 //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("networkComms.net logging enabled");
+                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled");
             }
         }
 

@@ -467,9 +467,9 @@ namespace DistributedFileSystem
         /// <summary>
         /// Introduces a new item into the swarm and sends a distribution command to the originating requester
         /// </summary>
-        /// <param name="requestOriginConnectionId"></param>
+        /// <param name="requestOriginNetworkIdentifier"></param>
         /// <param name="itemToDistribute"></param>
-        public static void PushItemToPeer(ShortGuid requestOriginConnectionId, DistributedItem itemToDistribute, string completedPacketType)
+        public static void PushItemToPeer(ShortGuid requestOriginNetworkIdentifier, DistributedItem itemToDistribute, string completedPacketType)
         {
             try
             {
@@ -486,16 +486,16 @@ namespace DistributedFileSystem
                     }
 
                     //We add the requester to the item swarm at this point
-                    itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(requestOriginConnectionId, new ChunkFlags(0));
+                    itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(requestOriginNetworkIdentifier, new ChunkFlags(0));
                     itemToDistribute.IncrementPushCount();
                 }
 
                 //We could contact other known super peers to see if they also have this file
 
                 //Send the config information to the client that wanted the file
-                NetworkComms.SendObject("DFS_IncomingLocalItemBuild", requestOriginConnectionId, false, new ItemAssemblyConfig(itemToDistribute, completedPacketType));
+                NetworkComms.SendObject("DFS_IncomingLocalItemBuild", requestOriginNetworkIdentifier, false, new ItemAssemblyConfig(itemToDistribute, completedPacketType));
 
-                if (DFS.loggingEnabled) DFS.logger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + requestOriginConnectionId + ".");
+                if (DFS.loggingEnabled) DFS.logger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + requestOriginNetworkIdentifier + ".");
             }
             catch (CommsException)
             {
@@ -884,7 +884,7 @@ namespace DistributedFileSystem
 
                         //If the peer thinks we have a chunk we dont we send them an update so that they are corrected
                         //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                        connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
+                        connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)));
                     }
                     else
                     {
@@ -1047,7 +1047,7 @@ namespace DistributedFileSystem
                     connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum);
                 else
                     //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                    connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
+                    connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)));
 
                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }

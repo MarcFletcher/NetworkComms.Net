@@ -252,7 +252,7 @@ namespace NetworkCommsDotNet
                         //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
                         //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
                         //but hey, we live in a crazy world!
-                        if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkNodeIdentifier)
+                        if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
                         {
                             connectionSetupException = true;
                             connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";

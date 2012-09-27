@@ -281,7 +281,7 @@ namespace DistributedFileSystem
 
                 //We add an entry to the dictionary for every chunk we do not yet have
                 for (byte i = 0; i < totalChunksInItem; i++)
-                    if (!PeerHasChunk(NetworkComms.NetworkNodeIdentifier, i))
+                    if (!PeerHasChunk(NetworkComms.NetworkIdentifier, i))
                         chunkExistence.Add(i, new Dictionary<ConnectionInfo, PeerAvailabilityInfo>());
 
                 //Now for each peer we know about we add them to the list if they have a chunck of interest
@@ -481,10 +481,10 @@ namespace DistributedFileSystem
         {
             lock (peerLocker)
             {
-                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkNodeIdentifier))
+                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkIdentifier))
                     throw new Exception("Local peer not located in peerChunkAvailabity for this item.");
 
-                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].PeerChunkFlags.SetFlag(chunkIndex, setAvailable);
+                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].PeerChunkFlags.SetFlag(chunkIndex, setAvailable);
             }
         }
 
@@ -526,7 +526,7 @@ namespace DistributedFileSystem
 
                             string[] result = null;
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
+                            if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(clientIP, superPeer))
                             {
                                 if (NetworkComms.ConnectionExists(peerIdentifier, ConnectionType.TCP))
                                     result = NetworkComms.SendReceiveObject<string[]>("DFS_KnownPeersRequest", peerIdentifier, false, "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
@@ -588,7 +588,7 @@ namespace DistributedFileSystem
                         }
 
                         //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                        if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
+                        if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(clientIP, superPeer))
                         {
                             if (NetworkComms.ConnectionExists(peerIdentifier, ConnectionType.TCP))
                                 //NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", peerIdentifier, false, itemCheckSum); 
@@ -700,10 +700,10 @@ namespace DistributedFileSystem
         {
             lock (peerLocker)
             {
-                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkNodeIdentifier))
+                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkIdentifier))
                     throw new Exception("Local peer not located in peerChunkAvailabity for this item.");
 
-                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].PeerChunkFlags.SetFlag(chunkIndex);
+                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].PeerChunkFlags.SetFlag(chunkIndex);
             }
         }
 
@@ -721,7 +721,7 @@ namespace DistributedFileSystem
             lock (peerLocker)
             {
                 peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
-                localChunkFlags = peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].PeerChunkFlags;
+                localChunkFlags = peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].PeerChunkFlags;
             }
 
             foreach (ShortGuid peerIdentifier in peerKeys)
@@ -737,7 +737,7 @@ namespace DistributedFileSystem
                     }
 
                     //We don't want to contact ourselves
-                    if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
+                    if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(clientIP, superPeer))
                     {
                         //For each peer that is not us we send our latest availability.
                         if (NetworkComms.ConnectionExists(peerIdentifier, ConnectionType.TCP))
@@ -768,7 +768,7 @@ namespace DistributedFileSystem
             {
                 try
                 {
-                    if (!peer.Value.SuperPeer && peer.Key != NetworkComms.NetworkNodeIdentifier)
+                    if (!peer.Value.SuperPeer && peer.Key != NetworkComms.NetworkIdentifier)
                     {
                         if (peer.Value.PeerChunkFlags.AllFlagsSet(totalNumChunks))
                         {
@@ -820,10 +820,10 @@ namespace DistributedFileSystem
             string[] peerKeys;
             lock (peerLocker)
             {
-                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkNodeIdentifier))
+                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkIdentifier))
                     throw new Exception("Local peer not located in peerChunkAvailabity for this item.");
 
-                if (removeSwarmWide && !peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].SuperPeer)
+                if (removeSwarmWide && !peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].SuperPeer)
                     throw new Exception("Attempted to trigger a swarm wide item removal but local is not a SuperPeer.");
 
                 peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
@@ -847,7 +847,7 @@ namespace DistributedFileSystem
                         }
 
                         //We don't want to contact ourselves
-                        if (peerIdentifier != NetworkComms.NetworkNodeIdentifier && PeerContactAllowed(clientIP, superPeer))
+                        if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(clientIP, superPeer))
                         {
                             //For each peer that is not us we send our latest availability.
                             if (NetworkComms.ConnectionExists(peerIdentifier, ConnectionType.TCP))
@@ -915,7 +915,7 @@ namespace DistributedFileSystem
         public void ClearAllLocalAvailabilityFlags()
         {
             lock (peerLocker)
-                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkNodeIdentifier].PeerChunkFlags.ClearAllFlags();
+                peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].PeerChunkFlags.ClearAllFlags();
         }
 
         #region IThreadSafeSerialise Members

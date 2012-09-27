@@ -21,7 +21,7 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block  by using catch(CommsException)
+    /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
     /// </summary>
     public abstract class CommsException : Exception
     {
@@ -37,7 +37,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A checksum error has occured. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
+    /// A checksum error has occured. <see cref="NetworkComms.EnablePacketCheckSumValidation"/> must be set to true for this exception to be thrown.
     /// </summary>
     public class CheckSumException : CommsException
     {
@@ -53,7 +53,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS.
+    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing <see cref="NetworkComms.PacketConfirmationTimeoutMS"/>.
     /// </summary>
     public class ConfirmationTimeoutException : CommsException
     {
@@ -101,7 +101,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured while trying to establish a remote connection
+    /// An error occured while trying to establish a <see cref="Connection"/>
     /// </summary>
     public class ConnectionSetupException : CommsException
     {
@@ -117,7 +117,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An error occured while trying to establish a connection
+    /// An error occured while trying to establish a <see cref="Connection"/>
     /// </summary>
     public class ConnectionShutdownException : CommsException
     {
@@ -165,7 +165,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An unexpected incoming packetType has been received. Consider setting NetworkComms.IgnoreUnknownPacketTypes to true to prevent this exception.
+    /// An unexpected incoming packetType has been received. Consider setting <see cref="NetworkComms.IgnoreUnknownPacketTypes"/> to true to prevent this exception.
     /// </summary>
     public class UnexpectedPacketTypeException : CommsException
     {
@@ -181,15 +181,15 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// An invalid connectionId has been provided.
+    /// An invalid network identifier has been provided.
     /// </summary>
-    public class InvalidConnectionIdException : CommsException
+    public class InvalidNetworkIdentifierException : CommsException
     {
         /// <summary>
-        /// Create a new instance of InvalidConnectionIdException
+        /// Create a new instance of InvalidNetworkIdentifierException
         /// </summary>
         /// <param name="msg">A string containing useful information regarding the error</param>
-        public InvalidConnectionIdException(string msg)
+        public InvalidNetworkIdentifierException(string msg)
             : base(msg)
         {
 

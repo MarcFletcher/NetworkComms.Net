@@ -10,7 +10,7 @@ namespace ExamplesConsole
     /// Networking in only 11 lines (not including comments and whitespace of course).
     /// Note: This example deliberately includes no validation or exception handling in order to keep it as short as possible (i.e. it's easy to break).
     /// </summary>
-    static class BasicSend
+    public static class BasicSend
     {
         public static void RunExample()
         {

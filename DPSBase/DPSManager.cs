@@ -229,7 +229,7 @@ namespace DPSBase
         /// <param name="dataProcessors">A <see cref="System.Collections.Generic.List{DataProcessor}()"/> to be used.  The order of this </param>
         /// <returns>A <see cref="long"/> describing the arguments</returns>
         /// <exception cref="ArgumentException">Thrown is more than 7 <see cref="DataSerializer"/>s are used</exception>
-        /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be used when transmitting data using Networkcomms.net</remarks>
+        /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be used when transmitting data using NetworkCommsDotNet</remarks>
         public static long CreateSerializerDataProcessorIdentifier(DataSerializer serializer, List<DataProcessor> dataProcessors)
         {
             long res = 0;
@@ -265,7 +265,7 @@ namespace DPSBase
         /// <param name="id">The <see cref="long"/> describing the <see cref="DataSerializer"/> and a set of <see cref="DataProcessor"/>s</param>
         /// <param name="serializer">The resultant <see cref="DataSerializer"/></param>
         /// <param name="dataProcessors">A List of the resultant <see cref="DataProcessor"/>s</param>
-        /// <remarks>This method is used to extract the serialization method and any data processing that needs to be used when transmitting data using Networkcomms.net</remarks>
+        /// <remarks>This method is used to extract the serialization method and any data processing that needs to be used when transmitting data using NetworkCommsDotNet</remarks>
         public static void GetSerializerDataProcessorsFromIdentifier(long id, out DataSerializer serializer, out List<DataProcessor> dataProcessors)
         {
             serializer = GetDataSerializer((byte)(id >> 56));

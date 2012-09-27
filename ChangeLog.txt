@@ -1,3 +1,7 @@
+Version 2.0 - Released xxxx
+
+
+
 Version 1.3 - Released 03/6/12
 
 - Multiple network adaptor support.
@@ -25,4 +29,4 @@ Version 1.1 - Released 17/2/12
 
 Version 1.0 - Released 2011
 
-- Base release of networkComms.net.
+- Base release of NetworkCommsDotNet.

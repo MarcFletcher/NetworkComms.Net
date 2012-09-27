@@ -25,7 +25,7 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Used to determine a valid local IP address, using the Windows API, to provided targets. This method is only supported in a Windows environment.
+    /// Used to determine a valid local <see href="http://en.wikipedia.org/wiki/IP_address">IP address</see>, using the Windows API, to provided targets. This method is only supported in a Windows environment.
     /// </summary>
     public static class IPExtAccess
     {

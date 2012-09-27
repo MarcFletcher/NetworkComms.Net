@@ -372,7 +372,7 @@ namespace ExamplesConsole
             /// <returns>The remote RPC object</returns>
             private IMath SelectRemoteObject(string serverIP, int serverPort, out string instanceId)
             {
-                //We have three main different usage cases for the RPC functionality provided by networkComms.net
+                //We have three main different usage cases for the RPC functionality provided by NetworkCommsDotNet
                 //Before we can demonstrate RPC features we need to select the remote object
                 //We select a remote object using one of three different access methods
                 //1. Create a private client specific instance

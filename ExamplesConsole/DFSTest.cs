@@ -17,7 +17,7 @@ namespace ExamplesConsole
         /// <summary>
         /// The distributed file system (DFS) allows for the high performance distribution of large files
         /// within a cluster of peers. This sytem replicates the behaviour the bitTorrent protocol by using 
-        /// networkComms.net. This example demonstrates the DFS in action.
+        /// NetworkCommsDotNet. This example demonstrates the DFS in action.
         /// </summary>
         public static void RunExample()
         {
@@ -52,7 +52,7 @@ namespace ExamplesConsole
 
                 //Create the item to be distributed
                 ConnectionInfo seedConnectionInfo = new ConnectionInfo(NetworkComms.AllAvailableLocalIPs()[0].ToString(), NetworkComms.DefaultListenPort);
-                seedConnectionInfo.SetNetworkIdentifer(NetworkComms.NetworkNodeIdentifier);
+                seedConnectionInfo.SetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
                 DistributedItem newItem = new DistributedItem("exampleItem", someRandomData, seedConnectionInfo);
 

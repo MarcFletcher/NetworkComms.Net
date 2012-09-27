@@ -7,7 +7,7 @@ using NetworkCommsDotNet;
 namespace ExamplesConsole
 {
     /// <summary>
-    /// A static class which provides implementation possibly shared across all examples
+    /// Provides implementation shared across examples
     /// </summary>
     public static class ExampleHelper
     {

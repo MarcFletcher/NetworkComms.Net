@@ -40,7 +40,7 @@ namespace NetworkCommsDotNet
         static NetworkComms()
         {
             //Generally comms defaults are defined here
-            NetworkNodeIdentifier = ShortGuid.NewGuid();
+            NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 200;
             InterfaceLinkSpeed = 100000000;
             DefaultListenPort = 10000;
@@ -74,14 +74,14 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Setting preferred IP prefixs will direct networkComms.net when selecting ip addresses. An alternative is to set ListenOnAllInterfaces to true.
+        /// Setting preferred IP prefixs will direct NetworkCommsDotNet when selecting ip addresses. An alternative is to set ListenOnAllInterfaces to true.
         /// Correct format is string[] { "192.168", "213.111.10" }.
         /// If multiple prefixs are provided the earlier prefix, if found, takes priority.
         /// </summary>
         public static string[] PreferredIPPrefixs { get; set; }
 
         /// <summary>
-        /// If prefered adaptor names are provided, i.e. { "eth0", "en0", "wlan0" } etc. networkComms.net will only listen on those adaptors.
+        /// If prefered adaptor names are provided, i.e. { "eth0", "en0", "wlan0" } etc. NetworkCommsDotNet will only listen on those adaptors.
         /// </summary>
         public static string[] AllowedAdaptorNames { get; set; }
 
@@ -133,14 +133,14 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// The default port networkComms.net will operate on
+        /// The default port NetworkCommsDotNet will operate on
         /// </summary>
         public static int DefaultListenPort { get; set; }
 
         /// <summary>
-        /// The local identifier for this instance of networkComms.net. This is an application unique identifier.
+        /// The local identifier for this instance of NetworkCommsDotNet. This is an application unique identifier.
         /// </summary>
-        public static ShortGuid NetworkNodeIdentifier { get; private set; }
+        public static ShortGuid NetworkIdentifier { get; private set; }
 
         /// <summary>
         /// An internal random object
@@ -148,7 +148,7 @@ namespace NetworkCommsDotNet
         internal static Random randomGen = new Random();
 
         /// <summary>
-        /// A single boolean used to control a networkComms.net shutdown
+        /// A single boolean used to control a NetworkCommsDotNet shutdown
         /// </summary>
         internal static volatile bool commsShutdown;
 
@@ -291,7 +291,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
         /// </summary>
-        internal static Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>> oldConnectionIdToConnectionInfo = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>>();
+        internal static Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>> oldNetworkIdentifierToConnectionInfo = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<ConnectionInfo>>>();
         #endregion
 
         #region Incoming Data and Connection Config
@@ -1067,15 +1067,15 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Retrieve a list of existing connections with the provided connectionId of the provided ConnectionType. Returns null if the requested connections do not exist.
+        /// Retrieve a list of existing connections with the provided networkIdentifier of the provided ConnectionType. Returns null if the requested connections do not exist.
         /// </summary>
-        /// <param name="connectionId"></param>
+        /// <param name="networkIdentifier"></param>
         /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static List<Connection> RetrieveConnection(ShortGuid connectionId, ConnectionType connectionType)
+        public static List<Connection> RetrieveConnection(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
-                return (from current in NetworkComms.allConnectionsById where current.Key == connectionId && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+                return (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
         }
 
         /// <summary>
@@ -1114,21 +1114,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a connection exists with the provided connectionId and ConnectionType
+        /// Returns true if a connection exists with the provided networkIdentifier and ConnectionType
         /// </summary>
-        /// <param name="connectionId"></param>
+        /// <param name="networkIdentifier"></param>
         /// <param name="connectionType"></param>
         /// <returns></returns>
-        public static bool ConnectionExists(ShortGuid connectionId, ConnectionType connectionType)
+        public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
-            if (loggingEnabled) logger.Trace("Checking by identifier and endPoint for existing " + connectionType + " connection to " + connectionId);
+            if (loggingEnabled) logger.Trace("Checking by identifier and endPoint for existing " + connectionType + " connection to " + networkIdentifier);
 
             lock (globalDictAndDelegateLocker)
             {
-                if (allConnectionsById.ContainsKey(connectionId))
+                if (allConnectionsById.ContainsKey(networkIdentifier))
                 {
-                    if (allConnectionsById[connectionId].ContainsKey(connectionType))
-                        return allConnectionsById[connectionId][connectionType].Count() > 0;
+                    if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
+                        return allConnectionsById[networkIdentifier][connectionType].Count() > 0;
                 }
             }
 
@@ -1191,15 +1191,15 @@ namespace NetworkCommsDotNet
                 //Keep a reference of the connection for possible debugging later
                 if (maintainConnectionInfoHistory)
                 {
-                    if (oldConnectionIdToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                    if (oldNetworkIdentifierToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
                     {
-                        if (oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
+                        if (oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
                         else
-                            oldConnectionIdToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
+                            oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
                     }
                     else
-                        oldConnectionIdToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
+                        oldNetworkIdentifierToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
                 }
 
                 if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
@@ -1289,7 +1289,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a reference by connectionId to the provided connection within NetworkComms. Requires a reference by IPEndPoint to already exist.
+        /// Add a reference by networkIdentifier to the provided connection within NetworkComms. Requires a reference by IPEndPoint to already exist.
         /// </summary>
         /// <param name="connection"></param>
         internal static void AddConnectionReferenceByIdentifier(Connection connection)
@@ -1335,15 +1335,15 @@ namespace NetworkCommsDotNet
         #region Obsolete Send Receive Methods - These will be removed in the release after 2.0
         #region SendObjectDefault
         /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and sets the connectionId. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified destination on the default comms port and sets the networkIdentifier. Uses the network comms default compressor and serializer
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
         /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
         /// <param name="sendObject">The obect to send</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
@@ -1356,16 +1356,16 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and sets the connectionId. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified destination on a specific comms port and sets the networkIdentifier. Uses the network comms default compressor and serializer
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
         /// <param name="commsPort">The destination comms port</param>
         /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
         /// <param name="sendObject">The obect to send</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
@@ -1375,7 +1375,7 @@ namespace NetworkCommsDotNet
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
             conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
         }
 
         /// <summary>
@@ -1420,17 +1420,17 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified connectionId. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified networkIdentifier. Uses the network comms default compressor and serializer
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="connectionId">Destination connection id</param>
+        /// <param name="networkIdentifier">Destination networkIdentifier</param>
         /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
         /// <param name="sendObject">The obect to send</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject)
+        public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject)
         {
-            List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
+            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1443,7 +1443,7 @@ namespace NetworkCommsDotNet
         #endregion SendObjectDefault
         #region SendObjectSpecific
         /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and sets the connectionId. Uses the provided compressor and serializer delegates
+        /// Send the provided object to the specified destination on the default comms port and sets the networkIdentifier. Uses the provided compressor and serializer delegates
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
@@ -1451,9 +1451,9 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
@@ -1464,11 +1464,11 @@ namespace NetworkCommsDotNet
 
             conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
 
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and sets the connectionId. Uses the provided compressor and serializer delegates
+        /// Send the provided object to the specified destination on a specific comms port and sets the networkIdentifier. Uses the provided compressor and serializer delegates
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
@@ -1477,9 +1477,9 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid connectionId)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
@@ -1489,7 +1489,7 @@ namespace NetworkCommsDotNet
                 options["ReceiveConfirmationRequired"] = (true).ToString();
 
             conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
         }
 
         /// <summary>
@@ -1538,19 +1538,19 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified connectionId. Uses the provided compressor and serializer delegates
+        /// Send the provided object to the specified networkIdentifier. Uses the provided compressor and serializer delegates
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="connectionId">Destination connection id</param>
+        /// <param name="networkIdentifier">Destination networkIdentifier</param>
         /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
         /// <param name="sendObject">The obect to send</param>
         /// <param name="serializer">The specific serializer delegate to use</param>
         /// <param name="compressor">The specific compressor delegate to use</param>
         [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
+        public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
-            List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
+            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1563,7 +1563,7 @@ namespace NetworkCommsDotNet
 
         #region SendReceiveObjectDefault
         /// <summary>
-        /// Send the provided object to the specified destination on the default comms port, setting the connectionId, and wait for the return object. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified destination on the default comms port, setting the networkIdentifier, and wait for the return object. Uses the network comms default compressor and serializer
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
@@ -1572,13 +1572,13 @@ namespace NetworkCommsDotNet
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1589,7 +1589,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port, setting the connectionId, and wait for the return object. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified destination on a specific comms port, setting the networkIdentifier, and wait for the return object. Uses the network comms default compressor and serializer
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
@@ -1599,13 +1599,13 @@ namespace NetworkCommsDotNet
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1665,21 +1665,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified connectionId and wait for the return object. Uses the network comms default compressor and serializer
+        /// Send the provided object to the specified networkIdentifier and wait for the return object. Uses the network comms default compressor and serializer
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="connectionId">Destination connection id</param>
+        /// <param name="networkIdentifier">Destination networkIdentifier</param>
         /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
+            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1692,7 +1692,7 @@ namespace NetworkCommsDotNet
         #endregion SendReceiveObjectDefault
         #region SendReceiveObjectSpecific
         /// <summary>
-        /// Send the provided object to the specified destination on the default comms port, setting the connectionId, and wait for the return object. Uses the provided compressors and serializers
+        /// Send the provided object to the specified destination on the default comms port, setting the networkIdentifier, and wait for the return object. Uses the provided compressors and serializers
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
@@ -1705,13 +1705,13 @@ namespace NetworkCommsDotNet
         /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1729,7 +1729,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port, setting the connectionId, and wait for the return object. Uses the provided compressors and serializers
+        /// Send the provided object to the specified destination on a specific comms port, setting the networkIdentifier, and wait for the return object. Uses the provided compressors and serializers
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
@@ -1743,13 +1743,13 @@ namespace NetworkCommsDotNet
         /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
         /// <param name="serializerIncoming">Serializer to use for return object</param>
         /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <param name="connectionId">The connectionId used to complete the send. Can be used in subsequent sends without requiring ip address</param>
+        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid connectionId)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
         {
             TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            connectionId = conn.ConnectionInfo.NetworkIdentifier;
+            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1838,11 +1838,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified connectionId and wait for the return object. Uses the provided compressors and serializers
+        /// Send the provided object to the specified networkIdentifier and wait for the return object. Uses the provided compressors and serializers
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="connectionId">Destination connection id</param>
+        /// <param name="networkIdentifier">Destination networkIdentifier</param>
         /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
@@ -1853,10 +1853,10 @@ namespace NetworkCommsDotNet
         /// <param name="compressorIncoming">Compressor to use for return object</param>
         /// <returns>The expected return object</returns>
         [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid connectionId, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
-            List<Connection> conns = RetrieveConnection(connectionId, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidConnectionIdException("Unable to locate connection with provided connectionId.");
+            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
