@@ -139,17 +139,17 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a partial packet to the end of the cache.
+        /// Add a partial packet to the end of the cache by reference.
         /// </summary>
-        /// <param name="packetBytes"></param>
-        /// <param name="packet"></param>
-        public void AddPartialPacket(int packetBytes, byte[] packet)
+        /// <param name="packetBytes">The number of valid bytes in the provided partial packet</param>
+        /// <param name="partialPacket">A buffer which may or may not be full with valid bytes</param>
+        public void AddPartialPacket(int packetBytes, byte[] partialPacket)
         {
             lock (locker)
             {
                 totalBytesCached += packetBytes;
 
-                packets.Add(packet);
+                packets.Add(partialPacket);
                 packetActualBytes.Add(packetBytes);
             }
         }
@@ -158,7 +158,8 @@ namespace NetworkCommsDotNet
         /// Returns the most recently cached partial packet and removes it from the cache.
         /// Used to more efficiently utilise allocated memory space.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="lastPacketBytesRead">The number of valid bytes in the last partial packet added</param>
+        /// <returns>A byte[] corresponding with the last added partial packet</returns>
         public byte[] RemoveMostRecentPartialPacket(ref int lastPacketBytesRead)
         {
             lock (locker)

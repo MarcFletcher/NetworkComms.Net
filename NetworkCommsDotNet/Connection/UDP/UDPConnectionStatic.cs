@@ -59,11 +59,12 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo. If there is an existing connection that is returned instead.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
-        /// <returns></returns>
+        /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
         {
             return CreateConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
@@ -71,12 +72,13 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo and and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/>.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendRecieveOptions">The SendReceiveOptions to use as defaults for this connection</param>
-        /// <param name="level">The UDP level to use for this connection</param>
-        /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
-        /// <returns></returns>
+        /// <param name="level">The UDP options to use for this connection</param>
+        /// <param name="listenForReturnPackets">If set to true will ensure that reply packets can be received</param>
+        /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets = true)
         {
             return CreateConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
@@ -138,7 +140,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Listen for incoming UDP packets on the default listen port across all available IP's
+        /// Listen for incoming UDP packets on all allowed local IP's on default port
         /// </summary>
         public static void AddNewLocalListener()
         {
@@ -172,7 +174,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Listen for incoming UDP packets on specified IPEndPoint. 
+        /// Listen for incoming UDP packets on specified <see cref="IPEndPoint"/>. 
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random</param>
@@ -215,7 +217,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Listen for incoming UDP packets on specified IPEndPoints. 
+        /// Listen for incoming UDP packets on provided list of <see cref="IPEndPoint"/>. 
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
@@ -235,9 +237,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of all current UDP local IPEndPoint listeners
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding with all UDP local listeners
         /// </summary>
-        /// <returns></returns>
+        /// <returns>List of <see cref="IPEndPoint"/> corresponding with all UDP local listeners</returns>
         public static List<IPEndPoint> CurrentLocalEndPoints()
         {
             lock (udpClientListenerLocker)
@@ -255,10 +257,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an endPoint corresponding to a possible local listener on the provided ipAddress. If not listening on provided IP returns null.
+        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
         /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <returns></returns>
+        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
+        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
         public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
         {
             lock (udpClientListenerLocker)
@@ -309,7 +311,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Sends a single object to the provided IPAddress and Port. IMPORTANT NOTE: You must be listening for UDP packets if you want to collect any reply. 
+        /// Sends a single object to the provided IPAddress and Port. NOTE: Any possible reply will be ignored unless listening for incoming udp packets. 
         /// </summary>
         /// <param name="sendingPacketType">The sending packet type</param>
         /// <param name="objectToSend">The object to send.</param>
@@ -321,7 +323,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Sends a single object to the provided endPoint. IMPORTANT NOTE: You must be listening for UDP packets if you want to collect any reply. 
+        /// Sends a single object to the provided endPoint. NOTE: Any possible reply will be ignored unless listening for incoming udp packets. 
         /// </summary>
         /// <param name="sendingPacketType">The sending packet type</param>
         /// <param name="objectToSend">The object to send</param>

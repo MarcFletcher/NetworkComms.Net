@@ -12,6 +12,9 @@ namespace ExamplesConsole
     /// </summary>
     public static class BasicSend
     {
+        /// <summary>
+        /// Run example
+        /// </summary>
         public static void RunExample()
         {
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.

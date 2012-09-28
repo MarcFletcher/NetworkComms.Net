@@ -156,6 +156,7 @@ namespace NetworkCommsDotNet
         /// The number of millisconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged values (AverageNetworkLoad). Default is 200ms but use atleast 100ms to get reliable values.
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
+
         private static Thread NetworkLoadThread = null;
         private static double currentNetworkLoad;
         private static CommsMath currentNetworkLoadValues;
@@ -195,8 +196,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns the averaged value of CurrentNetworkLoad, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
         /// </summary>
-        /// <param name="secondsToAverage"></param>
-        /// <returns></returns>
+        /// <param name="secondsToAverage">Number of seconds over which historial data should be used to arrive at an average</param>
+        /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoad(byte secondsToAverage)
         {
             if (NetworkLoadThread == null)
@@ -588,10 +589,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the unwrapper sendReceiveOptions for the provided packet type. If no specific options are registered returns null.
+        /// Returns the unwrapper <see cref="SendReceiveOptions"/> for the provided packet type. If no specific options are registered returns null.
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <returns></returns>
+        /// <param name="packetTypeStr">The packet type for which the <see cref="SendReceiveOptions"/> are required</param>
+        /// <returns>The requested <see cref="SendReceiveOptions"/> otherwise null</returns>
         public static SendReceiveOptions PacketTypeGlobalUnwrapperOptions(string packetTypeStr)
         {
             SendReceiveOptions options = null;
@@ -609,8 +610,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns true if a global packet handler exists for the provided packet type.
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <returns></returns>
+        /// <param name="packetTypeStr">The packet type for which to check incoming packet handlers</param>
+        /// <returns>True if a global packet handler exists</returns>
         public static bool GlobalIncomingPacketHandlerExists(string packetTypeStr)
         {
             lock (globalDictAndDelegateLocker)
@@ -643,7 +644,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Add a new connection shutdown delegate which will be called for every connection as it is closes.
         /// </summary>
-        /// <param name="connectionShutdownDelegate"></param>
+        /// <param name="connectionShutdownDelegate">The delegate to call on all connection shutdowns</param>
         public static void AppendGlobalConnectionCloseHandler(ConnectionEstablishShutdownDelegate connectionShutdownDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -660,7 +661,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Remove a connection shutdown delegate.
         /// </summary>
-        /// <param name="connectionShutdownDelegate"></param>
+        /// <param name="connectionShutdownDelegate">The delegate to remove from connection shutdown events</param>
         public static void RemoveGlobalConnectionCloseHandler(ConnectionEstablishShutdownDelegate connectionShutdownDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -683,7 +684,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Add a new connection establish delegate which will be called for every connection once it has been succesfully established.
         /// </summary>
-        /// <param name="connectionEstablishDelegate"></param>
+        /// <param name="connectionEstablishDelegate">The delegate to call after all connection establishments.</param>
         public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -700,7 +701,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Remove a connection establish delegate.
         /// </summary>
-        /// <param name="connectionEstablishDelegate"></param>
+        /// <param name="connectionEstablishDelegate">The delegate to remove from connection establish events</param>
         public static void RemoveGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
         {
             lock (globalDictAndDelegateLocker)
@@ -723,6 +724,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Shutdown all connections, comms threads and execute OnCommsShutdown event. If any comms activity has taken place this should be called on application close.
         /// </summary>
+        /// <param name="threadShutdownTimeoutMS">The time to wait for worker threads to close before attempting a thread abort.</param>
         public static void Shutdown(int threadShutdownTimeoutMS = 1000)
         {
             commsShutdown = true;
@@ -796,7 +798,7 @@ namespace NetworkCommsDotNet
         internal static ILog logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Access the logger externally.
+        /// Access the NetworkCommsDotNet logger externally.
         /// </summary>
         public static ILog Logger
         {
@@ -806,7 +808,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Enable logging using the provided common.logging adaptor. See examples for usage.
         /// </summary>
-        /// <param name="loggingAdaptor"></param>
+        /// <param name="loggingAdaptor">The logging adaptor to use for all logging.</param>
         public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
         {
             lock (globalDictAndDelegateLocker)
@@ -818,7 +820,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Disable logging in networkComms
+        /// Disable all logging in NetworkCommsDotNet
         /// </summary>
         public static void DisableLogging()
         {
@@ -835,10 +837,10 @@ namespace NetworkCommsDotNet
         static object errorLocker = new object();
 
         /// <summary>
-        /// Appends the provided logString to end of fileName.txt
+        /// Appends the provided logString to end of fileName.txt. If the file does not exist it will be created.
         /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="logString"></param>
+        /// <param name="fileName">The filename to use. The extension .txt will be appended automatically</param>
+        /// <param name="logString">The string to append.</param>
         public static void AppendStringToLogFile(string fileName, string logString)
         {
             try
@@ -856,25 +858,29 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Logs provided exception to a file to assist troubleshooting.
+        /// Logs the provided exception to a file to assist troubleshooting.
         /// </summary>
-        public static string LogError(Exception ex, string fileAppendStr, string optionalCommentStr = "")
+        /// <param name="ex">The exception to be logged</param>
+        /// <param name="fileName">The filename to use. A timestamp and extension .txt will be appended automatically</param>
+        /// <param name="optionalCommentStr">An optional string which will appear at the top of the error file</param>
+        /// <returns>The entire fileName used.</returns>
+        public static string LogError(Exception ex, string fileName, string optionalCommentStr = "")
         {
-            string fileName;
+            string entireFileName;
 
             lock (errorLocker)
             {
-                if (loggingEnabled) logger.Fatal(fileAppendStr + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
+                if (loggingEnabled) logger.Fatal(fileName + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
 
 #if iOS
-                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
+                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
 #else
-                fileName = fileAppendStr + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
+                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
 #endif
 
                 try
                 {
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
+                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
                     {
                         if (optionalCommentStr != "")
                         {
@@ -901,7 +907,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            return fileName;
+            return entireFileName;
         }
         #endregion
 
@@ -954,8 +960,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Return the MD5 hash of the provided byte array as a string
         /// </summary>
-        /// <param name="bytesToMd5"></param>
-        /// <returns></returns>
+        /// <param name="bytesToMd5">The bytes which will be checksummed</param>
+        /// <returns>The MD5 checksum as a string</returns>
         public static string MD5Bytes(byte[] bytesToMd5)
         {
             System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
@@ -965,7 +971,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a ConnectionInfo array containing information for all connections
         /// </summary>
-        /// <returns></returns>
+        /// <returns>ConnectionInfo[] containing information for all known connections</returns>
         public static ConnectionInfo[] AllConnectionInfos()
         {
             lock (globalDictAndDelegateLocker)
@@ -981,7 +987,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns the total number of connections
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Total number of connections</returns>
         public static int TotalNumConnections()
         {
             lock (globalDictAndDelegateLocker)
@@ -989,10 +995,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the total number of connections where the remoteEndPoint.Address matches the provided IP address
+        /// Returns the total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint"/> matches the provided <see cref="IPAddress"/>
         /// </summary>
-        /// <param name="matchIP">The IP address to match</param>
-        /// <returns></returns>
+        /// <param name="matchIP">The <see cref="IPAddress"/> to match</param>
+        /// <returns>Total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint "/> matches the provided <see cref="IPAddress"/></returns>
         public static int TotalNumConnections(IPAddress matchIP)
         {
             lock (globalDictAndDelegateLocker)
@@ -1011,7 +1017,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Close all connections of the provided type, e.g. TCP, UDP etc
+        /// Close all connections of the provided <see cref="ConnectionType"/>
         /// </summary>
         /// <param name="connectionType">The type of connections to be closed</param>
         public static void CloseAllConnections(ConnectionType connectionType)
@@ -1020,10 +1026,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Close all connections of the provided type except to provided endPoints.
+        /// Close all connections of the provided <see cref="ConnectionType"/> except to provided <see cref="IPEndPoint"/> array.
         /// </summary>
-        /// <param name="connectionTypeToClose">The type of connections to be closed. ConnectionType.Undefined matches ALL connection types</param>
-        /// <param name="closeAllExceptTheseEndPoints">Close all except those with provided endPoints</param>
+        /// <param name="connectionTypeToClose">The type of connections to be closed. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="closeAllExceptTheseEndPoints">Close all except those with provided <see cref="IPEndPoint"/> array</param>
         public static void CloseAllConnections(ConnectionType connectionTypeToClose, IPEndPoint[] closeAllExceptTheseEndPoints)
         {
             List<Connection> connectionsToClose;
@@ -1042,10 +1048,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of all connections matching the provided connectionType
+        /// Returns a list of all connections matching the provided <see cref="ConnectionType"/>
         /// </summary>
-        /// <param name="connectionType">The type of connections to return. ConnectionType.Undefined matches ALL connection types</param>
-        /// <returns></returns>
+        /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
         public static List<Connection> RetrieveConnection(ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
@@ -1060,29 +1066,32 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a list of all connections
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
         public static List<Connection> RetrieveConnection()
         {
             return RetrieveConnection(ConnectionType.Undefined);
         }
 
         /// <summary>
-        /// Retrieve a list of existing connections with the provided networkIdentifier of the provided ConnectionType. Returns null if the requested connections do not exist.
+        /// Retrieve a list of connections with the provided <see cref="ShortGuid"/> networkIdentifier of the provided <see cref="ConnectionType"/>.
         /// </summary>
-        /// <param name="networkIdentifier"></param>
-        /// <param name="connectionType"></param>
-        /// <returns></returns>
+        /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
+        /// <returns>A list of connections to the desired peer. If no matching connections exist returns empty list.</returns>
         public static List<Connection> RetrieveConnection(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
+            List<Connection> resultList;
             lock (globalDictAndDelegateLocker)
-                return (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+                resultList = (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+
+            return (resultList == null ? new List<Connection>() : resultList);
         }
 
         /// <summary>
-        /// Retrieve an existing connection with the provided ConnectionInfo. Returns null if the requested connection does not exist.
+        /// Retrieve an existing connection with the provided ConnectionInfo.
         /// </summary>
-        /// <param name="connectionInfo"></param>
-        /// <returns></returns>
+        /// <param name="connectionInfo">ConnectionInfo corresponding with the desired connection</param>
+        /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection RetrieveConnection(ConnectionInfo connectionInfo)
         {
             lock (globalDictAndDelegateLocker)
@@ -1090,21 +1099,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Retrieve an existing connection with the provided IPEndPoint of the provided ConnectionType. Returns null if the requested connection does not exist.
+        /// Retrieve an existing connection with the provided <see cref="IPEndPoint"/> of the provided <see cref="ConnectionType"/>.
         /// </summary>
-        /// <param name="IPEndPoint"></param>
-        /// <param name="connectionType"></param>
-        /// <returns></returns>
-        public static Connection RetrieveConnection(IPEndPoint IPEndPoint, ConnectionType connectionType)
+        /// <param name="remoteEndPoint">IPEndPoint corresponding with the desired connection</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
+        /// <returns>The desired connection. If no matching connection exists returns null.</returns>
+        public static Connection RetrieveConnection(IPEndPoint remoteEndPoint, ConnectionType connectionType)
         {
             lock (globalDictAndDelegateLocker)
             {
                 //return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
                 //return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint select current.Value[connectionType]).FirstOrDefault();
-                if (allConnectionsByEndPoint.ContainsKey(IPEndPoint))
+                if (allConnectionsByEndPoint.ContainsKey(remoteEndPoint))
                 {
-                    if (allConnectionsByEndPoint[IPEndPoint].ContainsKey(connectionType))
-                        return allConnectionsByEndPoint[IPEndPoint][connectionType];
+                    if (allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType))
+                        return allConnectionsByEndPoint[remoteEndPoint][connectionType];
                     else
                         return null;
                 }
@@ -1114,11 +1123,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a connection exists with the provided networkIdentifier and ConnectionType
+        /// Check if a connection exists with the provided networkIdentifier and ConnectionType
         /// </summary>
-        /// <param name="networkIdentifier"></param>
-        /// <param name="connectionType"></param>
-        /// <returns></returns>
+        /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
+        /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
             if (loggingEnabled) logger.Trace("Checking by identifier and endPoint for existing " + connectionType + " connection to " + networkIdentifier);
@@ -1136,11 +1145,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a connection exists with the provided IPEndPoint and ConnectionType
+        /// Check if a connection exists with the provided IPEndPoint and ConnectionType
         /// </summary>
-        /// <param name="remoteEndPoint"></param>
-        /// <param name="connectionType"></param>
-        /// <returns></returns>
+        /// <param name="remoteEndPoint">IPEndPoint corresponding with the desired connection</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
+        /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(IPEndPoint remoteEndPoint, ConnectionType connectionType)
         {
             if (loggingEnabled) logger.Trace("Checking by endPoint for existing " + connectionType + " connection to " + remoteEndPoint.Address + ":" + remoteEndPoint.Port);

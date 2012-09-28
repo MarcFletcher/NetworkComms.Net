@@ -37,12 +37,12 @@ namespace NetworkCommsDotNet
         static Thread newIncomingConnectionWorker;
 
         /// <summary>
-        /// By default usage of the nagle algorithm is disabled. If you wish it to be used for established connections set this property to true.
+        /// By default usage of <see href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's algorithm</see> during TCP exchanges is disabled for performance reasons. If you wish it to be used for newly established connections set this property to true.
         /// </summary>
         public static bool EnableNagleAlgorithmForNewConnections { get; set; }
 
         /// <summary>
-        /// Accept new incoming TCP connections on default IP's and Port's
+        /// Accept new incoming TCP connections on all allowed IP's and Port's
         /// </summary>
         public static void AddNewLocalListener()
         {
@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Accept new incoming TCP connections on specified IPEndPoint
+        /// Accept new incoming TCP connections on specified <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
@@ -125,7 +125,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Accept new TCP connections on specified IPEndPoints
+        /// Accept new TCP connections on specified list of <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random</param>
@@ -145,10 +145,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an endPoint corresponding to a possible local listener on the provided ipAddress. If not listening on provided IP returns null.
+        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
         /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <returns></returns>
+        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
+        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
         public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
         {
             lock (staticTCPConnectionLocker)
@@ -156,9 +156,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of all current TCP local IPEndPoint listeners
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners
         /// </summary>
-        /// <returns></returns>
+        /// <returns>List of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners</returns>
         public static List<IPEndPoint> CurrentLocalEndPoints()
         {
             lock (staticTCPConnectionLocker)
@@ -168,7 +168,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns true if there is atleast one local TCP listeners
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True if there is atleast one local TCP listeners</returns>
         public static bool ListeningForConnections()
         {
             lock (staticTCPConnectionLocker)

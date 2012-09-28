@@ -132,7 +132,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>
         /// </summary>
-        /// <param name="remoteEndPoint"></param>
+        /// <param name="remoteEndPoint">The end point corresponding with the remote target</param>
         public ConnectionInfo(IPEndPoint remoteEndPoint)
         {
             this.RemoteEndPoint = remoteEndPoint;
@@ -142,8 +142,9 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>.
         /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <param name="port"></param>
+        /// <param name="ipAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
+        /// <param name="port">The available port of the remote target. 
+        /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
         public ConnectionInfo(string ipAddress, int port)
         {
             this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(ipAddress),port);
@@ -287,7 +288,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Replaces the current networkIdentifier with that provided
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="networkIdentifier">The new networkIdentifier for this connectionInfo</param>
         public void SetNetworkIdentifer(ShortGuid networkIdentifier)
         {
             NetworkIdentifier = networkIdentifier;
@@ -296,9 +297,9 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Compares two <see cref="ConnectionInfo"/> objects and returns true if both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
+        /// <param name="x">Connection info to compare</param>
+        /// <param name="y">Connection info to compare</param>
+        /// <returns>True if networkIdentifiers and endPoints are equal otherwise false</returns>
         public bool Equals(ConnectionInfo x, ConnectionInfo y)
         {
             return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString() && x.RemoteEndPoint.Equals(y.RemoteEndPoint));
@@ -317,7 +318,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a string containing suitable information about this connection
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A string containing suitable information about this connection</returns>
         public override string ToString()
         {
             string returnString = "[" + ConnectionType + "] ";
@@ -334,6 +335,5 @@ namespace NetworkCommsDotNet
 
             return returnString.Trim();
         }
-
     }
 }

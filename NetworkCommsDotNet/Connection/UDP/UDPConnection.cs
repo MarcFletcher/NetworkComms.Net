@@ -24,7 +24,6 @@ using System.Threading;
 
 namespace NetworkCommsDotNet
 {
-    //Maximum packet size is theoretically 65,507 bytes
     public partial class UDPConnection : Connection
     {
         UdpClientThreadSafe udpClientThreadSafe;
@@ -40,14 +39,14 @@ namespace NetworkCommsDotNet
         bool isIsolatedUDPConnection = false;
 
         /// <summary>
-        /// Constructor for a UDP connection
+        /// Internal constructor for UDP connections
         /// </summary>
         /// <param name="connectionInfo"></param>
         /// <param name="defaultSendReceiveOptions"></param>
         /// <param name="level"></param>
         /// <param name="listenForIncomingPackets"></param>
         /// <param name="existingConnection"></param>
-        protected UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
+        private UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
             udpLevel = level;
@@ -105,10 +104,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Close this UDP connection
+        /// Executes UDP specific shutdown tasks
         /// </summary>
-        /// <param name="closeDueToError"></param>
-        /// <param name="logLocation"></param>
+        /// <param name="closeDueToError">True if closing connection due to error</param>
+        /// <param name="logLocation">An optional debug parameter.</param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
@@ -119,7 +118,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send a packet to the RemoteEndPoint specified in the ConnectionInfo
         /// </summary>
-        /// <param name="packet"></param>
+        /// <param name="packet">Packet to send</param>
         protected override void SendPacketSpecific(Packet packet)
         {
             if (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
@@ -145,10 +144,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send a packet to the specified ipEndPoint. The ability to do this is a perculiarty of UDP owing to its connectionless design.
+        /// Send a packet to the specified ipEndPoint. This feature is unique to UDP because of its connectionless structure.
         /// </summary>
-        /// <param name="packet"></param>
-        /// <param name="ipEndPoint"></param>
+        /// <param name="packet">Packet to send</param>
+        /// <param name="ipEndPoint">The target ipEndPoint</param>
         private void SendPacketSpecific(Packet packet, IPEndPoint ipEndPoint)
         {
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
@@ -217,7 +216,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Incoming data listen async method
         /// </summary>
-        /// <param name="ar"></param>
+        /// <param name="ar">Call back state data</param>
         protected void IncomingUDPPacketHandler(IAsyncResult ar)
         {
             UdpClientThreadSafe client = (UdpClientThreadSafe)ar.AsyncState;

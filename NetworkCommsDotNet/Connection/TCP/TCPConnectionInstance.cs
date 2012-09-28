@@ -30,7 +30,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Asynchronous incoming connection data delegate
         /// </summary>
-        /// <param name="ar"></param>
+        /// <param name="ar">The call back state object</param>
         void IncomingTCPPacketHandler(IAsyncResult ar)
         {
             //Incoming data always gets handled in a timeCritical fashion at this point
@@ -239,7 +239,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Closes the TCP connection
+        /// Closes the <see cref="TCPConnection"/>
         /// </summary>
         /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
         /// <param name="logLocation">Optional debug parameter.</param>
@@ -283,7 +283,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Sends the provided packet to the remote end point
         /// </summary>
-        /// <param name="packet"></param>
+        /// <param name="packet">Packet to send</param>
         protected override void SendPacketSpecific(Packet packet)
         {
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write

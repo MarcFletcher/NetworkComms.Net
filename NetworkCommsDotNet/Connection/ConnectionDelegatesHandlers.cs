@@ -33,7 +33,7 @@ namespace NetworkCommsDotNet
         protected object delegateLocker = new object();
 
         /// <summary>
-        /// The default SendReceiveOptions used for this connection
+        /// The default <see cref="SendReceiveOptions"/> used for this connection
         /// </summary>
         public SendReceiveOptions ConnectionDefaultSendReceiveOptions { get; protected set; }
 
@@ -189,10 +189,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the packet type unwrapper sendReceiveOptions. If no specific options are registered returns null
+        /// Returns the packet type sendReceiveOptions possibly used to unwrap incoming data. If no specific options are registered returns null
         /// </summary>
-        /// <param name="packetTypeStr"></param>
-        /// <returns></returns>
+        /// <param name="packetTypeStr">The packet type for which the <see cref="SendReceiveOptions"/> are required.</param>
+        /// <returns>The requested <see cref="SendReceiveOptions"/> otherwise null</returns>
         public SendReceiveOptions PacketTypeUnwrapperOptions(string packetTypeStr)
         {
             SendReceiveOptions options = null;
@@ -213,7 +213,7 @@ namespace NetworkCommsDotNet
         /// <typeparam name="T">The type of incoming object</typeparam>
         /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
-        /// <param name="options">The SendReceiveOptions to be used for the provided packet type</param>
+        /// <param name="options">The <see cref="SendReceiveOptions"/> to be used for the provided packet type</param>
         public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options)
         {
             lock (delegateLocker)
@@ -335,7 +335,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Add a connection specific shutdown delegate
         /// </summary>
-        /// <param name="handlerToAppend"></param>
+        /// <param name="handlerToAppend">The delegate to call when a connection is shutdown</param>
         public void AppendShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToAppend)
         {
             lock (delegateLocker)
@@ -352,7 +352,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Remove a connection specific shutdown delegate.
         /// </summary>
-        /// <param name="handlerToRemove"></param>
+        /// <param name="handlerToRemove">The delegate to remove for shutdown events</param>
         public void RemoveShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToRemove)
         {
             lock (delegateLocker)

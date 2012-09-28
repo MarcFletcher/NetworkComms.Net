@@ -37,6 +37,8 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
+            var result = NetworkComms.RetrieveConnection(ShortGuid.Empty, ConnectionType.Undefined);
+
             //Configure the logger here
             NameValueCollection properties = new NameValueCollection();
             properties["configType"] = "FILE";

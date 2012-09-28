@@ -28,7 +28,7 @@ namespace NetworkCommsDotNet
     public abstract partial class Connection
     {
         /// <summary>
-        /// The packet builder for this connection
+        /// The <see cref="PacketBuilder"/> for this connection
         /// </summary>
         protected PacketBuilder packetBuilder;
 
@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Attempts to use the data provided in packetBuilder to recreate something usefull. If we don't have enough data yet that value is set in packetBuilder.
         /// </summary>
-        /// <param name="packetBuilder"></param>
+        /// <param name="packetBuilder">The <see cref="PacketBuilder"/> containing incoming cached data</param>
         protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
         {
             //ThreadPriority is NetworkComms.timeCriticalThreadPriority
@@ -186,8 +186,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Once we have received all incoming data we can handle it further.
         /// </summary>
-        /// <param name="packetBytes"></param>
-        protected void CompleteIncomingPacketWorker(object packetBytes)
+        /// <param name="packetBytes">The whole packet as a serialised byte array</param>
+        private void CompleteIncomingPacketWorker(object packetBytes)
         {
             try
             {
@@ -301,7 +301,7 @@ namespace NetworkCommsDotNet
         /// Handle an incoming CheckSumFailResend packet type
         /// </summary>
         /// <param name="packetDataSection"></param>
-        protected void CheckSumFailResendHandler(byte[] packetDataSection)
+        private void CheckSumFailResendHandler(byte[] packetDataSection)
         {
             //If we have been asked to resend a packet then we just go through the list and resend it.
             SentPacket packetToReSend;

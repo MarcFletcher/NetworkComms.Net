@@ -33,10 +33,10 @@ namespace NetworkCommsDotNet
         static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
 
         /// <summary>
-        /// Attempts to guess the best local IP address of this machine for accessing the provided targetIP.
+        /// Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing the provided target <see cref="IPAddress"/>.
         /// </summary>
         /// <param name="targetIPAddress">The target IP which should be used to determine the best adaptor. e.g. Either a local network or public IP address.</param>
-        /// <returns></returns>
+        /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
         public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
             try

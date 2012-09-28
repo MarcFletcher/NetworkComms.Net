@@ -155,8 +155,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Return true if the connection is established within the provided timeout, otherwise false
         /// </summary>
-        /// <param name="waitTimeoutMS"></param>
-        /// <returns></returns>
+        /// <param name="waitTimeoutMS">Wait time in milliseconds before returning</param>
+        /// <returns>True if the wait was triggered, false otherwise after the provided timeout.</returns>
         protected bool WaitForConnectionEstablish(int waitTimeoutMS)
         {
             return connectionSetupWait.WaitOne(waitTimeoutMS);
@@ -165,7 +165,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Handle an incoming ConnectionSetup packet type
         /// </summary>
-        /// <param name="packetDataSection"></param>
+        /// <param name="packetDataSection">Serialised handshake data</param>
         private void ConnectionSetupHandler(byte[] packetDataSection)
         {
             //We should never be trying to handshake an established connection
