@@ -97,6 +97,10 @@ namespace NetworkCommsDotNet
             //If multiple matches are found then we rank by prefix order at the end
             //Credit: M.Fletcher & M.Dean
 
+            //We want to ignore IP's that have been autoassigned
+            IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
+            IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
+
             return (from current in NetworkInterface.GetAllNetworkInterfaces()
                     where
                         //First we need to select interfaces that contain address information
@@ -112,6 +116,7 @@ namespace NetworkCommsDotNet
                         //Once we have adaptors that contain address information we are after the address
                     from inside in current.GetIPProperties().UnicastAddresses
                     where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
+                        !(IsAddressInSubnet(inside.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4)) &&
                         (AllowedAdaptorNames == null ? true : AllowedAdaptorNames.Contains(current.Id))
                     //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
                     select inside.Address
@@ -130,6 +135,32 @@ namespace NetworkCommsDotNet
                             return int.MaxValue;
                         }
                     }).Where(ip => { return ip != IPAddress.None; }).ToList();
+        }
+
+        /// <summary>
+        /// Returns true if the provided address exists within the provided subnet.
+        /// </summary>
+        /// <param name="address">The address to check, i.e. 192.168.0.10</param>
+        /// <param name="subnet">The subnet, i.e. 192.168.0.0</param>
+        /// <param name="mask">The subnet mask, i.e. 255.255.255.0</param>
+        /// <returns>True if address is in the provided subnet</returns>
+        public static bool IsAddressInSubnet(IPAddress address, IPAddress subnet, IPAddress mask)
+        {
+            byte[] addrBytes = address.GetAddressBytes();
+            byte[] maskBytes = mask.GetAddressBytes();
+            byte[] maskedAddressBytes = new byte[addrBytes.Length];
+
+            //Catch for IPv6
+            if (maskBytes.Length < maskedAddressBytes.Length)
+                return false;
+
+            for (int i = 0; i < maskedAddressBytes.Length; ++i)
+                maskedAddressBytes[i] = (byte)(addrBytes[i] & maskBytes[i]);
+
+            IPAddress maskedAddress = new IPAddress(maskedAddressBytes);
+            bool equal = subnet.Equals(maskedAddress);
+
+            return equal;
         }
 
         /// <summary>

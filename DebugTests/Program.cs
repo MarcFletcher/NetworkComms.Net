@@ -46,6 +46,7 @@ namespace DebugTests
             //properties["showDateTime"] = "true";
             //properties["showLogName"] = "false";
             //properties["level"] = "All";
+
             //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
             NetworkComms.PreferredIPPrefixs = new string[] { "131.111" };

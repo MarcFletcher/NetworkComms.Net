@@ -57,9 +57,8 @@ namespace DistributedFileSystem
         internal static bool DFSShutdownRequested { get; private set; }
         public static bool DFSInitialised { get; private set; }
 
-        static Dictionary<string, List<int>> setupPortHandOutDict = new Dictionary<string, List<int>>();
-        static int maxHandOutPeerPort = 9700;
-        static int minHandOutPeerPort = 9600;
+        public static int MinTargetLocalPort { get; set; }
+        public static int MaxTargetLocalPort { get; set; }
 
         static Thread linkWorkerThread;
         static string linkTargetIP;
@@ -84,6 +83,9 @@ namespace DistributedFileSystem
 
         static DFS()
         {
+            MinTargetLocalPort = 10001;
+            MaxTargetLocalPort = 10999;
+
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
@@ -92,49 +94,18 @@ namespace DistributedFileSystem
         /// <summary>
         /// Initialises the DFS to run on the current local IP and default comms port.
         /// </summary>
-        public static void InitialiseDFS(bool initialiseDFSStartupServer = false)
+        public static void InitialiseDFS(int intialPort, bool rangeRandomPortFailover = true)
         {
-            CompleteInitialise();
-
-            //If we need a startup server then we do that here
-            if (initialiseDFSStartupServer)
-                NetworkComms.AppendGlobalIncomingPacketHandler<int>("DFS_Setup", IncomingPeerStartup);
+            CompleteInitialise(intialPort, rangeRandomPortFailover);
         }
 
-        /// <summary>
-        /// Initialises the DFS but first contacts the startup server to retrieve startup information.
-        /// </summary>
-        public static void InitialiseDFS(string startupServerIP, int startupServerPort)
+        private static void CompleteInitialise(int initialPort, bool rangeRandomPortFailover)
         {
             try
             {
-                //Contact server here
-                //int newCommsPort = NetworkComms.SendReceiveObject<int>("DFS_Setup", startupServerIP, startupServerPort, false, "DFS_Setup", 30000, 0);
-                int newCommsPort = TCPConnection.CreateConnection(new ConnectionInfo(startupServerIP, startupServerPort)).SendReceiveObject<int>("DFS_Setup", "DFS_Setup", 30000, 0);
+                if (TCPConnection.CurrentLocalEndPoints().Count > 0)
+                    throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
-                //We need to shutdown comms otherwise we can't change the comms port
-                NetworkComms.Shutdown();
-                NetworkComms.DefaultListenPort = newCommsPort;
-
-                Console.WriteLine(" ... data server suggested DFS listening port of {0}", newCommsPort);
-            }
-            catch (CommsException)
-            {
-
-            }
-            catch (Exception e)
-            {
-                NetworkComms.LogError(e, "Error_DFSInitialise", "startupServerIP - " + startupServerIP + ", startupServerPort - " + startupServerPort);
-            }
-
-            //Once we have the startup data we can finish the initialisation
-            CompleteInitialise();
-        }
-
-        private static void CompleteInitialise()
-        {
-            try
-            {
                 //Load the allowed ip addresses
                 LoadAllowedDisallowedPeerIPs();
 
@@ -159,12 +130,37 @@ namespace DistributedFileSystem
 
                 NetworkComms.AppendGlobalConnectionCloseHandler(DFSConnectionShutdown);
 
-                if (DFS.loggingEnabled) DFS.logger.Debug("DFS Initialised.");
-
                 NetworkComms.IgnoreUnknownPacketTypes = true;
-                TCPConnection.AddNewLocalListener();
 
-                Console.WriteLine(" ... initialised DFS on {0}:{1}", NetworkComms.AllAvailableLocalIPs()[0], NetworkComms.DefaultListenPort);
+                #region OpenIncomingPorts
+                List<IPAddress> availableIPAddresses = NetworkComms.AllAvailableLocalIPs();
+                List<IPEndPoint> localEndPointAttempts;
+                try
+                {
+                    localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
+                    TCPConnection.AddNewLocalListener(localEndPointAttempts, false);
+                }
+                catch (Exception)
+                {
+                    if (rangeRandomPortFailover)
+                    {
+                        for (int tryPort = MinTargetLocalPort; tryPort <= MaxTargetLocalPort; tryPort++)
+                        {
+                            try
+                            {
+                                localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
+                                TCPConnection.AddNewLocalListener(localEndPointAttempts, false);
+                                break;
+                            }
+                            catch (Exception) { }
+                        }
+                    }
+                    else
+                        throw;
+                }
+                #endregion
+
+                if (DFS.loggingEnabled) DFS.logger.Info("Initialised DFS");
             }
             catch (Exception e)
             {
@@ -630,12 +626,6 @@ namespace DistributedFileSystem
                         //Remove peer from any items
                         foreach (var item in swarmedItemsDict)
                             item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
-
-                        //ConnectionInfo peerConnInfo = NetworkComms.ConnectionIdToConnectionInfo(disconnectedConnectionIdentifier);
-                        string ipString = connection.ConnectionInfo.RemoteEndPoint.Address.ToString();
-
-                        if (setupPortHandOutDict.ContainsKey(ipString))
-                            setupPortHandOutDict[ipString].Remove(connection.ConnectionInfo.RemoteEndPoint.Port);
                     }
 
                     if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown triggered for peer " + connection + ".");
@@ -649,67 +639,6 @@ namespace DistributedFileSystem
                     NetworkComms.LogError(e, "Error_DFSConnectionShutdown");
                 }
             }));
-        }
-
-        private static void IncomingPeerStartup(PacketHeader packetHeader, Connection connection, int incomingObject)
-        {
-            try
-            {
-                //We need to provide a port between max and min
-                //We could just start with the max and go down
-                int portToReturn = maxHandOutPeerPort;
-
-                //ConnectionInfo peerConnInfo = NetworkComms.ConnectionIdToConnectionInfo(sourceConnectionId);
-
-                lock (globalDFSLocker)
-                {
-                    string clientIP = connection.ConnectionInfo.RemoteEndPoint.Address.ToString();
-
-                    //For each item we go through all the peers to see if we already have an existing peer with that ip address
-                    for (int i = maxHandOutPeerPort; i > 0; i--)
-                    {
-                        //This first 'if' alone is NOT sufficient to decide a port number
-                        //i.e. we may end up returning this port number to several peers at the same time if neither quickly reconnects
-                        if (!NetworkComms.ConnectionExists(new System.Net.IPEndPoint(connection.ConnectionInfo.RemoteEndPoint.Address, i), ConnectionType.TCP))
-                        {
-                            //This later check will make sure we don't hand the same port out in quick succession
-                            if (!setupPortHandOutDict.ContainsKey(clientIP)) setupPortHandOutDict.Add(clientIP, new List<int>());
-
-                            if (!setupPortHandOutDict[clientIP].Contains(i))
-                            {
-                                setupPortHandOutDict[clientIP].Add(i);
-                                portToReturn = i;
-                                break;
-                            }
-                        }
-                    }
-
-                    //We only contain a list of the last half ports to be handed out
-                    if (setupPortHandOutDict[clientIP].Count > (maxHandOutPeerPort - minHandOutPeerPort) / 2)
-                    {
-                        setupPortHandOutDict[clientIP] = (from current in setupPortHandOutDict[clientIP].Select((item, index) => new { index, item }) 
-                                                where current.index > (maxHandOutPeerPort - minHandOutPeerPort) / 2 
-                                                select current.item).ToList();
-                    }
-
-                    if (portToReturn < minHandOutPeerPort)
-                        throw new Exception("Unable to choose an appropriate port to return. Consider increasing available range. Attempted to assign port " + portToReturn +
-                            " to " + connection.ConnectionInfo.NetworkIdentifier + " at " + clientIP + ". Starting at port " + maxHandOutPeerPort + ". " +
-                            NetworkComms.TotalNumConnections(IPAddress.Parse(clientIP)) + " total existing connections from IP.");
-                }
-
-                //Return the selected port
-                //NetworkComms.SendObject("DFS_Setup", sourceConnectionId, false, portToReturn);
-                connection.SendObject("DFS_Setup", portToReturn);
-            }
-            catch (CommsException)
-            {
-
-            }
-            catch (Exception e)
-            {
-                NetworkComms.LogError(e, "Error_DFSPeerStartup");
-            }
         }
 
         /// <summary>
@@ -735,10 +664,10 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //NetworkComms.SendObject("DFS_KnownPeersUpdate", sourceConnectionId, false, new string[] { "" });
-                    connection.SendObject("DFS_KnownPeersUpdate", new string[] { "" });
+                    connection.SendObject("DFS_KnownPeersUpdate", new string[] { "" }, nullCompressionSRO);
                 else
                     //NetworkComms.SendObject("DFS_KnownPeersUpdate", sourceConnectionId, false, selectedItem.SwarmChunkAvailability.AllPeerEndPoints());
-                    connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints());
+                    connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints(), nullCompressionSRO);
             }
             catch (CommsException)
             {
@@ -880,11 +809,11 @@ namespace DistributedFileSystem
                 {
                     //First reply and say the peer can't have the requested data. This prevents a request timing out
                     //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), ProtobufSerializer.Instance, NullCompressor.Instance);
-                    connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable));
+                    connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
                     //Inform peer that we don't actually have the requested item
                     //NetworkComms.SendObject("DFS_ItemRemovalUpdate", sourceConnectionId, false, incomingRequest.ItemCheckSum);
-                    connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum);
+                    connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
                 }
                 else
                 {
@@ -892,11 +821,11 @@ namespace DistributedFileSystem
                     {
                         //First reply and say the peer can't have the requested data. This prevents a request timing out
                         //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), ProtobufSerializer.Instance, NullCompressor.Instance);
-                        connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable));
+                        connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
                         //If the peer thinks we have a chunk we dont we send them an update so that they are corrected
                         //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                        connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)));
+                        connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
                     }
                     else
                     {
@@ -904,7 +833,7 @@ namespace DistributedFileSystem
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
-                            connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy));
+                            connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
                         }
                         else
                         {
@@ -1056,10 +985,10 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //NetworkComms.SendObject("DFS_ItemRemovalUpdate", sourceConnectionId, false, itemCheckSum);
-                    connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum);
+                    connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
                 else
                     //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                    connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)));
+                    connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
 
                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }
@@ -1143,7 +1072,7 @@ namespace DistributedFileSystem
                 //If this link request is from the original requester then we reply with our own items list
                 if (!linkRequestData.LinkRequestReply)
                     //NetworkComms.SendObject("DFS_ItemLinkRequest", sourceConnectionId, false, new DFSLinkRequest(localItemKeys, true));
-                    connection.SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(localItemKeys, true));
+                    connection.SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(localItemKeys, true), nullCompressionSRO);
             }
             catch (CommsException e)
             {

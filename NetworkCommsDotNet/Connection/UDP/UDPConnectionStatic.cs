@@ -140,7 +140,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Listen for incoming UDP packets on all allowed local IP's on default port
+        /// Listen for incoming UDP packets on all allowed local IP's on default port.
         /// </summary>
         public static void AddNewLocalListener()
         {
@@ -177,7 +177,7 @@ namespace NetworkCommsDotNet
         /// Listen for incoming UDP packets on specified <see cref="IPEndPoint"/>. 
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (udpClientListenerLocker)
@@ -220,7 +220,7 @@ namespace NetworkCommsDotNet
         /// Listen for incoming UDP packets on provided list of <see cref="IPEndPoint"/>. 
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try

@@ -79,7 +79,7 @@ namespace NetworkCommsDotNet
         /// Accept new incoming TCP connections on specified <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
@@ -128,7 +128,7 @@ namespace NetworkCommsDotNet
         /// Accept new TCP connections on specified list of <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try

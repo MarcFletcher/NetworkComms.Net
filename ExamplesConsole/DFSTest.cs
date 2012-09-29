@@ -88,7 +88,7 @@ namespace ExamplesConsole
                     Console.WriteLine(" ... " + connectionId + " - " + incomingString);
                 };
 
-                DFS.InitialiseDFS(true);
+                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 NetworkComms.AppendGlobalConnectionEstablishHandler(clientEstablishDelegate);
@@ -97,7 +97,7 @@ namespace ExamplesConsole
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientInfo", InfoDelegate);
                 //TCPConnection.AddNewLocalListener();
 
-                Console.WriteLine("Listening for incoming objects on:");
+                Console.WriteLine("\nListening for incoming connections on:");
                 foreach (IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints())
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
@@ -151,15 +151,14 @@ namespace ExamplesConsole
                     {
                         #region Stats
                         Console.WriteLine("\nCurrent Stats:");
-                        Console.WriteLine("\t{0} comms connections.",NetworkComms.TotalNumConnections());
+                        Console.WriteLine("{0} comms connections.",NetworkComms.TotalNumConnections());
 
                         if (NetworkComms.TotalNumConnections() > 0)
                         {
-                            Console.Write("\tConnections with: ");
+                            Console.WriteLine("Connections with: ");
                             var connections = NetworkComms.RetrieveConnection();
                             foreach (var connection in connections)
-                                Console.Write("({0}) ,", connection.ConnectionInfo);
-                            Console.WriteLine("");
+                                Console.WriteLine("\t{0}", connection.ConnectionInfo);
                         }
                         #endregion
                     }
@@ -176,7 +175,7 @@ namespace ExamplesConsole
                 ConnectionInfo serverConnectionInfo;
                 ExampleHelper.GetServerDetails(out serverConnectionInfo);
 
-                DFS.InitialiseDFS(serverConnectionInfo.RemoteEndPoint.Address.ToString(), serverConnectionInfo.RemoteEndPoint.Port);
+                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 bool shutDown = false;
