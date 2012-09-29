@@ -330,7 +330,7 @@ namespace DistributedFileSystem
 
                                         newRequestCount++;
 
-                                        AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.RemoteEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.RemoteEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                        AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                         itemBuildTrackerDict.Add(chunkRarity[i], newChunkRequest);
 
@@ -395,7 +395,7 @@ namespace DistributedFileSystem
                                                 //We can now add the new request to the build dictionaries
                                                 ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i]);
 
-                                                AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.RemoteEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.RemoteEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                                AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                                 if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                                     newRequests[currentRequestConnectionInfo[i]].Add(newChunkRequest);
@@ -458,27 +458,20 @@ namespace DistributedFileSystem
                                     #region RequestChunkFromPeer
                                     //Console.WriteLine("({0}) requesting chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
 
-                                    //We may already have an existing connection to the peer
-                                    if (NetworkComms.ConnectionExists(request.Key.NetworkIdentifier, ConnectionType.TCP))
-                                        NetworkComms.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Key.NetworkIdentifier, false, request.Value[i]);
-                                    else
-                                    {
-                                        ShortGuid establishedIdentifier = ShortGuid.Empty;
-                                        NetworkComms.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Key.RemoteEndPoint.Address.ToString(), request.Key.RemoteEndPoint.Port, false, request.Value[i], ref establishedIdentifier);
+                                    TCPConnection peerConnection = TCPConnection.CreateConnection(new ConnectionInfo(request.Key.LocalEndPoint));
+                                    peerConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i]);
 
-                                        //We can double check here that the ip address we have just succesfully connected to is still the same peer as in the swarm info
-                                        if (establishedIdentifier != request.Key.NetworkIdentifier)
-                                        {
-                                            //If not we have no idea what chunks the new peer might have
-                                            //Start by removing the old peer
-                                            SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
-                                            //Request an availability update from the one we just connected to
-                                            //It's possible it will have sent one because of the DFS_ChunkAvailabilityInterestRequest but this makes double sure
-                                            NetworkComms.SendObject("DFS_ChunkAvailabilityRequest", establishedIdentifier, false, ItemCheckSum);
-                                        }
+                                    //We can double check here that the ip address we have just succesfully connected to is still the same peer as in the swarm info
+                                    if (peerConnection.ConnectionInfo.NetworkIdentifier != request.Key.NetworkIdentifier)
+                                    {
+                                        //If not we have no idea what chunks the new peer might have
+                                        //Start by removing the old peer
+                                        SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
+                                        //Request an availability update from the one we just connected to
+                                        //It's possible it will have sent one because of the DFS_ChunkAvailabilityInterestRequest but this makes double sure
+                                        peerConnection.SendObject("DFS_ChunkAvailabilityRequest", ItemCheckSum);
                                     }
                                     #endregion
-
                                     //Console.WriteLine("      ..({0}) chunk {1} requested from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
                                 }
                             }
@@ -690,7 +683,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the a copy of the bytes corresponding to the requested chunkIndex. Returns null is chunk is highly popular.
+        /// Returns the a copy of the bytes corresponding to the requested chunkIndex.
         /// </summary>
         /// <param name="chunkIndex"></param>
         /// <returns></returns>

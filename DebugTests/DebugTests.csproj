@@ -53,11 +53,16 @@
   <ItemGroup>
     <Compile Include="BasicSend.cs" />
     <Compile Include="DebugTest.cs" />
+    <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
+      <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
+      <Name>DistributedFileSystem</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
       <Name>DPSBase</Name>
@@ -81,7 +86,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="log4net.config">
+    <None Include="log4net_comms.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="log4net_dfs.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

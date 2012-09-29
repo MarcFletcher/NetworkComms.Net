@@ -8,7 +8,7 @@ using System.Threading;
 using DPSBase;
 using System.Net;
 
-namespace ExamplesConsole
+namespace DebugTests
 {
     static class DFSTest
     {

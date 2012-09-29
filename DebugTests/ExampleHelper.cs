@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using NetworkCommsDotNet;
 
 namespace DebugTests
 {
     /// <summary>
-    /// A static class which provides implementation possibly shared across all examples
+    /// Provides implementation shared across examples
     /// </summary>
     public static class ExampleHelper
     {
@@ -14,14 +15,13 @@ namespace DebugTests
         static int lastServerPort = -1;
 
         /// <summary>
-        /// Request user provides server details and returns the result. Performs the necessary validation and prevents code duplication across examples.
+        /// Request user to provide server details and returns the result as a <see cref="ConnectionInfo"/> object. Performs the necessary validation and prevents code duplication across examples.
         /// </summary>
-        /// <param name="serverIP"></param>
-        /// <param name="serverPort"></param>
-        public static void GetServerDetails(out string serverIP, out int serverPort)
+        /// <param name="connectionInfo"></param>
+        public static void GetServerDetails(out ConnectionInfo connectionInfo)
         {
             if (lastServerIP != "")
-                Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:",lastServerIP,lastServerPort);
+                Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:", lastServerIP, lastServerPort);
             else
                 Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:4000':");
 
@@ -34,17 +34,18 @@ namespace DebugTests
 
                     if (userEnteredStr.Trim() == "r" && lastServerIP != "")
                     {
-                        serverIP = lastServerIP;
-                        serverPort = lastServerPort;
+                        connectionInfo = new ConnectionInfo(lastServerIP, lastServerPort);
                         break;
                     }
                     else
                     {
-                        serverIP = userEnteredStr.Split(':')[0];
-                        serverPort = int.Parse(userEnteredStr.Split(':')[1]);
+                        string serverIP = userEnteredStr.Split(':')[0];
+                        int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
 
                         lastServerIP = serverIP;
                         lastServerPort = serverPort;
+
+                        connectionInfo = new ConnectionInfo(serverIP, serverPort);
                         break;
                     }
                 }

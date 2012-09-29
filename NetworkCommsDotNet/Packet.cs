@@ -54,8 +54,9 @@ namespace NetworkCommsDotNet
 
         private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
         {
-            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "")
-                throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
+            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
+
+            if (options == null) throw new ArgumentNullException("The provided SendReceiveOptions cannot be null.");
 
             if (packetObject == null)
                 this.packetData = new byte[0];

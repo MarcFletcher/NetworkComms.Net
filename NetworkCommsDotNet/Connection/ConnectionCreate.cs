@@ -107,10 +107,6 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionInfo);
 
-                    DateTime establishStartTime = DateTime.Now;
-
-                    //if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to establish new connection while comms is shutting down.");
-
                     EstablishConnectionSpecific();
 
                     if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Connection was closed during establish handshake.");
@@ -250,12 +246,11 @@ namespace NetworkCommsDotNet
                     {
                         //We need to check for a possible GUID clash
                         //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
-                        //It's far more likely we have a strange scenario where a remote peer is trying to establish a second independant connection (which should not really happen in the first place)
                         //but hey, we live in a crazy world!
                         if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
                         {
                             connectionSetupException = true;
-                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". Although technically near impossible some special (engineered) scenarios make this more probable.";
+                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
                         }
                         else if (connectionByEndPoint != this)
                         {

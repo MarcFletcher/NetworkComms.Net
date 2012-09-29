@@ -12,6 +12,7 @@ using log4net.Layout;
 using log4net.Appender;
 using System.Threading;
 using System.IO;
+using DistributedFileSystem;
 //using DistributedFileSystem;
 
 namespace DebugTests
@@ -20,14 +21,6 @@ namespace DebugTests
     {      
         static void Main(string[] args)
         {
-            //int a = 100;
-
-            //var bytes = SerializerBase.Protobuf.ProtobufSerializer.Instance.SerialiseDataObject(a, SerializerBase.NullCompressor.Instance);
-
-            //int b = SerializerBase.Protobuf.ProtobufSerializer.Instance.DeserialiseDataObject<int>(bytes, SerializerBase.NullCompressor.Instance);
-
-            //return;
-
             try
             {
                 Console.SetBufferSize(180, 500);
@@ -37,13 +30,17 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
-            var result = NetworkComms.RetrieveConnection(ShortGuid.Empty, ConnectionType.Undefined);
+            if (false)
+            {
+                //Configure the logger here
+                NameValueCollection properties = new NameValueCollection();
+                properties["configType"] = "FILE";
+                properties["configFile"] = "log4net_comms.config";
+                var logger = new Log4NetLoggerFactoryAdapter(properties);
 
-            //Configure the logger here
-            NameValueCollection properties = new NameValueCollection();
-            properties["configType"] = "FILE";
-            properties["configFile"] = "log4net.config";
-            NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+                NetworkComms.EnableLogging(logger);
+                DFS.EnableLogging(logger);
+            }
 
             //NameValueCollection properties = new NameValueCollection();
             //properties["showDateTime"] = "true";
@@ -51,10 +48,12 @@ namespace DebugTests
             //properties["level"] = "All";
             //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
+            NetworkComms.PreferredIPPrefixs = new string[] { "131.111" };
+
             //BasicSend.RunExample();
             //AliveTest.RunExample();
-            DebugTest.GoTCP();
-            //DFSTest.RunExample();
+            //DebugTest.GoTCP();
+            DFSTest.RunExample();
         }
     }
 }

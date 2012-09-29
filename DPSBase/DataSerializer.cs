@@ -72,6 +72,8 @@ namespace DPSBase
         /// <returns>Serialized array of bytes</returns>
         public byte[] SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            if (objectToSerialise == null) throw new ArgumentNullException("Provided paramater objectToSerialise should not be null.");
+
             //Check to see if the array serializer returns anything
             var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 
@@ -166,6 +168,8 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            if (receivedObjectBytes == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
+
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
             var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, typeof(T), dataProcessors, options);
 

@@ -325,6 +325,9 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
                     }
                 }
+
+                //If the connection is shutdown we should call close
+                if (ConnectionInfo.ConnectionShutdown) CloseConnection(false, -8);
             }
             catch (Exception)
             {

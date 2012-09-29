@@ -92,7 +92,7 @@ namespace NetworkCommsDotNet
         public bool ConnectionShutdown { get; private set; }
 
         /// <summary>
-        /// Returns the networkIdentifier of this peer as a ShortGuid
+        /// Returns the networkIdentifier of this peer as a ShortGuid. If the NetworkIdentifier has not yet been set returns ShortGuid.Empty.
         /// </summary>
         public ShortGuid NetworkIdentifier
         {
@@ -142,13 +142,28 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>.
         /// </summary>
-        /// <param name="ipAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
-        /// <param name="port">The available port of the remote target. 
+        /// <param name="remoteIPAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
+        /// <param name="remotePort">The available port of the remote target. 
         /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
-        public ConnectionInfo(string ipAddress, int port)
+        public ConnectionInfo(string remoteIPAddress, int remotePort)
         {
-            this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(ipAddress),port);
+            this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIPAddress),remotePort);
             this.ConnectionCreationTime = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Create a connectionInfo object which can be used to inform a remote peer of local connectivity
+        /// </summary>
+        /// <param name="connectionType">The type of connection</param>
+        /// <param name="localNetworkIdentifier">The local network identifier</param>
+        /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
+        /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
+        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
+        {
+            this.ConnectionType = connectionType;
+            this.NetworkIdentifier = localNetworkIdentifier;
+            this.LocalEndPoint = localEndPoint;
+            this.IsConnectable = isConnectable;
         }
 
         /// <summary>
@@ -179,21 +194,6 @@ namespace NetworkCommsDotNet
             this.RemoteEndPoint = remoteEndPoint;
             this.LocalEndPoint = localEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
-        }
-
-        /// <summary>
-        /// Create a connectionInfo object which can be used to inform a remote point of local information
-        /// </summary>
-        /// <param name="connectionType">The type of connection</param>
-        /// <param name="localNetworkIdentifier">The local network identifier</param>
-        /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
-        /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
-        internal ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
-        {
-            this.ConnectionType = connectionType;
-            this.NetworkIdentifier = localNetworkIdentifier;
-            this.LocalEndPoint = localEndPoint;
-            this.IsConnectable = isConnectable;
         }
 
         [ProtoBeforeSerialization]
@@ -331,6 +331,8 @@ namespace NetworkCommsDotNet
                     returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
                 else if (RemoteEndPoint != null)
                     returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
+                else if (LocalEndPoint != null)
+                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " " + (IsConnectable ? "Connectable" : "NotConnectable");
             }
 
             return returnString.Trim();

@@ -84,8 +84,8 @@ namespace NetworkCommsDotNet
         {
             lock (staticTCPConnectionLocker)
             {
-                if (tcpListenerDict.ContainsKey(newLocalEndPoint))
-                    throw new CommsSetupShutdownException("Provided newLocalEndPoint already exists in tcpListenerDict.");
+                //If as listener is already added there is not need to continue
+                if (tcpListenerDict.ContainsKey(newLocalEndPoint)) return;
 
                 TcpListener newListenerInstance;
 

@@ -141,12 +141,10 @@ namespace NetworkCommsDotNet
                                 incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"] != Enum.GetName(typeof(ThreadPriority), ThreadPriority.Normal))
                             {
                                 Thread newHandleThread = new Thread(CompleteIncomingPacketWorker);
-
-                                newHandleThread.Priority = incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ?
-                                    (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) :
-                                    ThreadPriority.Normal;
-                                
+                                newHandleThread.Priority = (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]);
                                 newHandleThread.Name = "CompleteIncomingPacketWorker-" + topPacketHeader.PacketType;
+
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching thread with priority '" + newHandleThread.Priority + "' to handle packet type '" + topPacketHeader.PacketType + "'. Loop index - " + loopCounter);
                                 newHandleThread.Start(completedData);
                             }
                             else

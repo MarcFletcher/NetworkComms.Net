@@ -52,7 +52,7 @@ namespace NetworkCommsDotNet
         {
             lock (udpRogueSenderCreationLocker)
             {
-                if (udpRogueSender == null)
+                if (udpRogueSender == null && !NetworkComms.commsShutdown)
                     udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
             }
         }
@@ -182,8 +182,8 @@ namespace NetworkCommsDotNet
         {
             lock (udpClientListenerLocker)
             {
-                if (udpConnectionListeners.ContainsKey(newLocalEndPoint))
-                    throw new CommsSetupShutdownException("Provided newLocalEndPoint already exists in udpConnectionListeners.");
+                //If a listener has already been added there is no need to continue
+                if (udpConnectionListeners.ContainsKey(newLocalEndPoint)) return;
 
                 UDPConnection newListeningConnection;
 
@@ -296,7 +296,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            connection.CloseConnection(false, -6);
+                            connection.CloseConnection(false, -7);
                         }
                         catch (Exception) { }
                     }

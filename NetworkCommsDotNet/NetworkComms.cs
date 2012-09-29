@@ -514,7 +514,7 @@ namespace NetworkCommsDotNet
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
         public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options)
         {
-            TriggerGlobalPacketHandlers(packetHeader, connection, incomingObjectBytes, options);
+            TriggerGlobalPacketHandlers(packetHeader, connection, incomingObjectBytes, options, IgnoreUnknownPacketTypes);
         }
 
         /// <summary>
@@ -1171,9 +1171,11 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         internal static bool RemoveConnectionReference(Connection connection, bool maintainConnectionInfoHistory = true)
         {
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering RemoveConnectionReference for " + connection.ConnectionInfo);
+
             //We don't have the connection identifier until the connection has been established.
-            if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
-                return false;
+            //if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
+            //    return false;
 
             if (connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
                 throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
@@ -1214,10 +1216,21 @@ namespace NetworkCommsDotNet
                 if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
                         allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
                 {
-                    if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
-                        throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
-                    else
+                    //if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                    //    throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
+                    //else
+                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                         allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Remove(connection);
+
+                    //Remove the connection type reference if it is empty
+                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Count == 0)
+                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Remove(connection.ConnectionInfo.ConnectionType);
+
+                    //Remove the identifier reference
+                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
+                        allConnectionsById.Remove(connection.ConnectionInfo.NetworkIdentifier);
+
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removed connection reference by ID for " + connection.ConnectionInfo);
                 }
 
                 //We can now remove this connection by end point as well
@@ -1229,6 +1242,8 @@ namespace NetworkCommsDotNet
                     //If this was the last connection type for this endpoint we can remove the endpoint reference as well
                     if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
                         allConnectionsByEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
+
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
                 }
                 #endregion
             }

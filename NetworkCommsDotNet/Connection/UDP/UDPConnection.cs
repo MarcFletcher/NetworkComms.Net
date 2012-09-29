@@ -186,6 +186,9 @@ namespace NetworkCommsDotNet
 
                     //Update the traffic time after we have written to netStream
                     ConnectionInfo.UpdateLastTrafficTime();
+
+                    //If the connection is shutdown we should call close
+                    if (ConnectionInfo.ConnectionShutdown) CloseConnection(false, -9);
                 }
                 catch (Exception)
                 {
