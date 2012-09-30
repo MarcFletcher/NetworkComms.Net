@@ -20,6 +20,8 @@ namespace ExamplesConsole
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
+            
+            //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.AddNewLocalListener()
             TCPConnection.AddNewLocalListener();
 
             //Print the IP addresses and ports we are listening on.
@@ -39,7 +41,7 @@ namespace ExamplesConsole
                 {
                     //Once we have a message we need to know where to send it
                     //Expecting user to enter ip address as 192.168.0.1:4000
-                    Console.WriteLine("Please enter the destination IP address and press enter, e.g 192.168.0.1:");
+                    Console.WriteLine("Please enter the destination IP address and press enter, e.g '192.168.0.1'");
 
                     //Parse the provided destination information
                     //If the user entered using a bad format we are going to get an exception

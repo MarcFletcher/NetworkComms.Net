@@ -19,6 +19,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>bin\Debug\</OutputPath>
     <DocumentationFile>bin\Debug\DebugTests.XML</DocumentationFile>
+    <WarningLevel>1</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -55,6 +56,7 @@
     <Compile Include="DebugTest.cs" />
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
+    <Compile Include="LoadTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

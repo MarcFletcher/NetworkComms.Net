@@ -1,6 +1,10 @@
 Version 2.0 - Released xxxx
 
-
+- Custom thread priority handling
+- Auto detection of incoming compression / serialisation.
+- API changes
+- UDP
+- Encryption
 
 Version 1.3 - Released 03/6/12
 

@@ -51,7 +51,7 @@ namespace ExamplesConsole
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Create the item to be distributed
-                ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAvailableLocalIPs()[0], NetworkComms.DefaultListenPort), true);
+                ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
                 seedConnectionInfo.SetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
                 DistributedItem newItem = new DistributedItem("exampleItem", someRandomData, seedConnectionInfo);

@@ -525,11 +525,9 @@ namespace DistributedFileSystem
                             }
 
                             string[] result = null;
-                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            //We don't want to contact ourselves plus we check the possible exception lists
                             if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
-                            {
                                 result = TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<string[]>("DFS_KnownPeersRequest", "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
-                            }
 
                             //We take all of the results and put them in our summary list
                             if (result != null)
@@ -538,7 +536,8 @@ namespace DistributedFileSystem
                                 {
                                     for (int i = 0; i < result.Length; i++)
                                     {
-                                        if (result[i] != "") allUnknownPeerEndPoints.Add(result[i]);
+                                        if (result[i] != "") 
+                                            allUnknownPeerEndPoints.Add(result[i]);
                                     }
                                 }
                             }
@@ -635,7 +634,7 @@ namespace DistributedFileSystem
                                 IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
 
                                 //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                                if (!(peerEndPoint.Address == NetworkComms.AllAvailableLocalIPs()[0] && peerEndPoint.Port == NetworkComms.DefaultListenPort) && PeerContactAllowed(peerEndPoint.Address, false))
+                                if (!(peerEndPoint.Address == NetworkComms.AllAllowedIPs()[0] && peerEndPoint.Port == NetworkComms.DefaultListenPort) && PeerContactAllowed(peerEndPoint.Address, false))
                                     TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             }
                             catch (CommsException)

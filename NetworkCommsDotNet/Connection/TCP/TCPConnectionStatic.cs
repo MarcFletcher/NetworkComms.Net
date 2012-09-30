@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static void AddNewLocalListener()
         {
-            List<IPAddress> localIPs = NetworkComms.AllAvailableLocalIPs();
+            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
             if (NetworkComms.ListenOnAllAllowedInterfaces)
             {

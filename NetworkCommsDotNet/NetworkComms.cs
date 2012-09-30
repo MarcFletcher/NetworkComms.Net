@@ -42,7 +42,9 @@ namespace NetworkCommsDotNet
             //Generally comms defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 200;
-            InterfaceLinkSpeed = 100000000;
+
+            InterfaceLinkSpeed = 95000000;
+
             DefaultListenPort = 10000;
             ListenOnAllAllowedInterfaces = true;
 
@@ -74,22 +76,23 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Setting preferred IP prefixs will direct NetworkCommsDotNet when selecting ip addresses. An alternative is to set ListenOnAllInterfaces to true.
-        /// Correct format is string[] { "192.168", "213.111.10" }.
-        /// If multiple prefixs are provided the earlier prefix, if found, takes priority.
+        /// If set NetworkCommsDotNet will only operate on matching IP Addresses. Also see <see cref="AllowedAdaptorNames"/>.
+        /// Correct format is string[] { "192.168", "213.111.10" }. If multiple prefixes are provided the earlier prefix, if found, takes priority.
         /// </summary>
-        public static string[] PreferredIPPrefixs { get; set; }
+        public static string[] AllowedIPPrefixes { get; set; }
 
         /// <summary>
-        /// If prefered adaptor names are provided, i.e. { "eth0", "en0", "wlan0" } etc. NetworkCommsDotNet will only listen on those adaptors.
+        ///  If set NetworkCommsDotNet will only operate on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
         /// </summary>
         public static string[] AllowedAdaptorNames { get; set; }
 
         /// <summary>
-        /// Returns all possible ipV4 addresses. Considers networkComms.PreferredIPPrefixs and networkComms.AllowedAdaptorNames. If PreferredIPPrefixs has been set ranks in descending preference. e.g. Most preffered at [0].
+        /// Returns all allowed local IP addresses. 
+        /// If <see cref="AllowedAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
+        /// If <see cref="AllowedIPPrefixes"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preffered at [0].
         /// </summary>
         /// <returns></returns>
-        public static List<IPAddress> AllAvailableLocalIPs()
+        public static List<IPAddress> AllAllowedIPs()
         {
             //This is probably the most awesome linq expression ever
             //It loops through every known network adaptor and tries to pull out any 
@@ -107,7 +110,7 @@ namespace NetworkCommsDotNet
                     (from inside in current.GetIPProperties().UnicastAddresses
                      where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
                         (AllowedAdaptorNames == null ? true :  AllowedAdaptorNames.Contains(current.Id))
-                     //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))  
+                     && (AllowedIPPrefixes == null ? true : AllowedIPPrefixes.Contains(inside.Address.ToString(), new IPComparer()))  
                      select inside).Count() > 0
                     //We only want adaptors which are operational
                     //&& current.OperationalStatus == OperationalStatus.Up //This line causes problems in mono
@@ -118,23 +121,49 @@ namespace NetworkCommsDotNet
                     where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
                         !(IsAddressInSubnet(inside.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4)) &&
                         (AllowedAdaptorNames == null ? true : AllowedAdaptorNames.Contains(current.Id))
-                    //&& (preferredIPPrefix == null ? true : preferredIPPrefix.Contains(inside.Address.ToString(), new IPComparer()))
+                    && (AllowedIPPrefixes == null ? true : AllowedIPPrefixes.Contains(inside.Address.ToString(), new IPComparer()))
                     select inside.Address
                     ).ToArray()).Aggregate(new IPAddress[] { IPAddress.None }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
                     {
                         //If we have no preffered addresses we just return a default
-                        if (PreferredIPPrefixs == null)
+                        if (AllowedIPPrefixes == null)
                             return int.MaxValue;
                         else
                         {
                             //We can check the preffered and return the index at which the IP occurs
-                            for (int i = 0; i < PreferredIPPrefixs.Length; i++)
-                                if (ip.ToString().StartsWith(PreferredIPPrefixs[i])) return i;
+                            for (int i = 0; i < AllowedIPPrefixes.Length; i++)
+                                if (ip.ToString().StartsWith(AllowedIPPrefixes[i])) return i;
 
                             //If there was no match for this IP in the preffered IP range we just return maxValue
                             return int.MaxValue;
                         }
                     }).Where(ip => { return ip != IPAddress.None; }).ToList();
+        }
+
+        /// <summary>
+        /// Custom comparer for IP addresses. Used by <see cref="AllAllowedIPs"/>
+        /// </summary>
+        class IPComparer : IEqualityComparer<string>
+        {
+            // Products are equal if their names and product numbers are equal.
+            public bool Equals(string x, string y)
+            {
+                //Check whether the compared objects reference the same data.
+                if (Object.ReferenceEquals(x, y)) return true;
+
+                //Check whether any of the compared objects is null.
+                if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                    return false;
+
+                return (y.StartsWith(x) || x.StartsWith(y));
+            }
+
+            // If Equals() returns true for a pair of objects 
+            // then GetHashCode() must return the same value for these objects.
+            public int GetHashCode(string ipAddress)
+            {
+                return ipAddress.GetHashCode();
+            }
         }
 
         /// <summary>
@@ -193,7 +222,7 @@ namespace NetworkCommsDotNet
         private static CommsMath currentNetworkLoadValues;
 
         /// <summary>
-        /// The interface link speed in bits/sec used for network load calculations.
+        /// The interface link speed in bits/sec used for network load calculations. Default is 100Mb/sec
         /// </summary>
         public static long InterfaceLinkSpeed { get; set; }
 
@@ -212,6 +241,8 @@ namespace NetworkCommsDotNet
                     {
                         if (NetworkLoadThread == null)
                         {
+                            currentNetworkLoadValues = new CommsMath();
+
                             NetworkLoadThread = new Thread(NetworkLoadWorker);
                             NetworkLoadThread.Name = "NetworkLoadThread";
                             NetworkLoadThread.Start();
@@ -333,7 +364,7 @@ namespace NetworkCommsDotNet
         public static bool ConnectionListenModeUseSync { get; set; }
 
         /// <summary>
-        /// Used for switching between listening on a single interface or all interfaces. Default is true (all interfaces).
+        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedIPPrefixes"/> and <see cref="AllowedAdaptorNames"/>
         /// </summary>
         public static bool ListenOnAllAllowedInterfaces { get; set; }
 
@@ -624,7 +655,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which the <see cref="SendReceiveOptions"/> are required</param>
         /// <returns>The requested <see cref="SendReceiveOptions"/> otherwise null</returns>
-        public static SendReceiveOptions PacketTypeGlobalUnwrapperOptions(string packetTypeStr)
+        public static SendReceiveOptions GlobalPacketTypeUnwrapperOptions(string packetTypeStr)
         {
             SendReceiveOptions options = null;
 

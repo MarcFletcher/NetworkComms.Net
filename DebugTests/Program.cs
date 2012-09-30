@@ -49,12 +49,14 @@ namespace DebugTests
 
             //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
-            NetworkComms.PreferredIPPrefixs = new string[] { "131.111" };
+            NetworkComms.ListenOnAllAllowedInterfaces = false;
+            NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
-            DFSTest.RunExample();
+            //DFSTest.RunExample();
+            LoadTest.RunExample();
         }
     }
 }

@@ -66,14 +66,14 @@ namespace NetworkCommsDotNet
 
             bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(header.PacketType);
 
-            //Look at the connection specific and global send receive options?
+            //Get connection specific options for this packet type, if there arn't any use the connection default options
             SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(header.PacketType);
             if (connectionSpecificOptions == null) connectionSpecificOptions = ConnectionDefaultSendReceiveOptions;
 
-            SendReceiveOptions globalOptions = NetworkComms.PacketTypeGlobalUnwrapperOptions(header.PacketType);
+            //Get global options for this packet type, if there arn't any use the global default options
+            SendReceiveOptions globalOptions = NetworkComms.GlobalPacketTypeUnwrapperOptions(header.PacketType);
             if (globalOptions == null) globalOptions = NetworkComms.DefaultSendReceiveOptions;
 
-            //Return the one with the highest thready priority
             if (connectionSpecificHandlers && globalHandlers)
             {
                 if (!connectionSpecificOptions.OptionsCompatable(globalOptions))

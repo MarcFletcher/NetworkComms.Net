@@ -51,7 +51,7 @@ namespace DebugTests
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Create the item to be distributed
-                ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAvailableLocalIPs()[0], NetworkComms.DefaultListenPort), true);
+                ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
                 seedConnectionInfo.SetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
                 DistributedItem newItem = new DistributedItem("exampleItem", someRandomData, seedConnectionInfo);
@@ -95,7 +95,6 @@ namespace DebugTests
                 NetworkComms.AppendGlobalConnectionCloseHandler(clientShutdownDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("BigDataRequest", ReplyDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientInfo", InfoDelegate);
-                //TCPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nListening for incoming connections on:");
                 foreach (IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints())

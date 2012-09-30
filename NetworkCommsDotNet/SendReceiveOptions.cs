@@ -62,10 +62,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public Dictionary<string, string> Options
         {
-            get
-            {
-                return options;
-            }
+            get { return options; }
         }
         
         /// <summary>
@@ -113,7 +110,7 @@ namespace NetworkCommsDotNet
         /// <inheritdoc />
         public object Clone()
         {
-            return new SendReceiveOptions(DataSerializer, DataProcessors, Options);
+            return new SendReceiveOptions(DataSerializer, new List<DataProcessor>(DataProcessors), new Dictionary<string,string>(Options));
         }
 
         #endregion

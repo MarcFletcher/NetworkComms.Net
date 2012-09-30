@@ -616,7 +616,6 @@ namespace DistributedFileSystem
 
                 if (integrateChunk)
                 {
-                    //Console.WriteLine(". {0} chunk {1} received.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingReply.ChunkIndex);
                     #region StoreChunk
                     //We expect the final chunk to have a smaller length
                     if (incomingReply.ChunkData.Length != ChunkSizeInBytes && incomingReply.ChunkIndex < TotalNumChunks - 1)
