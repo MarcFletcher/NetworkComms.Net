@@ -284,60 +284,64 @@ namespace DPSBase
 
         private DPSManager()
         {
-            //An aggregate catalog that combines multiple catalogs
-            var catalog = new AggregateCatalog();
-
-            //We're going to try and guess where we might have serializers and compressors.  We will look in all currently loaded assemblies
-            //and all dll and exe files in the application root directory and subdirectories
-
-            //Add all the currently loaded assemblies
-            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass => catalog.Catalogs.Add(new AssemblyCatalog(ass)));
-
-            var allDirectories = Directory.GetDirectories(Directory.GetCurrentDirectory(), "*", SearchOption.AllDirectories);
-
-            //Adds all the parts found in dlls in the same localtion
-            catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.dll"));
-            //Adds all the parts found in exe in the same localtion
-            catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.exe"));
-
-            for (int i = 0; i < allDirectories.Length; i++)
+            //Composition is not working currently on mono so we won't do it for that.
+            if (Type.GetType("Mono.Runtime") != null)
             {
-                if (Directory.GetFiles(allDirectories[i], "*.exe", SearchOption.TopDirectoryOnly).Union(
-                    Directory.GetFiles(allDirectories[i], "*.dll", SearchOption.TopDirectoryOnly)).Count() != 0)
+                //An aggregate catalog that combines multiple catalogs
+                var catalog = new AggregateCatalog();
+
+                //We're going to try and guess where we might have serializers and compressors.  We will look in all currently loaded assemblies
+                //and all dll and exe files in the application root directory and subdirectories
+
+                //Add all the currently loaded assemblies
+                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass => catalog.Catalogs.Add(new AssemblyCatalog(ass)));
+
+                var allDirectories = Directory.GetDirectories(Directory.GetCurrentDirectory(), "*", SearchOption.AllDirectories);
+
+                //Adds all the parts found in dlls in the same localtion
+                catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.dll"));
+                //Adds all the parts found in exe in the same localtion
+                catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.exe"));
+
+                for (int i = 0; i < allDirectories.Length; i++)
                 {
-                    //Adds all the parts found in dlls in the same localtion
-                    catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.dll"));
-                    //Adds all the parts found in exe in the same localtion
-                    catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.exe"));
+                    if (Directory.GetFiles(allDirectories[i], "*.exe", SearchOption.TopDirectoryOnly).Union(
+                        Directory.GetFiles(allDirectories[i], "*.dll", SearchOption.TopDirectoryOnly)).Count() != 0)
+                    {
+                        //Adds all the parts found in dlls in the same localtion
+                        catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.dll"));
+                        //Adds all the parts found in exe in the same localtion
+                        catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.exe"));
+                    }
+                }
+
+                _container = new CompositionContainer(catalog);
+
+                //Fill the imports of this object
+                try
+                {
+                    _container.ComposeParts(this);
+                }
+                catch (CompositionException compositionException)
+                {
+                    Console.WriteLine(compositionException.ToString());
+                }
+
+                var serializersToAdd = serializers.Distinct(SerializerComparer.Instance).Where(s => !SerializersByType.ContainsKey(s.GetType())).ToArray();
+                var dataProcessorsToAdd = compressors.Distinct(DataProcessorComparer.Instance).Where(c => !DataProcessorsByType.ContainsKey(c.GetType())).ToArray();
+
+                foreach (var instance in serializersToAdd)
+                {
+                    SerializersByType.Add(instance.GetType(), instance);
+                    SerializersByID.Add(instance.Identifier, instance);
+                }
+
+                foreach (var instance in dataProcessorsToAdd)
+                {
+                    DataProcessorsByType.Add(instance.GetType(), instance);
+                    DataProcessorsByID.Add(instance.Identifier, instance);
                 }
             }
-
-            _container = new CompositionContainer(catalog);
-
-            //Fill the imports of this object
-            try
-            {
-                _container.ComposeParts(this);
-            }
-            catch (CompositionException compositionException)
-            {
-                Console.WriteLine(compositionException.ToString());
-            }
-
-            var serializersToAdd = serializers.Distinct(SerializerComparer.Instance).Where(s => !SerializersByType.ContainsKey(s.GetType())).ToArray();
-            var dataProcessorsToAdd = compressors.Distinct(DataProcessorComparer.Instance).Where(c => !DataProcessorsByType.ContainsKey(c.GetType())).ToArray();
-
-            foreach (var instance in serializersToAdd)
-            {
-                SerializersByType.Add(instance.GetType(), instance);
-                SerializersByID.Add(instance.Identifier, instance);
-            }
-
-            foreach (var instance in dataProcessorsToAdd)
-            {
-                DataProcessorsByType.Add(instance.GetType(), instance);
-                DataProcessorsByID.Add(instance.Identifier, instance);
-            }                        
         }
     }
 }
