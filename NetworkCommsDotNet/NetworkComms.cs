@@ -41,7 +41,7 @@ namespace NetworkCommsDotNet
         {
             //Generally comms defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
-            NetworkLoadUpdateWindowMS = 200;
+            NetworkLoadUpdateWindowMS = 2000;
 
             InterfaceLinkSpeed = 95000000;
 
@@ -213,7 +213,8 @@ namespace NetworkCommsDotNet
         internal static volatile bool commsShutdown;
 
         /// <summary>
-        /// The number of millisconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged values (AverageNetworkLoad). Default is 200ms but use atleast 100ms to get reliable values.
+        /// The number of millisconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged values (AverageNetworkLoad). 
+        /// Default is 2000ms. Shorter values can be used but less than 200ms may cause significant errors in the value of returned value, especially in mono environments.
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
 

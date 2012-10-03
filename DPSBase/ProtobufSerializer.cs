@@ -69,7 +69,7 @@ namespace DPSBase
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {               
             ProtoBuf.Serializer.NonGeneric.Serialize(ouputStream, objectToSerialise);
-            ouputStream.Seek(0, 0);           
+            ouputStream.Seek(0, 0);
         }
 
         /// <inheritdoc />

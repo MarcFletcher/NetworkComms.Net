@@ -49,6 +49,9 @@ namespace DebugTests
 
             //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
 
+            var ident = DPSBase.ProtobufSerializer.Instance;
+            var ident2 = SevenZipLZMACompressor.LZMACompressor.Instance;
+
             NetworkComms.ListenOnAllAllowedInterfaces = false;
             NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 

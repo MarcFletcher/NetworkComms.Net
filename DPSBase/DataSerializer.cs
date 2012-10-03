@@ -20,6 +20,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.ComponentModel.Composition;
 using System.IO;
+using System.Reflection;
 
 namespace DPSBase
 {    
@@ -37,14 +38,20 @@ namespace DPSBase
         protected static T GetInstance<T>() where T : DataSerializer
         {
             //this forces helper static constructor to be called
-            var instance = DPSManager.GetDataSerializer<T>() as T;
-
+            var instance = (Type.GetType("Mono.Runtime") == null ? DPSManager.GetDataSerializer<T>() as T : null);
             if (instance == null)
             {
                 //if the instance is null the type was not added as part of composition
                 //create a new instance of T and add it to helper as a serializer
+                var construct = typeof(T).GetConstructor(new Type[] { });
+                if (construct == null)
+                    construct = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[0], null);
 
-                instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
+                if (construct == null)
+                    throw new Exception();
+
+                instance = construct.Invoke(new object[] { }) as T;
+
                 DPSManager.AddDataSerializer(instance);
             }
 

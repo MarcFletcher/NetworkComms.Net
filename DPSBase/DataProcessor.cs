@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.ComponentModel.Composition;
+using System.Reflection;
 
 namespace DPSBase
 {
@@ -47,7 +48,15 @@ namespace DPSBase
                 //if the instance is null the type was not added as part of composition
                 //create a new instance of T and add it to helper as a compressor
 
-                instance = typeof(T).GetConstructor(new Type[] { }).Invoke(new object[] { }) as T;
+                var construct = typeof(T).GetConstructor(new Type[] { });
+                if (construct == null)
+                    construct = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[0], null);
+
+                if (construct == null)
+                    throw new Exception();
+
+                instance = construct.Invoke(new object[] { }) as T;
+                
                 DPSManager.AddDataProcessor(instance);
             }
 
