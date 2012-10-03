@@ -285,7 +285,6 @@ namespace DPSBase
         private DPSManager()
         {
             //Composition is not working currently on mono so we won't do it for that.
-            if(false)
             if (Type.GetType("Mono.Runtime") == null)
             {
                 //An aggregate catalog that combines multiple catalogs
