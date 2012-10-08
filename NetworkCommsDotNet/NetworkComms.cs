@@ -1335,8 +1335,17 @@ namespace NetworkCommsDotNet
             {
                 if (ConnectionExists(endPointToUse, connection.ConnectionInfo.ConnectionType))
                 {
-                    if (RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType) != connection)
-                        throw new ConnectionSetupException("A different connection already exists with " + connection.ConnectionInfo);
+                    Connection existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
+                    if (existingConnection != connection)
+                    {
+                        string connectionState = "unknownState";
+                        if (existingConnection.ConnectionInfo.ConnectionEstablished) connectionState = "established";
+                        else if (existingConnection.ConnectionInfo.ConnectionEstablishing) connectionState = "establishing";
+                        else if (existingConnection.ConnectionInfo.ConnectionShutdown) connectionState = "shutdown";
+
+                        throw new ConnectionSetupException("A different connection already exists with " + connection.ConnectionInfo +
+                            ". Existing connection is " + connectionState + " at " + existingConnection.ConnectionInfo.ConnectionEstablishedTime + " details - " + existingConnection.ConnectionInfo);
+                    }
                     else
                     {
                         //We have just tried to add the same reference twice, no need to do anything this time around

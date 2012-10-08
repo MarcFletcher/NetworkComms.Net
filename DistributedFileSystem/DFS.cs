@@ -162,6 +162,9 @@ namespace DistributedFileSystem
                                 break;
                             }
                             catch (Exception) { }
+
+                            if (tryPort == MaxTargetLocalPort)
+                                throw new CommsSetupShutdownException("Failed to find local available listen port while trying to initialise DFS.");
                         }
                     }
                     else

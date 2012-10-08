@@ -21,22 +21,25 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A simple class to do math operations in NetworkCommsDotNet
+    /// A simple class to do math operations in NetworkCommsDotNet. Primarly used for load detection.
     /// </summary>
-    class CommsMath
+    public class CommsMath
     {
         private List<double> values;
         private object locker = new object();
 
+        /// <summary>
+        /// Create a new empty instance of CommsMath
+        /// </summary>
         public CommsMath()
         {
             values = new List<double>();
         }
 
         /// <summary>
-        /// Add a new value to the list
+        /// Add a new value to the internal list
         /// </summary>
-        /// <param name="value"></param>
+        /// <param name="value">The value to add</param>
         public void AddValue(double value)
         {
             lock (locker)
@@ -49,9 +52,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Trims the list to the provided maxCount. The most recent added items are preserved.
+        /// Trims the list to the provided maxCount. The most recently added items are preserved.
         /// </summary>
-        /// <param name="maxCount"></param>
+        /// <param name="maxCount">The maximum size of the list after being trimmed</param>
         public void TrimList(int maxCount)
         {
             lock (locker)
@@ -75,7 +78,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Return the mean of the current list.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The mean of all values currently in the list.</returns>
         public double CalculateMean()
         {
             lock (locker)
@@ -88,7 +91,7 @@ namespace NetworkCommsDotNet
         /// Return the mean of the current list.
         /// </summary>
         /// <param name="lastNValues">If less than the number of items in the value list returns the mean of the lastNValues</param>
-        /// <returns></returns>
+        /// <returns>The mean of relevant values</returns>
         public double CalculateMean(int lastNValues)
         {
             lock (locker)
@@ -105,8 +108,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Return the mean of the provided list of values
         /// </summary>
-        /// <param name="localValues"></param>
-        /// <returns></returns>
+        /// <param name="localValues">Values for which a mean should be calculated</param>
+        /// <returns>The mean of provided values</returns>
         public static double CalculateMean(List<double> localValues)
         {
             if (localValues.Count == 0)
