@@ -38,7 +38,8 @@ namespace DPSBase
         protected static T GetInstance<T>() where T : DataSerializer
         {
             //this forces helper static constructor to be called
-            var instance = (Type.GetType("Mono.Runtime") == null ? DPSManager.GetDataSerializer<T>() as T : null);
+            T instance = DPSManager.GetDataSerializer<T>() as T;
+
             if (instance == null)
             {
                 //if the instance is null the type was not added as part of composition
@@ -55,7 +56,7 @@ namespace DPSBase
                 DPSManager.AddDataSerializer(instance);
             }
 
-            return instance;
+            return instance as T;
         }
             
         /// <summary>

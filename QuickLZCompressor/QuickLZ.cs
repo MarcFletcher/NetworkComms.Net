@@ -77,6 +77,9 @@ namespace QuickLZCompressor
         {
             get
             {
+                if (!Available)
+                    throw new NotSupportedException("QuickLZ is not supported on this platform");
+
                 if (instance == null)
                     instance = GetInstance<QuickLZ>();
 
@@ -84,51 +87,69 @@ namespace QuickLZCompressor
             }
         }
 
+        /// <summary>
+        /// Returns true if running in windows and the native <see href="http://www.quicklz.com/">QuickLZ</see> library is available for execution.  False otherwise.  All function calls to <see cref="QuickLZCompressor.QuickLZ"/> will fail if Available returns false
+        /// </summary>
+        public static bool Available { get; private set; }
+
         static QuickLZ()
         {
-            if (!Directory.Exists(DllDir) || !File.Exists(dllFullName))
+            try
             {
-                if (!Directory.Exists(DllDir))
-                    Directory.CreateDirectory(DllDir);
 
-                if (!File.Exists(dllFullName))
+                if (!Directory.Exists(DllDir) || !File.Exists(dllFullName))
                 {
-                    using (Stream s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(dllName))
+                    if (!Directory.Exists(DllDir))
+                        Directory.CreateDirectory(DllDir);
+
+                    if (!File.Exists(dllFullName))
                     {
-                        using (FileStream fs = new FileStream(dllFullName, FileMode.CreateNew))
+                        using (Stream s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(dllName))
                         {
-                            byte[] bytes = new byte[s.Length];
-                            s.Read(bytes, 0, bytes.Length);
-                            fs.Write(bytes, 0, bytes.Length);
+                            using (FileStream fs = new FileStream(dllFullName, FileMode.CreateNew))
+                            {
+                                byte[] bytes = new byte[s.Length];
+                                s.Read(bytes, 0, bytes.Length);
+                                fs.Write(bytes, 0, bytes.Length);
+                            }
                         }
                     }
                 }
-            }
 
-            IntPtr dllPtr = LoadLibrary(dllFullName);
+                IntPtr dllPtr = LoadLibrary(dllFullName);
 
-            IntPtr procAddress = GetProcAddress(dllPtr, "qlz_compress");
-            qlz_compress = (qlz_compress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_compress_del));
-            procAddress = GetProcAddress(dllPtr, "qlz_decompress");
-            qlz_decompress = (qlz_decompress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_decompress_del));
-            procAddress = GetProcAddress(dllPtr, "qlz_size_decompressed");
-            qlz_size_decompressed = (qlz_size_compressed_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_size_compressed_del));
-            procAddress = GetProcAddress(dllPtr, "qlz_get_setting");
-            qlz_get_setting = (qlz_get_settings_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_get_settings_del));
+                IntPtr procAddress = GetProcAddress(dllPtr, "qlz_compress");
+                qlz_compress = (qlz_compress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_compress_del));
+                procAddress = GetProcAddress(dllPtr, "qlz_decompress");
+                qlz_decompress = (qlz_decompress_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_decompress_del));
+                procAddress = GetProcAddress(dllPtr, "qlz_size_decompressed");
+                qlz_size_decompressed = (qlz_size_compressed_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_size_compressed_del));
+                procAddress = GetProcAddress(dllPtr, "qlz_get_setting");
+                qlz_get_setting = (qlz_get_settings_del)Marshal.GetDelegateForFunctionPointer(procAddress, typeof(qlz_get_settings_del));
 
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler((o, e) =>
-            {
-                try
+                AppDomain.CurrentDomain.ProcessExit += new EventHandler((o, e) =>
                 {
-                    if (dllPtr != IntPtr.Zero)
-                        FreeLibrary(dllPtr);
-                }
-                catch (Exception) { }
-            });
+                    try
+                    {
+                        if (dllPtr != IntPtr.Zero)
+                            FreeLibrary(dllPtr);
+                    }
+                    catch (Exception) { }
+                });
+
+                Available = true;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                Available = false;
+            }
         }
 
         private QuickLZ()
         {
+            if (!Available)
+                return;
+
             state_compress = new byte[qlz_get_setting(1)];
 
             if (QLZ_STREAMING_BUFFER == 0)
@@ -185,7 +206,10 @@ namespace QuickLZCompressor
 
         /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
-        {            
+        {
+            if (!Available)
+                throw new NotSupportedException("QuickLZ is not supported on this platform");
+
             // Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.            
             lock (compressDecompressLocker)
             {
@@ -205,7 +229,10 @@ namespace QuickLZCompressor
 
         /// <inheritdoc />
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
-        {            
+        {
+            if (!Available)
+                throw new NotSupportedException("QuickLZ is not supported on this platform");
+
             // Testing confirmed the decompress methods within quickLZ do not appear to be thread safe. No testing done on compress but also locked incase.            
             lock (compressDecompressLocker)
             {
