@@ -1343,7 +1343,7 @@ namespace NetworkCommsDotNet
                         else if (existingConnection.ConnectionInfo.ConnectionEstablishing) connectionState = "establishing";
                         else if (existingConnection.ConnectionInfo.ConnectionShutdown) connectionState = "shutdown";
 
-                        throw new ConnectionSetupException("A different connection already exists with " + connection.ConnectionInfo +
+                        throw new ConnectionSetupException("A different connection already exists with the same endPoint. New details - " + connection.ConnectionInfo +
                             ". Existing connection is " + connectionState + " at " + existingConnection.ConnectionInfo.ConnectionEstablishedTime + " details - " + existingConnection.ConnectionInfo);
                     }
                     else
