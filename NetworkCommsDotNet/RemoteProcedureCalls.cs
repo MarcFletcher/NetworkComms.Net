@@ -91,55 +91,29 @@ namespace NetworkCommsDotNet
         /// Provides functions for managing proxy classes to remote objects client side
         /// </summary>
         public static class Client
-        {
+        {            
             /// <summary>
             /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
             /// use the instance on the server unless they have the instanceId returned by this method
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="networkIdentifier">Server networkIdentifier</param>
+            /// <param name="connection">The connection over which to perform remote procedure calls</param>
             /// <param name="instanceName">The object identifier to use for this proxy</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPrivateInstance<T>(ShortGuid networkIdentifier, string instanceName, out string instanceId) where T : class
+            public static T CreateProxyToPrivateInstance<T>(Connection connection, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, networkIdentifier, false, packetType, 1000, instanceName);
+                instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceName);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
-            }
-
-            /// <summary>
-            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
-            /// use the instance on the server unless they have the instanceId returned by this method
-            /// </summary>
-            /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
-            /// <param name="portNumber">The server side port to connect to</param>
-            /// <param name="instanceName">The object identifier to use for this proxy</param>
-            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
-            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPrivateInstance<T>(string serverIP, int portNumber, string instanceName, out string instanceId) where T : class
-            {
-                //Make sure the type is an interface
-                if (!typeof(T).IsInterface)
-                    throw new InvalidOperationException(typeof(T).Name + " is not an interface");
-
-                var networkIdentifier = default(ShortGuid);
-                string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceName, ref networkIdentifier);
-
-                if (instanceId == String.Empty)
-                    throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
-
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
+                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
             }
 
             /// <summary>
@@ -147,95 +121,45 @@ namespace NetworkCommsDotNet
             /// calls on the same server side object 
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="networkIdentifier">The networkIdentifier to be used to create the proxy</param>
+            /// <param name="connection">The connection over which to perform remote procedure calls</param>
             /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
             /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPublicNamedInstance<T>(ShortGuid networkIdentifier, string instanceName, out string instanceId) where T : class
+            public static T CreateProxyToPublicNamedInstance<T>(Connection connection, string instanceName, out string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, networkIdentifier, false, packetType, 1000, instanceName);
+                instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceName);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Named instance does not exist");
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
-            }
-
-            /// <summary>
-            /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is public in sense that any client can use specified name to make 
-            /// calls on the same server side object 
-            /// </summary>
-            /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
-            /// <param name="portNumber">The server side port to connect to</param>
-            /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
-            /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
-            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToPublicNamedInstance<T>(string serverIP, int portNumber, string instanceName, out string instanceId) where T : class
-            {
-                //Make sure the type is an interface
-                if (!typeof(T).IsInterface)
-                    throw new InvalidOperationException(typeof(T).Name + " is not an interface");
-
-                var networkIdentifier = default(ShortGuid);
-                string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceName, ref networkIdentifier);
-
-                if (instanceId == String.Empty)
-                    throw new RPCException("Named instance does not exist");
-
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
+                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
             }
 
             /// <summary>
             /// Creates a remote proxy to an object with a specific identifier implementing the supplied interface with the specified server
             /// </summary>
             /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="networkIdentifier">Server networkIdentifier</param>
+            /// <param name="connection">The connection over which to perform remote procedure calls</param>
             /// <param name="instanceId">Unique identifier for the instance on the server</param>
             /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToIdInstance<T>(ShortGuid networkIdentifier, string instanceId) where T : class
+            public static T CreateProxyToIdInstance<T>(Connection connection, string instanceId) where T : class
             {
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
                 string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, networkIdentifier, false, packetType, 1000, instanceId);
+                instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceId);
 
                 if (instanceId == String.Empty)
                     throw new RPCException("Instance with given Id not found");
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
-            }
-
-            /// <summary>
-            /// Creates a remote proxy to an object with a specific identifier implementing the supplied interface with the specified server
-            /// </summary>
-            /// <typeparam name="T">The interface to use for the proxy</typeparam>
-            /// <param name="serverIP">IPv4 address of the form XXX.XXX.XXX.XXX</param>
-            /// <param name="portNumber">The server side port to connect to</param>
-            /// <param name="instanceId">Unique identifier for the instance on the server</param>
-            /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-            public static T CreateProxyToIdInstance<T>(string serverIP, int portNumber, string instanceId) where T : class
-            {
-                //Make sure the type is an interface
-                if (!typeof(T).IsInterface)
-                    throw new InvalidOperationException(typeof(T).Name + " is not an interface");
-
-                var networkIdentifier = default(ShortGuid);
-                string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
-                instanceId = NetworkComms.SendReceiveObject<string>(packetType, serverIP, portNumber, false, packetType, 1000, instanceId, ref networkIdentifier);
-
-                if (instanceId == String.Empty)
-                    throw new RPCException("Instance with given instanceId not found by server.");
-
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, networkIdentifier);
+                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
             }
 
             //We use this to get the private method. Should be able to get it dynamically
@@ -269,7 +193,7 @@ namespace NetworkCommsDotNet
                     type.AddInterfaceImplementation(typeof(T));
 
                     var serverInstanceId = type.DefineField("ServerInstanceID", typeof(string), FieldAttributes.Private);
-                    var serverNetworkIdentifier = type.DefineField("ServerConnectionID", typeof(ShortGuid), FieldAttributes.Private);
+                    var networkConnection = type.DefineField("ServerConnection", typeof(Connection), FieldAttributes.Private);
 
                     //Get the methods for the reflection invocation.  MOVE OUTSIDE THIS LOOP
                     MethodInfo getTypeMethod = typeof(Type).GetMethod("GetType", new Type[] { typeof(string) });
@@ -277,14 +201,14 @@ namespace NetworkCommsDotNet
                     MethodInfo invokeMethod = typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
 
                     //Give the type an empty constructor
-                    var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(ShortGuid) });
+                    var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection) });
                     var il = ctor.GetILGenerator();
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Stfld, serverInstanceId);
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldarg_2);
-                    il.Emit(OpCodes.Stfld, serverNetworkIdentifier);
+                    il.Emit(OpCodes.Stfld, networkConnection);
                     il.Emit(OpCodes.Ret);
 
                     //Loop through each method in the interface
@@ -357,8 +281,7 @@ namespace NetworkCommsDotNet
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, serverNetworkIdentifier);
-                        il.Emit(OpCodes.Box, serverNetworkIdentifier.FieldType);
+                        il.Emit(OpCodes.Ldfld, networkConnection);                        
                         il.Emit(OpCodes.Stelem_Ref);
 
                         //Load the handler name to call into second element of array for reflection invocation of method
@@ -494,8 +417,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldloc, reflectionParamArray);
                             il.Emit(OpCodes.Ldc_I4_0);
                             il.Emit(OpCodes.Ldarg_0);
-                            il.Emit(OpCodes.Ldfld, serverNetworkIdentifier);
-                            il.Emit(OpCodes.Box, serverNetworkIdentifier.FieldType);
+                            il.Emit(OpCodes.Ldfld, networkConnection);                            
                             il.Emit(OpCodes.Stelem_Ref);
 
                             //Load the handler name to call into second element of array for reflection invocation of method
@@ -602,8 +524,7 @@ namespace NetworkCommsDotNet
                             il.Emit(OpCodes.Ldloc, reflectionParamArray);
                             il.Emit(OpCodes.Ldc_I4_0);
                             il.Emit(OpCodes.Ldarg_0);
-                            il.Emit(OpCodes.Ldfld, serverNetworkIdentifier);
-                            il.Emit(OpCodes.Box, serverNetworkIdentifier.FieldType);
+                            il.Emit(OpCodes.Ldfld, networkConnection);                            
                             il.Emit(OpCodes.Stelem_Ref);
 
                             //Load the handler name to call into second element of array for reflection invocation of method
@@ -669,20 +590,20 @@ namespace NetworkCommsDotNet
             /// <summary>
             /// Private method for simplifying the remote procedure call.  I don't want to write this in IL!!
             /// </summary>
-            /// <param name="networkIdentifier"></param>
+            /// <param name="connection"></param>
             /// <param name="handlerType"></param>
             /// <param name="instanceId"></param>
             /// <param name="functionToCall"></param>
             /// <param name="args"></param>
             /// <returns></returns>
-            private static object RemoteCallClient(ShortGuid networkIdentifier, string handlerType, string instanceId, string functionToCall, object[] args)
+            private static object RemoteCallClient(Connection connection, string handlerType, string instanceId, string functionToCall, object[] args)
             {
                 RemoteCallWrapper wrapper = new RemoteCallWrapper();
                 wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
                 wrapper.name = functionToCall;
                 wrapper.instanceId = instanceId;
 
-                wrapper = NetworkComms.SendReceiveObject<RemoteCallWrapper>(handlerType, networkIdentifier, false, handlerType, 1000, wrapper);
+                wrapper = connection.SendReceiveObject<RemoteCallWrapper>(handlerType, handlerType, 1000, wrapper);
 
                 if (wrapper.Exception != null)
                     throw new RPCException(wrapper.Exception);

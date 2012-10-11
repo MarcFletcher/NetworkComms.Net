@@ -235,6 +235,8 @@ namespace ExamplesConsole
                 }
             }
 
+            private ConnectionType connectionTypeToUse;
+
             /// <summary>
             /// Create an instance of ServerExampleInstance
             /// </summary>
@@ -247,12 +249,19 @@ namespace ExamplesConsole
             /// </summary>
             public void Run()
             {
+                //Select whether to use TCP or UDP
+                SelectConnectionType();
+
                 //Setup the RPC server side
                 SetupRPCUsage();
 
                 //Print out something at the server end to show that we are listening
                 Console.WriteLine("Listening for connections on:");
-                foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+
+                if (connectionTypeToUse == ConnectionType.TCP)
+                    foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                else
+                    foreach (System.Net.IPEndPoint localEndPoint in UDPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nPress 'any' key to quit.");
                 Console.ReadKey(true);
@@ -264,6 +273,32 @@ namespace ExamplesConsole
                 //RemoteProcedureCalls.Server.RemovePrivateRPCObjectType<T, I>();
 
                 NetworkComms.Shutdown();
+            }
+
+            private void SelectConnectionType()
+            {
+                Console.WriteLine("Please select a connection type:\n1 - TCP\n2 - UDP\n");
+
+                int selectedType;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedType);
+                    if (parseSucces && selectedType <= 2) break;
+                    Console.WriteLine("Invalid connection type choice. Please try again.");
+                }
+
+                if (selectedType == 1)
+                {
+                    Console.WriteLine(" ... selected TCP.\n");
+                    connectionTypeToUse = ConnectionType.TCP;
+                }
+                else if (selectedType == 2)
+                {
+                    Console.WriteLine(" ... selected UDP.\n");
+                    connectionTypeToUse = ConnectionType.UDP;
+                }
+                else
+                    throw new Exception("Unable to determine selected connection type.");
             }
 
             /// <summary>
@@ -297,6 +332,11 @@ namespace ExamplesConsole
                         Console.WriteLine("\nServer object instance has been succesfully created.\n");
                         break;
                 }
+
+                if (connectionTypeToUse == ConnectionType.TCP)
+                    TCPConnection.AddNewLocalListener();
+                else
+                    UDPConnection.AddNewLocalListener();
             }
         }
 
@@ -306,6 +346,8 @@ namespace ExamplesConsole
         /// </summary>
         public class ClientExampleInstance : IRPCExampleInstance
         {
+            private ConnectionType connectionTypeToUse;
+
             /// <summary>
             /// Create an instance of ClientExampleInstance
             /// </summary>
@@ -323,6 +365,8 @@ namespace ExamplesConsole
                 ConnectionInfo connectionInfo;
                 ExampleHelper.GetServerDetails(out connectionInfo);
 
+                SelectConnectionType();
+
                 try
                 {
                     //We would really like to create a local instance of MathClass, but the client does not have a 
@@ -334,7 +378,14 @@ namespace ExamplesConsole
 
                     //We need to select our remote object using one of the available access methods
                     string instanceId = "";
-                    IMath remoteObject = SelectRemoteObject(connectionInfo.RemoteEndPoint.Address.ToString(), connectionInfo.RemoteEndPoint.Port, out instanceId);
+                    Connection connection = null;
+
+                    if (connectionTypeToUse == ConnectionType.TCP)
+                        connection = TCPConnection.CreateConnection(connectionInfo);
+                    else
+                        connection = UDPConnection.CreateConnection(connectionInfo, UDPOptions.None);
+
+                    IMath remoteObject = SelectRemoteObject(connection, out instanceId);
                     Console.WriteLine("\nRemote object has been selected. RPC object instanceId: {0}", instanceId);
 
                     while (true)
@@ -363,14 +414,39 @@ namespace ExamplesConsole
                 }
             }
 
+            private void SelectConnectionType()
+            {
+                Console.WriteLine("\nPlease select a connection type:\n1 - TCP\n2 - UDP\n");
+
+                int selectedType;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedType);
+                    if (parseSucces && selectedType <= 2) break;
+                    Console.WriteLine("Invalid connection type choice. Please try again.");
+                }
+
+                if (selectedType == 1)
+                {
+                    Console.WriteLine(" ... selected TCP.\n");
+                    connectionTypeToUse = ConnectionType.TCP;
+                }
+                else if (selectedType == 2)
+                {
+                    Console.WriteLine(" ... selected UDP.\n");
+                    connectionTypeToUse = ConnectionType.UDP;
+                }
+                else
+                    throw new Exception("Unable to determine selected connection type.");
+            }
+
             /// <summary>
             /// Allows the user to select a remote object based on the different available access methods
             /// </summary>
-            /// <param name="serverIP">The RPC server ip address</param>
-            /// <param name="serverPort">The RPC server port number</param>
+            ///<param name="connection">The connection over which to perform remote procedure calls</param>
             /// <param name="instanceId">The instanceId of the linked object</param>
             /// <returns>The remote RPC object</returns>
-            private IMath SelectRemoteObject(string serverIP, int serverPort, out string instanceId)
+            private IMath SelectRemoteObject(Connection connection, out string instanceId)
             {
                 //We have three main different usage cases for the RPC functionality provided by NetworkCommsDotNet
                 //Before we can demonstrate RPC features we need to select the remote object
@@ -395,17 +471,17 @@ namespace ExamplesConsole
                         Console.WriteLine("\nYou selected to create a new private client object instance.");
                         Console.Write("Please enter a name for your private object: ");
                         instanceName = Console.ReadLine();
-                        return RemoteProcedureCalls.Client.CreateProxyToPrivateInstance<IMath>(serverIP, serverPort, instanceName, out instanceId);
+                        return RemoteProcedureCalls.Client.CreateProxyToPrivateInstance<IMath>(connection, instanceName, out instanceId);
                     case 2:
                         Console.WriteLine("\nYou selected to access an existing, named, public server object instance.");
                         Console.Write("Please enter the name of the server object: ");
                         instanceName = Console.ReadLine();
-                        return RemoteProcedureCalls.Client.CreateProxyToPublicNamedInstance<IMath>(serverIP, serverPort, instanceName, out instanceId);
+                        return RemoteProcedureCalls.Client.CreateProxyToPublicNamedInstance<IMath>(connection, instanceName, out instanceId);
                     case 3:
                         Console.WriteLine("\nYou selected to access an existing, private, client object instance using an instanceId.");
                         Console.Write("Please enter the object instanceId: ");
                         instanceId = Console.ReadLine();
-                        return RemoteProcedureCalls.Client.CreateProxyToIdInstance<IMath>(serverIP, serverPort, instanceId);
+                        return RemoteProcedureCalls.Client.CreateProxyToIdInstance<IMath>(connection, instanceId);
                 }
 
                 throw new Exception("It should be impossible to get here.");
