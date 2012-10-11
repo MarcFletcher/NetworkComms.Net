@@ -42,6 +42,8 @@ namespace DebugTests
                 DFS.EnableLogging(logger);
             }
 
+            var infos = NetworkComms.AllConnectionInfo(true);
+
             //NameValueCollection properties = new NameValueCollection();
             //properties["showDateTime"] = "true";
             //properties["showLogName"] = "false";

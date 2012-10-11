@@ -222,34 +222,58 @@ namespace NetworkCommsDotNet
         /// <param name="ar">Call back state data</param>
         protected void IncomingUDPPacketHandler(IAsyncResult ar)
         {
-            UdpClientThreadSafe client = (UdpClientThreadSafe)ar.AsyncState;
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
-
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
-
-            if (isIsolatedUDPConnection)
+            try
             {
-                //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                IncomingPacketHandleHandOff(packetBuilder);
+                UdpClientThreadSafe client = (UdpClientThreadSafe)ar.AsyncState;
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
+
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+
+                if (isIsolatedUDPConnection)
+                {
+                    //This connection was created for a specific remoteEndPoint so we can handle the data internally
+                    packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                    IncomingPacketHandleHandOff(packetBuilder);
+                }
+                else
+                {
+                    //Look for an existing connection, if one does not exist we will create it
+                    //This ensures that all further processing knows about the correct endPoint
+                    UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+
+                    //We pass the data off to the specific connection
+                    connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                    connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+
+                    if (connection.packetBuilder.TotalPartialPacketCount > 0)
+                        throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                }
+
+                //Listen for more udp packets!!
+                client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
             }
-            else
+            //On any error here we close the connection
+            catch (NullReferenceException)
             {
-                //Look for an existing connection, if one does not exist we will create it
-                //This ensures that all further processing knows about the correct endPoint
-                UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this); 
-
-                //We pass the data off to the specific connection
-                connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                connection.IncomingPacketHandleHandOff(connection.packetBuilder);
-
-                if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                    throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                CloseConnection(true, 25);
             }
-
-            //Listen for more udp packets!!
-            client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
+            catch (IOException)
+            {
+                CloseConnection(true, 26);
+            }
+            catch (ObjectDisposedException)
+            {
+                CloseConnection(true, 27);
+            }
+            catch (SocketException)
+            {
+                CloseConnection(true, 28);
+            }
+            catch (InvalidOperationException)
+            {
+                CloseConnection(true, 29);
+            }
         }
 
         /// <summary>

@@ -455,25 +455,23 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (sendReceiveOptions.DataSerializer != null && sendReceiveOptions.DataProcessors != null)
+                if (sendReceiveOptions.DataSerializer != null)
                 {
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
                         //Make sure if we already have an existing entry that it matches with the provided
-                        if (globalIncomingPacketUnwrappers[packetTypeStr].Options != sendReceiveOptions)
-                            throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
+                        if (!globalIncomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(sendReceiveOptions))
+                            throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
                     }
                     else
                         globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
                 }
-                else if (sendReceiveOptions.DataSerializer != null ^ sendReceiveOptions.DataProcessors != null)
-                    throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
                     //If we have not specified the serialiser and compressor we assume to be using defaults
                     //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
                     if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specific serializer and compressor instances. Please ensure the same instances are provided in this call to AppendPacketHandler.");
+                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specified SendReceiveOptions. Please ensure the same options are provided.");
                 }
 
                 //Ad the handler to the list
@@ -1034,17 +1032,64 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a ConnectionInfo array containing information for all connections
         /// </summary>
-        /// <returns>ConnectionInfo[] containing information for all known connections</returns>
-        public static ConnectionInfo[] AllConnectionInfos()
+        /// <param name="includeClosedConnections">If true information for closed connections will also be included</param>
+        /// <returns>List of ConnectionInfo containing information for all requested connections</returns>
+        public static List<ConnectionInfo> AllConnectionInfo(bool includeClosedConnections = false)
         {
+            List<ConnectionInfo> returnList = new List<ConnectionInfo>();
+
             lock (globalDictAndDelegateLocker)
             {
-                return (from current in allConnectionsByEndPoint
+                returnList.AddRange((from current in allConnectionsByEndPoint
                         select current.Value.Values.Select(connection =>
                         {
                             return connection.ConnectionInfo;
-                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToArray();
+                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+
+                if (includeClosedConnections)
+                {
+                    var allClosedConnections = (from current in oldNetworkIdentifierToConnectionInfo
+                                         select current.Value.Values.ToList()).ToList();
+
+                    foreach (List<List<ConnectionInfo>> networkIdentifierConnections in allClosedConnections)
+                        returnList.AddRange(networkIdentifierConnections.Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+                }
             }
+
+            return returnList.Distinct().ToList();
+        }
+
+        /// <summary>
+        /// Returns a ConnectionInfo array containing information for all connections which have the provided networkIdentifier. It is also possible to include information for closed connections.
+        /// </summary>
+        /// <param name="networkIdentifier">The networkIdentifier corresponding to the desired connectionInfo information</param>
+        /// <param name="includeClosedConnections">If true will include information for connections which are closed. Otherwise only active connections will be included.</param>
+        /// <returns>List of ConnectionInfo containing information for matching connections</returns>
+        public static List<ConnectionInfo> AllConnectionInfo(ShortGuid networkIdentifier, bool includeClosedConnections = false)
+        {
+            List<ConnectionInfo> returnList = new List<ConnectionInfo>();
+
+            lock (globalDictAndDelegateLocker)
+            {
+
+                returnList.AddRange((from current in allConnectionsByEndPoint
+                        select current.Value.Values.Select(connection =>
+                        {
+                            if (connection.ConnectionInfo.NetworkIdentifier == networkIdentifier)
+                                return connection.ConnectionInfo;
+                            else
+                                return null;
+                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+
+                if (includeClosedConnections)
+                {
+                    var possibleOldConnections = (from current in NetworkComms.oldNetworkIdentifierToConnectionInfo where current.Key == networkIdentifier select current.Value).FirstOrDefault();
+                    if (possibleOldConnections != null)
+                        returnList.AddRange(possibleOldConnections.Values.Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+                }
+            }
+
+            return returnList.Distinct().ToList();
         }
 
         /// <summary>

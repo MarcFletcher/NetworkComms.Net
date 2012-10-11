@@ -100,7 +100,7 @@ namespace NetworkCommsDotNet
         /// <param name="options">The <see cref="SendReceiveOptions"/> to compare against</param>
         /// <returns>True if the options are compatible, false otherwise</returns>
         /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DataProcessor"/>s</remarks>
-        public bool OptionsCompatable(SendReceiveOptions options)
+        public bool OptionsCompatible(SendReceiveOptions options)
         {
             return options.DataProcessors.SequenceEqual(DataProcessors) && options.DataSerializer == DataSerializer;                    
         }
@@ -122,6 +122,15 @@ namespace NetworkCommsDotNet
         where DS : DataSerializer
     {
         /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> is passed as a generic parameter and no <see cref="DPSBase.DataProcessor"/>s are used. To provide additional options see other overrides. 
+        /// </summary>
+        public SendRecieveOptions()
+            : base(null)
+        {
+            DataSerializer = DPSManager.GetDataSerializer<DS>();
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> is passed as a generic parameter and no <see cref="DPSBase.DataProcessor"/>s are used.  
         /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> as an argument which may be null
         /// </summary>
@@ -140,6 +149,16 @@ namespace NetworkCommsDotNet
         where DS : DataSerializer 
         where DP1 : DataProcessor
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and a single <see cref="DPSBase.DataProcessor"/> while will be used are passed as generic parameters. To provide additional options see other overrides. 
+        /// </summary>
+        public SendRecieveOptions()
+            : base(null)
+        {
+            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<DP1>() };
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and a single <see cref="DPSBase.DataProcessor"/> while will be used are passed as generic parameters
         /// Further options can be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/> as an argument which may be null

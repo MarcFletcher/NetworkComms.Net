@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
 
             if (connectionSpecificHandlers && globalHandlers)
             {
-                if (!connectionSpecificOptions.OptionsCompatable(globalOptions))
+                if (!connectionSpecificOptions.OptionsCompatible(globalOptions))
                     throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '" + header.PacketType + "'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
 
                 //We need to combine options in this case using the connection specific option in preference if both are present
@@ -219,25 +219,23 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
-                if (options.DataSerializer != null && options.DataProcessors != null)
+                if (options.DataSerializer != null)
                 {
                     if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     {
                         //Make sure if we already have an existing entry that it matches with the provided
-                        if (incomingPacketUnwrappers[packetTypeStr].Options != options)
-                            throw new PacketHandlerException("You cannot specify a different compressor or serializer instance if one has already been specified for this packetTypeStr.");
+                        if (!incomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(options))
+                            throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
                     }
                     else
                         incomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, options));
                 }
-                else if (options.DataSerializer != null ^ options.DataProcessors != null)
-                    throw new PacketHandlerException("You must provide both serializer and compressor or neither.");
                 else
                 {
                     //If we have not specified the serialiser and compressor we assume to be using defaults
                     //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
                     if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specific serializer and compressor instances. Please ensure the same instances are provided in this call to AppendPacketHandler.");
+                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specified SendReceiveOptions. Please ensure the same options are provided.");
                 }
 
                 //Ad the handler to the list
