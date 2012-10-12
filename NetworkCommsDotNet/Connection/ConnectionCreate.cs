@@ -91,7 +91,7 @@ namespace NetworkCommsDotNet
                 lock (delegateLocker)
                 {
                     if (ConnectionInfo.ConnectionEstablished) return;
-                    else if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection.");
+                    else if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection. Please create a new connection instead.");
                     else if (ConnectionInfo.ConnectionEstablishing)
                         connectionEstablishing = true;
                     else

@@ -1231,6 +1231,24 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Check if a connection exists with the provided IPEndPoint and ConnectionType
+        /// </summary>
+        /// <param name="connectionInfo">ConnectionInfo corresponding with the desired connection</param>
+        /// <returns>True if a matching connection exists, otherwise false</returns>
+        public static bool ConnectionExists(ConnectionInfo connectionInfo)
+        {
+            if (loggingEnabled) logger.Trace("Checking by endPoint for existing " + connectionInfo.ConnectionType + " connection to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port);
+
+            lock (globalDictAndDelegateLocker)
+            {
+                if (allConnectionsByEndPoint.ContainsKey(connectionInfo.RemoteEndPoint))
+                    return allConnectionsByEndPoint[connectionInfo.RemoteEndPoint].ContainsKey(connectionInfo.ConnectionType);
+                else
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// Check if a connection exists with the provided networkIdentifier and ConnectionType
         /// </summary>
         /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
