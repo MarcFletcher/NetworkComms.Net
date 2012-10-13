@@ -44,7 +44,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Accept new incoming TCP connections on all allowed IP's and Port's
         /// </summary>
-        public static void AddNewLocalListener()
+        public static void StartListening()
         {
             List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
@@ -56,7 +56,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            AddNewLocalListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -72,7 +72,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                AddNewLocalListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
             {
@@ -129,12 +129,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    AddNewLocalListener(endPoint, useRandomPortFailOver);
+                    StartListening(endPoint, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -145,31 +145,31 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
-        /// </summary>
-        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
-        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
-        public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
-        {
-            lock (staticTCPConnectionLocker)
-                return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
-        }
-
-        /// <summary>
         /// Returns a list of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners
         /// </summary>
         /// <returns>List of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners</returns>
-        public static List<IPEndPoint> CurrentLocalEndPoints()
+        public static List<IPEndPoint> ExistingLocalListenEndPoints()
         {
             lock (staticTCPConnectionLocker)
                 return tcpListenerDict.Keys.ToList();
         }
 
         /// <summary>
+        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
+        /// </summary>
+        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
+        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
+        public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
+        {
+            lock (staticTCPConnectionLocker)
+                return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
+        }
+
+        /// <summary>
         /// Returns true if there is atleast one local TCP listeners
         /// </summary>
         /// <returns>True if there is atleast one local TCP listeners</returns>
-        public static bool ListeningForConnections()
+        public static bool Listening()
         {
             lock (staticTCPConnectionLocker)
                 return tcpListenerDict.Count > 0;

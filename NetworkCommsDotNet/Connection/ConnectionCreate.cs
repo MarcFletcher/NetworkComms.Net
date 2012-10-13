@@ -90,9 +90,9 @@ namespace NetworkCommsDotNet
                 bool connectionEstablishing = false;
                 lock (delegateLocker)
                 {
-                    if (ConnectionInfo.ConnectionEstablished) return;
-                    else if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection. Please create a new connection instead.");
-                    else if (ConnectionInfo.ConnectionEstablishing)
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Established) return;
+                    else if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection. Please create a new connection instead.");
+                    else if (ConnectionInfo.ConnectionState == ConnectionState.Establishing)
                         connectionEstablishing = true;
                     else
                         ConnectionInfo.NoteStartConnectionEstablish();
@@ -109,7 +109,7 @@ namespace NetworkCommsDotNet
 
                     EstablishConnectionSpecific();
 
-                    if (ConnectionInfo.ConnectionShutdown) throw new ConnectionSetupException("Connection was closed during establish handshake.");
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Connection was closed during establish handshake.");
 
                     if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                         throw new ConnectionSetupException("Remote network identifier should have been set by this point.");

@@ -188,7 +188,7 @@ namespace NetworkCommsDotNet
                     ConnectionInfo.UpdateLastTrafficTime();
 
                     //If the connection is shutdown we should call close
-                    if (ConnectionInfo.ConnectionShutdown) CloseConnection(false, -9);
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -9);
                 }
                 catch (Exception)
                 {
@@ -285,7 +285,7 @@ namespace NetworkCommsDotNet
             {
                 while (true)
                 {
-                    if (ConnectionInfo.ConnectionShutdown)
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                         break;
 
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);

@@ -111,7 +111,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                if (TCPConnection.CurrentLocalEndPoints().Count > 0)
+                if (TCPConnection.ExistingLocalListenEndPoints().Count > 0)
                     throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
                 //Load the allowed ip addresses
@@ -147,7 +147,7 @@ namespace DistributedFileSystem
                 try
                 {
                     localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
-                    TCPConnection.AddNewLocalListener(localEndPointAttempts, false);
+                    TCPConnection.StartListening(localEndPointAttempts, false);
                 }
                 catch (Exception)
                 {
@@ -158,7 +158,7 @@ namespace DistributedFileSystem
                             try
                             {
                                 localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
-                                TCPConnection.AddNewLocalListener(localEndPointAttempts, false);
+                                TCPConnection.StartListening(localEndPointAttempts, false);
                                 break;
                             }
                             catch (Exception) { }

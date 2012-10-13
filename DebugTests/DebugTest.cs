@@ -32,10 +32,10 @@ namespace DebugTests
             if (false)
             {
                 NetworkComms.ListenOnAllAllowedInterfaces = true;
-                TCPConnection.AddNewLocalListener();
+                TCPConnection.StartListening();
 
                 Console.WriteLine("Listening on:");
-                foreach (var entry in TCPConnection.CurrentLocalEndPoints())
+                foreach (var entry in TCPConnection.ExistingLocalListenEndPoints())
                     Console.WriteLine("  " + entry.Address + ":" + entry.Port);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connection, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connection.ConnectionInfo); });
@@ -95,7 +95,7 @@ namespace DebugTests
                     Console.WriteLine("Received UDP broadcast.");
                 });
 
-                UDPConnection.AddNewLocalListener();
+                UDPConnection.StartListening();
 
                 Console.WriteLine("\nReady for incoming udp connections.");
 
@@ -113,7 +113,7 @@ namespace DebugTests
                 byte[] sendArray = new byte[65000];
                 testConnection.SendObject("udpTest", sendArray);
 
-                UDPConnection.AddNewLocalListener();
+                UDPConnection.StartListening();
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<string>("udpResponse", (header, connection, message) =>
                 {

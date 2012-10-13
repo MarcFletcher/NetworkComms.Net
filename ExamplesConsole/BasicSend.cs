@@ -20,13 +20,13 @@ namespace ExamplesConsole
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
-            
-            //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.AddNewLocalListener()
-            TCPConnection.AddNewLocalListener();
+
+            //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.StartListening()
+            TCPConnection.StartListening();
 
             //Print the IP addresses and ports we are listening on.
             Console.WriteLine("Listening for messages on:");
-            foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+            foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
             //We can loop here to allow any number of test messages to be sent and received
             while (true)

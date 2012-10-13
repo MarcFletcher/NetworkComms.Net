@@ -23,6 +23,27 @@ using System.Net;
 namespace NetworkCommsDotNet
 {
     /// <summary>
+    /// Describes the current state of the connection
+    /// </summary>
+    public enum ConnectionState
+    {
+        /// <summary>
+        /// The connection is in the process of being established.
+        /// </summary>
+        Establishing,
+
+        /// <summary>
+        /// The connection has been succesfully established.
+        /// </summary>
+        Established,
+
+        /// <summary>
+        /// The connection has been shutdown.
+        /// </summary>
+        Shutdown
+    }
+
+    /// <summary>
     /// Contains any information related to the configuration of a <see cref="Connection"/> object.
     /// </summary>
     [ProtoContract]
@@ -77,19 +98,9 @@ namespace NetworkCommsDotNet
         public IPEndPoint RemoteEndPoint { get; private set; }
 
         /// <summary>
-        /// True if the connection is currently being established.
+        /// Describes the current state of the connection
         /// </summary>
-        public bool ConnectionEstablishing { get; private set; }
-
-        /// <summary>
-        /// True if the connection has been succesfully established.
-        /// </summary>
-        public bool ConnectionEstablished { get; private set; }
-
-        /// <summary>
-        /// True if the connection has been shutdown.
-        /// </summary>
-        public bool ConnectionShutdown { get; private set; }
+        public ConnectionState ConnectionState { get; private set; }
 
         /// <summary>
         /// Returns the networkIdentifier of this peer as a ShortGuid. If the NetworkIdentifier has not yet been set returns ShortGuid.Empty.
@@ -216,10 +227,10 @@ namespace NetworkCommsDotNet
         {
             lock(internalLocker)
             {
-                if (ConnectionShutdown) throw new ConnectionSetupException("Unable to mark as establishing as connection has already shutdown.");
+                if (ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Unable to mark as establishing as connection has already shutdown.");
 
-                if (ConnectionEstablishing) throw new ConnectionSetupException("Connection already marked as establishing");
-                else ConnectionEstablishing = true;
+                if (ConnectionState == ConnectionState.Establishing) throw new ConnectionSetupException("Connection already marked as establishing");
+                else ConnectionState = ConnectionState.Establishing;
             }
         }
 
@@ -230,13 +241,13 @@ namespace NetworkCommsDotNet
         {
             lock (internalLocker)
             {
-                if (ConnectionShutdown) throw new ConnectionSetupException("Unable to mark as established as connection has already shutdown.");
+                if (ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Unable to mark as established as connection has already shutdown.");
 
-                if (!ConnectionEstablishing) throw new ConnectionSetupException("Connection should be marked as establishing before calling CompleteConnectionEstablish");
+                if (!(ConnectionState == ConnectionState.Establishing)) throw new ConnectionSetupException("Connection should be marked as establishing before calling CompleteConnectionEstablish");
 
-                if (ConnectionEstablished) throw new ConnectionSetupException("Connection already marked as establised.");
+                if (ConnectionState == ConnectionState.Established) throw new ConnectionSetupException("Connection already marked as establised.");
 
-                ConnectionEstablished = true;
+                ConnectionState = ConnectionState.Established;
                 ConnectionEstablishedTime = DateTime.Now;
 
                 if (NetworkIdentifier == ShortGuid.Empty) throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
@@ -249,11 +260,7 @@ namespace NetworkCommsDotNet
         internal void NoteConnectionShutdown()
         {
             lock (internalLocker)
-            {
-                ConnectionShutdown = true;
-                ConnectionEstablished = false;
-                ConnectionEstablishing = false;
-            }
+                ConnectionState = ConnectionState.Shutdown;
         }
 
         /// <summary>
@@ -323,7 +330,7 @@ namespace NetworkCommsDotNet
         {
             string returnString = "[" + ConnectionType + "] ";
 
-            if (ConnectionEstablished)
+            if (ConnectionState == ConnectionState.Established)
                 returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifierStr + ")";
             else
             {

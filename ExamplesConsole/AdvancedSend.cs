@@ -97,9 +97,9 @@ namespace ExamplesConsole
             }
 
             if (connectionTypeToUse == ConnectionType.TCP)
-                TCPConnection.AddNewLocalListener();
+                TCPConnection.StartListening();
             else
-                UDPConnection.AddNewLocalListener();
+                UDPConnection.StartListening();
 
             //***************************************************************//
             //                End of interesting stuff                       //
@@ -107,7 +107,7 @@ namespace ExamplesConsole
 
             Console.WriteLine("Listening for incoming objects on:");
             
-            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? TCPConnection.CurrentLocalEndPoints() : UDPConnection.CurrentLocalEndPoints());
+            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? TCPConnection.ExistingLocalListenEndPoints() : UDPConnection.ExistingLocalListenEndPoints());
             
             foreach(IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);

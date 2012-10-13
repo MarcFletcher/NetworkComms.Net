@@ -57,7 +57,7 @@ namespace DebugTests
                     Console.WriteLine("{0} - Caught {1} bytes thrown by {2}.", DateTime.Now.ToLongTimeString(), data.Length, connection.ConnectionInfo);
                 });
 
-                TCPConnection.AddNewLocalListener();
+                TCPConnection.StartListening();
 
                 Console.WriteLine("Let the catching begin!\n");
                 while (true)

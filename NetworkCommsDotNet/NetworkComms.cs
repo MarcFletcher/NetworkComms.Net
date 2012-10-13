@@ -1303,7 +1303,7 @@ namespace NetworkCommsDotNet
             //if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
             //    return false;
 
-            if (connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
+            if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established && !(connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                 throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
 
             bool returnValue = false;
@@ -1388,26 +1388,27 @@ namespace NetworkCommsDotNet
             if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
                 return;
 
-            if (connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
+            if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
             if (endPointToUse == null) endPointToUse = connection.ConnectionInfo.RemoteEndPoint;
 
+            //We can double check for an existing connection here first so that it occurs outside the lock
+            Connection existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
+            if (existingConnection != null) existingConnection.ConnectionAlive();
+
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)
             {
+                //We now check for an existing connection again from within the lock
                 if (ConnectionExists(endPointToUse, connection.ConnectionInfo.ConnectionType))
                 {
-                    Connection existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
+                    //If a connection still exist we don't assume it is the same as above
+                    existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
-                        string connectionState = "unknownState";
-                        if (existingConnection.ConnectionInfo.ConnectionEstablished) connectionState = "established";
-                        else if (existingConnection.ConnectionInfo.ConnectionEstablishing) connectionState = "establishing";
-                        else if (existingConnection.ConnectionInfo.ConnectionShutdown) connectionState = "shutdown";
-
-                        throw new ConnectionSetupException("A different connection already exists with the same endPoint. New details - " + connection.ConnectionInfo +
-                            ". Existing connection is " + connectionState + " at " + existingConnection.ConnectionInfo.ConnectionEstablishedTime + " details - " + existingConnection.ConnectionInfo);
+                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). New details - " + connection.ConnectionInfo +
+                            ". Existing connection is '" + existingConnection.ConnectionInfo.ConnectionState.ToString() + "' at " + existingConnection.ConnectionInfo.ConnectionEstablishedTime + " details - " + existingConnection.ConnectionInfo);
                     }
                     else
                     {
@@ -1453,7 +1454,7 @@ namespace NetworkCommsDotNet
         /// <param name="connection"></param>
         internal static void AddConnectionReferenceByIdentifier(Connection connection)
         {
-            if (!connection.ConnectionInfo.ConnectionEstablished || connection.ConnectionInfo.ConnectionShutdown)
+            if (!(connection.ConnectionInfo.ConnectionState == ConnectionState.Established) || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by identifier should only be added once a connection is established. This is to prevent duplicate connections.");
 
             if (connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)

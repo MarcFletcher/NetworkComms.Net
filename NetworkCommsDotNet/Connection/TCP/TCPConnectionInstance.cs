@@ -110,7 +110,7 @@ namespace NetworkCommsDotNet
                         IncomingPacketHandleHandOff(packetBuilder);
                     }
 
-                    if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionShutdown))
+                    if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                         CloseConnection(false, -2);
                     else
                     {
@@ -162,7 +162,7 @@ namespace NetworkCommsDotNet
             {
                 while (true)
                 {
-                    if (ConnectionInfo.ConnectionShutdown)
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                         break;
 
                     int bufferOffset = 0;
@@ -198,7 +198,7 @@ namespace NetworkCommsDotNet
                             packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                         }
                     }
-                    else if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionShutdown))
+                    else if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                     {
                         //If we read 0 bytes and there is no data available we should be shutting down
                         CloseConnection(false, -1);
@@ -311,7 +311,7 @@ namespace NetworkCommsDotNet
             try
             {
                 //Only once the connection has been established do we send null packets
-                if (ConnectionInfo.ConnectionEstablished)
+                if (ConnectionInfo.ConnectionState == ConnectionState.Established)
                 {
                     //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
                     lock (sendLocker)
@@ -327,7 +327,7 @@ namespace NetworkCommsDotNet
                 }
 
                 //If the connection is shutdown we should call close
-                if (ConnectionInfo.ConnectionShutdown) CloseConnection(false, -8);
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -8);
             }
             catch (Exception)
             {

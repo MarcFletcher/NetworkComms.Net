@@ -147,7 +147,7 @@ namespace NetworkCommsDotNet
             //Start listening for incoming data
             StartIncomingDataListen();
 
-            IPEndPoint existingListener = TCPConnection.ExistingLocalListener(ConnectionInfo.LocalEndPoint.Address);
+            IPEndPoint existingListener = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
 
             //If we are server side and we have just received an incoming connection we need to return a conneciton id
             //This id will be used in all future connections from this machine

@@ -97,7 +97,7 @@ namespace DebugTests
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientInfo", InfoDelegate);
 
                 Console.WriteLine("\nListening for incoming connections on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints())
+                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
@@ -213,7 +213,7 @@ namespace DebugTests
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
                 Console.WriteLine("\nListening for incoming objects on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints())
+                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 startTime = DateTime.Now;

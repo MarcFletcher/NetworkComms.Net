@@ -114,7 +114,7 @@ namespace NetworkCommsDotNet
 
                             lock (udpClientListenerLocker)
                             {
-                                IPEndPoint existingLocalEndPoint = ExistingLocalListener(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                                IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(((IPEndPoint)testSocket.LocalEndPoint).Address);
                                 if (existingLocalEndPoint != null)
                                 {
                                     existingConnection = udpConnectionListeners[existingLocalEndPoint];
@@ -142,7 +142,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Listen for incoming UDP packets on all allowed local IP's on default port.
         /// </summary>
-        public static void AddNewLocalListener()
+        public static void StartListening()
         {
             List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
@@ -154,7 +154,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            AddNewLocalListener(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -170,7 +170,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                AddNewLocalListener(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void AddNewLocalListener(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
             lock (udpClientListenerLocker)
             {
@@ -221,12 +221,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void AddNewLocalListener(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    AddNewLocalListener(endPoint, useRandomPortFailOver);
+                    StartListening(endPoint, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -240,20 +240,10 @@ namespace NetworkCommsDotNet
         /// Returns a list of <see cref="IPEndPoint"/> corresponding with all UDP local listeners
         /// </summary>
         /// <returns>List of <see cref="IPEndPoint"/> corresponding with all UDP local listeners</returns>
-        public static List<IPEndPoint> CurrentLocalEndPoints()
+        public static List<IPEndPoint> ExistingLocalListenEndPoints()
         {
             lock (udpClientListenerLocker)
                 return udpConnectionListeners.Keys.ToList();
-        }
-
-        /// <summary>
-        /// Returns true if there is atleast one local UDP listeners
-        /// </summary>
-        /// <returns></returns>
-        public static bool ListeningForConnections()
-        {
-            lock (udpClientListenerLocker)
-                return udpConnectionListeners.Count > 0;
         }
 
         /// <summary>
@@ -261,10 +251,20 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
         /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
-        public static IPEndPoint ExistingLocalListener(IPAddress ipAddress)
+        public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
         {
             lock (udpClientListenerLocker)
                 return (from current in udpConnectionListeners.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Returns true if there is atleast one local UDP listeners
+        /// </summary>
+        /// <returns></returns>
+        public static bool Listening()
+        {
+            lock (udpClientListenerLocker)
+                return udpConnectionListeners.Count > 0;
         }
 
         /// <summary>
@@ -344,7 +344,7 @@ namespace NetworkCommsDotNet
 
                 lock (udpClientListenerLocker)
                 {
-                    IPEndPoint existingLocalEndPoint = ExistingLocalListener(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                    IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(((IPEndPoint)testSocket.LocalEndPoint).Address);
                     if (existingLocalEndPoint != null)
                         connectionToUse = udpConnectionListeners[existingLocalEndPoint];
                 }

@@ -259,9 +259,9 @@ namespace ExamplesConsole
                 Console.WriteLine("Listening for connections on:");
 
                 if (connectionTypeToUse == ConnectionType.TCP)
-                    foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                    foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
                 else
-                    foreach (System.Net.IPEndPoint localEndPoint in UDPConnection.CurrentLocalEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                    foreach (System.Net.IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nPress 'any' key to quit.");
                 Console.ReadKey(true);
@@ -334,9 +334,9 @@ namespace ExamplesConsole
                 }
 
                 if (connectionTypeToUse == ConnectionType.TCP)
-                    TCPConnection.AddNewLocalListener();
+                    TCPConnection.StartListening();
                 else
-                    UDPConnection.AddNewLocalListener();
+                    UDPConnection.StartListening();
             }
         }
 

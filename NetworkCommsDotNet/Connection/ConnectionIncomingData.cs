@@ -192,7 +192,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... packet hand off task started.");
 
                 //Check for a shutdown connection
-                if (ConnectionInfo.ConnectionShutdown) return;
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) return;
 
                 //Idiot check
                 if (packetBytes == null) throw new NullReferenceException("Provided object packetBytes should really not be null.");

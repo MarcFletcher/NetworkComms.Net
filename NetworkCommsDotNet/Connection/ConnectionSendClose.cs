@@ -261,7 +261,7 @@ namespace NetworkCommsDotNet
             System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
             responseTimeMS = long.MaxValue;
 
-            if (!ConnectionInfo.ConnectionEstablished)
+            if (!(ConnectionInfo.ConnectionState == ConnectionState.Established))
             {
                 if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
                 {
@@ -305,7 +305,7 @@ namespace NetworkCommsDotNet
             lock (sendLocker)
             {
                 //We don't allow sends on a closed connection
-                if (ConnectionInfo.ConnectionShutdown) throw new CommunicationException("Attempting to send packet on connection which has been closed or is currently closing.");
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new CommunicationException("Attempting to send packet on connection which has been closed or is currently closing.");
 
                 string confirmationCheckSum = "";
                 AutoResetEvent confirmationWaitSignal = new AutoResetEvent(false);
