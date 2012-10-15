@@ -87,6 +87,9 @@ namespace NetworkCommsDotNet
         {
             try
             {
+                if (NetworkComms.loggingEnabled)
+                    NetworkComms.logger.Trace("Establishing new connection with " + ConnectionInfo);
+
                 bool connectionEstablishing = false;
                 lock (delegateLocker)
                 {
@@ -155,6 +158,9 @@ namespace NetworkCommsDotNet
         /// <returns>True if the wait was triggered, false otherwise after the provided timeout.</returns>
         protected bool WaitForConnectionEstablish(int waitTimeoutMS)
         {
+            if (NetworkComms.loggingEnabled)
+                NetworkComms.logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
+
             return connectionSetupWait.WaitOne(waitTimeoutMS);
         }
 

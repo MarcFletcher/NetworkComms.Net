@@ -30,7 +30,7 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
-            if (false)
+            if (true)
             {
                 //Configure the logger here
                 NameValueCollection properties = new NameValueCollection();
@@ -42,23 +42,14 @@ namespace DebugTests
                 DFS.EnableLogging(logger);
             }
 
-            var infos = NetworkComms.AllConnectionInfo(true);
+            //NetworkComms.ListenOnAllAllowedInterfaces = false;
+            //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
-            //NameValueCollection properties = new NameValueCollection();
-            //properties["showDateTime"] = "true";
-            //properties["showLogName"] = "false";
-            //properties["level"] = "All";
-
-            //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
-
-            NetworkComms.ListenOnAllAllowedInterfaces = false;
-            NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
-
-            //BasicSend.RunExample();
+            BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
-            LoadTest.RunExample();
+            //LoadTest.RunExample();
         }
     }
 }

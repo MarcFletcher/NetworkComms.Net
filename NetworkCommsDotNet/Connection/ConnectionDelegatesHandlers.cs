@@ -160,7 +160,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... passing completed data packet to selected handlers.");
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... passing completed data packet to selected connection specific handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing

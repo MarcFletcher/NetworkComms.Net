@@ -143,6 +143,12 @@ namespace QuickLZCompressor
             {
                 Available = false;
             }
+            catch (Exception ex)
+            {
+                Available = false;
+                using (StreamWriter sw = new StreamWriter("quickLZLoadError.txt", false))
+                    sw.WriteLine(ex.ToString());
+            }
         }
 
         private QuickLZ()
