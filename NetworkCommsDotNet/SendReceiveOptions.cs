@@ -46,15 +46,16 @@ namespace NetworkCommsDotNet
             {
                 if (value == null)
                     _dataProcessors = new List<DataProcessor>();
-
-                if (value.Count > 7)
-                    throw new ArgumentException("Only 7 data Processors are supported");
-
-                //validate the list to make sure all the data processors are the same
-                if (value.Distinct().SequenceEqual(value))
-                    _dataProcessors = value;
+                else if (value.Count > 7)
+                    throw new ArgumentException("A maximum of seven data processors are supported");
                 else
-                    throw new ArgumentException("Same data processor cannot be applied twice");
+                {
+                    //validate the list to make sure all the data processors are the same
+                    if (value.Distinct().SequenceEqual(value))
+                        _dataProcessors = value;
+                    else
+                        throw new ArgumentException("Same data processor cannot be provided more than once.");
+                }
             }
         }
 
