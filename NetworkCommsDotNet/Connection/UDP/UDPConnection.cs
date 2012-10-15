@@ -49,6 +49,9 @@ namespace NetworkCommsDotNet
         private UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
+            if (NetworkComms.loggingEnabled)
+                NetworkComms.logger.Trace("Creating new UDPConnection with " + connectionInfo);
+
             udpLevel = level;
 
             if (listenForIncomingPackets && existingConnection != null)

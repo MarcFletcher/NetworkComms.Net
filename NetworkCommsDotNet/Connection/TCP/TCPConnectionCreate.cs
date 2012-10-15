@@ -84,9 +84,17 @@ namespace NetworkCommsDotNet
             {
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
                 if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
+                {
+                    if (NetworkComms.loggingEnabled)
+                        NetworkComms.logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
+
                     connection = (TCPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
+                }
                 else
                 {
+                    if (NetworkComms.loggingEnabled)
+                        NetworkComms.logger.Trace("Creating new TCPConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
+
                     //We add a reference to networkComms for this connection within the constructor
                     connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, tcpClient);
                     newConnection = true;
@@ -95,8 +103,8 @@ namespace NetworkCommsDotNet
 
             if (establishIfRequired)
             {
-                if (newConnection) connection.EstablishConnection();
-                else  connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
+                if (newConnection) connection.EstablishConnection(); 
+                else connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
             }
 
             TriggerConnectionKeepAliveThread();

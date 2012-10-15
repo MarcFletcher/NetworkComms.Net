@@ -11,22 +11,24 @@ namespace DebugTests
     /// Networking in only 11 lines (not including comments and whitespace of course).
     /// Note: This example deliberately includes no validation or exception handling in order to keep it as short as possible (i.e. it's easy to break).
     /// </summary>
-    static class BasicSend
+    public static class BasicSend
     {
+        /// <summary>
+        /// Run example
+        /// </summary>
         public static void RunExample()
         {
-            NetworkComms.ListenOnAllAllowedInterfaces = true;
-
             //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
             //This handler will just write the incoming string message to the console window.
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (header, connectionInfo, message) => { Console.WriteLine("\n  ... Incoming message from " + connectionInfo + " saying '" + message  +"'.");});
-            
-            //Print the ip address and comms port we are listening on.
-            //If the ip address has not been auto detected correctly, either
-            //  1 - Set the LocalIP property manually before calling NetworkComms.AppendIncomingPacketHandler
-            //  2 - Specify some ip prefixs to help the auto detected by setting the NetworkComms.PreferredIPPrefix property
-            Console.WriteLine("Listening for messages on {0}:{1} ({2})", NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort, NetworkComms.AllAllowedIPs().Count);
-            
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
+
+            //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.StartListening()
+            TCPConnection.StartListening();
+
+            //Print the IP addresses and ports we are listening on.
+            Console.WriteLine("Listening for messages on:");
+            foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+
             //We can loop here to allow any number of test messages to be sent and received
             while (true)
             {
@@ -39,15 +41,15 @@ namespace DebugTests
                 else
                 {
                     //Once we have a message we need to know where to send it
-                    //Expecting user to enter ip address as 192.168.0.1
-                    Console.WriteLine("Please enter the destination IP Address (Assumes default port), e.g 192.168.0.1:");
+                    //Expecting user to enter ip address as 192.168.0.1:4000
+                    Console.WriteLine("Please enter the destination IP address and press enter, e.g '192.168.0.1'");
 
-                    //Parse the provided destination IP Address
+                    //Parse the provided destination information
                     //If the user entered using a bad format we are going to get an exception
-                    string serverIP = Console.ReadLine();
+                    string ipAddressStr = Console.ReadLine();
 
                     //Send the message to the provided destination, voila!
-                    NetworkComms.SendObject("Message", serverIP, message);
+                    NetworkComms.SendObject("Message", ipAddressStr, message);
                 }
             }
 
@@ -55,4 +57,5 @@ namespace DebugTests
             NetworkComms.Shutdown();
         }
     }
+
 }

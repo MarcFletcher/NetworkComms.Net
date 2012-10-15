@@ -623,7 +623,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
-                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected handlers.");
+                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected global handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -1151,24 +1151,10 @@ namespace NetworkCommsDotNet
                                               select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToList();
             }
 
+            if (loggingEnabled) logger.Trace("Closing " + connectionsToClose.Count + " connections.");
+
             foreach (Connection connection in connectionsToClose)
                 connection.CloseConnection(false, -6);
-        }
-
-        /// <summary>
-        /// Returns a list of all connections matching the provided <see cref="ConnectionType"/>
-        /// </summary>
-        /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
-        /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> RetrieveConnection(ConnectionType connectionType)
-        {
-            lock (globalDictAndDelegateLocker)
-            {
-                return (from current in allConnectionsByEndPoint.Values
-                        select (from inner in current
-                                where (connectionType == ConnectionType.Undefined ? true : inner.Key == connectionType)
-                                select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => {return entry != null;}).ToList();
-            }
         }
 
         /// <summary>
@@ -1178,6 +1164,27 @@ namespace NetworkCommsDotNet
         public static List<Connection> RetrieveConnection()
         {
             return RetrieveConnection(ConnectionType.Undefined);
+        }
+
+        /// <summary>
+        /// Returns a list of all connections matching the provided <see cref="ConnectionType"/>
+        /// </summary>
+        /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
+        public static List<Connection> RetrieveConnection(ConnectionType connectionType)
+        {
+            List<Connection> result;
+            lock (globalDictAndDelegateLocker)
+            {
+                result = (from current in allConnectionsByEndPoint.Values
+                        select (from inner in current
+                                where (connectionType == ConnectionType.Undefined ? true : inner.Key == connectionType)
+                                select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => {return entry != null;}).ToList();
+            }
+
+            if (loggingEnabled) logger.Trace("RetrieveConnection by connectionType='"+connectionType+"'. Returning list of " + result.Count + " connections.");
+
+            return result;
         }
 
         /// <summary>
@@ -1192,7 +1199,10 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
                 resultList = (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
 
-            return (resultList == null ? new List<Connection>() : resultList);
+            resultList = (resultList == null ? new List<Connection>() : resultList);
+            if (loggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'. Returning list of " + resultList.Count + " connections.");
+
+            return resultList;
         }
 
         /// <summary>
@@ -1202,8 +1212,19 @@ namespace NetworkCommsDotNet
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection RetrieveConnection(ConnectionInfo connectionInfo)
         {
+            Connection result;
             lock (globalDictAndDelegateLocker)
-                return (from current in NetworkComms.allConnectionsByEndPoint where current.Key.Equals(connectionInfo.RemoteEndPoint) && current.Value.ContainsKey(connectionInfo.ConnectionType) select current.Value[connectionInfo.ConnectionType]).FirstOrDefault();
+                result = (from current in NetworkComms.allConnectionsByEndPoint where current.Key.Equals(connectionInfo.RemoteEndPoint) && current.Value.ContainsKey(connectionInfo.ConnectionType) select current.Value[connectionInfo.ConnectionType]).FirstOrDefault();
+
+            if (loggingEnabled)
+            {
+                if (result == null)
+                    logger.Trace("RetrieveConnection by connectionInfo='"+connectionInfo+"'. No matching connection was found.");
+                else
+                    logger.Trace("RetrieveConnection by connectionInfo='"+connectionInfo+"'. Matching connection was found.");
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -1214,6 +1235,7 @@ namespace NetworkCommsDotNet
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection RetrieveConnection(IPEndPoint remoteEndPoint, ConnectionType connectionType)
         {
+            Connection result = null;
             lock (globalDictAndDelegateLocker)
             {
                 //return (from current in NetworkComms.allConnectionsByEndPoint where current.Key == IPEndPoint && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
@@ -1221,13 +1243,19 @@ namespace NetworkCommsDotNet
                 if (allConnectionsByEndPoint.ContainsKey(remoteEndPoint))
                 {
                     if (allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType))
-                        return allConnectionsByEndPoint[remoteEndPoint][connectionType];
-                    else
-                        return null;
+                        result = allConnectionsByEndPoint[remoteEndPoint][connectionType];
                 }
-                else
-                    return null;
             }
+
+            if (loggingEnabled)
+            {
+                if (result == null)
+                    logger.Trace("RetrieveConnection by remoteEndPoint='"+remoteEndPoint.Address+":"+remoteEndPoint.Port+"' and connectionType='"+connectionType+"'. No matching connection was found.");
+                else
+                    logger.Trace("RetrieveConnection by remoteEndPoint='"+remoteEndPoint.Address+":"+remoteEndPoint.Port+"' and connectionType='"+connectionType+"'. Matching connection was found.");
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -1237,15 +1265,15 @@ namespace NetworkCommsDotNet
         /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(ConnectionInfo connectionInfo)
         {
-            if (loggingEnabled) logger.Trace("Checking by endPoint for existing " + connectionInfo.ConnectionType + " connection to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port);
-
+            bool result = false;
             lock (globalDictAndDelegateLocker)
             {
                 if (allConnectionsByEndPoint.ContainsKey(connectionInfo.RemoteEndPoint))
-                    return allConnectionsByEndPoint[connectionInfo.RemoteEndPoint].ContainsKey(connectionInfo.ConnectionType);
-                else
-                    return false;
+                    result = allConnectionsByEndPoint[connectionInfo.RemoteEndPoint].ContainsKey(connectionInfo.ConnectionType);
             }
+
+            if (loggingEnabled) logger.Trace("Checking for existing connection by connectionInfo='" + connectionInfo +"'");
+            return result;
         }
 
         /// <summary>
@@ -1256,18 +1284,18 @@ namespace NetworkCommsDotNet
         /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
-            if (loggingEnabled) logger.Trace("Checking by identifier and endPoint for existing " + connectionType + " connection to " + networkIdentifier);
-
+            bool result = false;
             lock (globalDictAndDelegateLocker)
             {
                 if (allConnectionsById.ContainsKey(networkIdentifier))
                 {
                     if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
-                        return allConnectionsById[networkIdentifier][connectionType].Count() > 0;
+                        result = allConnectionsById[networkIdentifier][connectionType].Count() > 0;
                 }
             }
 
-            return false;
+            if (loggingEnabled) logger.Trace("Checking for existing connection by identifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'");
+            return result;
         }
 
         /// <summary>
@@ -1278,15 +1306,15 @@ namespace NetworkCommsDotNet
         /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(IPEndPoint remoteEndPoint, ConnectionType connectionType)
         {
-            if (loggingEnabled) logger.Trace("Checking by endPoint for existing " + connectionType + " connection to " + remoteEndPoint.Address + ":" + remoteEndPoint.Port);
-
+            bool result = false;
             lock (globalDictAndDelegateLocker)
             {
                 if (allConnectionsByEndPoint.ContainsKey(remoteEndPoint))
-                    return allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType);
-                else
-                    return false;
+                    result = allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType);
             }
+
+            if (loggingEnabled) logger.Trace("Checking for existing connection by endPoint='"+remoteEndPoint.Address + ":" + remoteEndPoint.Port+"' and connectionType='" + connectionType + "'");
+            return result;
         }
 
         /// <summary>
@@ -1384,6 +1412,9 @@ namespace NetworkCommsDotNet
         /// <param name="endPointToUse">An optional override which forces a specific IPEndPoint</param>
         internal static void AddConnectionByReferenceEndPoint(Connection connection, IPEndPoint endPointToUse = null)
         {
+            if (NetworkComms.loggingEnabled)
+                NetworkComms.logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
+
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
             if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
                 return;
@@ -1395,7 +1426,7 @@ namespace NetworkCommsDotNet
 
             //We can double check for an existing connection here first so that it occurs outside the lock
             Connection existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
-            if (existingConnection != null) existingConnection.ConnectionAlive();
+            if (existingConnection != null && existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Established && connection!=existingConnection) existingConnection.ConnectionAlive();
 
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)

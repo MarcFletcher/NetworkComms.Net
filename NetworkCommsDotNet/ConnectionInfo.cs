@@ -28,6 +28,11 @@ namespace NetworkCommsDotNet
     public enum ConnectionState
     {
         /// <summary>
+        /// The state of this connection is undefined. This is the starting state of new connections.
+        /// </summary>
+        Undefined,
+
+        /// <summary>
         /// The connection is in the process of being established.
         /// </summary>
         Establishing,
