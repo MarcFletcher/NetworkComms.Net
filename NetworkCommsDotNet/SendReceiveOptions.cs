@@ -44,6 +44,9 @@ namespace NetworkCommsDotNet
             get { return _dataProcessors; }
             protected set
             {
+                if (value == null)
+                    _dataProcessors = new List<DataProcessor>();
+
                 if (value.Count > 7)
                     throw new ArgumentException("Only 7 data Processors are supported");
 
