@@ -34,7 +34,17 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Gets the <see cref="DPSBase.DataSerializer"/> that should be used when sending information
         /// </summary>
-        public DataSerializer DataSerializer { get { return _dataSerializer; } protected set { _dataSerializer = value; } }
+        public DataSerializer DataSerializer
+        {
+            get { return _dataSerializer; }
+            protected set
+            {
+                if (value == null)
+                    _dataSerializer = DPSManager.GetDataSerializer<NullSerializer>();
+                else
+                    _dataSerializer = value;
+            }
+        }
 
         /// <summary>
         /// Gets the <see cref="DPSBase.DataProcessor"/>s that should be used when sending information. <see cref="DPSBase.DataProcessor"/>s are applied in index order
@@ -45,17 +55,19 @@ namespace NetworkCommsDotNet
             protected set
             {
                 if (value == null)
-                    _dataProcessors = new List<DataProcessor>();
-                else if (value.Count > 7)
-                    throw new ArgumentException("A maximum of seven data processors are supported");
-                else
                 {
-                    //validate the list to make sure all the data processors are the same
-                    if (value.Distinct().SequenceEqual(value))
-                        _dataProcessors = value;
-                    else
-                        throw new ArgumentException("Same data processor cannot be provided more than once.");
+                    _dataProcessors = new List<DataProcessor>();
+                    return;
                 }
+
+                if (value.Count > 7)
+                    throw new ArgumentException("Only 7 data Processors are supported");
+
+                //validate the list to make sure all the data processors are the same
+                if (value.Distinct().SequenceEqual(value))
+                    _dataProcessors = value;
+                else
+                    throw new ArgumentException("Same data processor cannot be applied twice");
             }
         }
 
@@ -132,6 +144,7 @@ namespace NetworkCommsDotNet
             : base(null)
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataProcessors = null; //Note that this will cause data processors to be set to an empty list
         }
 
         /// <summary>
@@ -143,6 +156,7 @@ namespace NetworkCommsDotNet
             : base(options)
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataProcessors = null; //Note that this will cause data processors to be set to an empty list
         }
     }
 
