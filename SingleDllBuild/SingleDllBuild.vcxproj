@@ -14,6 +14,32 @@
     <None Include="ILMerge.exe" />
     <None Include="SingleDll.bat" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
+      <Project>{5cb68f8c-6002-45d2-9c5f-ae7cf455eb6e}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{a38225e2-bef8-4ea4-8ac9-4a5b4f5ea85d}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
+      <Project>{b659339d-a958-4f33-96e6-3a0ccfcbc5c1}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{7473f5fc-a9be-454e-9bb4-2c8876304ab0}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
+      <Project>{e10b41f4-696d-465c-963d-086488e2b6aa}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B97A1312-9935-4AAE-A152-6246A5626245}</ProjectGuid>
     <RootNamespace>SingleDllBuild</RootNamespace>

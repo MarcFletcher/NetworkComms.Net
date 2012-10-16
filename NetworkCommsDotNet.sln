@@ -1,16 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkCommsDotNet", "NetworkCommsDotNet\NetworkCommsDotNet.csproj", "{7DB00305-F5ED-4545-9D83-542132C8177E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedFileSystem", "DistributedFileSystem\DistributedFileSystem.csproj", "{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickLZCompressor", "QuickLZCompressor\QuickLZCompressor.csproj", "{B659339D-A958-4F33-96E6-3A0CCFCBC5C1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpZipLibCompressor", "SharpZipLibCompressor\SharpZipLibCompressor.csproj", "{E10B41F4-696D-465C-963D-086488E2B6AA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipLZMACompressor", "SevenZipLZMACompressor\SevenZipLZMACompressor.csproj", "{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
@@ -21,19 +11,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		protobuf-net.dll = protobuf-net.dll
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkCommsDotNet", "NetworkCommsDotNet\NetworkCommsDotNet.csproj", "{7DB00305-F5ED-4545-9D83-542132C8177E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedFileSystem", "DistributedFileSystem\DistributedFileSystem.csproj", "{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickLZCompressor", "QuickLZCompressor\QuickLZCompressor.csproj", "{B659339D-A958-4F33-96E6-3A0CCFCBC5C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpZipLibCompressor", "SharpZipLibCompressor\SharpZipLibCompressor.csproj", "{E10B41F4-696D-465C-963D-086488E2B6AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipLZMACompressor", "SevenZipLZMACompressor\SevenZipLZMACompressor.csproj", "{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplesConsole", "ExamplesConsole\ExamplesConsole.csproj", "{8EFAC467-5DE2-4AC8-B90F-45E215BD9C20}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugTests", "DebugTests\DebugTests.csproj", "{A33EA8B0-EB46-493B-BE84-2CC325E66137}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SingleDllBuild", "SingleDllBuild\SingleDllBuild.vcxproj", "{B97A1312-9935-4AAE-A152-6246A5626245}"
-	ProjectSection(ProjectDependencies) = postProject
-		{7DB00305-F5ED-4545-9D83-542132C8177E} = {7DB00305-F5ED-4545-9D83-542132C8177E}
-		{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E} = {5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}
-		{B659339D-A958-4F33-96E6-3A0CCFCBC5C1} = {B659339D-A958-4F33-96E6-3A0CCFCBC5C1}
-		{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D} = {A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}
-		{E10B41F4-696D-465C-963D-086488E2B6AA} = {E10B41F4-696D-465C-963D-086488E2B6AA}
-		{7473F5FC-A9BE-454E-9BB4-2C8876304AB0} = {7473F5FC-A9BE-454E-9BB4-2C8876304AB0}
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DPSBase", "DPSBase\DPSBase.csproj", "{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}"
 EndProject
