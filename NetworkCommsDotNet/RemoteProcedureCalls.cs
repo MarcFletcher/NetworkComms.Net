@@ -113,7 +113,7 @@ namespace NetworkCommsDotNet
                 if (instanceId == String.Empty)
                     throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
+                return Cache<T>.CreateInstance(instanceId, connection);
             }
 
             /// <summary>
@@ -137,7 +137,7 @@ namespace NetworkCommsDotNet
                 if (instanceId == String.Empty)
                     throw new RPCException("Named instance does not exist");
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
+                return Cache<T>.CreateInstance(instanceId, connection);
             }
 
             /// <summary>
@@ -159,7 +159,7 @@ namespace NetworkCommsDotNet
                 if (instanceId == String.Empty)
                     throw new RPCException("Instance with given Id not found");
 
-                return (T)Activator.CreateInstance(Cache<T>.Type, instanceId, connection);
+                return Cache<T>.CreateInstance(instanceId, connection);
             }
 
             //We use this to get the private method. Should be able to get it dynamically
@@ -171,7 +171,43 @@ namespace NetworkCommsDotNet
             /// <typeparam name="T"></typeparam>
             private static class Cache<T> where T : class
             {
-                internal static readonly Type Type;
+                private static readonly Type Type;
+
+                public static T CreateInstance(string instanceId, Connection connection)
+                {
+                    //Create the instance
+                    var res = (T)Activator.CreateInstance(Type, instanceId, connection);
+                                  
+                    Dictionary<string, FieldInfo> eventFields = new Dictionary<string,FieldInfo>();
+
+                    foreach (var ev in typeof(T).GetEvents())
+                        eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
+
+                    //Add the packet handler to deal with incoming event firing
+                    connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + Type.Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                        {
+                            try
+                            {
+                                //Let's do some basic checks on the data we've been sent
+                                if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
+                                    return;
+
+                                var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
+
+                                List<object> args = new List<object>();
+
+                                for (int i = 0; i < eventCallWrapper.args.Count; i++)
+                                    args.Add(eventCallWrapper.args[i]);
+
+                                del.DynamicInvoke(args);
+                            }
+                            catch (Exception) { }
+
+                        }, NetworkComms.DefaultSendReceiveOptions);
+
+                    return res;
+                }
+
                 static Cache()
                 {
                     //Make sure the type is an interface
@@ -211,11 +247,11 @@ namespace NetworkCommsDotNet
                     il.Emit(OpCodes.Stfld, networkConnection);
                     il.Emit(OpCodes.Ret);
 
-                    //Loop through each method in the interface
-                    foreach (var method in typeof(T).GetMethods())
+                    //Loop through each method in the interface but exclude any event methods
+                    foreach (var method in typeof(T).GetMethods().Except(typeof(T).GetEvents().SelectMany(a => { return new MethodInfo[] { a.GetAddMethod(), a.GetRemoveMethod()}; })))
                     {
                         #region Method
-
+                        
                         //Get the method arguements and implement as a public virtual method that we will override
                         var args = method.GetParameters();
                         var methodImpl = type.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, Array.ConvertAll(args, arg => arg.ParameterType));
@@ -578,12 +614,158 @@ namespace NetworkCommsDotNet
                         }
                     }
 
-                    foreach (var handler in typeof(T).GetEvents())
+                    if (typeof(T).GetEvents().Count() != 0)
                     {
-                        throw new InvalidOperationException(@"Events in interfaces are not supported at this time. If this is a desired feature please submit a request at http://bitbucket.org/MarcF/networkcomms.net");
+                        foreach (var handler in typeof(T).GetEvents())
+                        {
+                            //Implement the event
+                            var evImpl = type.DefineEvent(handler.Name, handler.Attributes, handler.EventHandlerType);
+                            //And then the underlying field
+                            var eventField = type.DefineField(handler.Name, handler.EventHandlerType, FieldAttributes.Private);
+
+                            //Get the methods for adding and removing delegates
+                            var delegateCombineMethod = typeof(Delegate).GetMethod("Combine", new Type[] { typeof(Delegate), typeof(Delegate) });
+                            var delegateRemoveMethod = typeof(Delegate).GetMethod("Remove", new Type[] { typeof(Delegate), typeof(Delegate) });
+
+                            //This is used to keep things thread safe
+                            var compareExchange = GetGenericMethod(typeof(Interlocked), "CompareExchange");// finds the correct method to call.
+                            // thanks to @marc, create the specific method with the correct type
+                            compareExchange = compareExchange.MakeGenericMethod(handler.EventHandlerType);
+
+                            //We will then define the add method
+
+                            #region Event Add Method
+
+                            MethodBuilder method = type.DefineMethod("add_" + handler.Name, MethodAttributes.Public | MethodAttributes.Virtual, null, new Type[] { handler.EventHandlerType });
+                            method.DefineParameter(0, ParameterAttributes.Retval, null);
+                            method.DefineParameter(1, ParameterAttributes.In, "value");
+
+                            evImpl.SetAddOnMethod(method);
+
+                            il = method.GetILGenerator();
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(typeof(bool));
+
+                            Label loop = il.DefineLabel();
+
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, eventField);
+                            il.Emit(OpCodes.Stloc_0);
+
+                            il.EmitWriteLine("Built");
+
+                            il.MarkLabel(loop);// loop start (head: IL_0007)
+
+                            il.Emit(OpCodes.Ldloc_0);
+                            il.Emit(OpCodes.Stloc_1);
+                            il.Emit(OpCodes.Ldloc_1);
+                            il.Emit(OpCodes.Ldarg_1);
+
+                            il.Emit(OpCodes.Call, delegateCombineMethod);
+                            il.Emit(OpCodes.Castclass, handler.EventHandlerType);
+
+                            il.Emit(OpCodes.Stloc_2);
+                            il.Emit(OpCodes.Ldarg_0);
+
+                            il.Emit(OpCodes.Ldflda, eventField);
+
+                            il.Emit(OpCodes.Ldloc_2);
+                            il.Emit(OpCodes.Ldloc_1);
+
+                            // How to do this?
+                            //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
+                            //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
+                            il.Emit(OpCodes.Call, compareExchange);
+
+                            il.Emit(OpCodes.Stloc_0);
+                            il.Emit(OpCodes.Ldloc_0);
+                            il.Emit(OpCodes.Ldloc_1);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Stloc_3);
+                            il.Emit(OpCodes.Ldloc_3);
+                            il.Emit(OpCodes.Brtrue_S, loop);
+                            // end loop
+                            il.Emit(OpCodes.Ret);
+
+                            #endregion
+
+                            //Next define the remove method
+
+                            #region Event Add Method
+
+                            method = type.DefineMethod("remove_" + handler.Name, MethodAttributes.Public | MethodAttributes.Virtual, null, new Type[] { handler.EventHandlerType });
+                            method.DefineParameter(0, ParameterAttributes.Retval, null);
+                            method.DefineParameter(1, ParameterAttributes.In, "value");
+
+                            evImpl.SetRemoveOnMethod(method);
+
+                            il = method.GetILGenerator();
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(handler.EventHandlerType);
+                            il.DeclareLocal(typeof(bool));
+
+                            loop = il.DefineLabel();
+
+                            il.Emit(OpCodes.Ldarg_0);
+                            il.Emit(OpCodes.Ldfld, eventField);
+                            il.Emit(OpCodes.Stloc_0);
+
+                            il.EmitWriteLine("Built");
+
+                            il.MarkLabel(loop);// loop start (head: IL_0007)
+
+                            il.Emit(OpCodes.Ldloc_0);
+                            il.Emit(OpCodes.Stloc_1);
+                            il.Emit(OpCodes.Ldloc_1);
+                            il.Emit(OpCodes.Ldarg_1);
+
+                            il.Emit(OpCodes.Call, delegateCombineMethod);
+                            il.Emit(OpCodes.Castclass, handler.EventHandlerType);
+
+                            il.Emit(OpCodes.Stloc_2);
+                            il.Emit(OpCodes.Ldarg_0);
+
+                            il.Emit(OpCodes.Ldflda, eventField);
+
+                            il.Emit(OpCodes.Ldloc_2);
+                            il.Emit(OpCodes.Ldloc_1);
+
+                            // How to do this?
+                            //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
+                            //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
+                            il.Emit(OpCodes.Call, compareExchange);
+
+                            il.Emit(OpCodes.Stloc_0);
+                            il.Emit(OpCodes.Ldloc_0);
+                            il.Emit(OpCodes.Ldloc_1);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Stloc_3);
+                            il.Emit(OpCodes.Ldloc_3);
+                            il.Emit(OpCodes.Brtrue_S, loop);
+                            // end loop
+                            il.Emit(OpCodes.Ret);
+
+                            #endregion
+                        }
+
                     }
 
                     Cache<T>.Type = type.CreateType();
+                }
+
+                private static MethodInfo GetGenericMethod(Type type, string methodName)
+                {
+                    var q = from m in type.GetMethods()
+                            where m.Name == methodName && m.IsGenericMethod
+                            select m;
+                    return q.FirstOrDefault();
                 }
             }
 
@@ -756,7 +938,11 @@ namespace NetworkCommsDotNet
                     string instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
 
                     if (!RPCObjects.ContainsKey(instanceId))
+                    {
+                        //Need to add code HERE to deal with events
+
                         RPCObjects.Add(instanceId, new RPCStorageWrapper(instance, typeof(I), RPCStorageWrapper.RPCObjectType.Public));
+                    }
 
                     if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME"))
                     {
@@ -877,7 +1063,11 @@ namespace NetworkCommsDotNet
                     var instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connection.ConnectionInfo.NetworkIdentifier.ToString()).GetHashCode() ^ salt))));
 
                     if (!RPCObjects.ContainsKey(instanceId))
+                    {
+                        //Need to add code HERE to deal with events
+
                         RPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]));
+                    }
 
                     if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID"))
                     {

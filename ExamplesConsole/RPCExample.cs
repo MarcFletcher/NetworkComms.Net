@@ -125,6 +125,8 @@ namespace ExamplesConsole
                 get;
                 set;
             }
+
+            event EventHandler<EventArgs> TestEvent;
         }
 
         /// <summary>
@@ -233,6 +235,9 @@ namespace ExamplesConsole
                         lastResult = value; 
                     }
                 }
+
+
+                public event EventHandler<EventArgs> TestEvent;
             }
 
             private ConnectionType connectionTypeToUse;
