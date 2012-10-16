@@ -134,9 +134,9 @@ namespace ExamplesConsole
 
                 //Create the connection
                 if (connectionTypeToUse == ConnectionType.TCP)
-                    connectionToUse = TCPConnection.CreateConnection(connectionInfo);
+                    connectionToUse = TCPConnection.GetConnection(connectionInfo);
                 else
-                    connectionToUse = UDPConnection.CreateConnection(connectionInfo, UDPOptions.None);
+                    connectionToUse = UDPConnection.GetConnection(connectionInfo, UDPOptions.None);
 
                 //Send the object
                 if (toSendType == typeof(Array))

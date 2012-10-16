@@ -52,7 +52,7 @@ namespace NetworkCommsDotNet
     /// Contains any information related to the configuration of a <see cref="Connection"/> object.
     /// </summary>
     [ProtoContract]
-    public class ConnectionInfo : IEqualityComparer<ConnectionInfo>
+    public class ConnectionInfo : IEquatable<ConnectionInfo>
     {
         /// <summary>
         /// The type of this connection
@@ -307,14 +307,48 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Compares two <see cref="ConnectionInfo"/> objects and returns true if both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
+        /// Compares this <see cref="ConnectionInfo"/> object with obj and returns true if obj is ConnectionInfo and both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
         /// </summary>
-        /// <param name="x">Connection info to compare</param>
-        /// <param name="y">Connection info to compare</param>
-        /// <returns>True if networkIdentifiers and endPoints are equal otherwise false</returns>
-        public bool Equals(ConnectionInfo x, ConnectionInfo y)
+        /// <param name="obj">The object to test of equality</param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
         {
-            return (x.NetworkIdentifier.ToString() == y.NetworkIdentifier.ToString() && x.RemoteEndPoint.Equals(y.RemoteEndPoint));
+            var other = obj as ConnectionInfo;
+            if (other == null)
+                return false;
+            return this.Equals(other);
+        }
+
+        /// <summary>
+        /// Compares this <see cref="ConnectionInfo"/> object with other and returns true if both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(ConnectionInfo other)
+        {
+            return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString() && this.RemoteEndPoint.Equals(other.RemoteEndPoint));
+        }
+
+        /// <summary>
+        /// Returns left.Equals(right)
+        /// </summary>
+        /// <param name="left">Left connectionInfo</param>
+        /// <param name="right">Right connectionInfo</param>
+        /// <returns>True if both are equal, otherwise false</returns>
+        public static bool operator ==(ConnectionInfo left, ConnectionInfo right)
+        {
+            return left.Equals(right);
+        }
+
+        /// <summary>
+        /// Returns !left.Equals(right)
+        /// </summary>
+        /// <param name="left">Left connectionInfo</param>
+        /// <param name="right">Right connectionInfo</param>
+        /// <returns>True if both are different, otherwise false</returns>
+        public static bool operator !=(ConnectionInfo left, ConnectionInfo right)
+        {
+            return !left.Equals(right);
         }
 
         /// <summary>

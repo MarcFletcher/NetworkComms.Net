@@ -527,7 +527,7 @@ namespace DistributedFileSystem
                             string[] result = null;
                             //We don't want to contact ourselves plus we check the possible exception lists
                             if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
-                                result = TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<string[]>("DFS_KnownPeersRequest", "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                result = TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<string[]>("DFS_KnownPeersRequest", "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
 
                             //We take all of the results and put them in our summary list
                             if (result != null)
@@ -585,7 +585,7 @@ namespace DistributedFileSystem
 
                         //We don't want to contact ourselves and for now that includes anything having the same ip as us
                         if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
-                            TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                            TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                     }
                     catch (CommsException)
                     {
@@ -635,7 +635,7 @@ namespace DistributedFileSystem
 
                                 //We don't want to contact ourselves and for now that includes anything having the same ip as us
                                 if (!(peerEndPoint.Address == NetworkComms.AllAllowedIPs()[0] && peerEndPoint.Port == NetworkComms.DefaultListenPort) && PeerContactAllowed(peerEndPoint.Address, false))
-                                    TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                    TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             }
                             catch (CommsException)
                             {
@@ -726,7 +726,7 @@ namespace DistributedFileSystem
 
                     //We don't want to contact ourselves
                     if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
-                        TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, localChunkFlags));
+                        TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, localChunkFlags));
                 }
                 //We don't just want to catch comms exceptions because if a peer has potentially disconnected we may get a KeyNotFoundException here
                 catch (Exception)
@@ -754,7 +754,7 @@ namespace DistributedFileSystem
                     {
                         if (peer.Value.PeerChunkFlags.AllFlagsSet(totalNumChunks))
                         {
-                            var connections = NetworkComms.RetrieveConnection(peer.Key, ConnectionType.TCP);
+                            var connections = NetworkComms.GetExistingConnection(peer.Key, ConnectionType.TCP);
                             //NetworkComms.CloseConnection();
                             if (connections != null) foreach (var connection in connections) connection.CloseConnection(false);
                         }
@@ -830,7 +830,7 @@ namespace DistributedFileSystem
 
                         //We don't want to contact ourselves
                         if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
-                            TCPConnection.CreateConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
+                            TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
                     }
                     catch (CommsException)
                     {
