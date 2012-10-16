@@ -243,7 +243,7 @@ namespace NetworkCommsDotNet
                 {
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
 
                     //We pass the data off to the specific connection
                     connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
@@ -306,7 +306,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        UDPConnection connection = CreateConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
 
                         //We pass the data off to the specific connection
                         connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);

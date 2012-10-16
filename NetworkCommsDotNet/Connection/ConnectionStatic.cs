@@ -104,7 +104,7 @@ namespace NetworkCommsDotNet
         private static void AllConnectionsSendNullPacketKeepAlive(bool returnImmediately = false)
         {
             //Loop through all connections and test the alive state
-            List<Connection> allConnections = NetworkComms.RetrieveConnection();
+            List<Connection> allConnections = NetworkComms.GetExistingConnection();
 
             List<Task> connectionCheckTasks = new List<Task>();
 

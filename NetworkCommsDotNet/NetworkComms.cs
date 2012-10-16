@@ -331,6 +331,8 @@ namespace NetworkCommsDotNet
                 catch (Exception ex)
                 {
                     LogError(ex, "NetworkLoadWorker");
+                    //If an error has happened we dont want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
+                    Thread.Sleep(5000);
                 }
             } while (!commsShutdown);
         }
@@ -998,7 +1000,7 @@ namespace NetworkCommsDotNet
         /// <param name="sendObject">The obect to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             conn.SendObject(packetTypeStr, sendObject);
         }
 
@@ -1014,7 +1016,7 @@ namespace NetworkCommsDotNet
         /// <returns>The expected return object</returns>
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
@@ -1161,9 +1163,9 @@ namespace NetworkCommsDotNet
         /// Returns a list of all connections
         /// </summary>
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> RetrieveConnection()
+        public static List<Connection> GetExistingConnection()
         {
-            return RetrieveConnection(ConnectionType.Undefined);
+            return GetExistingConnection(ConnectionType.Undefined);
         }
 
         /// <summary>
@@ -1171,7 +1173,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> RetrieveConnection(ConnectionType connectionType)
+        public static List<Connection> GetExistingConnection(ConnectionType connectionType)
         {
             List<Connection> result;
             lock (globalDictAndDelegateLocker)
@@ -1193,7 +1195,7 @@ namespace NetworkCommsDotNet
         /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
         /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
         /// <returns>A list of connections to the desired peer. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> RetrieveConnection(ShortGuid networkIdentifier, ConnectionType connectionType)
+        public static List<Connection> GetExistingConnection(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
             List<Connection> resultList;
             lock (globalDictAndDelegateLocker)
@@ -1210,7 +1212,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo corresponding with the desired connection</param>
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
-        public static Connection RetrieveConnection(ConnectionInfo connectionInfo)
+        public static Connection GetExistingConnection(ConnectionInfo connectionInfo)
         {
             Connection result;
             lock (globalDictAndDelegateLocker)
@@ -1233,7 +1235,7 @@ namespace NetworkCommsDotNet
         /// <param name="remoteEndPoint">IPEndPoint corresponding with the desired connection</param>
         /// <param name="connectionType">The <see cref="ConnectionType"/> desired</param>
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
-        public static Connection RetrieveConnection(IPEndPoint remoteEndPoint, ConnectionType connectionType)
+        public static Connection GetExistingConnection(IPEndPoint remoteEndPoint, ConnectionType connectionType)
         {
             Connection result = null;
             lock (globalDictAndDelegateLocker)
@@ -1425,7 +1427,7 @@ namespace NetworkCommsDotNet
             if (endPointToUse == null) endPointToUse = connection.ConnectionInfo.RemoteEndPoint;
 
             //We can double check for an existing connection here first so that it occurs outside the lock
-            Connection existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
+            Connection existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
             if (existingConnection != null && existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Established && connection!=existingConnection) existingConnection.ConnectionAlive();
 
             //How do we prevent multiple threads from trying to create a duplicate connection??
@@ -1435,7 +1437,7 @@ namespace NetworkCommsDotNet
                 if (ConnectionExists(endPointToUse, connection.ConnectionInfo.ConnectionType))
                 {
                     //If a connection still exist we don't assume it is the same as above
-                    existingConnection = RetrieveConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
+                    existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
                         throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). New details - " + connection.ConnectionInfo +
@@ -1536,7 +1538,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1558,7 +1560,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1579,7 +1581,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1600,7 +1602,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1620,7 +1622,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject)
         {
-            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1646,7 +1648,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1672,7 +1674,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1695,7 +1697,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1718,7 +1720,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1740,7 +1742,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
         {
-            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1768,7 +1770,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1795,7 +1797,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
             networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1820,7 +1822,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1845,7 +1847,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -1869,7 +1871,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1901,7 +1903,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
             networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1939,7 +1941,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
             networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
@@ -1975,7 +1977,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -2011,7 +2013,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
-            TCPConnection conn = TCPConnection.CreateConnection(new ConnectionInfo(destinationIPAddress, commsPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
 
@@ -2046,7 +2048,7 @@ namespace NetworkCommsDotNet
         [Obsolete]
         public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
         {
-            List<Connection> conns = RetrieveConnection(networkIdentifier, ConnectionType.TCP);
+            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
             if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
 
             var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);

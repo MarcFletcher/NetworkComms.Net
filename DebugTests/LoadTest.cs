@@ -38,7 +38,7 @@ namespace DebugTests
                     {
                         while (true)
                         {
-                            TCPConnection.CreateConnection(new ConnectionInfo(catcherPoint)).SendObject("ThrowData", throwData, nullCompressionSRO);
+                            TCPConnection.GetConnection(new ConnectionInfo(catcherPoint)).SendObject("ThrowData", throwData, nullCompressionSRO);
                         }
                     });
 

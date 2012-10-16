@@ -220,7 +220,7 @@ namespace DistributedFileSystem
                 try
                 {
                     //This links any existing local items and retrieves a list of all remote items
-                    TCPConnection primaryServer = TCPConnection.CreateConnection(new ConnectionInfo(linkTargetIP, linkTargetPort));
+                    TCPConnection primaryServer = TCPConnection.GetConnection(new ConnectionInfo(linkTargetIP, linkTargetPort));
 
                     DFSLinkRequest availableLinkTargetItems = primaryServer.SendReceiveObject<DFSLinkRequest>("DFS_ItemLinkRequest", "DFS_ItemLinkRequest", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
                     if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker could link " + availableLinkTargetItems.AvailableItems.Count+ " items from target.");
@@ -582,7 +582,7 @@ namespace DistributedFileSystem
             try
             {
                 //NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
-                TCPConnection.CreateConnection(new ConnectionInfo(peerIP, peerPort)).SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
+                TCPConnection.GetConnection(new ConnectionInfo(peerIP, peerPort)).SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
             }
             catch (CommsException)
             {

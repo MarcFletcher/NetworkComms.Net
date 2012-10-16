@@ -39,27 +39,27 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
-        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
+        public static TCPConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            return CreateConnection(connectionInfo, null, null, establishIfRequired);
+            return GetConnection(connectionInfo, null, null, establishIfRequired);
         }
 
         /// <summary>
         /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
-        public static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
+        public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
-            return CreateConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
+            return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace NetworkCommsDotNet
         /// <param name="tcpClient">If this is an incoming connection we will already have access to the tcpClient, otherwise use null</param>
         /// <param name="establishIfRequired">Establish during create if true</param>
         /// <returns>An existing connection or a new one</returns>
-        internal static TCPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
+        internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
@@ -88,7 +88,7 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled)
                         NetworkComms.logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
 
-                    connection = (TCPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
+                    connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
                 }
                 else
                 {

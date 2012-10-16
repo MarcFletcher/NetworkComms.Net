@@ -386,9 +386,9 @@ namespace ExamplesConsole
                     Connection connection = null;
 
                     if (connectionTypeToUse == ConnectionType.TCP)
-                        connection = TCPConnection.CreateConnection(connectionInfo);
+                        connection = TCPConnection.GetConnection(connectionInfo);
                     else
-                        connection = UDPConnection.CreateConnection(connectionInfo, UDPOptions.None);
+                        connection = UDPConnection.GetConnection(connectionInfo, UDPOptions.None);
 
                     IMath remoteObject = SelectRemoteObject(connection, out instanceId);
                     Console.WriteLine("\nRemote object has been selected. RPC object instanceId: {0}", instanceId);

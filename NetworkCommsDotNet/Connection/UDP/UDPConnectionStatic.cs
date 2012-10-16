@@ -59,29 +59,29 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
         {
-            return CreateConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+            return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
         }
 
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo and and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.RetrieveConnection()"/>.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/>.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendRecieveOptions">The SendReceiveOptions to use as defaults for this connection</param>
         /// <param name="level">The UDP options to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets can be received</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets = true)
         {
-            return CreateConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
+            return GetConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
         }
 
         /// <summary>
@@ -93,7 +93,7 @@ namespace NetworkCommsDotNet
         /// <param name="listenForReturnPackets"></param>
         /// <param name="existingConnection"></param>
         /// <returns></returns>
-        internal static UDPConnection CreateConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
+        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
         {
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
@@ -101,7 +101,7 @@ namespace NetworkCommsDotNet
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
                 if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, ConnectionType.UDP))
-                    connection = (UDPConnection)NetworkComms.RetrieveConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP);
+                    connection = (UDPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP);
                 else
                 {
                     //If we are listening on what will be the outgoing adaptor we send with that client to ensure if our connection info is handed off we are connectable by others

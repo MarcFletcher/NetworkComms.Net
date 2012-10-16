@@ -117,7 +117,7 @@ namespace ExamplesConsole
                             {
                                 try
                                 {
-                                    TCPConnection.CreateConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
+                                    TCPConnection.GetConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
                                 }
                                 catch (Exception)
                                 {
@@ -135,7 +135,7 @@ namespace ExamplesConsole
                             {
                                 try
                                 {
-                                    TCPConnection.CreateConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
+                                    TCPConnection.GetConnection(new ConnectionInfo(connectedClients[i])).SendObject("ClientCommand", 0);
                                 }
                                 catch (Exception)
                                 {
@@ -156,7 +156,7 @@ namespace ExamplesConsole
                         if (NetworkComms.TotalNumConnections() > 0)
                         {
                             Console.WriteLine("Connections with: ");
-                            var connections = NetworkComms.RetrieveConnection();
+                            var connections = NetworkComms.GetExistingConnection();
                             foreach (var connection in connections)
                                 Console.WriteLine("\t{0}", connection.ConnectionInfo);
                         }
@@ -239,7 +239,7 @@ namespace ExamplesConsole
 
                             buildComplete = false;
 
-                            TCPConnection.CreateConnection(serverConnectionInfo).SendObject("BigDataRequest");
+                            TCPConnection.GetConnection(serverConnectionInfo).SendObject("BigDataRequest");
 
                             Console.WriteLine(" ... initiating item build ...");
                         }
@@ -256,7 +256,7 @@ namespace ExamplesConsole
 
                 try
                 {
-                    TCPConnection.CreateConnection(serverConnectionInfo).SendObject("ClientInfo", "... shutting down, initiating DFS shutdown.");
+                    TCPConnection.GetConnection(serverConnectionInfo).SendObject("ClientInfo", "... shutting down, initiating DFS shutdown.");
                 }
                 catch (CommsException)
                 {

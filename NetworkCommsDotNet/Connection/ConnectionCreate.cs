@@ -240,7 +240,7 @@ namespace NetworkCommsDotNet
             {
                 lock (NetworkComms.globalDictAndDelegateLocker)
                 {
-                    Connection connectionByEndPoint = NetworkComms.RetrieveConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
+                    Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
 
                     //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
                     if (connectionByEndPoint == null)

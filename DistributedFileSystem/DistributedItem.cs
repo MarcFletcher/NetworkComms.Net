@@ -458,7 +458,7 @@ namespace DistributedFileSystem
                                     #region RequestChunkFromPeer
                                     //Console.WriteLine("({0}) requesting chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
 
-                                    TCPConnection peerConnection = TCPConnection.CreateConnection(new ConnectionInfo(request.Key.LocalEndPoint));
+                                    TCPConnection peerConnection = TCPConnection.GetConnection(new ConnectionInfo(request.Key.LocalEndPoint));
                                     peerConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i]);
 
                                     //We can double check here that the ip address we have just succesfully connected to is still the same peer as in the swarm info
