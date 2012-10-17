@@ -178,32 +178,32 @@ namespace NetworkCommsDotNet
                     //Create the instance
                     var res = (T)Activator.CreateInstance(Type, instanceId, connection);
                                   
-                    Dictionary<string, FieldInfo> eventFields = new Dictionary<string,FieldInfo>();
+                    //Dictionary<string, FieldInfo> eventFields = new Dictionary<string,FieldInfo>();
 
-                    foreach (var ev in typeof(T).GetEvents())
-                        eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
+                    //foreach (var ev in typeof(T).GetEvents())
+                    //    eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
 
-                    //Add the packet handler to deal with incoming event firing
-                    connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + Type.Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
-                        {
-                            try
-                            {
-                                //Let's do some basic checks on the data we've been sent
-                                if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
-                                    return;
+                    ////Add the packet handler to deal with incoming event firing
+                    //connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + Type.Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                    //    {
+                    //        try
+                    //        {
+                    //            //Let's do some basic checks on the data we've been sent
+                    //            if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
+                    //                return;
 
-                                var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
+                    //            var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
 
-                                List<object> args = new List<object>();
+                    //            List<object> args = new List<object>();
 
-                                for (int i = 0; i < eventCallWrapper.args.Count; i++)
-                                    args.Add(eventCallWrapper.args[i]);
+                    //            for (int i = 0; i < eventCallWrapper.args.Count; i++)
+                    //                args.Add(eventCallWrapper.args[i]);
 
-                                del.DynamicInvoke(args);
-                            }
-                            catch (Exception) { }
+                    //            del.DynamicInvoke(args);
+                    //        }
+                    //        catch (Exception) { }
 
-                        }, NetworkComms.DefaultSendReceiveOptions);
+                    //    }, NetworkComms.DefaultSendReceiveOptions);
 
                     return res;
                 }
