@@ -94,6 +94,15 @@ namespace QuickLZCompressor
 
         static QuickLZ()
         {
+            //This is a check to see if we're running in linux
+            if (System.Environment.OSVersion.Platform == PlatformID.MacOSX ||
+                System.Environment.OSVersion.Platform == PlatformID.Unix ||
+                (int)System.Environment.OSVersion.Platform == 128)
+            {
+                Available = false;
+                return;
+            }
+
             try
             {
 
@@ -142,7 +151,7 @@ namespace QuickLZCompressor
             catch (EntryPointNotFoundException)
             {
                 Available = false;
-            }
+            }                
             catch (Exception ex)
             {
                 Available = false;

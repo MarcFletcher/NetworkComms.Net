@@ -247,6 +247,8 @@ namespace NetworkCommsDotNet
                     il.Emit(OpCodes.Stfld, networkConnection);
                     il.Emit(OpCodes.Ret);
 
+                    
+
                     //Loop through each method in the interface but exclude any event methods
                     foreach (var method in typeof(T).GetMethods().Except(typeof(T).GetEvents().SelectMany(a => { return new MethodInfo[] { a.GetAddMethod(), a.GetRemoveMethod()}; })))
                     {
@@ -397,6 +399,11 @@ namespace NetworkCommsDotNet
                         #endregion Method
                     }
 
+                    MethodAttributes propertyEventMethodAttributes = MethodAttributes.Public |
+                        MethodAttributes.Virtual |
+                        MethodAttributes.SpecialName |
+                        MethodAttributes.HideBySig;
+                        
                     //Next we should implement remote properties
                     foreach (var property in typeof(T).GetProperties())
                     {
@@ -407,9 +414,7 @@ namespace NetworkCommsDotNet
                         {
                             #region Property Get
 
-                            MethodAttributes getsetAttr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-
-                            var getMethod = type.DefineMethod("get_" + property.Name, getsetAttr, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                            var getMethod = type.DefineMethod("get_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
                             il = getMethod.GetILGenerator();
                             il.Emit(OpCodes.Ldarg_0);
 
@@ -514,9 +519,7 @@ namespace NetworkCommsDotNet
                         {
                             #region Property Set
 
-                            MethodAttributes getsetAttr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-
-                            var setMethod = type.DefineMethod("set_" + property.Name, getsetAttr, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                            var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
                             il = setMethod.GetILGenerator();
                             il.Emit(OpCodes.Ldarg_0);
 
@@ -628,15 +631,13 @@ namespace NetworkCommsDotNet
                             var delegateRemoveMethod = typeof(Delegate).GetMethod("Remove", new Type[] { typeof(Delegate), typeof(Delegate) });
 
                             //This is used to keep things thread safe
-                            var compareExchange = GetGenericMethod(typeof(Interlocked), "CompareExchange");// finds the correct method to call.
-                            // thanks to @marc, create the specific method with the correct type
-                            compareExchange = compareExchange.MakeGenericMethod(handler.EventHandlerType);
-
+                            var compareExchange = typeof(Interlocked).GetMethods().Where(info => info.Name == "CompareExchange" && info.IsGenericMethod).First().MakeGenericMethod(handler.EventHandlerType);
+                            
                             //We will then define the add method
 
                             #region Event Add Method
 
-                            MethodBuilder method = type.DefineMethod("add_" + handler.Name, MethodAttributes.Public | MethodAttributes.Virtual, null, new Type[] { handler.EventHandlerType });
+                            MethodBuilder method = type.DefineMethod("add_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
                             method.DefineParameter(0, ParameterAttributes.Retval, null);
                             method.DefineParameter(1, ParameterAttributes.In, "value");
 
@@ -695,9 +696,9 @@ namespace NetworkCommsDotNet
 
                             //Next define the remove method
 
-                            #region Event Add Method
+                            #region Event Remove Method
 
-                            method = type.DefineMethod("remove_" + handler.Name, MethodAttributes.Public | MethodAttributes.Virtual, null, new Type[] { handler.EventHandlerType });
+                            method = type.DefineMethod("remove_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
                             method.DefineParameter(0, ParameterAttributes.Retval, null);
                             method.DefineParameter(1, ParameterAttributes.In, "value");
 
@@ -760,13 +761,6 @@ namespace NetworkCommsDotNet
                     Cache<T>.Type = type.CreateType();
                 }
 
-                private static MethodInfo GetGenericMethod(Type type, string methodName)
-                {
-                    var q = from m in type.GetMethods()
-                            where m.Name == methodName && m.IsGenericMethod
-                            select m;
-                    return q.FirstOrDefault();
-                }
             }
 
             /// <summary>
