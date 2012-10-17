@@ -31,6 +31,8 @@ namespace DPSBase
     /// </summary>
     public sealed class DPSManager
     {
+        #region Comparers
+
         class SerializerComparer : IEqualityComparer<DataSerializer>
         {
             public static SerializerComparer Instance { get; private set; }
@@ -98,6 +100,31 @@ namespace DPSBase
 
             #endregion
         }
+
+        class AssemblyComparer : IEqualityComparer<AssemblyName>
+        {
+            public static AssemblyComparer Instance { get; private set; }
+
+            static AssemblyComparer() { Instance = new AssemblyComparer(); }
+
+            public AssemblyComparer() { }
+
+            #region IEqualityComparer<AssemblyName> Members
+
+            public bool Equals(AssemblyName x, AssemblyName y)
+            {
+                return x.FullName == y.FullName;               
+            }
+
+            public int GetHashCode(AssemblyName obj)
+            {
+                return obj.FullName.GetHashCode();
+            }
+
+            #endregion
+        }
+
+        #endregion
 
         private CompositionContainer _container;
 
@@ -290,68 +317,60 @@ namespace DPSBase
                 //An aggregate catalog that combines multiple catalogs
                 var catalog = new AggregateCatalog();
 
-                //We're going to try and guess where we might have serializers and compressors.  We will look in all currently loaded assemblies
-                //and all dll and exe files in the application root directory and subdirectories
-
-                //Add all the currently loaded assemblies
+                //First add all currently loaded assemblies
                 AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass => catalog.Catalogs.Add(new AssemblyCatalog(ass)));
 
-                //var allDirectories = Directory.GetDirectories(Directory.GetCurrentDirectory(), "*", SearchOption.AllDirectories);
+                //We're now going to look through the assemly reference tree to look for more components
+                //This will be done by first checking whether a relefection only load of each assembly and checking 
+                //for reference to DPSBase.  We will therefore get the full name of DPSBase
+                var dpsBaseAssembly = typeof(DPSManager).Assembly.GetName();
 
-                ////Adds all the parts found in dlls in the same localtion
-                //catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.dll"));
-                ////Adds all the parts found in exe in the same localtion
-                //catalog.Catalogs.Add(new DirectoryCatalog(Directory.GetCurrentDirectory(), "*.exe"));
+                System.Diagnostics.Debug.Print(dpsBaseAssembly.FullName);
 
-                //for (int i = 0; i < allDirectories.Length; i++)
-                //{
-                //    if (Directory.GetFiles(allDirectories[i], "*.exe", SearchOption.TopDirectoryOnly).Union(
-                //        Directory.GetFiles(allDirectories[i], "*.dll", SearchOption.TopDirectoryOnly)).Count() != 0)
-                //    {
-                //        //Adds all the parts found in dlls in the same localtion
-                //        catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.dll"));
-                //        //Adds all the parts found in exe in the same localtion
-                //        catalog.Catalogs.Add(new DirectoryCatalog(allDirectories[i], "*.exe"));
-                //    }
-                //}
-                var allDlls = Directory.EnumerateFiles(Directory.GetCurrentDirectory(), "*.dll", SearchOption.AllDirectories);
-                foreach (var file in allDlls)
+                //Keep track of all assemblies that have been loaded
+                var allAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToDictionary(ass => ass.FullName, ass => ass);
+                //And all the assembly names we have tried to load
+                var loadedAssemblies = new List<string>();
+
+                //Set an identifier to come back to as we load assemblies
+                AssemblySearchStart:
+
+                //Loop through all assemblies
+                foreach (var pair in allAssemblies)
                 {
-                    try
-                    {
-                        var asmCat = new AssemblyCatalog(file);
+                    var assembly = pair.Value;
 
-                        //Force MEF to load the plugin and figure out if there are any exports
-                        // good assemblies will not throw the RTLE exception and can be added to the catalog
-                        if (asmCat.Parts.ToList().Count > 0)
-                            catalog.Catalogs.Add(asmCat);
-                    }
-                    catch (ReflectionTypeLoadException)
+                    //Loop through the assemblies this assemlby references
+                    foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
                     {
-                    }
-                    catch (BadImageFormatException)
-                    {
-                    }
-                }
+                        //If we've already tried this assembly name then keep going.  Otherwise record that we will have tried this assembly
+                        if (loadedAssemblies.Contains(referencedAssembly.FullName))
+                            continue;
+                        else
+                            loadedAssemblies.Add(referencedAssembly.FullName);
 
-                var allEXEs = Directory.EnumerateFiles(Directory.GetCurrentDirectory(), "*.exe", SearchOption.AllDirectories);
-                foreach (var file in allEXEs)
-                {
-                    try
-                    {
-                        var asmCat = new AssemblyCatalog(file);
+                        //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
+                        var refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
 
-                        //Force MEF to load the plugin and figure out if there are any exports
-                        // good assemblies will not throw the RTLE exception and can be added to the catalog
-                        if (asmCat.Parts.ToList().Count > 0)
-                            catalog.Catalogs.Add(asmCat);
+                        //Note that multiple assembly names/versions could resolve to this assembly so check if we're already considered the actual
+                        //loaded assembly
+                        if (!allAssemblies.ContainsKey(refAssembly.FullName))
+                        {
+                            //if not add it to the considered list
+                            allAssemblies.Add(refAssembly.FullName, refAssembly);
+
+                            //if it references DPSBase directly it might contain components. Add the assembly to the catalog
+                            if (refAssembly.GetReferencedAssemblies().Contains(dpsBaseAssembly, AssemblyComparer.Instance))
+                            {
+                                System.Diagnostics.Debug.Print(refAssembly.FullName);
+                                catalog.Catalogs.Add(new AssemblyCatalog(refAssembly.Location));
+                            }
+
+                            //We're changed allAssemblies and loadedAssemblies so restart
+                            goto AssemblySearchStart;
+                        }
                     }
-                    catch (ReflectionTypeLoadException)
-                    {
-                    }
-                    catch (BadImageFormatException)
-                    {
-                    }
+
                 }
 
                 _container = new CompositionContainer(catalog);
