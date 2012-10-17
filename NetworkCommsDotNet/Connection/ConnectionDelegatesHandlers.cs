@@ -257,6 +257,37 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns true if a packet handler exists for the provided packet type, on this connection
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type for which to check incoming packet handlers</param>
+        /// <returns>True if a packet handler exists</returns>
+        public bool IncomingPacketHandlerExists(string packetTypeStr)
+        {
+            lock (delegateLocker)
+                return incomingPacketHandlers.ContainsKey(packetTypeStr);
+        }
+
+        /// <summary>
+        /// Returns true if the provided packet handler has been added for the provided packet type, on this connection.
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type within which to check packet handlers</param>
+        /// <param name="packetHandlerDelgatePointer">The packet handler to look for</param>
+        /// <returns>True if a global packet handler exists for the provided packetType</returns>
+        public bool IncomingPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        {
+            lock (delegateLocker)
+            {
+                if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    if ((from current in incomingPacketHandlers[packetTypeStr] where current.EqualsDelegate(packetHandlerDelgatePointer) select current).Count() > 0)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Remove the provided delegate for the specified packet type
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>

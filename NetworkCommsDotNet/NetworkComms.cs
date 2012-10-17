@@ -680,6 +680,26 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
                 return globalIncomingPacketHandlers.ContainsKey(packetTypeStr);
         }
+
+        /// <summary>
+        /// Returns true if the provided global packet handler has been added for the provided packet type.
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type within which to check packet handlers</param>
+        /// <param name="packetHandlerDelgatePointer">The packet handler to look for</param>
+        /// <returns>True if a global packet handler exists for the provided packetType</returns>
+        public static bool GlobalIncomingPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    if ((from current in globalIncomingPacketHandlers[packetTypeStr] where current.EqualsDelegate(packetHandlerDelgatePointer) select current).Count() > 0)
+                        return true;
+                }
+            }
+
+            return false;
+        }
         #endregion
 
         #region Connection Establish and Shutdown
