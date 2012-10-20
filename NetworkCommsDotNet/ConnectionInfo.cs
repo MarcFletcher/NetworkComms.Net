@@ -326,7 +326,10 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public bool Equals(ConnectionInfo other)
         {
-            return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString() && this.RemoteEndPoint.Equals(other.RemoteEndPoint));
+            if (this.RemoteEndPoint != null && other.RemoteEndPoint != null)
+                return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString() && this.RemoteEndPoint.Equals(other.RemoteEndPoint));
+            else
+                return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString());
         }
 
         /// <summary>

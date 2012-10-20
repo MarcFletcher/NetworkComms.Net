@@ -331,6 +331,9 @@ namespace NetworkCommsDotNet
                 catch (Exception ex)
                 {
                     LogError(ex, "NetworkLoadWorker");
+                    
+                    //It may be the interfaces available to the OS have changed so we will reset them here
+                    interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces() select outer).ToArray();
                     //If an error has happened we dont want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
                     Thread.Sleep(5000);
                 }
