@@ -74,6 +74,7 @@
     <Compile Include="ProtobufSerializer.cs" />
     <Compile Include="RijndaelPSKEncrypter.cs" />
     <Compile Include="DPSManager.cs" />
+    <Compile Include="StreamSendWrapper.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

@@ -78,17 +78,22 @@ namespace DPSBase
         /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in index order i.e. low index to high</param>
         /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>Serialized array of bytes</returns>
-        public byte[] SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            if (objectToSerialise.GetType() == typeof(Stream)) throw new ArgumentException("Provided parameter objectToSerialise should not be of type Stream. Consider using StreamSendWrapper instead.");
             if (objectToSerialise == null) throw new ArgumentNullException("Provided paramater objectToSerialise should not be null.");
 
             //Check to see if the array serializer returns anything
             var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 
             //if the object was an array baseres will != null
-            if (baseRes != null)
-                return baseRes;
+            if (baseRes != null) return baseRes;
 
+            return SerialiseGeneralObject<T>(objectToSerialise, dataProcessors, options);            
+        }
+
+        private byte[] SerialiseGeneralObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
             //Create the first memory stream that will be used 
             using (MemoryStream tempStream1 = new MemoryStream())
             {
@@ -150,9 +155,9 @@ namespace DPSBase
                             //Return the resultant bytes
                             return tempStream2.ToArray();
                         }
-                    }                    
+                    }
                 }
-            }            
+            }
         }
 
         /// <summary>
@@ -270,7 +275,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// Abstract class that provides fastest method for serializing arrays of primitive data types.
+    /// Class that provides optimised method for serializing arrays of primitive data types.
     /// </summary>
     static class ArraySerializer
     {
@@ -468,6 +473,14 @@ namespace DPSBase
 
             return null;
         }
+
+    }
+
+    /// <summary>
+    /// Class that provides optimised method for serializing <see cref="StreamSendWrapper"/>
+    /// </summary>
+    static class StreamWrapperSerializer
+    {
 
     }
 }

@@ -70,6 +70,18 @@ namespace DistributedFileSystem
         public string ItemTypeStr { get; private set; }
 
         /// <summary>
+        /// The target to where the item should be built, i.e. memory or disk
+        /// </summary>
+        [ProtoMember(9)]
+        public ItemBuildTarget ItemBuildTarget {get; private set;}
+
+        /// <summary>
+        /// A unique identifier for this item, usually a filename
+        /// </summary>
+        [ProtoMember(10)]
+        public string ItemIdentifier {get; private set;}
+
+        /// <summary>
         /// Private constructor for serialisation.
         /// </summary>
         private ItemAssemblyConfig() { }
@@ -84,6 +96,8 @@ namespace DistributedFileSystem
             this.CompletedPacketType = completedPacketType;
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
             this.ItemTypeStr = itemToDistribute.ItemTypeStr;
+
+            throw new Exception("THe item identifier has not yet been set");
         }
     }
 }
