@@ -198,6 +198,7 @@ namespace DistributedFileSystem
                 lock (itemLocker)
                 {
                     //Console.WriteLine("Disconnected - Removing requests to peer "+ connectionId);
+                    SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
                     itemBuildTrackerDict = (from current in itemBuildTrackerDict where current.Value.PeerConnectionInfo.NetworkIdentifier != connection.ConnectionInfo.NetworkIdentifier select current).ToDictionary(dict => dict.Key, dict => dict.Value);
                     itemBuildWait.Set();
                 }

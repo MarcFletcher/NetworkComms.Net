@@ -314,9 +314,10 @@ namespace NetworkCommsDotNet
         public override bool Equals(object obj)
         {
             var other = obj as ConnectionInfo;
-            if (other == null)
+            if (((object)other) == null)
                 return false;
-            return this.Equals(other);
+            else
+                return this == other;
         }
 
         /// <summary>
@@ -326,10 +327,7 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public bool Equals(ConnectionInfo other)
         {
-            if (this.RemoteEndPoint != null && other.RemoteEndPoint != null)
-                return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString() && this.RemoteEndPoint.Equals(other.RemoteEndPoint));
-            else
-                return (this.NetworkIdentifier.ToString() == other.NetworkIdentifier.ToString());
+            return this == other;
         }
 
         /// <summary>
@@ -340,7 +338,15 @@ namespace NetworkCommsDotNet
         /// <returns>True if both are equal, otherwise false</returns>
         public static bool operator ==(ConnectionInfo left, ConnectionInfo right)
         {
-            return left.Equals(right);
+            if (((object)left) == ((object)right)) return true;
+            else if (((object)left) == null || ((object)right) == null) return false;
+            else
+            {
+                if (left.RemoteEndPoint != null && right.RemoteEndPoint != null)
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint));
+                else
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString());
+            }
         }
 
         /// <summary>
@@ -351,7 +357,7 @@ namespace NetworkCommsDotNet
         /// <returns>True if both are different, otherwise false</returns>
         public static bool operator !=(ConnectionInfo left, ConnectionInfo right)
         {
-            return !left.Equals(right);
+            return !(left == right);
         }
 
         /// <summary>

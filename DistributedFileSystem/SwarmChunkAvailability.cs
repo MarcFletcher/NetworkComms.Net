@@ -385,7 +385,8 @@ namespace DistributedFileSystem
             lock (peerLocker)
             {
                 if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    throw new Exception("networkIdentifier provided does not exist in peerChunksByNetworkIdentifierDict. Check with PeerExistsInSwarm before calling this method.");
+                    //throw new Exception("networkIdentifier provided does not exist in peerChunksByNetworkIdentifierDict. Check with PeerExistsInSwarm before calling this method.");
+                    return false;
 
                 return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer;
             }
