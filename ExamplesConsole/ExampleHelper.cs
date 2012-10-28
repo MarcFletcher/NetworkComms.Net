@@ -23,7 +23,7 @@ namespace ExamplesConsole
             if (lastServerIP != "")
                 Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:",lastServerIP,lastServerPort);
             else
-                Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:4000':");
+                Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:10000':");
 
             while (true)
             {

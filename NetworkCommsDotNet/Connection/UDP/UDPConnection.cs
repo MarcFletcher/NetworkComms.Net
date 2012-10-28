@@ -136,10 +136,10 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             //Prepare the single byte array to send
-            byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
+            byte[] udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
+            //Copy the header bytes into the datagram
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData, 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteEndPoint);
 
@@ -165,7 +165,7 @@ namespace NetworkCommsDotNet
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
 
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData, 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
+            Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 

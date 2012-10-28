@@ -49,7 +49,7 @@ namespace DistributedFileSystem
         /// MD5 of final assembled item
         /// </summary>
         [ProtoMember(5)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
 
         /// <summary>
         /// The packetType to use when the item has been fully assembled
@@ -96,8 +96,7 @@ namespace DistributedFileSystem
             this.CompletedPacketType = completedPacketType;
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
             this.ItemTypeStr = itemToDistribute.ItemTypeStr;
-
-            throw new Exception("THe item identifier has not yet been set");
+            this.ItemIdentifier = itemToDistribute.ItemIdentifier;
         }
     }
 }

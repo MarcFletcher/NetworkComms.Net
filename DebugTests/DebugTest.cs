@@ -24,6 +24,11 @@ namespace DebugTests
 
             //NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(ProcessorManager.Instance.GetSerializer<ProtobufSerializer>(), null, null);
 
+            byte[] serialisedTest = DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<SerialiseTest>(new SerialiseTest(2, "God")).ThreadSafeStream.ToArray();
+            Array.Resize<byte>(ref serialisedTest, 100);
+
+            SerialiseTest deserialised = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SerialiseTest>(serialisedTest);
+
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });
 
@@ -122,6 +127,26 @@ namespace DebugTests
 
                 UDPConnection.SendObject("udpTest", new byte[100], new IPEndPoint(IPAddress.Parse("131.111.73.213"), 10000));
                 Thread.Sleep(10000000);
+            }
+        }
+
+        [ProtoBuf.ProtoContract]
+        class SerialiseTest
+        {
+            [ProtoBuf.ProtoMember(1)]
+            int someNumber;
+            [ProtoBuf.ProtoMember(2)]
+            string someString;
+            [ProtoBuf.ProtoMember(3)]
+            byte[] someBytes;
+
+            private SerialiseTest() { }
+
+            public SerialiseTest(int num, string str)
+            {
+                this.someNumber = num;
+                this.someString = str;
+                this.someBytes = new byte[300];
             }
         }
     }

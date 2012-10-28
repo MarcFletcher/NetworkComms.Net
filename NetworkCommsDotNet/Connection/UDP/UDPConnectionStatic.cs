@@ -142,7 +142,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Listen for incoming UDP packets on all allowed local IP's on default port.
         /// </summary>
-        public static void StartListening()
+        /// <param name="useRandomPortFailOver">If true and the default local port is not available will select one at random. If false and a port is unavailable listening will not be enabled on that adaptor unless NetworkComms.ListenOnAllAllowedInterfaces is false in which case a <see cref="CommsSetupShutdownException"/> will be thrown instead.</param>
+        public static void StartListening(bool useRandomPortFailOver = false)
         {
             List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
@@ -154,7 +155,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), false);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -170,7 +171,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
         }
 
         /// <summary>

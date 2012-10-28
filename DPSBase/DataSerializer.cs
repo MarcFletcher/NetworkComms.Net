@@ -65,7 +65,7 @@ namespace DPSBase
         /// <typeparam name="T">Type of object to serialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize</param>
         /// <returns>Serialized array of bytes</returns>
-        public byte[] SerialiseDataObject<T>(T objectToSerialise)
+        public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise)
         {
             return SerialiseDataObject<T>(objectToSerialise, null, null);
         }
@@ -80,82 +80,89 @@ namespace DPSBase
         /// <returns>Serialized array of bytes</returns>
         public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            if (objectToSerialise.GetType() == typeof(Stream)) throw new ArgumentException("Provided parameter objectToSerialise should not be of type Stream. Consider using StreamSendWrapper instead.");
             if (objectToSerialise == null) throw new ArgumentNullException("Provided paramater objectToSerialise should not be null.");
 
-            //Check to see if the array serializer returns anything
-            var baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
+            Type objectToSerialiseType = objectToSerialise.GetType();
+            if (objectToSerialiseType == typeof(Stream)) 
+                throw new ArgumentException("Provided parameter objectToSerialise should not be of type Stream. Consider using StreamSendWrapper as send object instead.");
+            else if (objectToSerialiseType == typeof(StreamSendWrapper))
+                return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamSendWrapper, dataProcessors, options);
+
+            StreamSendWrapper baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 
             //if the object was an array baseres will != null
-            if (baseRes != null) return baseRes;
-
-            return SerialiseGeneralObject<T>(objectToSerialise, dataProcessors, options);            
+            if (baseRes != null) 
+                return baseRes;
+            else
+                return SerialiseGeneralObject<T>(objectToSerialise, dataProcessors, options);
         }
 
-        private byte[] SerialiseGeneralObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        private StreamSendWrapper SerialiseGeneralObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             //Create the first memory stream that will be used 
-            using (MemoryStream tempStream1 = new MemoryStream())
+            MemoryStream tempStream1 = new MemoryStream();
+
+            //Serialise the object using the overriden method
+            SerialiseDataObjectInt(tempStream1, objectToSerialise, options);
+
+            //If we have no data processing to do we can simply return the serialised bytes
+            if (dataProcessors == null || dataProcessors.Count == 0)
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+            else
             {
-                //Serialise the object using the overriden method
-                SerialiseDataObjectInt(tempStream1, objectToSerialise, options);
+                //Otherwise we will need a second memory stream to process the data
+                MemoryStream tempStream2 = new MemoryStream();
 
-                //If we have no data processing to do we can simply return the serialised bytes
-                if (dataProcessors == null || dataProcessors.Count == 0)
-                    return tempStream1.ToArray();
-                else
+                //variable will store the number of bytes in the output stream at each processing stage
+                long writtenBytes;
+                //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
+                //the most common usage case
+                dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+                //If we have more than one processor we need to loop through them
+                if (dataProcessors.Count > 1)
                 {
-                    //Otherwise we will need a second memory stream to process the data
-                    using (MemoryStream tempStream2 = new MemoryStream())
+                    //Loop through the remaining processors two at a time.  Each loop processes data temp2 -> temp1 -> temp2
+                    for (int i = 1; i < dataProcessors.Count; i += 2)
                     {
-                        //variable will store the number of bytes in the output stream at each processing stage
-                        long writtenBytes;
-                        //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
-                        //the most common usage case
-                        dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+                        //Seek streams to zero and truncate the last output stream to the data size
+                        tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                        tempStream1.Seek(0, 0);
+                        //Process the data
+                        dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
 
-                        //If we have more than one processor we need to loop through them
-                        if (dataProcessors.Count > 1)
+                        //if the second of the pair exists
+                        if (i + 1 < dataProcessors.Count)
                         {
-                            //Loop through the remaining processors two at a time.  Each loop processes data temp2 -> temp1 -> temp2
-                            for (int i = 1; i < dataProcessors.Count; i += 2)
-                            {
-                                //Seek streams to zero and truncate the last output stream to the data size
-                                tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                                tempStream1.Seek(0, 0);
-                                //Process the data
-                                dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
-
-                                //if the second of the pair exists
-                                if (i + 1 < dataProcessors.Count)
-                                {
-                                    //Seek streams to zero and truncate the last output stream to the data size
-                                    tempStream2.Seek(0, 0);
-                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                    //Process the data
-                                    dataProcessors[i + 1].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-                                }
-                            }
-                        }
-
-                        //Depending on whether the number of processors is even or odd a different stream will hold the final data
-                        if (dataProcessors.Count % 2 == 0)
-                        {
-                            //Seek to the begining and truncate the output stream
-                            tempStream1.Seek(0, 0);
-                            tempStream1.SetLength(writtenBytes);
-                            //Return the resultant bytes
-                            return tempStream1.ToArray();
-                        }
-                        else
-                        {
-                            //Seek to the begining and truncate the output stream
+                            //Seek streams to zero and truncate the last output stream to the data size
                             tempStream2.Seek(0, 0);
-                            tempStream2.SetLength(writtenBytes);
-                            //Return the resultant bytes
-                            return tempStream2.ToArray();
+                            tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                            //Process the data
+                            dataProcessors[i + 1].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
                         }
                     }
+                }
+
+                //Depending on whether the number of processors is even or odd a different stream will hold the final data
+                if (dataProcessors.Count % 2 == 0)
+                {
+                    //Seek to the begining and truncate the output stream
+                    tempStream1.Seek(0, 0);
+                    tempStream1.SetLength(writtenBytes);
+                    //Return the resultant bytes
+                    //return tempStream1.ToArray();
+                    tempStream2.Dispose();
+                    return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                }
+                else
+                {
+                    //Seek to the begining and truncate the output stream
+                    tempStream2.Seek(0, 0);
+                    tempStream2.SetLength(writtenBytes);
+                    //Return the resultant bytes
+                    //return tempStream2.ToArray();
+                    tempStream1.Dispose();
+                    return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
                 }
             }
         }
@@ -184,11 +191,15 @@ namespace DPSBase
             if (receivedObjectBytes == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
 
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
-            var baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, typeof(T), dataProcessors, options);
-
+            object baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, typeof(T), dataProcessors, options);
             if (baseRes != null)
                 return (T)baseRes;
+            else
+                return DeserialiseGeneralObject<T>(receivedObjectBytes, dataProcessors, options);
+        }
 
+        private T DeserialiseGeneralObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
             //Create a memory stream using the incoming bytes as the initial buffer
             using (MemoryStream inputStream = new MemoryStream(receivedObjectBytes))
             {
@@ -287,7 +298,7 @@ namespace DPSBase
         /// <param name="dataProcessors">The compression provider to use</param>
         /// <param name="options">Options to be used during serialization and processing of data</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public static unsafe byte[] SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static unsafe StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             Type objType = objectToSerialise.GetType();
 
@@ -297,77 +308,82 @@ namespace DPSBase
 
                 //No need to do anything for a byte array
                 if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
-                    return objectToSerialise as byte[];
+                    //return objectToSerialise as byte[];
+                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(objectToSerialise as byte[])));
                 else if (elementType.IsPrimitive)
-                {                                        
+                {
                     var asArray = objectToSerialise as Array;
                     GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
 
                     try
                     {
                         IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
-                        long writtenBytes = 0; 
+                        long writtenBytes = 0;
 
-                        using (MemoryStream tempStream1 = new System.IO.MemoryStream())
-                        {                            
-                            using (UnmanagedMemoryStream inputDataStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
+                        MemoryStream tempStream1 = new System.IO.MemoryStream();
+
+                        using (UnmanagedMemoryStream inputDataStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
+                        {
+                            if (dataProcessors == null || dataProcessors.Count == 0)
                             {
-                                if (dataProcessors == null || dataProcessors.Count == 0)
-                                {
-                                    inputDataStream.CopyTo(tempStream1);
-                                    return tempStream1.ToArray();
-                                }
-
-                                dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
+                                inputDataStream.CopyTo(tempStream1);
+                                //return tempStream1.ToArray();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
                             }
 
-                            if (dataProcessors.Count > 1)
+                            dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
+                        }
+
+                        if (dataProcessors.Count > 1)
+                        {
+                            MemoryStream tempStream2 = new MemoryStream();
+
+                            for (int i = 1; i < dataProcessors.Count; i += 2)
                             {
-                                using (MemoryStream tempStream2 = new MemoryStream())
+                                tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                tempStream2.Seek(0, 0);
+                                dataProcessors[i].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+                                if (i + 1 < dataProcessors.Count)
                                 {
-                                    for (int i = 1; i < dataProcessors.Count; i += 2)
-                                    {
-                                        tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                        tempStream2.Seek(0, 0);
-                                        dataProcessors[i].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-
-                                        if (i + 1 < dataProcessors.Count)
-                                        {
-                                            tempStream1.Seek(0, 0);
-                                            tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                                            dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
-                                        }
-                                    }
-
-                                    if (dataProcessors.Count % 2 == 0)
-                                    {
-                                        tempStream2.SetLength(writtenBytes + 4);
-                                        tempStream2.Seek(writtenBytes, 0);
-                                        tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                                        return tempStream2.ToArray();
-                                    }
-                                    else
-                                    {
-                                        tempStream1.SetLength(writtenBytes + 4);
-                                        tempStream1.Seek(writtenBytes, 0);
-                                        tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                                        return tempStream1.ToArray();
-                                    }
+                                    tempStream1.Seek(0, 0);
+                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                    dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
                                 }
+                            }
+
+                            if (dataProcessors.Count % 2 == 0)
+                            {
+                                tempStream2.SetLength(writtenBytes + 4);
+                                tempStream2.Seek(writtenBytes, 0);
+                                tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
+                                //return tempStream2.ToArray();
+                                tempStream1.Dispose();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
                             }
                             else
                             {
                                 tempStream1.SetLength(writtenBytes + 4);
                                 tempStream1.Seek(writtenBytes, 0);
                                 tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                                return tempStream1.ToArray();
+                                //return tempStream1.ToArray();
+                                tempStream2.Dispose();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
                             }
+                        }
+                        else
+                        {
+                            tempStream1.SetLength(writtenBytes + 4);
+                            tempStream1.Seek(writtenBytes, 0);
+                            tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
+                            //return tempStream1.ToArray();
+                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
                         }
                     }
                     finally
                     {
                         arrayHandle.Free();
-                    }                   
+                    }
                 }
             }
 
@@ -473,14 +489,98 @@ namespace DPSBase
 
             return null;
         }
-
     }
 
     /// <summary>
-    /// Class that provides optimised method for serializing <see cref="StreamSendWrapper"/>
+    /// Class that provides optimised method for serializing arrays of primitive data types.
     /// </summary>
-    static class StreamWrapperSerializer
+    static class StreamSendWrapperSerializer
     {
+        /// <summary>
+        /// Serializes StreamSendWrapper to a StreamSendWrapper possibly using provided data processors.  If there are no data processor streamSendWrapperToSerialize will be returned.
+        /// </summary>        
+        /// <param name="streamSendWrapperToSerialize">StreamSendWrapper to serialize</param>
+        /// <param name="dataProcessors">The compression provider to use</param>
+        /// <param name="options">Options to be used during serialization and processing of data</param>
+        /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
+        public static StreamSendWrapper SerialiseStreamSendWrapper(StreamSendWrapper streamSendWrapperToSerialize, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
+            //If we have no data processing to do we can simply return the serialised bytes
+            if (dataProcessors == null || dataProcessors.Count == 0)
+                return streamSendWrapperToSerialize;
 
+            //If we have data processors we will have to read everything into memory first
+            //Create the memory streams for passing back and forth between data processors 
+            MemoryStream tempStream1 = new MemoryStream();
+            MemoryStream tempStream2 = new MemoryStream();
+
+            //Initialise tempStream 1 with the data from the provided StreamSendWrapper
+            streamSendWrapperToSerialize.ThreadSafeStream.CopyTo(tempStream1, streamSendWrapperToSerialize.Start, streamSendWrapperToSerialize.Length);
+
+            //variable will store the number of bytes in the output stream at each processing stage
+            long writtenBytes;
+            //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
+            //the most common usage case
+            dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+            //If we have more than one processor we need to loop through them
+            if (dataProcessors.Count > 1)
+            {
+                //Loop through the remaining processors two at a time.  Each loop processes data temp2 -> temp1 -> temp2
+                for (int i = 1; i < dataProcessors.Count; i += 2)
+                {
+                    //Seek streams to zero and truncate the last output stream to the data size
+                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                    tempStream1.Seek(0, 0);
+                    //Process the data
+                    dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
+
+                    //if the second of the pair exists
+                    if (i + 1 < dataProcessors.Count)
+                    {
+                        //Seek streams to zero and truncate the last output stream to the data size
+                        tempStream2.Seek(0, 0);
+                        tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                        //Process the data
+                        dataProcessors[i + 1].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+                    }
+                }
+            }
+
+            //Depending on whether the number of processors is even or odd a different stream will hold the final data
+            if (dataProcessors.Count % 2 == 0)
+            {
+                //Seek to the begining and truncate the output stream
+                tempStream1.Seek(0, 0);
+                tempStream1.SetLength(writtenBytes);
+                //Return the resultant bytes
+                //return tempStream1.ToArray();
+                tempStream2.Dispose();
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+            }
+            else
+            {
+                //Seek to the begining and truncate the output stream
+                tempStream2.Seek(0, 0);
+                tempStream2.SetLength(writtenBytes);
+                //Return the resultant bytes
+                //return tempStream2.ToArray();
+                tempStream1.Dispose();
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
+            }
+        }
+
+        /// <summary>
+        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is a <see cref="StreamSendWrapper"/>
+        /// </summary>        
+        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <param name="dataProcessors">Compression provider to use</param>
+        /// <param name="objType">The <see cref="System.Type"/> of the <see cref="object"/> to be returned</param>
+        /// <param name="options">Options to be used during deserialization and processing of data</param>
+        /// <returns>The deserialized object if it is an array, otherwise null</returns>
+        public static object DeserialiseStreamSendWrapper(byte[] receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
+            throw new Exception("NetworkComms should never be expected a type of StreamSendWrapper. Any data sent using a StreamSendWrapper should be handled on recieve as byte[].");
+        }
     }
 }

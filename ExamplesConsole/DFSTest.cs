@@ -7,6 +7,7 @@ using NetworkCommsDotNet;
 using System.Threading;
 using DPSBase;
 using System.Net;
+using System.IO;
 
 namespace ExamplesConsole
 {
@@ -54,7 +55,7 @@ namespace ExamplesConsole
                 ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
                 seedConnectionInfo.SetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
-                DistributedItem newItem = new DistributedItem("exampleItem", someRandomData, seedConnectionInfo);
+                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfo);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {

@@ -25,14 +25,14 @@ namespace DistributedFileSystem
     class ItemRemovalUpdate
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
 
         [ProtoMember(2)]
         public bool RemoveSwarmWide { get; private set; }
 
         private ItemRemovalUpdate() { }
 
-        public ItemRemovalUpdate(long itemCheckSum, bool removeSwarmWide)
+        public ItemRemovalUpdate(string itemCheckSum, bool removeSwarmWide)
         {
             this.ItemCheckSum = itemCheckSum;
             this.RemoveSwarmWide = removeSwarmWide;

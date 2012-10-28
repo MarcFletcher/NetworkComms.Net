@@ -33,7 +33,7 @@ namespace DistributedFileSystem
     public class ChunkAvailabilityRequest
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
 
@@ -53,7 +53,7 @@ namespace DistributedFileSystem
 
         private ChunkAvailabilityRequest() { }
 
-        public ChunkAvailabilityRequest(long itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
+        public ChunkAvailabilityRequest(string itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
@@ -68,7 +68,7 @@ namespace DistributedFileSystem
     public class ChunkAvailabilityReply
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
         [ProtoMember(3)]
@@ -83,7 +83,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="itemCheckSum"></param>
         /// <param name="chunkIndex"></param>
-        public ChunkAvailabilityReply(long itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
+        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
@@ -96,7 +96,7 @@ namespace DistributedFileSystem
         /// <param name="itemMD5"></param>
         /// <param name="chunkIndex"></param>
         /// <param name="chunkData"></param>
-        public ChunkAvailabilityReply(long itemCheckSum, byte chunkIndex, byte[] chunkData)
+        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, byte[] chunkData)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;

@@ -7,14 +7,16 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// Used to send all or parts of a stream. Usefull for sending files directly from disk etc.
+    /// Used to send all or parts of a stream. Particularly usefull for sending files directly from disk etc.
     /// </summary>
     public class StreamSendWrapper
     {
+        object streamLocker = new object();
+
         /// <summary>
         /// The wrapped stream
         /// </summary>
-        public Stream Stream { get; private set; }
+        public ThreadSafeStream ThreadSafeStream { get; set; }
         /// <summary>
         /// The start position to read from Stream
         /// </summary>
@@ -24,33 +26,33 @@ namespace DPSBase
         /// </summary>
         public int Length { get; private set; }
 
-        public StreamSendWrapper(Stream stream, int start, int length)
+        /// <summary>
+        /// Create a new stream wrapper and set Start and Length to encompass the entire Stream
+        /// </summary>
+        /// <param name="stream">The underlying stream</param>
+        public StreamSendWrapper(ThreadSafeStream stream)
         {
-            this.Stream = stream;
-            this.Start = start;
-            this.Length = length;
+            if (Length > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
+
+            this.ThreadSafeStream = stream;
+            this.Start = 0;
+            this.Length = (int)stream.Length;
         }
 
         /// <summary>
-        /// Read all data from the stream ignoring start and length properties
+        /// Create a new stream wrapper
         /// </summary>
-        /// <returns></returns>
-        public byte[] AllBytes()
+        /// <param name="stream">The underlying stream</param>
+        /// <param name="start">The start position from where to read data</param>
+        /// <param name="length">The length to read</param>
+        public StreamSendWrapper(ThreadSafeStream stream, long start, long length)
         {
-            byte[] returnData = new byte[Stream.Length];
-            Stream.Read(returnData, 0, returnData.Length);
-            return returnData;
-        }
+            if (Start > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
+            if (Length > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
 
-        /// <summary>
-        /// Returns data from the stream specified by start and length properties
-        /// </summary>
-        /// <returns></returns>
-        public byte[] Bytes()
-        {
-            byte[] returnData = new byte[Length];
-            Stream.Read(returnData, Start, returnData.Length);
-            return returnData;
+            this.ThreadSafeStream = stream;
+            this.Start = (int)start;
+            this.Length = (int)length;
         }
     }
 }
