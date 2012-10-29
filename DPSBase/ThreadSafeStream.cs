@@ -14,19 +14,53 @@ namespace DPSBase
         private Stream stream;
         private object streamLocker = new object();
 
+        /// <summary>
+        /// If true the internal stream will be disposed once the data has been written to the network
+        /// </summary>
+        public bool DisposeStreamAfterSend { get; private set; }
+
+        /// <summary>
+        /// Create a thread safe stream. Once any actions are complete the stream must be correctly disposed by the user.
+        /// </summary>
+        /// <param name="stream">The stream to make thread safe</param>
         public ThreadSafeStream(Stream stream)
         {
+            this.DisposeStreamAfterSend = false;
+
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
 
             this.stream = Stream.Synchronized(stream);
+            //this.stream = stream;
         }
 
+        /// <summary>
+        /// Create a thread safe stream.
+        /// </summary>
+        /// <param name="stream">The stream to make thread safe.</param>
+        /// <param name="disposeStreamAfterSend">If true the provided stream will be disposed once data has been written to the network. If false the stream must be disposed of correctly by the user</param>
+        public ThreadSafeStream(Stream stream, bool disposeStreamAfterSend)
+        {
+            this.DisposeStreamAfterSend = disposeStreamAfterSend;
+
+            if (stream.Length > int.MaxValue)
+                throw new NotImplementedException("Streams larger than 2GB not yet supported.");
+
+            this.stream = Stream.Synchronized(stream);
+            //this.stream = stream;
+        }
+
+        /// <summary>
+        /// The total length of the internal stream
+        /// </summary>
         public long Length
         {
             get { lock (streamLocker) return stream.Length; }
         }
 
+        /// <summary>
+        /// The current position of the internal stream
+        /// </summary>
         public long Position
         {
             get { lock (streamLocker) return stream.Position; }
@@ -41,6 +75,7 @@ namespace DPSBase
         {
             lock (streamLocker)
             {
+                stream.Seek(0, SeekOrigin.Begin);
                 byte[] returnData = new byte[stream.Length + numberZeroBytesPrefex];
                 stream.Read(returnData, numberZeroBytesPrefex, returnData.Length - numberZeroBytesPrefex);
                 return returnData;
@@ -50,12 +85,12 @@ namespace DPSBase
         /// <summary>
         /// Return the MD5 hash of the current <see cref="StreamSendWrapper"/> as a string
         /// </summary>
-        /// <param name="streamWrapper">All specified bytes will be read for the provided stream</param>
         /// <returns></returns>
         public string MD5CheckSum()
         {
             lock (streamLocker)
             {
+                stream.Seek(0, SeekOrigin.Begin);
                 System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
                 return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "");
             }
@@ -102,6 +137,9 @@ namespace DPSBase
             }
         }
 
+        /// <summary>
+        /// Call Dispose on the internal stream
+        /// </summary>
         public void Dispose()
         {
             lock (streamLocker) stream.Dispose();

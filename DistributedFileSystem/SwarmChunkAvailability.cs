@@ -623,6 +623,8 @@ namespace DistributedFileSystem
 
                 if (allUnknownPeerEndPointsComplete.Count > 0)
                 {
+                    List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+
                     //If we have some unknown peers we can request an update from them as well
                     foreach (string peerContactInfoOuter in allUnknownPeerEndPointsComplete)
                     {
@@ -635,7 +637,7 @@ namespace DistributedFileSystem
                                 IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
 
                                 //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                                if (!(peerEndPoint.Address == NetworkComms.AllAllowedIPs()[0] && peerEndPoint.Port == NetworkComms.DefaultListenPort) && PeerContactAllowed(peerEndPoint.Address, false))
+                                if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && PeerContactAllowed(peerEndPoint.Address, false))
                                     TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             }
                             catch (CommsException)

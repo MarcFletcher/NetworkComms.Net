@@ -97,6 +97,7 @@ namespace DistributedFileSystem
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
             this.ItemTypeStr = itemToDistribute.ItemTypeStr;
             this.ItemIdentifier = itemToDistribute.ItemIdentifier;
+            this.ItemBuildTarget = itemToDistribute.ItemBuildTarget;
         }
     }
 }

@@ -48,8 +48,19 @@ namespace DistributedFileSystem
         public const int ItemBuildTimeoutSecsPerMB = 6;
 
         static object globalDFSLocker = new object();
-        //Dictionary which contains a cache of the distributed items
+        /// <summary>
+        /// Dictionary which contains a cache of the distributed items
+        /// </summary>
         static Dictionary<string, DistributedItem> swarmedItemsDict = new Dictionary<string, DistributedItem>();
+
+        static int ChunkCacheDataTimeoutSecs = 300;
+        static int ChunkCacheDataCleanupIntervalSecs = 310;
+        static DateTime lastChunkCacheCleanup = DateTime.Now;
+        static object chunkDataCacheLocker = new object();
+        /// <summary>
+        /// Temporary storage for chunk data which is awaiting info
+        /// </summary>
+        static Dictionary<ShortGuid, Dictionary<long, ChunkDataWrapper>> chunkDataCache = new Dictionary<ShortGuid, Dictionary<long, ChunkDataWrapper>>();
 
         internal static List<string> allowedPeerIPs = new List<string>();
         internal static List<string> disallowedPeerIPs = new List<string>();
@@ -126,7 +137,9 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<string[]>("DFS_RequestLocalItemBuild", RequestLocalItemBuilds);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest, highPrioRecieveSRO);
-                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReply", IncomingChunkInterestReply);
+
+                NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("DFS_ChunkAvailabilityInterestReplyData", IncomingChunkInterestReplyData);
+                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest, highPrioRecieveSRO);
                 NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate, highPrioRecieveSRO);
@@ -627,6 +640,45 @@ namespace DistributedFileSystem
             return returnDict;
         }
 
+        /// <summary>
+        /// Flick through the chunk data cache and remove any items that have timed out
+        /// </summary>
+        private static void CheckForChunkDataCacheTimeouts()
+        {
+            lock (chunkDataCacheLocker)
+            {
+                if ((DateTime.Now - lastChunkCacheCleanup).TotalSeconds > ChunkCacheDataCleanupIntervalSecs)
+                {
+                    if (DFS.loggingEnabled) DFS.logger.Trace("Starting ChunkDataCache cleanup.");
+
+                    int removedCount = 0;
+
+                    ShortGuid[] peerKeys = chunkDataCache.Keys.ToArray();
+                    for (int i = 0; i < peerKeys.Length; i++)
+                    {
+                        long[] dataSequenceKeys = chunkDataCache[peerKeys[i]].Keys.ToArray();
+                        for (int k = 0; k < dataSequenceKeys.Length; k++)
+                        {
+                            if ((DateTime.Now - chunkDataCache[peerKeys[i]][dataSequenceKeys[k]].TimeRecieved).TotalSeconds > ChunkCacheDataTimeoutSecs)
+                            {
+                                //If we have timed out data we will remove it
+                                chunkDataCache[peerKeys[i]].Remove(dataSequenceKeys[k]);
+                                removedCount++;
+                            }
+                        }
+
+                        //If there is no longer any data for a particular peer we remove the peer entry
+                        if (chunkDataCache[peerKeys[i]].Count == 0)
+                            chunkDataCache.Remove(peerKeys[i]);
+                    }
+
+                    if (DFS.loggingEnabled) DFS.logger.Trace("Completed ChunkDataCache cleanup having removed " + removedCount + " items.");
+
+                    lastChunkCacheCleanup = DateTime.Now;
+                }
+            }
+        }
+
         #region NetworkCommsDelegates
         /// <summary>
         /// If a connection is disconnected we want to make sure we handle it within the DFS
@@ -854,26 +906,24 @@ namespace DistributedFileSystem
                         {
                             //try
                             //{
-                                //We get the data here
-                                StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
+                            //We get the data here
+                            StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
 
-                                //Console.WriteLine("   ... ({0}) begin push of chunk {1} to {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
-                                //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, chunkData), ProtobufSerializer.Instance, NullCompressor.Instance);
-                                //connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, chunkData), nullCompressionSRO);
+                            if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
-                                lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
+                            long packetSequenceNumber;
+                            connection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
+
+                            if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkInfo to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
                             
-                                //Console.WriteLine("         ... ({0}) pushed chunk {1} to {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
-                                //If we have sent data there is a good chance we have used up alot of memory
-                                //This seems to be an efficient place for a garbage collection
-                                try { GC.Collect(); }
-                                catch (Exception) { }
-                            //}
-                            //finally
-                            //{
-                            //    //We must guarantee we leave the bytes if we had succesfully entered them.
-                            //    selectedItem.LeaveChunkBytes(incomingRequest.ChunkIndex);
-                            //}
+                            connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetSequenceNumber), nullCompressionSRO);
+
+                            lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
+                            
+                            //If we have sent data there is a good chance we have used up alot of memory
+                            //This seems to be an efficient place for a garbage collection
+                            try { GC.Collect(); }
+                            catch (Exception) { }
                         }
                     }
                 }
@@ -891,16 +941,51 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Received when a peer sends us a chunk possibly following a request
+        /// Received when a peer sends us the data portion of a chunk possibly following a request
         /// </summary>
         /// <param name="packetHeader"></param>
         /// <param name="sourceConnectionId"></param>
         /// <param name="incomingObjectBytes"></param>
-        private static void IncomingChunkInterestReply(PacketHeader packetHeader, Connection connection, ChunkAvailabilityReply incomingReply)
+        private static void IncomingChunkInterestReplyData(PacketHeader packetHeader, Connection connection, byte[] incomingData)
         {
             try
             {
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReply from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
+                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
+
+                lock (chunkDataCacheLocker)
+                {
+                    if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                        chunkDataCache.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
+
+                    if (!packetHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
+                        throw new Exception("The dataSequenceNumber option appears to missing from the packetHeader. What has been changed?");
+
+                    long dataSequenceNumber = packetHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                    if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(dataSequenceNumber))
+                        throw new Exception("Data already exists for peer:" + connection.ConnectionInfo.NetworkIdentifier + " with sequence number:" + dataSequenceNumber);
+                    else
+                        chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
+                }
+
+                CheckForChunkDataCacheTimeouts();
+            }
+            catch (Exception e)
+            {
+                NetworkComms.LogError(e, "Error_IncomingChunkInterestReplyData");
+            }
+        }
+
+        /// <summary>
+        /// Received when a peer sends us a chunk data information possibly following a request
+        /// </summary>
+        /// <param name="packetHeader"></param>
+        /// <param name="sourceConnectionId"></param>
+        /// <param name="incomingObjectBytes"></param>
+        private static void IncomingChunkInterestReplyInfo(PacketHeader packetHeader, Connection connection, ChunkAvailabilityReply incomingReply)
+        {
+            try
+            {
+                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
 
                 DistributedItem item = null;
                 lock (globalDFSLocker)
@@ -910,11 +995,29 @@ namespace DistributedFileSystem
                 }
 
                 if (item != null)
+                {
+                    //Do we have the data yet?
+                    lock (chunkDataCacheLocker)
+                    {
+                        //Given we always send the data first it would be a really fucked up if the data is not where we expect it to be
+                        if (chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) && chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(incomingReply.DataSequenceNumber))
+                        {
+                            incomingReply.SetChunkData(chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][incomingReply.DataSequenceNumber].Data);
+                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(incomingReply.DataSequenceNumber);
+
+                            if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
+                                chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                        }
+                        else
+                            throw new Exception("Unable to locate chunk data (this info is probably really late) in cache for item:" + item.ItemCheckSum + ", chunkIndex:" + incomingReply.ChunkIndex + ", dataSequenceNumber:" + incomingReply.DataSequenceNumber);
+                    }
+
                     item.HandleIncomingChunkReply(incomingReply, connection);
+                }
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingChunkInterestReply");
+                NetworkComms.LogError(e, "Error_IncomingChunkInterestReplyInfo");
             }
         }
 

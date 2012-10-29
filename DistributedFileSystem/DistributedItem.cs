@@ -63,6 +63,8 @@ namespace DistributedFileSystem
 
         public DateTime ItemBuildCompleted { get; private set; }
 
+        public ItemBuildTarget ItemBuildTarget { get; private set; }
+
         /// <summary>
         /// Contains a record of which peers have which chunks of this file
         /// </summary>
@@ -88,17 +90,18 @@ namespace DistributedFileSystem
         List<string> assembleLog;
         object assembleLogLocker = new object();
 
-        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth = 1)
+        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth = 1)
         {
-            Constructor(itemTypeStr, itemIdentifier, itemData, seedConnectionInfo, itemBuildCascadeDepth);
+            Constructor(itemTypeStr, itemIdentifier, itemData, seedConnectionInfo, itemBuildTarget, itemBuildCascadeDepth);
         }
 
-        private void Constructor(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, int itemBuildCascadeDepth)
+        private void Constructor(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth)
         {
             //CurrentChunkEnterCounter = 0;
             this.ItemTypeStr = itemTypeStr;
-            this.ItemIdentifier = ItemIdentifier;
+            this.ItemIdentifier = itemIdentifier;
             this.ItemDataStream = new ThreadSafeStream(itemData);
+            this.ItemBuildTarget = itemBuildTarget;
 
             ItemCheckSum = ItemDataStream.MD5CheckSum();
             ItemBytesLength = (int)ItemDataStream.Length;
@@ -119,6 +122,7 @@ namespace DistributedFileSystem
             //Break the itemBytes into chunks
             //this.ItemByteArray = new byte[TotalNumChunks][];
             int currentPosition = 0;
+            ChunkPositionLengthDict = new Dictionary<int, PositionLength>();
             for (int i = 0; i < TotalNumChunks; i++)
             {
                 int chunkSize = (i == TotalNumChunks - 1 ? ItemBytesLength - (i * ChunkSizeInBytes) : ChunkSizeInBytes);
@@ -149,11 +153,12 @@ namespace DistributedFileSystem
             //this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
             //this.ItemByteArray = new byte[TotalNumChunks][];
             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Disk)
-                this.ItemDataStream = new ThreadSafeStream(new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite));
+                this.ItemDataStream = new ThreadSafeStream(new FileStream(assemblyConfig.ItemIdentifier + ".DFSitem", FileMode.Create, FileAccess.ReadWrite));
             else if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Memory || assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                 this.ItemDataStream = new ThreadSafeStream(new MemoryStream(ItemBytesLength));
 
             int currentPosition = 0;
+            ChunkPositionLengthDict = new Dictionary<int, PositionLength>();
             for (int i = 0; i < TotalNumChunks; i++)
             {
                 int chunkSize = (i == TotalNumChunks - 1 ? ItemBytesLength - (i * ChunkSizeInBytes) : ChunkSizeInBytes);
@@ -754,10 +759,7 @@ namespace DistributedFileSystem
                 if (LocalItemValid())
                     return ItemDataStream.ToArray();
                 else
-                {
-                    //ItemChunkCheckSums(true);
                     throw new Exception("Attempted to access item bytes but they are corrupted.");
-                }
             }
             else
                 throw new Exception("Attempted to access item bytes before all chunks had been retrieved.");

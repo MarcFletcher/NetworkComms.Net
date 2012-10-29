@@ -143,6 +143,9 @@ namespace NetworkCommsDotNet
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteEndPoint);
 
+            if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
+                packet.PacketData.ThreadSafeStream.Dispose();
+
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 

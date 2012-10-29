@@ -74,6 +74,8 @@ namespace DistributedFileSystem
         [ProtoMember(3)]
         public ChunkReplyState ReplyState { get; private set; }
         [ProtoMember(4)]
+        public long DataSequenceNumber { get; private set; }
+
         public byte[] ChunkData { get; private set; }
 
         private ChunkAvailabilityReply() { }
@@ -96,12 +98,38 @@ namespace DistributedFileSystem
         /// <param name="itemMD5"></param>
         /// <param name="chunkIndex"></param>
         /// <param name="chunkData"></param>
-        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, byte[] chunkData)
+        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
-            this.ChunkData = chunkData;
+            this.DataSequenceNumber = dataSequenceNumber;
             this.ReplyState = ChunkReplyState.DataIncluded;
+        }
+
+        /// <summary>
+        /// Set the data for this ChunkAvailabilityReply
+        /// </summary>
+        /// <param name="chunkData"></param>
+        public void SetChunkData(byte[] chunkData)
+        {
+            this.ChunkData = chunkData;
+        }
+    }
+
+    /// <summary>
+    /// Temporary sotrage for chunk data which is awaiting corresponding info
+    /// </summary>
+    class ChunkDataWrapper
+    {
+        public long IncomingSequenceNumber { get; private set; }
+        public byte[] Data { get; private set; }
+        public DateTime TimeRecieved { get; private set; }
+
+        public ChunkDataWrapper(long incomingSequenceNumber, byte[] data)
+        {
+            this.IncomingSequenceNumber = incomingSequenceNumber;
+            this.Data = data;
+            this.TimeRecieved = DateTime.Now;
         }
     }
 }

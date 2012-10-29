@@ -107,7 +107,7 @@ namespace DPSBase
 
             //If we have no data processing to do we can simply return the serialised bytes
             if (dataProcessors == null || dataProcessors.Count == 0)
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
             else
             {
                 //Otherwise we will need a second memory stream to process the data
@@ -152,7 +152,7 @@ namespace DPSBase
                     //Return the resultant bytes
                     //return tempStream1.ToArray();
                     tempStream2.Dispose();
-                    return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                    return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
                 }
                 else
                 {
@@ -162,7 +162,7 @@ namespace DPSBase
                     //Return the resultant bytes
                     //return tempStream2.ToArray();
                     tempStream1.Dispose();
-                    return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
+                    return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
                 }
             }
         }
@@ -309,7 +309,7 @@ namespace DPSBase
                 //No need to do anything for a byte array
                 if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
                     //return objectToSerialise as byte[];
-                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(objectToSerialise as byte[])));
+                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(objectToSerialise as byte[]), true));
                 else if (elementType.IsPrimitive)
                 {
                     var asArray = objectToSerialise as Array;
@@ -328,7 +328,7 @@ namespace DPSBase
                             {
                                 inputDataStream.CopyTo(tempStream1);
                                 //return tempStream1.ToArray();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
                             }
 
                             dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
@@ -359,7 +359,7 @@ namespace DPSBase
                                 tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream2.ToArray();
                                 tempStream1.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
                             }
                             else
                             {
@@ -368,7 +368,7 @@ namespace DPSBase
                                 tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream1.ToArray();
                                 tempStream2.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
                             }
                         }
                         else
@@ -377,7 +377,7 @@ namespace DPSBase
                             tempStream1.Seek(writtenBytes, 0);
                             tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                             //return tempStream1.ToArray();
-                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
                         }
                     }
                     finally
@@ -556,7 +556,7 @@ namespace DPSBase
                 //Return the resultant bytes
                 //return tempStream1.ToArray();
                 tempStream2.Dispose();
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream1));
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
             }
             else
             {
@@ -566,7 +566,7 @@ namespace DPSBase
                 //Return the resultant bytes
                 //return tempStream2.ToArray();
                 tempStream1.Dispose();
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream2));
+                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
             }
         }
 
