@@ -33,6 +33,11 @@ namespace NetworkCommsDotNet
         protected object sendLocker = new object();
 
         /// <summary>
+        /// A counter which is incremented during every a send. The current value is included in the header of all sent packets.
+        /// </summary>
+        protected long packetSequenceCounter = 0;
+
+        /// <summary>
         /// Maintains a list of sent packets for the purpose of confirmation and possible resends.
         /// </summary>
         object sentPacketsLocker = new object();
@@ -46,6 +51,14 @@ namespace NetworkCommsDotNet
         public void SendObject(string sendingPacketType, object objectToSend) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions); }
 
         /// <summary>
+        /// Send an object using the connection default <see cref="SendReceiveOptions"/>
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send</param>
+        /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
+        public void SendObject(string sendingPacketType, object objectToSend, out long packetSequenceNumber) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions, out packetSequenceNumber); }
+
+        /// <summary>
         /// Send an object using the provided SendReceiveOptions
         /// </summary>
         /// <param name="sendingPacketType">The packet type to use for send</param>
@@ -53,7 +66,20 @@ namespace NetworkCommsDotNet
         /// <param name="options">Send specific <see cref="SendReceiveOptions"/></param>
         public void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options)
         {
-            SendPacket(new Packet(sendingPacketType, objectToSend, options));
+            long packetSequenceNumber;
+            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
+        }
+
+        /// <summary>
+        /// Send an object using the provided SendReceiveOptions
+        /// </summary>
+        /// <param name="sendingPacketType">The packet type to use for send</param>
+        /// <param name="objectToSend">The object to send</param>
+        /// <param name="options">Send specific <see cref="SendReceiveOptions"/></param>
+        /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
+        public void SendObject(string sendingPacketType, object objectToSend, SendReceiveOptions options, out long packetSequenceNumber)
+        {
+            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
         }
 
         /// <summary>
@@ -61,6 +87,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="sendingPacketType">The sending packet type</param>
         public void SendObject(string sendingPacketType) { SendObject(sendingPacketType, null); }
+
+        /// <summary>
+        /// Send an empty packet using the provided packetType. Usefull for signalling.
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
+        public void SendObject(string sendingPacketType, out long packetSequenceNumber) { SendObject(sendingPacketType, null, ConnectionDefaultSendReceiveOptions, out packetSequenceNumber); }
 
         /// <summary>
         /// Send an object using the connection default <see cref="SendReceiveOptions"/> and wait for a returned object again using default <see cref="SendReceiveOptions"/>.
@@ -77,6 +110,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Send an object using the connection default <see cref="SendReceiveOptions"/> and wait for a returned object again using default <see cref="SendReceiveOptions"/>.
+        /// </summary>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <param name="sendObject">The object to send</param>
+        /// <param name="sentPacketSequenceNumber">The sequence number of the packet sent</param>
+        /// <returns>The requested return object</returns>
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, out long sentPacketSequenceNumber)
+        {
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, null, null, out sentPacketSequenceNumber);
+        }
+
+        /// <summary>
         /// Send an object using the provided <see cref="SendReceiveOptions"/> and wait for a returned object using provided <see cref="SendReceiveOptions"/>.
         /// </summary>
         /// <typeparam name="returnObjectType">The type of return object</typeparam>
@@ -88,6 +136,24 @@ namespace NetworkCommsDotNet
         /// <param name="receiveOptions">SendReceiveOptions used when receiving the return object</param>
         /// <returns>The requested return object</returns>
         public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions sendOptions, SendReceiveOptions receiveOptions)
+        {
+            long sentPacketSequenceNumber;
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, sendOptions, receiveOptions, out sentPacketSequenceNumber);
+        }
+
+        /// <summary>
+        /// Send an object using the provided <see cref="SendReceiveOptions"/> and wait for a returned object using provided <see cref="SendReceiveOptions"/>.
+        /// </summary>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <param name="sendObject">The object to send</param>
+        /// <param name="sendOptions">SendReceiveOptions to use when sending</param>
+        /// <param name="receiveOptions">SendReceiveOptions used when receiving the return object</param>
+        /// <param name="sentPacketSequenceNumber">The sequence number of the packet sent</param>
+        /// <returns>The requested return object</returns>
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, SendReceiveOptions sendOptions, SendReceiveOptions receiveOptions, out long sentPacketSequenceNumber)
         {
             returnObjectType returnObject = default(returnObjectType);
 
@@ -117,7 +183,7 @@ namespace NetworkCommsDotNet
             AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
             Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions);
-            SendPacket(sendPacket);
+            SendPacket(sendPacket, out sentPacketSequenceNumber);
 
             //We wait for the return data here
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
@@ -144,6 +210,20 @@ namespace NetworkCommsDotNet
         /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
         /// <returns></returns>
         public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) { return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null); }
+
+        /// <summary>
+        /// Send an empty packet using the connection default <see cref="SendReceiveOptions"/> and wait for a returned object again using default <see cref="SendReceiveOptions"/>. Usefull to request an object when there is no need to send anything.
+        /// </summary>
+        /// <typeparam name="returnObjectType">The type of return object</typeparam>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>
+        /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw an ExpectedReturnTimeoutException.</param>
+        /// <param name="sentPacketSequenceNumber">The sequence number of the packet sent</param>
+        /// <returns></returns>
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, out long sentPacketSequenceNumber) 
+        { 
+            return SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null, out sentPacketSequenceNumber); 
+        }
 
         /// <summary>
         /// Closes the connection and trigger any associated shutdown delegates.
@@ -302,6 +382,17 @@ namespace NetworkCommsDotNet
         /// <param name="packet">The packet to send</param>
         private void SendPacket(Packet packet)
         {
+            long packetSequenceNumber;
+            SendPacket(packet, out packetSequenceNumber);
+        }
+
+        /// <summary>
+        /// Send the provided packet to the remoteEndPoint. Waits for recieve confirmation if required.
+        /// </summary>
+        /// <param name="packet">The packet to send</param>
+        /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
+        private void SendPacket(Packet packet, out long packetSequenceNumber)
+        {
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
 
             //Multiple threads may try to send packets at the same time so wait one at a time here
@@ -309,6 +400,10 @@ namespace NetworkCommsDotNet
             {
                 //We don't allow sends on a closed connection
                 if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new CommunicationException("Attempting to send packet on connection which has been closed or is currently closing.");
+
+                //Set packet sequence number inside sendLocker
+                packetSequenceNumber = packetSequenceCounter++;
+                packet.PacketHeader.SetOption(PacketHeaderLongItems.PacketSequenceNumber, packetSequenceNumber);
 
                 string confirmationCheckSum = "";
                 AutoResetEvent confirmationWaitSignal = new AutoResetEvent(false);
@@ -425,7 +520,6 @@ namespace NetworkCommsDotNet
             }
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
-        
         }
 
         /// <summary>

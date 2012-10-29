@@ -44,6 +44,11 @@ namespace NetworkCommsDotNet
         /// The creation time of the packet header.
         /// </summary>
         PacketCreationTime,
+
+        /// <summary>
+        /// The sequence number for this packet. Each connection maintains a unique counter which is increments on each sent packet.
+        /// </summary>
+        PacketSequenceNumber,
     }
 
     /// <summary>

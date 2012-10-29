@@ -241,7 +241,6 @@ namespace NetworkCommsDotNet
 
                     var hash = packetHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
 
-
                     Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), hash, NetworkComms.InternalFixedSendReceiveOptions);
                     SendPacket(returnPacket);
                 }
