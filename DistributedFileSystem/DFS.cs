@@ -481,6 +481,27 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
+        /// Remove any items from the DFS with a matching itemTypeStr
+        /// </summary>
+        /// <param name="ItemTypeStr"></param>
+        /// <param name="broadcastRemoval"></param>
+        public static void RemoveAllItemsFromLocalOnly(string ItemTypeStr, bool broadcastRemoval = false)
+        {
+            List<string> keysToRemove = new List<string>();
+            lock (globalDFSLocker)
+            {
+                foreach (DistributedItem item in swarmedItemsDict.Values)
+                {
+                    if (item.ItemTypeStr == ItemTypeStr)
+                        keysToRemove.Add(item.ItemCheckSum);
+                }
+            }
+
+            foreach (string key in keysToRemove)
+                RemoveItem(key, broadcastRemoval);
+        }
+
+        /// <summary>
         /// Pings all clients for a tracked item to make sure they are still alive. 
         /// Any clients which fail to respond within a sensible time are removed for the item swarm.
         /// </summary>
