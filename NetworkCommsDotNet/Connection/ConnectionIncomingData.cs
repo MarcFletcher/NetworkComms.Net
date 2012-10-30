@@ -218,19 +218,24 @@ namespace NetworkCommsDotNet
                     var packetHeaderHash = packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
 
                     //Validate the checkSumhash of the data
-                    if (packetHeaderHash != NetworkComms.MD5Bytes(packetDataSection))
+                    string packetDataSectionMD5 = NetworkComms.MD5Bytes(packetDataSection);
+                    if (packetHeaderHash != packetDataSectionMD5)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet header detected.");
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
 
                         //We have corruption on a resend request, something is very wrong so we throw an exception.
                         if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
 
-                        //Instead of throwing an exception we can request the packet to be resent
-                        Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
-                        SendPacket(returnPacket);
-
-                        //We need to wait for the packet to be resent before going further
-                        return;
+                        if (packetHeader.PayloadPacketSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
+                        {
+                            //Instead of throwing an exception we can request the packet to be resent
+                            Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
+                            SendPacket(returnPacket);
+                            //We need to wait for the packet to be resent before going further
+                            return;
+                        }
+                        else
+                            throw new CheckSumException("Corrupted packet detected from "+ConnectionInfo+", expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
                     }
                 }
 
@@ -281,7 +286,7 @@ namespace NetworkCommsDotNet
             }
             catch (CommunicationException)
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed.");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed.");
                 CloseConnection(true, 2);
             }
             catch (Exception ex)

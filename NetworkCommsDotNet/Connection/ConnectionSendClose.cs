@@ -280,19 +280,33 @@ namespace NetworkCommsDotNet
                 //Close connection my get called multiple times for a given connection depending on the reason for being closed
                 bool firstClose = NetworkComms.RemoveConnectionReference(this);
 
-                //Almost there
-                //Last thing is to call any connection specific shutdown delegates
-                if (firstClose && ConnectionSpecificShutdownDelegate != null)
+                try
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
-                    ConnectionSpecificShutdownDelegate(this);
+                    //Almost there
+                    //Last thing is to call any connection specific shutdown delegates
+                    if (firstClose && ConnectionSpecificShutdownDelegate != null)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
+                        ConnectionSpecificShutdownDelegate(this);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    NetworkComms.LogError(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                 }
 
-                //Last but not least we call any global connection shutdown delegates
-                if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
+                try
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
-                    NetworkComms.globalConnectionShutdownDelegates(this);
+                    //Last but not least we call any global connection shutdown delegates
+                    if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
+                        NetworkComms.globalConnectionShutdownDelegates(this);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    NetworkComms.LogError(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                 }
             }
             catch (Exception ex)
@@ -393,7 +407,14 @@ namespace NetworkCommsDotNet
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
         private void SendPacket(Packet packet, out long packetSequenceNumber)
         {
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
+            if (NetworkComms.loggingEnabled)
+            {
+                string packetDataMD5 = "";
+                if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash))
+                    packetDataMD5 = packet.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
+
+                NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo + (packetDataMD5 == "" ? "" : ". PacketCheckSum="+packetDataMD5));
+            }
 
             //Multiple threads may try to send packets at the same time so wait one at a time here
             lock (sendLocker)

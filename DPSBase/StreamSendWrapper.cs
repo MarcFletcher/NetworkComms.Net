@@ -54,5 +54,14 @@ namespace DPSBase
             this.Start = (int)start;
             this.Length = (int)length;
         }
+
+        /// <summary>
+        /// Return the MD5 for the specific part of the stream only.
+        /// </summary>
+        /// <returns></returns>
+        public string MD5CheckSum()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

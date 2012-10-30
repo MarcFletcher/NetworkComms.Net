@@ -67,7 +67,7 @@ namespace NetworkCommsDotNet
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;
             if (NetworkComms.EnablePacketCheckSumValidation)
-                hashStr = packetData.ThreadSafeStream.MD5CheckSum();
+                hashStr = NetworkComms.MD5Bytes(packetData.ThreadSafeStream.ToArray(packetData.Start, packetData.Length));
 
             this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, requestReturnPacketTypeStr,  
                 options.Options.ContainsKey("ReceiveConfirmationRequired") ? bool.Parse(options.Options["ReceiveConfirmationRequired"]) : false,

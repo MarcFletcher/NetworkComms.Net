@@ -498,7 +498,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Removes the provided delegate for the specified packet type.
+        /// Removes the provided delegate for the specified packet type. If the provided delegate does not exist for this packet type just returns.
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which the delegate will be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be removed</param>
@@ -544,7 +544,7 @@ namespace NetworkCommsDotNet
         /// Removes all delegates for the provided packet type.
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public static void RemoveAllCustomGlobalPacketHandlers(string packetTypeStr)
+        public static void RemoveGlobalIncomingPacketHandler(string packetTypeStr)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -561,7 +561,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Removes all delegates for all packet types
         /// </summary>
-        public static void RemoveAllCustomGlobalPacketHandlers()
+        public static void RemoveGlobalIncomingPacketHandler()
         {
             lock (globalDictAndDelegateLocker)
             {

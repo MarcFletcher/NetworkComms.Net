@@ -114,7 +114,7 @@ namespace NetworkCommsDotNet
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
-            if (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any)))
+            if (udpClientThreadSafe!=null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))))
                 udpClientThreadSafe.CloseClient();
         }
 

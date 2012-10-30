@@ -77,6 +77,7 @@ namespace DistributedFileSystem
         public long DataSequenceNumber { get; private set; }
 
         public byte[] ChunkData { get; private set; }
+        public bool ChunkDataSet { get; private set; }
 
         private ChunkAvailabilityReply() { }
 
@@ -112,6 +113,7 @@ namespace DistributedFileSystem
         /// <param name="chunkData"></param>
         public void SetChunkData(byte[] chunkData)
         {
+            ChunkDataSet = true;
             this.ChunkData = chunkData;
         }
     }
@@ -123,13 +125,20 @@ namespace DistributedFileSystem
     {
         public long IncomingSequenceNumber { get; private set; }
         public byte[] Data { get; private set; }
-        public DateTime TimeRecieved { get; private set; }
+        public DateTime TimeCreated { get; private set; }
+        public ChunkAvailabilityReply ChunkAvailabilityReply { get; private set; }
+
+        public ChunkDataWrapper(ChunkAvailabilityReply chunkAvailabilityReply)
+        {
+            this.ChunkAvailabilityReply = chunkAvailabilityReply;
+            this.TimeCreated = DateTime.Now;
+        }
 
         public ChunkDataWrapper(long incomingSequenceNumber, byte[] data)
         {
             this.IncomingSequenceNumber = incomingSequenceNumber;
             this.Data = data;
-            this.TimeRecieved = DateTime.Now;
+            this.TimeCreated = DateTime.Now;
         }
     }
 }

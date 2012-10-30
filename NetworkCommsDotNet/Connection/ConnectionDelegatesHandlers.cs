@@ -334,7 +334,7 @@ namespace NetworkCommsDotNet
         /// Removes all delegates for the provided packet type
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public void RemoveAllPacketHandlers(string packetTypeStr)
+        public void RemoveIncomingPacketHandler(string packetTypeStr)
         {
             lock (delegateLocker)
             {
@@ -351,7 +351,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Removes all delegates for all packet types
         /// </summary>
-        public void RemoveAllPacketHandlers()
+        public void RemoveIncomingPacketHandler()
         {
             lock (delegateLocker)
             {

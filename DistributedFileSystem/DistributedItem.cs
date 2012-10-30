@@ -24,6 +24,7 @@ using System.Diagnostics;
 using NetworkCommsDotNet;
 using DPSBase;
 using System.IO;
+using ProtoBuf;
 
 namespace DistributedFileSystem
 {
@@ -39,12 +40,18 @@ namespace DistributedFileSystem
         }
     }
 
+    [ProtoContract]
     public class DistributedItem : IDisposable
     {
+        [ProtoMember(1)]
         public string ItemIdentifier { get; private set; }
+        [ProtoMember(2)]
         public string ItemTypeStr { get; private set; }
+        [ProtoMember(3)]
         public string ItemCheckSum { get; private set; }
+        [ProtoMember(4)]
         public byte TotalNumChunks { get; private set; }
+        [ProtoMember(5)]
         public int ChunkSizeInBytes { get; private set; }
 
         //Version two
@@ -57,17 +64,19 @@ namespace DistributedFileSystem
         /// </summary>
         //byte[][] ItemByteArray { get; set; }
 
+        [ProtoMember(6)]
         public int ItemBytesLength { get; private set; }
-
+        [ProtoMember(7)]
         public int ItemBuildCascadeDepth { get; private set; }
-
+        [ProtoMember(8)]
         public DateTime ItemBuildCompleted { get; private set; }
-
+        [ProtoMember(9)]
         public ItemBuildTarget ItemBuildTarget { get; private set; }
 
         /// <summary>
         /// Contains a record of which peers have which chunks of this file
         /// </summary>
+        [ProtoMember(10)]
         public SwarmChunkAvailability SwarmChunkAvailability { get; private set; }
 
         /// <summary>
@@ -75,8 +84,8 @@ namespace DistributedFileSystem
         /// </summary>
         Dictionary<byte, ChunkAvailabilityRequest> itemBuildTrackerDict;
 
-        AutoResetEvent itemBuildWait;
-        ManualResetEvent itemBuildComplete;
+        AutoResetEvent itemBuildWait = new AutoResetEvent(false);
+        ManualResetEvent itemBuildComplete = new ManualResetEvent(false);
 
         /// <summary>
         /// Tracks which chunks are currently being provided to other peers
@@ -90,12 +99,9 @@ namespace DistributedFileSystem
         List<string> assembleLog;
         object assembleLogLocker = new object();
 
-        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth = 1)
-        {
-            Constructor(itemTypeStr, itemIdentifier, itemData, seedConnectionInfo, itemBuildTarget, itemBuildCascadeDepth);
-        }
+        private DistributedItem() { }
 
-        private void Constructor(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth)
+        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth = 1)
         {
             //CurrentChunkEnterCounter = 0;
             this.ItemTypeStr = itemTypeStr;
@@ -121,14 +127,7 @@ namespace DistributedFileSystem
             //this.ItemBytes = itemBytes;
             //Break the itemBytes into chunks
             //this.ItemByteArray = new byte[TotalNumChunks][];
-            int currentPosition = 0;
-            ChunkPositionLengthDict = new Dictionary<int, PositionLength>();
-            for (int i = 0; i < TotalNumChunks; i++)
-            {
-                int chunkSize = (i == TotalNumChunks - 1 ? ItemBytesLength - (i * ChunkSizeInBytes) : ChunkSizeInBytes);
-                ChunkPositionLengthDict.Add(i, new PositionLength(currentPosition, chunkSize));
-                currentPosition+=chunkSize;
-            }
+            InitialiseChunkPositionLengthDict();
 
             TotalChunkSupplyCount = 0;
             PushCount = 0;
@@ -153,27 +152,17 @@ namespace DistributedFileSystem
             //this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
             //this.ItemByteArray = new byte[TotalNumChunks][];
             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Disk)
-                this.ItemDataStream = new ThreadSafeStream(new FileStream(assemblyConfig.ItemIdentifier + ".DFSitem", FileMode.Create, FileAccess.ReadWrite));
+                this.ItemDataStream = new ThreadSafeStream(new FileStream(assemblyConfig.ItemIdentifier + ".DFSItemData", FileMode.Create, FileAccess.ReadWrite));
             else if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Memory || assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                 this.ItemDataStream = new ThreadSafeStream(new MemoryStream(ItemBytesLength));
 
-            int currentPosition = 0;
-            ChunkPositionLengthDict = new Dictionary<int, PositionLength>();
-            for (int i = 0; i < TotalNumChunks; i++)
-            {
-                int chunkSize = (i == TotalNumChunks - 1 ? ItemBytesLength - (i * ChunkSizeInBytes) : ChunkSizeInBytes);
-                ChunkPositionLengthDict.Add(i, new PositionLength(currentPosition, chunkSize));
-                currentPosition += chunkSize;
-            }
+            InitialiseChunkPositionLengthDict();
 
             //this.SwarmChunkAvailability = NetworkComms.DefaultSerializer.DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes, NetworkComms.DefaultCompressor);
             this.SwarmChunkAvailability = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes);
 
             //As requests are made they are added to the build dict. We never remove a completed request.
             this.itemBuildTrackerDict = new Dictionary<byte, ChunkAvailabilityRequest>();
-
-            this.itemBuildWait = new AutoResetEvent(false);
-            this.itemBuildComplete = new ManualResetEvent(false);
 
             //Make sure that the original source added this node to the swarm before providing the assemblyConfig
             if (!SwarmChunkAvailability.PeerExistsInSwarm(NetworkComms.NetworkIdentifier))
@@ -188,6 +177,24 @@ namespace DistributedFileSystem
             }
 
             if (DFS.loggingEnabled) DFS.logger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
+        }
+
+        [ProtoAfterDeserialization]
+        private void AfterDeserialisation()
+        {
+            InitialiseChunkPositionLengthDict();
+        }
+
+        private void InitialiseChunkPositionLengthDict()
+        {
+            int currentPosition = 0;
+            ChunkPositionLengthDict = new Dictionary<int, PositionLength>();
+            for (int i = 0; i < TotalNumChunks; i++)
+            {
+                int chunkSize = (i == TotalNumChunks - 1 ? ItemBytesLength - (i * ChunkSizeInBytes) : ChunkSizeInBytes);
+                ChunkPositionLengthDict.Add(i, new PositionLength(currentPosition, chunkSize));
+                currentPosition += chunkSize;
+            }
         }
 
         public void IncrementPushCount()
@@ -836,6 +843,28 @@ namespace DistributedFileSystem
         {
             if (ItemDataStream != null)
                 ItemDataStream.Dispose();
+        }
+
+        /// <summary>
+        /// Load the specified distributed item. Does not add the .DFSItem extension
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        public static DistributedItem Load(string fileName, Stream dataStream, ConnectionInfo seedConnectionInfo)
+        {
+            DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
+            loadedItem.ItemDataStream = new ThreadSafeStream(dataStream);
+            loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, loadedItem.TotalNumChunks);
+            return loadedItem;
+        }
+
+        /// <summary>
+        /// Save this distributed item, adds .DFSItem extension.
+        /// </summary>
+        /// <param name="fileName"></param>
+        public void Save(string fileName)
+        {
+            File.WriteAllBytes(fileName + ".DFSItem", DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<DistributedItem>(this).ThreadSafeStream.ToArray());
         }
     }
 

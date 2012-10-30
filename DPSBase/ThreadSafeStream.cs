@@ -67,7 +67,7 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Returns data from Stream.ToArray()
+        /// Returns data from entire Stream
         /// </summary>
         /// <param name="numberZeroBytesPrefex">If non zero will append N 0 value bytes to the start of the returned array</param>
         /// <returns></returns>
@@ -83,7 +83,28 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Return the MD5 hash of the current <see cref="StreamSendWrapper"/> as a string
+        /// Returns data from the specified portion of Stream
+        /// </summary>
+        /// <param name="start">The start position of the desired bytes</param>
+        /// <param name="length">The total number of desired bytes</param>
+        /// <param name="numberZeroBytesPrefex">If non zero will append N 0 value bytes to the start of the returned array</param>
+        /// <returns></returns>
+        public byte[] ToArray(int start, int length, int numberZeroBytesPrefex = 0)
+        {
+            lock (streamLocker)
+            {
+                if (start + length > stream.Length)
+                    throw new ArgumentOutOfRangeException("Provided start and length parameters reference past the end of the available stream.");
+
+                stream.Seek(start, SeekOrigin.Begin);
+                byte[] returnData = new byte[length + numberZeroBytesPrefex];
+                stream.Read(returnData, numberZeroBytesPrefex, returnData.Length - numberZeroBytesPrefex);
+                return returnData;
+            }
+        }
+
+        /// <summary>
+        /// Return the MD5 hash of the current <see cref="ThreadSafeStream"/> as a string
         /// </summary>
         /// <returns></returns>
         public string MD5CheckSum()

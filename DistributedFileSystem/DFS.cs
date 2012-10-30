@@ -113,12 +113,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Initialises the DFS to run on the current local IP and default comms port.
         /// </summary>
-        public static void InitialiseDFS(int intialPort, bool rangeRandomPortFailover = true)
-        {
-            CompleteInitialise(intialPort, rangeRandomPortFailover);
-        }
-
-        private static void CompleteInitialise(int initialPort, bool rangeRandomPortFailover)
+        public static void InitialiseDFS(int initialPort, bool rangeRandomPortFailover = true)
         {
             try
             {
@@ -145,8 +140,6 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate, highPrioRecieveSRO);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate, highPrioRecieveSRO);
-
-                //NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityInterestReplyComplete", IncomingChunkRequestReplyComplete);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest, highPrioRecieveSRO);
                 NetworkComms.AppendGlobalIncomingPacketHandler<DFSLinkRequest>("DFS_ItemLinkRequest", IncomingRemoteItemLinkRequest);
@@ -659,7 +652,7 @@ namespace DistributedFileSystem
                         long[] dataSequenceKeys = chunkDataCache[peerKeys[i]].Keys.ToArray();
                         for (int k = 0; k < dataSequenceKeys.Length; k++)
                         {
-                            if ((DateTime.Now - chunkDataCache[peerKeys[i]][dataSequenceKeys[k]].TimeRecieved).TotalSeconds > ChunkCacheDataTimeoutSecs)
+                            if ((DateTime.Now - chunkDataCache[peerKeys[i]][dataSequenceKeys[k]].TimeCreated).TotalSeconds > ChunkCacheDataTimeoutSecs)
                             {
                                 //If we have timed out data we will remove it
                                 chunkDataCache[peerKeys[i]].Remove(dataSequenceKeys[k]);
@@ -952,6 +945,7 @@ namespace DistributedFileSystem
             {
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
 
+                ChunkAvailabilityReply existingChunkAvailabilityReply = null;
                 lock (chunkDataCacheLocker)
                 {
                     if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
@@ -962,9 +956,33 @@ namespace DistributedFileSystem
 
                     long dataSequenceNumber = packetHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
                     if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(dataSequenceNumber))
-                        throw new Exception("Data already exists for peer:" + connection.ConnectionInfo.NetworkIdentifier + " with sequence number:" + dataSequenceNumber);
+                    {
+                        //The info beat the data so we handle it here
+                        existingChunkAvailabilityReply = chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber].ChunkAvailabilityReply;
+                        existingChunkAvailabilityReply.SetChunkData(incomingData);
+
+                        chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(existingChunkAvailabilityReply.DataSequenceNumber);
+                        if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
+                            chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                    }
                     else
+                    {
                         chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
+                        if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
+                    }
+                }
+
+                if (existingChunkAvailabilityReply != null)
+                {
+                    DistributedItem item = null;
+                    lock (globalDFSLocker)
+                    {
+                        if (swarmedItemsDict.ContainsKey(existingChunkAvailabilityReply.ItemCheckSum))
+                            item = swarmedItemsDict[existingChunkAvailabilityReply.ItemCheckSum];
+                    }
+
+                    if (item != null)
+                        item.HandleIncomingChunkReply(existingChunkAvailabilityReply, connection);
                 }
 
                 CheckForChunkDataCacheTimeouts();
@@ -1008,11 +1026,20 @@ namespace DistributedFileSystem
                             if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
                                 chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
                         }
-                        else
-                            throw new Exception("Unable to locate chunk data (this info is probably really late) in cache for item:" + item.ItemCheckSum + ", chunkIndex:" + incomingReply.ChunkIndex + ", dataSequenceNumber:" + incomingReply.DataSequenceNumber);
+                        else if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
+                        {
+                            //throw new Exception("Unable to locate chunk data (this info is probably really late) in cache for item:" + item.ItemCheckSum + ", chunkIndex:" + incomingReply.ChunkIndex + ", dataSequenceNumber:" + incomingReply.DataSequenceNumber);
+                            //We have beaten the data, we will add the chunkavailability reply instead and wait then let the incoming data trigger the handle
+                            if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                                chunkDataCache.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
+
+                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(incomingReply.DataSequenceNumber, new ChunkDataWrapper(incomingReply));
+                            if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkAvailabilityReply to chunkDataCache (awaiting data) from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
+                        }
                     }
 
-                    item.HandleIncomingChunkReply(incomingReply, connection);
+                    if (incomingReply.ChunkDataSet || incomingReply.ReplyState != ChunkReplyState.DataIncluded)
+                        item.HandleIncomingChunkReply(incomingReply, connection);
                 }
             }
             catch (Exception e)
