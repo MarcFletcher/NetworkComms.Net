@@ -466,8 +466,8 @@ namespace DistributedFileSystem
                 itemToRemove.Dispose();
             }
 
-            try { GC.Collect(); }
-            catch (Exception) { }
+            //try { GC.Collect(); }
+            //catch (Exception) { }
         }
 
         public static void RemoveAllItemsFromLocalOnly(bool broadcastRemoval = false)
@@ -558,8 +558,8 @@ namespace DistributedFileSystem
                 NetworkComms.LogError(ex, "Error_AddItemToSwarm");
             }
 
-            try { GC.Collect(); }
-            catch (Exception) { }
+            //try { GC.Collect(); }
+            //catch (Exception) { }
         }
 
         /// <summary>
@@ -599,8 +599,8 @@ namespace DistributedFileSystem
                 NetworkComms.LogError(ex, "Error_AddItemToSwarm");
             }
 
-            try { GC.Collect(); }
-            catch (Exception) { }
+            //try { GC.Collect(); }
+            //catch (Exception) { }
 
             return itemToAdd;
         }
@@ -813,9 +813,13 @@ namespace DistributedFileSystem
 
                 //Once complete we pass the item bytes back into network comms
                 //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
-                if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "") 
-                    //NetworkComms.TriggerPacketHandler(new PacketHeader(assemblyConfig.CompletedPacketType, false, "", newItem.ItemBytesLength, true), sourceConnectionId, newItem.AccessItemBytes(), NullSerializer.Instance, NullCompressor.Instance);
-                    NetworkComms.TriggerGlobalPacketHandlers(new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength), connection, newItem.AccessItemBytes(), nullOptions);
+                if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
+                {
+                    PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                    //We set the item checksum so that the entire distributed item can be easily retrieved later
+                    itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, newItem.AccessItemBytes(), nullOptions);
+                }
 
                 //Close any connections which are no longer required
                 newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
@@ -936,8 +940,8 @@ namespace DistributedFileSystem
                             
                             //If we have sent data there is a good chance we have used up alot of memory
                             //This seems to be an efficient place for a garbage collection
-                            try { GC.Collect(); }
-                            catch (Exception) { }
+                            //try { GC.Collect(); }
+                            //catch (Exception) { }
                         }
                     }
                 }

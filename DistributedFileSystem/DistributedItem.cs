@@ -595,8 +595,8 @@ namespace DistributedFileSystem
 
             AddBuildLogLine("Completed assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
 
-            try { GC.Collect(); }
-            catch (Exception) { }
+            //try { GC.Collect(); }
+            //catch (Exception) { }
         }
 
         public void HandleIncomingChunkReply(ChunkAvailabilityReply incomingReply, Connection connection)
@@ -709,8 +709,8 @@ namespace DistributedFileSystem
 
                     //For the same reason we garbage collect at the server end when creating this data we want to 
                     //garbage collect after handling incoming data
-                    try { GC.Collect(); }
-                    catch (Exception) { }
+                    //try { GC.Collect(); }
+                    //catch (Exception) { }
                 }
             }
             catch (Exception)
