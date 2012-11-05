@@ -159,7 +159,7 @@ namespace DistributedFileSystem
             InitialiseChunkPositionLengthDict();
 
             //this.SwarmChunkAvailability = NetworkComms.DefaultSerializer.DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes, NetworkComms.DefaultCompressor);
-            this.SwarmChunkAvailability = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes);
+            this.SwarmChunkAvailability = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SwarmChunkAvailability>(new MemoryStream(assemblyConfig.SwarmChunkAvailabilityBytes));
 
             //As requests are made they are added to the build dict. We never remove a completed request.
             this.itemBuildTrackerDict = new Dictionary<byte, ChunkAvailabilityRequest>();
@@ -852,7 +852,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public static DistributedItem Load(string fileName, Stream dataStream, ConnectionInfo seedConnectionInfo)
         {
-            DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
+            DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(new MemoryStream(File.ReadAllBytes(fileName)));
             loadedItem.ItemDataStream = new ThreadSafeStream(dataStream);
             loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, loadedItem.TotalNumChunks);
             return loadedItem;

@@ -6,6 +6,7 @@ using NetworkCommsDotNet;
 using System.Threading;
 using System.Net;
 using DPSBase;
+using System.IO;
 
 namespace DebugTests
 {
@@ -27,7 +28,7 @@ namespace DebugTests
             byte[] serialisedTest = DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<SerialiseTest>(new SerialiseTest(2, "God")).ThreadSafeStream.ToArray();
             Array.Resize<byte>(ref serialisedTest, 100);
 
-            SerialiseTest deserialised = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SerialiseTest>(serialisedTest);
+            SerialiseTest deserialised = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SerialiseTest>(new MemoryStream(serialisedTest));
 
             NetworkComms.AppendGlobalConnectionEstablishHandler(connectionInfo => { Console.WriteLine("Connection establish handler executed for " + connectionInfo); });
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionInfo => { Console.WriteLine("Connection close handler executed for " + connectionInfo); });

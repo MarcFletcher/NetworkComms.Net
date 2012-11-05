@@ -129,7 +129,7 @@ namespace NetworkCommsDotNet
                 longItems.Add(PacketHeaderLongItems.PacketCreationTime, DateTime.Now.Ticks);
         }
 
-        internal PacketHeader(byte[] packetData, SendReceiveOptions sendReceiveOptions)
+        internal PacketHeader(MemoryStream packetData, SendReceiveOptions sendReceiveOptions)
         {
             try
             {

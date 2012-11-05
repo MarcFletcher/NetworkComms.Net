@@ -212,19 +212,4 @@ namespace NetworkCommsDotNet
         }
     }
 
-    /// <summary>
-    /// An error occured during an RPC (Remote Procedure Call) exchange.
-    /// </summary>
-    public class RPCException : CommsException
-    {
-        /// <summary>
-        /// Create a new instance of RPCException
-        /// </summary>
-        /// <param name="msg">A string containing useful information regarding the error</param>
-        public RPCException(string msg)
-            : base(msg)
-        {
-
-        }
-    }
 }

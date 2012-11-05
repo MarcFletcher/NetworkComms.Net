@@ -114,6 +114,10 @@
       <Project>{B659339D-A958-4F33-96E6-3A0CCFCBC5C1}</Project>
       <Name>QuickLZCompressor</Name>
     </ProjectReference>
+    <ProjectReference Include="..\RemoteProcedureCalls\RemoteProcedureCalls.csproj">
+      <Project>{BFB67E36-9DF1-473D-B5DC-D94C5199C624}</Project>
+      <Name>RemoteProcedureCalls</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
       <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>
       <Name>SevenZipLZMACompressor</Name>

@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -206,7 +207,7 @@ namespace NetworkCommsDotNet
                 if (packetHeader == null) throw new NullReferenceException("Type cast to PacketHeader failed in CompleteIncomingPacketWorker.");
 
                 //Unwrap with an idiot check
-                byte[] packetDataSection = completedData[1] as byte[];
+                MemoryStream packetDataSection = completedData[1] as MemoryStream;
                 if (packetDataSection == null) throw new NullReferenceException("Type cast to byte[] failed in CompleteIncomingPacketWorker.");
 
                 SendReceiveOptions packetSendReceiveOptions = completedData[2] as SendReceiveOptions;
@@ -303,7 +304,7 @@ namespace NetworkCommsDotNet
         /// Handle an incoming CheckSumFailResend packet type
         /// </summary>
         /// <param name="packetDataSection"></param>
-        private void CheckSumFailResendHandler(byte[] packetDataSection)
+        private void CheckSumFailResendHandler(MemoryStream packetDataSection)
         {
             //If we have been asked to resend a packet then we just go through the list and resend it.
             SentPacket packetToReSend;

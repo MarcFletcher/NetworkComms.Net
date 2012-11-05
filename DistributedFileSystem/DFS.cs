@@ -818,7 +818,7 @@ namespace DistributedFileSystem
                     PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
                     //We set the item checksum so that the entire distributed item can be easily retrieved later
                     itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
-                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, newItem.AccessItemBytes(), nullOptions);
+                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(newItem.AccessItemBytes()), nullOptions);
                 }
 
                 //Close any connections which are no longer required

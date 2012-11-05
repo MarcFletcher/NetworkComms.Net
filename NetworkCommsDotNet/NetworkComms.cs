@@ -26,6 +26,7 @@ using System.Collections;
 using System.Net.NetworkInformation;
 using Common.Logging;
 using System.Diagnostics;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -578,7 +579,7 @@ namespace NetworkCommsDotNet
         /// <param name="connection">The incoming connection</param>
         /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
-        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options)
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options)
         {
             TriggerGlobalPacketHandlers(packetHeader, connection, incomingObjectBytes, options, IgnoreUnknownPacketTypes);
         }
@@ -591,7 +592,7 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
         /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
-        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
+        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
         {
             try
             {
@@ -1048,7 +1049,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="bytesToMd5">The bytes which will be checksummed</param>
         /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(byte[] bytesToMd5)
+        public static string MD5Bytes(MemoryStream bytesToMd5)
         {
             System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
             return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-", "");

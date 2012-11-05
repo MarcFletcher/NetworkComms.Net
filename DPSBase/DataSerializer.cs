@@ -173,7 +173,7 @@ namespace DPSBase
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
+        public T DeserialiseDataObject<T>(MemoryStream receivedObjectBytes)
         {
             return DeserialiseDataObject<T>(receivedObjectBytes, null, null);
         }
@@ -186,7 +186,7 @@ namespace DPSBase
         /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in reverse order i.e. high index to low</param>
         /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public T DeserialiseDataObject<T>(MemoryStream receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (receivedObjectBytes == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
 
@@ -198,65 +198,64 @@ namespace DPSBase
                 return DeserialiseGeneralObject<T>(receivedObjectBytes, dataProcessors, options);
         }
 
-        private T DeserialiseGeneralObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        private T DeserialiseGeneralObject<T>(MemoryStream receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             //Create a memory stream using the incoming bytes as the initial buffer
-            using (MemoryStream inputStream = new MemoryStream(receivedObjectBytes))
-            {
-                //If no data processing is required then we can just deserialise the object straight
-                if (dataProcessors == null || dataProcessors.Count == 0)
-                    return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
-                else
-                {
-                    //Otherwise we will need another stream
-                    using (MemoryStream tempStream = new MemoryStream())
-                    {
-                        //variable will store the number of bytes in the output stream at each processing stage
-                        long writtenBytes;
-                        //Data processing for deserialization is done in reverse so run the last element
-                        dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
+            MemoryStream inputStream = receivedObjectBytes;
 
-                        //If we have more than 1 processor we will now run the remaining processors pair wise
-                        if (dataProcessors.Count > 1)
+            //If no data processing is required then we can just deserialise the object straight
+            if (dataProcessors == null || dataProcessors.Count == 0)
+                return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
+            else
+            {
+                //Otherwise we will need another stream
+                using (MemoryStream tempStream = new MemoryStream())
+                {
+                    //variable will store the number of bytes in the output stream at each processing stage
+                    long writtenBytes;
+                    //Data processing for deserialization is done in reverse so run the last element
+                    dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
+
+                    //If we have more than 1 processor we will now run the remaining processors pair wise
+                    if (dataProcessors.Count > 1)
+                    {
+                        //Data processing for deserialization is done in reverse so run from a high index down in steps of 2. Each loop processes data temp -> input -> temp
+                        for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
                         {
-                            //Data processing for deserialization is done in reverse so run from a high index down in steps of 2. Each loop processes data temp -> input -> temp
-                            for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
+                            //Seek streams to zero and truncate the last output stream to the data size
+                            inputStream.Seek(0, 0);
+                            tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
+                            //Process the data
+                            dataProcessors[i].ReverseProcessDataStream(tempStream, inputStream, options, out writtenBytes);
+
+                            //if the second processor exists run it
+                            if (i - 1 >= 0)
                             {
                                 //Seek streams to zero and truncate the last output stream to the data size
-                                inputStream.Seek(0, 0);
-                                tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
+                                inputStream.Seek(0, 0); inputStream.SetLength(writtenBytes);
+                                tempStream.Seek(0, 0);
                                 //Process the data
-                                dataProcessors[i].ReverseProcessDataStream(tempStream, inputStream, options, out writtenBytes);
-
-                                //if the second processor exists run it
-                                if (i - 1 >= 0)
-                                {
-                                    //Seek streams to zero and truncate the last output stream to the data size
-                                    inputStream.Seek(0, 0); inputStream.SetLength(writtenBytes);
-                                    tempStream.Seek(0, 0);
-                                    //Process the data
-                                    dataProcessors[i].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
-                                }
+                                dataProcessors[i].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
                             }
                         }
+                    }
 
-                        //Depending on whether the number of processors is even or odd a different stream will hold the final data
-                        if (dataProcessors.Count % 2 == 0)
-                        {
-                            //Seek to the begining and truncate the output stream
-                            inputStream.Seek(0, 0);
-                            inputStream.SetLength(writtenBytes);
-                            //Return the resultant bytes
-                            return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
-                        }
-                        else
-                        {
-                            //Seek to the begining and truncate the output stream
-                            tempStream.Seek(0, 0);
-                            tempStream.SetLength(writtenBytes);
-                            //Return the resultant bytes
-                            return (T)DeserialiseDataObjectInt(tempStream, typeof(T), options);
-                        }
+                    //Depending on whether the number of processors is even or odd a different stream will hold the final data
+                    if (dataProcessors.Count % 2 == 0)
+                    {
+                        //Seek to the begining and truncate the output stream
+                        inputStream.Seek(0, 0);
+                        inputStream.SetLength(writtenBytes);
+                        //Return the resultant bytes
+                        return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
+                    }
+                    else
+                    {
+                        //Seek to the begining and truncate the output stream
+                        tempStream.Seek(0, 0);
+                        tempStream.SetLength(writtenBytes);
+                        //Return the resultant bytes
+                        return (T)DeserialiseDataObjectInt(tempStream, typeof(T), options);
                     }
                 }
             }
@@ -398,7 +397,7 @@ namespace DPSBase
         /// <param name="objType">The <see cref="System.Type"/> of the <see cref="object"/> to be returned</param>
         /// <param name="options">Options to be used during deserialization and processing of data</param>
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
-        public static unsafe object DeserialiseArrayObject(byte[] receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static unsafe object DeserialiseArrayObject(MemoryStream receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (objType.IsArray)
             {
@@ -409,8 +408,17 @@ namespace DPSBase
                     return (object)receivedObjectBytes;
                 if (elementType.IsPrimitive)
                 {
-                    int numElements = (dataProcessors == null || dataProcessors.Count == 0) ? (receivedObjectBytes.Length / Marshal.SizeOf(elementType)) :
-                        (int)(BitConverter.ToUInt32(receivedObjectBytes, receivedObjectBytes.Length - sizeof(int)));
+                    int numElements;
+
+
+                    if (dataProcessors == null || dataProcessors.Count == 0)
+                        numElements = (int)(receivedObjectBytes.Length / Marshal.SizeOf(elementType));
+                    else
+                    {
+                        byte[] temp = new byte[sizeof(int)];
+                        receivedObjectBytes.Read(temp, (int)receivedObjectBytes.Length - sizeof(int), sizeof(int));
+                        numElements = (int)(BitConverter.ToUInt32(temp, 0));
+                    }
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
 
@@ -423,7 +431,7 @@ namespace DPSBase
 
                         using (System.IO.UnmanagedMemoryStream finalOutputStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
                         {
-                            using (MemoryStream inputBytesStream = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))))
+                            using (MemoryStream inputBytesStream = new MemoryStream(receivedObjectBytes.GetBuffer(), 0, (int)(receivedObjectBytes.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int)))))
                             {
                                 if (dataProcessors != null && dataProcessors.Count > 1)
                                 {

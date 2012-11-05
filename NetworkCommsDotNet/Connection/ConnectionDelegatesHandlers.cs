@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -136,7 +137,7 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
         /// <param name="options">The incoming sendReceiveOptions to use overriding defaults</param>
         /// <returns>Returns true if connection specific handlers were executed.</returns>
-        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, byte[] incomingObjectBytes, SendReceiveOptions options)
+        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, MemoryStream incomingObjectBytes, SendReceiveOptions options)
         {
             try
             {
