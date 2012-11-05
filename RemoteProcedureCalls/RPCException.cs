@@ -13,29 +13,29 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using ProtoBuf;
+using NetworkCommsDotNet;
 
-namespace DistributedFileSystem
+namespace RemoteProcedureCalls
 {
-    [ProtoContract]
-    class ItemRemovalUpdate
+
+    /// <summary>
+    /// An error occured during an RPC (Remote Procedure Call) exchange.
+    /// </summary>
+    public class RPCException : CommsException
     {
-        [ProtoMember(1)]
-        public string ItemCheckSum { get; private set; }
-
-        [ProtoMember(2)]
-        public bool RemoveSwarmWide { get; private set; }
-
-        private ItemRemovalUpdate() { }
-
-        public ItemRemovalUpdate(string itemCheckSum, bool removeSwarmWide)
+        /// <summary>
+        /// Create a new instance of RPCException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
+        public RPCException(string msg)
+            : base(msg)
         {
-            this.ItemCheckSum = itemCheckSum;
-            this.RemoveSwarmWide = removeSwarmWide;
+
         }
     }
 }

@@ -1,0 +1,13 @@
+syntax: glob
+**/bin/**
+**/obj/**
+*.suo
+x64/**
+ipch/**
+*.sdf
+*.opensdf
+*.csproj.user
+*.vcxproj.user
+SingleDllBuild/Debug/*
+SingleDllBuild/Release/*
+Documentation/Help/*

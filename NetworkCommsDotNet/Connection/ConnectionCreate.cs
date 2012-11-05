@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -168,7 +169,7 @@ namespace NetworkCommsDotNet
         /// Handle an incoming ConnectionSetup packet type
         /// </summary>
         /// <param name="packetDataSection">Serialised handshake data</param>
-        private void ConnectionSetupHandler(byte[] packetDataSection)
+        private void ConnectionSetupHandler(MemoryStream packetDataSection)
         {
             //We should never be trying to handshake an established connection
             ConnectionInfo remoteConnectionInfo = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection,

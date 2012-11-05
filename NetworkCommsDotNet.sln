@@ -40,6 +40,8 @@ Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "Documentation", "Documentat
 		{7473F5FC-A9BE-454E-9BB4-2C8876304AB0} = {7473F5FC-A9BE-454E-9BB4-2C8876304AB0}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteProcedureCalls", "RemoteProcedureCalls\RemoteProcedureCalls.csproj", "{BFB67E36-9DF1-473D-B5DC-D94C5199C624}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -164,6 +166,18 @@ Global
 		{DFB5C120-3B1F-4466-9961-31206204C119}.Documentation|Mixed Platforms.Build.0 = Debug|Any CPU
 		{DFB5C120-3B1F-4466-9961-31206204C119}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFB5C120-3B1F-4466-9961-31206204C119}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Documentation|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Documentation|Any CPU.Build.0 = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Documentation|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Documentation|Mixed Platforms.Build.0 = Debug|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{BFB67E36-9DF1-473D-B5DC-D94C5199C624}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

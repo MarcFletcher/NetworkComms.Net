@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -238,7 +239,7 @@ namespace NetworkCommsDotNet
         /// <param name="startIndex">The inclusive byte index to use as the starting position.</param>
         /// <param name="length">The total number of desired bytes.</param>
         /// <returns>The requested bytes as a single array.</returns>
-        public byte[] ReadDataSection(int startIndex, int length)
+        public MemoryStream ReadDataSection(int startIndex, int length)
         {
             lock (locker)
             {
@@ -298,7 +299,7 @@ namespace NetworkCommsDotNet
                 if (writeTotal != length)
                     throw new Exception("Not enough data available in packetBuilder to complete request.");
 
-                return returnArray;
+                return new MemoryStream(returnArray);
             }
         }
     }

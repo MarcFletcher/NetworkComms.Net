@@ -114,7 +114,7 @@ namespace NetworkCommsDotNet
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
-            if (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any)))
+            if (udpClientThreadSafe!=null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))))
                 udpClientThreadSafe.CloseClient();
         }
 
@@ -136,12 +136,15 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             //Prepare the single byte array to send
-            byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
+            byte[] udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
+            //Copy the header bytes into the datagram
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData, 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteEndPoint);
+
+            if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
+                packet.PacketData.ThreadSafeStream.Dispose();
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
@@ -165,7 +168,7 @@ namespace NetworkCommsDotNet
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
 
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData, 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
+            Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 

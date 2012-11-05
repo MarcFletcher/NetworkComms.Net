@@ -169,6 +169,7 @@ namespace ExamplesConsole
             //                End of interesting stuff                       //
             //***************************************************************//
         }
+
         #region Customisation Methods
 
         private static void SelectLogging()
@@ -381,7 +382,7 @@ namespace ExamplesConsole
         private static void CreateSendObject()
         {
             Console.Write("\nPlease select something to send:\n" +
-                "1 - Array of ints or strings)\n");
+                "1 - Array of ints or strings\n");
 
             if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
                 Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");

@@ -33,7 +33,7 @@ namespace DistributedFileSystem
     public class ChunkAvailabilityRequest
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
 
@@ -53,7 +53,7 @@ namespace DistributedFileSystem
 
         private ChunkAvailabilityRequest() { }
 
-        public ChunkAvailabilityRequest(long itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
+        public ChunkAvailabilityRequest(string itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
@@ -68,13 +68,16 @@ namespace DistributedFileSystem
     public class ChunkAvailabilityReply
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
         [ProtoMember(3)]
         public ChunkReplyState ReplyState { get; private set; }
         [ProtoMember(4)]
+        public long DataSequenceNumber { get; private set; }
+
         public byte[] ChunkData { get; private set; }
+        public bool ChunkDataSet { get; private set; }
 
         private ChunkAvailabilityReply() { }
 
@@ -83,7 +86,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="itemCheckSum"></param>
         /// <param name="chunkIndex"></param>
-        public ChunkAvailabilityReply(long itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
+        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
@@ -96,12 +99,46 @@ namespace DistributedFileSystem
         /// <param name="itemMD5"></param>
         /// <param name="chunkIndex"></param>
         /// <param name="chunkData"></param>
-        public ChunkAvailabilityReply(long itemCheckSum, byte chunkIndex, byte[] chunkData)
+        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
-            this.ChunkData = chunkData;
+            this.DataSequenceNumber = dataSequenceNumber;
             this.ReplyState = ChunkReplyState.DataIncluded;
+        }
+
+        /// <summary>
+        /// Set the data for this ChunkAvailabilityReply
+        /// </summary>
+        /// <param name="chunkData"></param>
+        public void SetChunkData(byte[] chunkData)
+        {
+            ChunkDataSet = true;
+            this.ChunkData = chunkData;
+        }
+    }
+
+    /// <summary>
+    /// Temporary sotrage for chunk data which is awaiting corresponding info
+    /// </summary>
+    class ChunkDataWrapper
+    {
+        public long IncomingSequenceNumber { get; private set; }
+        public byte[] Data { get; private set; }
+        public DateTime TimeCreated { get; private set; }
+        public ChunkAvailabilityReply ChunkAvailabilityReply { get; private set; }
+
+        public ChunkDataWrapper(ChunkAvailabilityReply chunkAvailabilityReply)
+        {
+            this.ChunkAvailabilityReply = chunkAvailabilityReply;
+            this.TimeCreated = DateTime.Now;
+        }
+
+        public ChunkDataWrapper(long incomingSequenceNumber, byte[] data)
+        {
+            this.IncomingSequenceNumber = incomingSequenceNumber;
+            this.Data = data;
+            this.TimeCreated = DateTime.Now;
         }
     }
 }

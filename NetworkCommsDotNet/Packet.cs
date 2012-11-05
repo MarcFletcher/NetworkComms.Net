@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DPSBase;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -27,7 +28,7 @@ namespace NetworkCommsDotNet
     public class Packet
     {
         PacketHeader packetHeader;
-        byte[] packetData;
+        StreamSendWrapper packetData;
 
         /// <summary>
         /// Create a new packet
@@ -59,14 +60,18 @@ namespace NetworkCommsDotNet
             if (options == null) throw new ArgumentNullException("The provided SendReceiveOptions cannot be null.");
 
             if (packetObject == null)
-                this.packetData = new byte[0];
+                this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0]), true));
             else
                 this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;
             if (NetworkComms.EnablePacketCheckSumValidation)
-                hashStr = NetworkComms.MD5Bytes(packetData);
+            {
+                MemoryStream tempStream = new MemoryStream(new byte[packetData.Length]);
+                packetData.ThreadSafeStream.CopyTo(tempStream, packetData.Start, packetData.Length);
+                hashStr = NetworkComms.MD5Bytes(tempStream);
+            }
 
             this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, requestReturnPacketTypeStr,  
                 options.Options.ContainsKey("ReceiveConfirmationRequired") ? bool.Parse(options.Options["ReceiveConfirmationRequired"]) : false,
@@ -89,7 +94,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Return the byte[] packet data
         /// </summary>
-        public byte[] PacketData
+        public StreamSendWrapper PacketData
         {
             get { return packetData; }
         }
@@ -101,24 +106,18 @@ namespace NetworkCommsDotNet
         public byte[] SerialiseHeader(SendReceiveOptions options)
         {
             //We need to start of by serialising the header
-            byte[] serialisedHeader = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null);
+            byte[] serialisedHeader = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null).ThreadSafeStream.ToArray(1);
 
-            //Define our return array which includes byte[0] as the header size
-            byte[] returnArray = new byte[1 + serialisedHeader.Length];
-
-            if (serialisedHeader.Length > byte.MaxValue)
+            if (serialisedHeader.Length - 1 > byte.MaxValue)
                 throw new SerialisationException("Unable to send packet as header size is larger than Byte.MaxValue. Try reducing the length of provided packetTypeStr or turning off checkSum validation.");
 
             //The first byte now specifies the header size (allows for variable header size)
-            returnArray[0] = (byte)serialisedHeader.Length;
+            serialisedHeader[0] = (byte)(serialisedHeader.Length - 1);
 
-            //Copy the bytes for the header in
-            Buffer.BlockCopy(serialisedHeader, 0, returnArray, 1, serialisedHeader.Length);
-
-            if (returnArray == null)
+            if (serialisedHeader == null)
                 throw new SerialisationException("Serialised header bytes should never be null.");
 
-            return returnArray;
+            return serialisedHeader;
         }
     }
 }

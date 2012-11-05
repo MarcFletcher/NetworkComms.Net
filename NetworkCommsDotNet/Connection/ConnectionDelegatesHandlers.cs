@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -136,7 +137,7 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
         /// <param name="options">The incoming sendReceiveOptions to use overriding defaults</param>
         /// <returns>Returns true if connection specific handlers were executed.</returns>
-        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, byte[] incomingObjectBytes, SendReceiveOptions options)
+        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, MemoryStream incomingObjectBytes, SendReceiveOptions options)
         {
             try
             {
@@ -334,7 +335,7 @@ namespace NetworkCommsDotNet
         /// Removes all delegates for the provided packet type
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public void RemoveAllPacketHandlers(string packetTypeStr)
+        public void RemoveIncomingPacketHandler(string packetTypeStr)
         {
             lock (delegateLocker)
             {
@@ -351,7 +352,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Removes all delegates for all packet types
         /// </summary>
-        public void RemoveAllPacketHandlers()
+        public void RemoveIncomingPacketHandler()
         {
             lock (delegateLocker)
             {

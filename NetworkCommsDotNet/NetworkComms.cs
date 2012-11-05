@@ -26,6 +26,7 @@ using System.Collections;
 using System.Net.NetworkInformation;
 using Common.Logging;
 using System.Diagnostics;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -498,7 +499,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Removes the provided delegate for the specified packet type.
+        /// Removes the provided delegate for the specified packet type. If the provided delegate does not exist for this packet type just returns.
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which the delegate will be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be removed</param>
@@ -544,7 +545,7 @@ namespace NetworkCommsDotNet
         /// Removes all delegates for the provided packet type.
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
-        public static void RemoveAllCustomGlobalPacketHandlers(string packetTypeStr)
+        public static void RemoveGlobalIncomingPacketHandler(string packetTypeStr)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -561,7 +562,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Removes all delegates for all packet types
         /// </summary>
-        public static void RemoveAllCustomGlobalPacketHandlers()
+        public static void RemoveGlobalIncomingPacketHandler()
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -578,7 +579,7 @@ namespace NetworkCommsDotNet
         /// <param name="connection">The incoming connection</param>
         /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
-        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options)
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options)
         {
             TriggerGlobalPacketHandlers(packetHeader, connection, incomingObjectBytes, options, IgnoreUnknownPacketTypes);
         }
@@ -591,7 +592,7 @@ namespace NetworkCommsDotNet
         /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
         /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
-        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, byte[] incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
+        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
         {
             try
             {
@@ -628,7 +629,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
-                    if (loggingEnabled) logger.Trace(" ... passing completed data packet to selected global handlers.");
+                    if (loggingEnabled) logger.Trace(" ... passing completed data packet of type '"+packetHeader.PacketType+"' to selected global handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -1048,7 +1049,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="bytesToMd5">The bytes which will be checksummed</param>
         /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(byte[] bytesToMd5)
+        public static string MD5Bytes(MemoryStream bytesToMd5)
         {
             System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
             return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-", "");

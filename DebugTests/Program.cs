@@ -45,9 +45,9 @@ namespace DebugTests
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
-            BasicSend.RunExample();
+            //BasicSend.RunExample();
             //AliveTest.RunExample();
-            //DebugTest.GoTCP();
+            DebugTest.GoTCP();
             //DFSTest.RunExample();
             //LoadTest.RunExample();
         }

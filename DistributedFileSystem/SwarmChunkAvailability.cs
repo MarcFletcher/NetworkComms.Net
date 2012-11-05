@@ -33,13 +33,13 @@ namespace DistributedFileSystem
     public class PeerChunkAvailabilityUpdate
     {
         [ProtoMember(1)]
-        public long ItemCheckSum { get; private set; }
+        public string ItemCheckSum { get; private set; }
         [ProtoMember(2)]
         public ChunkFlags ChunkFlags { get; private set; }
 
         private PeerChunkAvailabilityUpdate() { }
 
-        public PeerChunkAvailabilityUpdate(long itemCheckSum, ChunkFlags chunkFlags)
+        public PeerChunkAvailabilityUpdate(string itemCheckSum, ChunkFlags chunkFlags)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkFlags = chunkFlags;
@@ -493,7 +493,7 @@ namespace DistributedFileSystem
         /// Update the chunk availability by contacting all existing peers. If a cascade depth greater than 1 is provided will also contact each peers peers.
         /// </summary>
         /// <param name="cascadeDepth"></param>
-        public void UpdatePeerAvailability(long itemCheckSum, int cascadeDepth, int responseTimeoutMS = 1000)
+        public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseTimeoutMS = 1000)
         {
             string[] currentPeerKeys;
             lock (peerLocker) currentPeerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
@@ -623,6 +623,8 @@ namespace DistributedFileSystem
 
                 if (allUnknownPeerEndPointsComplete.Count > 0)
                 {
+                    List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+
                     //If we have some unknown peers we can request an update from them as well
                     foreach (string peerContactInfoOuter in allUnknownPeerEndPointsComplete)
                     {
@@ -635,7 +637,7 @@ namespace DistributedFileSystem
                                 IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
 
                                 //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                                if (!(peerEndPoint.Address == NetworkComms.AllAllowedIPs()[0] && peerEndPoint.Port == NetworkComms.DefaultListenPort) && PeerContactAllowed(peerEndPoint.Address, false))
+                                if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && PeerContactAllowed(peerEndPoint.Address, false))
                                     TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             }
                             catch (CommsException)
@@ -701,7 +703,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="itemCheckSum"></param>
         /// <param name="chunkIndex"></param>
-        public void BroadcastLocalAvailability(long itemCheckSum)
+        public void BroadcastLocalAvailability(string itemCheckSum)
         {
             //Console.WriteLine("Updating swarm availability.");
 
@@ -798,7 +800,7 @@ namespace DistributedFileSystem
         /// Broadcast to all known peers that the local DFS is removing the specified item
         /// </summary>
         /// <param name="itemCheckSum"></param>
-        public void BroadcastItemRemoval(long itemCheckSum, bool removeSwarmWide)
+        public void BroadcastItemRemoval(string itemCheckSum, bool removeSwarmWide)
         {
             string[] peerKeys;
             lock (peerLocker)
@@ -900,7 +902,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                return DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<SwarmChunkAvailability>(this);
+                return DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<SwarmChunkAvailability>(this).ThreadSafeStream.ToArray();
             }
             catch(Exception)
             {

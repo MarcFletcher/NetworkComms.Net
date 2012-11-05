@@ -361,13 +361,15 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a hashcode created by NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode()
+        /// Returns NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode();
         /// </summary>
-        /// <param name="obj">The object for which a hashcode needs to be created</param>
-        /// <returns>the hashcode</returns>
-        public int GetHashCode(ConnectionInfo obj)
+        /// <returns>The hashcode for this connection info</returns>
+        public override int GetHashCode()
         {
-            return obj.NetworkIdentifier.GetHashCode() ^ obj.RemoteEndPoint.GetHashCode();
+            if (RemoteEndPoint != null)
+                return NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode();
+            else
+                return NetworkIdentifier.GetHashCode();
         }
 
         /// <summary>

@@ -22,7 +22,7 @@ namespace ExamplesConsole
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
 
             //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.StartListening()
-            TCPConnection.StartListening();
+            TCPConnection.StartListening(true);
 
             //Print the IP addresses and ports we are listening on.
             Console.WriteLine("Listening for messages on:");

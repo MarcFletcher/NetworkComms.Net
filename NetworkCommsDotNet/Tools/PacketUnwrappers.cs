@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
+using System.IO;
 
 namespace NetworkCommsDotNet
 {
@@ -46,7 +47,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     interface IPacketTypeHandlerDelegateWrapper : IEquatable<IPacketTypeHandlerDelegateWrapper>
     {
-        object DeSerialize(byte[] incomingBytes, SendReceiveOptions options);
+        object DeSerialize(MemoryStream incomingBytes, SendReceiveOptions options);
 
         void Process(PacketHeader packetHeader, Connection connection, object obj);
         bool EqualsDelegate(Delegate other);
@@ -61,7 +62,7 @@ namespace NetworkCommsDotNet
             this.innerDelegate = packetHandlerDelegate;
         }
 
-        public object DeSerialize(byte[] incomingBytes, SendReceiveOptions options)
+        public object DeSerialize(MemoryStream incomingBytes, SendReceiveOptions options)
         {
             if (incomingBytes == null || incomingBytes.Length == 0) return null;
             else

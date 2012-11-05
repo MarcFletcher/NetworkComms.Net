@@ -292,7 +292,12 @@ namespace NetworkCommsDotNet
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
-            tcpClientNetworkStream.Write(packet.PacketData, 0, packet.PacketData.Length);
+            //tcpClientNetworkStream.Write(packet.PacketData.ToArray(), 0, packet.PacketData.Length);
+            packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length);
+
+            //Correctly dispose the stream if we are finished with it
+            if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
+                packet.PacketData.ThreadSafeStream.Dispose();
 
             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
 

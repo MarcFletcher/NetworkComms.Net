@@ -44,6 +44,11 @@ namespace NetworkCommsDotNet
         /// The creation time of the packet header.
         /// </summary>
         PacketCreationTime,
+
+        /// <summary>
+        /// The sequence number for this packet. Each connection maintains a unique counter which is increments on each sent packet.
+        /// </summary>
+        PacketSequenceNumber,
     }
 
     /// <summary>
@@ -52,7 +57,7 @@ namespace NetworkCommsDotNet
     public enum PacketHeaderStringItems : byte
     {
         /// <summary>
-        /// The type of the packet. This is a compulsory option.
+        /// The type of the packet. This is a compulsory option which determines how the incoming packet is handled.
         /// </summary>
         PacketType,
 
@@ -64,12 +69,17 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The packet type which should be used for any return packet type.
         /// </summary>
-        RequestedReturnPactetType,
+        RequestedReturnPacketType,
 
         /// <summary>
         /// A checksum corresponding to the payload data.
         /// </summary>
         CheckSumHash,
+
+        /// <summary>
+        /// Optional packet identifier.
+        /// </summary>
+        PacketIdentifier,
     }
 
     /// <summary>
@@ -107,7 +117,7 @@ namespace NetworkCommsDotNet
             longItems.Add(PacketHeaderLongItems.PayloadPacketSize, payloadPacketSize);
             
             if (requestedReturnPacketTypeStr != null)
-                stringItems.Add(PacketHeaderStringItems.RequestedReturnPactetType, requestedReturnPacketTypeStr);
+                stringItems.Add(PacketHeaderStringItems.RequestedReturnPacketType, requestedReturnPacketTypeStr);
 
             if (receiveConfirmationRequired)
                 stringItems.Add(PacketHeaderStringItems.ReceiveConfirmationRequired, "");
@@ -119,7 +129,7 @@ namespace NetworkCommsDotNet
                 longItems.Add(PacketHeaderLongItems.PacketCreationTime, DateTime.Now.Ticks);
         }
 
-        internal PacketHeader(byte[] packetData, SendReceiveOptions sendReceiveOptions)
+        internal PacketHeader(MemoryStream packetData, SendReceiveOptions sendReceiveOptions)
         {
             try
             {
