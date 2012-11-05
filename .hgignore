@@ -10,3 +10,4 @@ ipch/**
 *.vcxproj.user
 SingleDllBuild/Debug/*
 SingleDllBuild/Release/*
+Documentation/Help/*
