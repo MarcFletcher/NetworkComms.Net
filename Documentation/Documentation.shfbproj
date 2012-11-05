@@ -33,7 +33,7 @@
     <Preliminary>True</Preliminary>
     <NamingMethod>Guid</NamingMethod>
     <HelpTitle>NetworkCommsDotNet Help</HelpTitle>
-    <ContentPlacement>AboveNamespaces</ContentPlacement>
+    <ContentPlacement>BelowNamespaces</ContentPlacement>
     <DocumentationSources>
       <DocumentationSource sourceFile="..\DPSBase\DPSBase.csproj" />
       <DocumentationSource sourceFile="..\ExamplesConsole\ExamplesConsole.csproj" />
@@ -75,12 +75,13 @@
     </ComponentConfigurations>
     <NamespaceSummaries>
       <NamespaceSummaryItem name="DPSBase" isDocumented="True">Abstract classes for defining data serialization and processing techniques as well as basic implementations of both.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating most of the NetworkCommsDotNet feature set.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem></NamespaceSummaries>
+      <NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating most of the NetworkCommsDotNet feature set.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
+    </NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcommsdotnet.com</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />
