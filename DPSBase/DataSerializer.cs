@@ -173,13 +173,37 @@ namespace DPSBase
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <returns>The deserialized object</returns>
+        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
+        {
+            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes));
+        }
+
+        /// <summary>
+        /// Converts a memory stream containing bytes previously serialized to an object of provided type. Assumes no data processors.
+        /// </summary>
+        /// <typeparam name="T">Type of object to deserialize to</typeparam>
+        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(MemoryStream receivedObjectBytes)
         {
             return DeserialiseDataObject<T>(receivedObjectBytes, null, null);
         }
 
         /// <summary>
-        /// Converts array of bytes previously serialized and processed using data processors to an object of provided type
+        /// Converts bytes previously serialized and processed using data processors to an object of provided type
+        /// </summary>
+        /// <typeparam name="T">Type of object to deserialize to</typeparam>
+        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in reverse order i.e. high index to low</param>
+        /// <param name="options">Options dictionary for serialisation/data processing</param>
+        /// <returns>The deserialized object</returns>
+        public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
+            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes), dataProcessors, options);
+        }
+
+        /// <summary>
+        /// Converts a memory stream containing bytes previously serialized and processed using data processors to an object of provided type
         /// </summary>
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>

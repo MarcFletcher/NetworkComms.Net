@@ -7,7 +7,7 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// A wrapper around a stream to ensure it can be accessed in a thread safe way. The .net implementation of Stream.Synchronized is suitable on its own.
+    /// A wrapper around a stream to ensure it can be accessed in a thread safe way. The .net implementation of Stream.Synchronized is not suitable on its own.
     /// </summary>
     public class ThreadSafeStream : IDisposable
     {

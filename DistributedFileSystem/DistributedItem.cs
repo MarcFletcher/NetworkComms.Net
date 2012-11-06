@@ -738,6 +738,18 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
+        /// Returns a streamSendWrapper that contains the entire item
+        /// </summary>
+        /// <returns></returns>
+        public StreamSendWrapper GetItemStream()
+        {
+            if (LocalItemComplete())
+                return new StreamSendWrapper(ItemDataStream, 0, ItemBytesLength);
+            else
+                throw new Exception("Attempted to acces DFS item data stream when item was not complete.");
+        }
+
+        /// <summary>
         /// Returns the a copy of the bytes corresponding to the requested chunkIndex.
         /// </summary>
         /// <param name="chunkIndex"></param>

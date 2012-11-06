@@ -1045,14 +1045,27 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on return, this ensures the MD5 is consistent.
+        /// </summary>
+        /// <param name="streamToMD5">The bytes which will be checksummed</param>
+        /// <returns>The MD5 checksum as a string</returns>
+        public static string MD5Bytes(Stream streamToMD5)
+        {
+            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+
+            //If we don't ensure the position is consistent the MD5 changes
+            streamToMD5.Seek(0, SeekOrigin.Begin);
+            return BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
+        }
+
+        /// <summary>
         /// Return the MD5 hash of the provided byte array as a string
         /// </summary>
         /// <param name="bytesToMd5">The bytes which will be checksummed</param>
         /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(MemoryStream bytesToMd5)
+        public static string MD5Bytes(byte[] bytesToMd5)
         {
-            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            return BitConverter.ToString(md5.ComputeHash(bytesToMd5)).Replace("-", "");
+            return MD5Bytes(new MemoryStream(bytesToMd5));
         }
 
         /// <summary>
