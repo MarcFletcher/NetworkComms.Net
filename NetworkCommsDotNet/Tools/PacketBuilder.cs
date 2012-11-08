@@ -299,7 +299,7 @@ namespace NetworkCommsDotNet
                 if (writeTotal != length)
                     throw new Exception("Not enough data available in packetBuilder to complete request.");
 
-                return new MemoryStream(returnArray);
+                return new MemoryStream(returnArray, 0, returnArray.Length, false, true);
             }
         }
     }

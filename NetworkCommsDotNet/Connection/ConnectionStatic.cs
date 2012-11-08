@@ -54,7 +54,7 @@ namespace NetworkCommsDotNet
         {
             lock (staticConnectionLocker)
             {
-                if (connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped)
+                if (!shutdownWorkerThreads && connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped)
                 {
                     connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
                     connectionKeepAliveWorker.Name = "ConnectionKeepAliveWorker";

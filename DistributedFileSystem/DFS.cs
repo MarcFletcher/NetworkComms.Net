@@ -420,7 +420,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="itemCheckSum"></param>
         /// <returns></returns>
-        public static DistributedItem GetDistributedItem(string itemCheckSum)
+        public static DistributedItem GetDistributedItemByChecksum(string itemCheckSum)
         {
             lock (globalDFSLocker)
             {
@@ -429,6 +429,25 @@ namespace DistributedFileSystem
                 else
                     return null;
             }
+        }
+
+        /// <summary>
+        /// Returns the distributed item with the provided identifier. Returns null if item is not found.
+        /// </summary>
+        /// <param name="itemIdentifier"></param>
+        /// <returns></returns>
+        public static DistributedItem GetDistributedItemByIdentifier(string itemIdentifier)
+        {
+            lock (globalDFSLocker)
+            {
+                foreach (DistributedItem item in swarmedItemsDict.Values)
+                {
+                    if (item.ItemIdentifier == itemIdentifier)
+                        return item;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -780,7 +799,6 @@ namespace DistributedFileSystem
             {
                 if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
 
-                
                 //We check to see if we already have the necessary file locally
                 lock (globalDFSLocker)
                 {
@@ -805,7 +823,7 @@ namespace DistributedFileSystem
                 //Copy the result to the disk if required by the build target
                 if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                 {
-                    using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite))
+                    using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
                         newItem.CopyItemDataStream(sw);
                 }
 
@@ -818,7 +836,8 @@ namespace DistributedFileSystem
                     PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
                     //We set the item checksum so that the entire distributed item can be easily retrieved later
                     itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
-                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(newItem.AccessItemBytes()), nullOptions);
+                    byte[] itemBytes = newItem.AccessItemBytes();
+                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(itemBytes, 0, itemBytes.Length, false, true), nullOptions);
                 }
 
                 //Close any connections which are no longer required
@@ -914,7 +933,8 @@ namespace DistributedFileSystem
                     }
                     else
                     {
-                        if (NetworkComms.AverageNetworkLoad(10) > DFS.PeerBusyNetworkLoadThreshold)
+                        //If we are a super peer we always have to respond to the request
+                        if (NetworkComms.AverageNetworkLoad(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
@@ -971,30 +991,43 @@ namespace DistributedFileSystem
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
 
                 ChunkAvailabilityReply existingChunkAvailabilityReply = null;
-                lock (chunkDataCacheLocker)
+
+                try
                 {
-                    if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
-                        chunkDataCache.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
-
-                    if (!packetHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
-                        throw new Exception("The dataSequenceNumber option appears to missing from the packetHeader. What has been changed?");
-
-                    long dataSequenceNumber = packetHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
-                    if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(dataSequenceNumber))
+                    lock (chunkDataCacheLocker)
                     {
-                        //The info beat the data so we handle it here
-                        existingChunkAvailabilityReply = chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber].ChunkAvailabilityReply;
-                        existingChunkAvailabilityReply.SetChunkData(incomingData);
+                        if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                            chunkDataCache.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<long, ChunkDataWrapper>());
 
-                        chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(existingChunkAvailabilityReply.DataSequenceNumber);
-                        if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
-                            chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                        if (!packetHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
+                            throw new Exception("The dataSequenceNumber option appears to missing from the packetHeader. What has been changed?");
+
+                        long dataSequenceNumber = packetHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                        if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(dataSequenceNumber))
+                        {
+                            if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber] == null)
+                                throw new Exception("An entry existed for the desired dataSequenceNumber but the entry was null.");
+                            else if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber].ChunkAvailabilityReply == null)
+                                throw new Exception("An entry existed for the desired ChunkAvailabilityReply but the entry was null.");
+
+                            //The info beat the data so we handle it here
+                            existingChunkAvailabilityReply = chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber].ChunkAvailabilityReply;
+                            existingChunkAvailabilityReply.SetChunkData(incomingData);
+
+                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(existingChunkAvailabilityReply.DataSequenceNumber);
+                            if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
+                                chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                        }
+                        else
+                        {
+                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
+                            if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
+                        }
                     }
-                    else
-                    {
-                        chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
-                        if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    NetworkComms.LogError(ex, "Error_IncomingChunkInterestReplyDataInner");
                 }
 
                 if (existingChunkAvailabilityReply != null)

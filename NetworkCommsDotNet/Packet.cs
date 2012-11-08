@@ -60,7 +60,7 @@ namespace NetworkCommsDotNet
             if (options == null) throw new ArgumentNullException("The provided SendReceiveOptions cannot be null.");
 
             if (packetObject == null)
-                this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0]), true));
+                this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
             else
                 this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
 

@@ -134,7 +134,8 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            TriggerConnectionKeepAliveThread();
+            if (!NetworkComms.commsShutdown)
+                TriggerConnectionKeepAliveThread();
 
             return connection;
         }
@@ -214,7 +215,8 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            TriggerConnectionKeepAliveThread();
+            if (!NetworkComms.commsShutdown)
+                TriggerConnectionKeepAliveThread();
         }
 
         /// <summary>

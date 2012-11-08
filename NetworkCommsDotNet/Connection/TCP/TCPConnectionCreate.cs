@@ -107,7 +107,8 @@ namespace NetworkCommsDotNet
                 else connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
             }
 
-            TriggerConnectionKeepAliveThread();
+            if (!NetworkComms.commsShutdown)
+                TriggerConnectionKeepAliveThread();
 
             return connection;
         }

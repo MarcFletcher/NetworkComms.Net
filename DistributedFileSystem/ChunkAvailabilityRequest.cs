@@ -130,6 +130,9 @@ namespace DistributedFileSystem
 
         public ChunkDataWrapper(ChunkAvailabilityReply chunkAvailabilityReply)
         {
+            if (chunkAvailabilityReply == null)
+                throw new Exception("Unable to create a ChunkDataWrapper with a null ChunkAvailabilityReply reference.");
+
             this.ChunkAvailabilityReply = chunkAvailabilityReply;
             this.TimeCreated = DateTime.Now;
         }

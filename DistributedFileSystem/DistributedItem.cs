@@ -143,6 +143,8 @@ namespace DistributedFileSystem
             this.TotalChunkSupplyCount = 0;
             this.PushCount = 0;
 
+            this.ItemIdentifier = assemblyConfig.ItemIdentifier;
+            this.ItemTypeStr = assemblyConfig.ItemTypeStr;
             this.TotalNumChunks = assemblyConfig.TotalNumChunks;
             this.ChunkSizeInBytes = assemblyConfig.ChunkSizeInBytes;
             this.ItemCheckSum = assemblyConfig.ItemCheckSum;
@@ -152,14 +154,29 @@ namespace DistributedFileSystem
             //this.ItemBytes = new byte[assemblyConfig.TotalItemSizeInBytes];
             //this.ItemByteArray = new byte[TotalNumChunks][];
             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Disk)
-                this.ItemDataStream = new ThreadSafeStream(new FileStream(assemblyConfig.ItemIdentifier + ".DFSItemData", FileMode.Create, FileAccess.ReadWrite));
+            {
+                string fileName = assemblyConfig.ItemIdentifier + ".DFSItemData";
+                if (File.Exists(fileName))
+                {
+                    //If the file already exists the MD5 had better match otherwise we have a problem
+                    FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                    string existingFileMD5 = NetworkComms.MD5Bytes(file);
+
+                    if (existingFileMD5 != assemblyConfig.ItemCheckSum)
+                        throw new Exception("File with name '" + fileName + "' already exists. Unfortunately the MD5 does match the expected DFS item. Unable to continue.");
+                    else
+                        this.ItemDataStream = new ThreadSafeStream(file);
+                }
+                else
+                    this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+            }
             else if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Memory || assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                 this.ItemDataStream = new ThreadSafeStream(new MemoryStream(ItemBytesLength));
 
             InitialiseChunkPositionLengthDict();
 
             //this.SwarmChunkAvailability = NetworkComms.DefaultSerializer.DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes, NetworkComms.DefaultCompressor);
-            this.SwarmChunkAvailability = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SwarmChunkAvailability>(new MemoryStream(assemblyConfig.SwarmChunkAvailabilityBytes));
+            this.SwarmChunkAvailability = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<SwarmChunkAvailability>(assemblyConfig.SwarmChunkAvailabilityBytes);
 
             //As requests are made they are added to the build dict. We never remove a completed request.
             this.itemBuildTrackerDict = new Dictionary<byte, ChunkAvailabilityRequest>();
@@ -195,6 +212,19 @@ namespace DistributedFileSystem
                 ChunkPositionLengthDict.Add(i, new PositionLength(currentPosition, chunkSize));
                 currentPosition += chunkSize;
             }
+        }
+
+        public override string ToString()
+        {
+            return ItemTypeStr + " - " + ItemIdentifier;
+        }
+
+        public void UpdateBuildTarget(ItemBuildTarget newTarget)
+        {
+            if (DFS.GetDistributedItemByChecksum(ItemCheckSum) == null)
+                this.ItemBuildTarget = newTarget;
+            else
+                throw new Exception("Unable to update build target once item has been added to DFS. Future version of the DFS may be more flexible in this regard.");
         }
 
         public void IncrementPushCount()
@@ -864,7 +894,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public static DistributedItem Load(string fileName, Stream dataStream, ConnectionInfo seedConnectionInfo)
         {
-            DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(new MemoryStream(File.ReadAllBytes(fileName)));
+            DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
             loadedItem.ItemDataStream = new ThreadSafeStream(dataStream);
             loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, loadedItem.TotalNumChunks);
             return loadedItem;

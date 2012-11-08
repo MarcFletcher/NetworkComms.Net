@@ -237,11 +237,11 @@ namespace NetworkCommsDotNet
             {
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
-                if (NetworkLoadThread == null)
+                if (!commsShutdown && NetworkLoadThread == null)
                 {
                     lock (globalDictAndDelegateLocker)
                     {
-                        if (NetworkLoadThread == null)
+                        if (!commsShutdown && NetworkLoadThread == null)
                         {
                             currentNetworkLoadValues = new CommsMath();
 
@@ -264,11 +264,11 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoad(byte secondsToAverage)
         {
-            if (NetworkLoadThread == null)
+            if (!commsShutdown && NetworkLoadThread == null)
             {
                 lock (globalDictAndDelegateLocker)
                 {
-                    if (NetworkLoadThread == null)
+                    if (!commsShutdown && NetworkLoadThread == null)
                     {
                         currentNetworkLoadValues = new CommsMath();
 
@@ -293,7 +293,7 @@ namespace NetworkCommsDotNet
 
             long[] startSent, startRecieved, endSent, endRecieved;
 
-            do
+            while (!commsShutdown)
             {
                 try
                 {
@@ -338,7 +338,7 @@ namespace NetworkCommsDotNet
                     //If an error has happened we dont want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
                     Thread.Sleep(5000);
                 }
-            } while (!commsShutdown);
+            }
         }
         #endregion
 
@@ -1065,7 +1065,7 @@ namespace NetworkCommsDotNet
         /// <returns>The MD5 checksum as a string</returns>
         public static string MD5Bytes(byte[] bytesToMd5)
         {
-            return MD5Bytes(new MemoryStream(bytesToMd5));
+            return MD5Bytes(new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false, true));
         }
 
         /// <summary>

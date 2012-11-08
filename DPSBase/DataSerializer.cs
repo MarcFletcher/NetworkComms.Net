@@ -175,18 +175,18 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
         {
-            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes));
+            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true));
         }
 
         /// <summary>
         /// Converts a memory stream containing bytes previously serialized to an object of provided type. Assumes no data processors.
         /// </summary>
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
-        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <param name="receivedObjectStream">Byte array containing serialized and compressed object</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(MemoryStream receivedObjectBytes)
+        public T DeserialiseDataObject<T>(MemoryStream receivedObjectStream)
         {
-            return DeserialiseDataObject<T>(receivedObjectBytes, null, null);
+            return DeserialiseDataObject<T>(receivedObjectStream, null, null);
         }
 
         /// <summary>
@@ -199,33 +199,36 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes), dataProcessors, options);
+            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true), dataProcessors, options);
         }
 
         /// <summary>
         /// Converts a memory stream containing bytes previously serialized and processed using data processors to an object of provided type
         /// </summary>
         /// <typeparam name="T">Type of object to deserialize to</typeparam>
-        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <param name="receivedObjectStream">Byte array containing serialized and compressed object</param>
         /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in reverse order i.e. high index to low</param>
         /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>The deserialized object</returns>
-        public T DeserialiseDataObject<T>(MemoryStream receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public T DeserialiseDataObject<T>(MemoryStream receivedObjectStream, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            if (receivedObjectBytes == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
+            if (receivedObjectStream == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
+
+            //Ensure the stream is at the beginning
+            receivedObjectStream.Seek(0, SeekOrigin.Begin);
 
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
-            object baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectBytes, typeof(T), dataProcessors, options);
+            object baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectStream, typeof(T), dataProcessors, options);
             if (baseRes != null)
                 return (T)baseRes;
             else
-                return DeserialiseGeneralObject<T>(receivedObjectBytes, dataProcessors, options);
+                return DeserialiseGeneralObject<T>(receivedObjectStream, dataProcessors, options);
         }
 
-        private T DeserialiseGeneralObject<T>(MemoryStream receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        private T DeserialiseGeneralObject<T>(MemoryStream receivedObjectStream, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             //Create a memory stream using the incoming bytes as the initial buffer
-            MemoryStream inputStream = receivedObjectBytes;
+            MemoryStream inputStream = receivedObjectStream;
 
             //If no data processing is required then we can just deserialise the object straight
             if (dataProcessors == null || dataProcessors.Count == 0)
@@ -331,8 +334,11 @@ namespace DPSBase
 
                 //No need to do anything for a byte array
                 if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
+                {
+                    byte[] bytesToSerialise = objectToSerialise as byte[];
                     //return objectToSerialise as byte[];
-                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(objectToSerialise as byte[]), true));
+                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
+                }
                 else if (elementType.IsPrimitive)
                 {
                     var asArray = objectToSerialise as Array;
@@ -416,12 +422,12 @@ namespace DPSBase
         /// <summary>
         /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
         /// </summary>        
-        /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
+        /// <param name="inputStream">Byte array containing serialized and compressed object</param>
         /// <param name="dataProcessors">Compression provider to use</param>
         /// <param name="objType">The <see cref="System.Type"/> of the <see cref="object"/> to be returned</param>
         /// <param name="options">Options to be used during deserialization and processing of data</param>
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
-        public static unsafe object DeserialiseArrayObject(MemoryStream receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static unsafe object DeserialiseArrayObject(MemoryStream inputStream, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (objType.IsArray)
             {
@@ -429,23 +435,31 @@ namespace DPSBase
 
                 //No need to do anything for a byte array
                 if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
-                    return (object)receivedObjectBytes;
+                {
+                    try
+                    {
+                        return (object)inputStream.GetBuffer();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return (object)inputStream.ToArray();
+                    }
+                }
                 if (elementType.IsPrimitive)
                 {
                     int numElements;
 
 
                     if (dataProcessors == null || dataProcessors.Count == 0)
-                        numElements = (int)(receivedObjectBytes.Length / Marshal.SizeOf(elementType));
+                        numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
                     else
                     {
                         byte[] temp = new byte[sizeof(int)];
-                        receivedObjectBytes.Read(temp, (int)receivedObjectBytes.Length - sizeof(int), sizeof(int));
+                        inputStream.Read(temp, (int)inputStream.Length - sizeof(int), sizeof(int));
                         numElements = (int)(BitConverter.ToUInt32(temp, 0));
                     }
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
-
                     GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
 
                     try
@@ -455,7 +469,18 @@ namespace DPSBase
 
                         using (System.IO.UnmanagedMemoryStream finalOutputStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
                         {
-                            using (MemoryStream inputBytesStream = new MemoryStream(receivedObjectBytes.GetBuffer(), 0, (int)(receivedObjectBytes.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int)))))
+                            MemoryStream inputBytesStream = null;
+                            try
+                            {
+                                //We hope that the buffer is publicly accessible as otherwise it defeats the point of having a special serializer for arrays
+                                inputBytesStream = new MemoryStream(inputStream.GetBuffer(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                inputBytesStream = new MemoryStream(inputStream.ToArray(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+                            }
+
+                            using (inputBytesStream)
                             {
                                 if (dataProcessors != null && dataProcessors.Count > 1)
                                 {
