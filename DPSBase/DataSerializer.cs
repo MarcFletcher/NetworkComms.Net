@@ -1,4 +1,4 @@
-﻿//  Copyright 2011 Marc Fletcher, Matthew Dean
+﻿//  Copyright 2011-2012 Marc Fletcher, Matthew Dean
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -12,6 +12,9 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//  A commercial license of this software can also be purchased. 
+//  Please see <http://www.networkcommsdotnet.com/licenses> for details.
 
 using System;
 using System.Collections.Generic;
@@ -454,8 +457,9 @@ namespace DPSBase
                         numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
                     else
                     {
-                        byte[] temp = new byte[sizeof(int)];
-                        inputStream.Read(temp, (int)inputStream.Length - sizeof(int), sizeof(int));
+                        byte[] temp = new byte[sizeof(int)];                        
+                        inputStream.Seek(inputStream.Length - sizeof(int), SeekOrigin.Begin);
+                        inputStream.Read(temp, 0, sizeof(int));
                         numElements = (int)(BitConverter.ToUInt32(temp, 0));
                     }
 
