@@ -59,8 +59,6 @@ namespace NetworkCommsDotNet
         /// <param name="packetBuilder">The <see cref="PacketBuilder"/> containing incoming cached data</param>
         protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
         {
-            //ThreadPriority is NetworkComms.timeCriticalThreadPriority
-
             try
             {
                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCount + " bytes read.");
@@ -121,38 +119,33 @@ namespace NetworkCommsDotNet
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
-
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
-
-                            //Build the necessary task input data
-                            object[] completedData = new object[3];
-                            completedData[0] = topPacketHeader;
-                            completedData[1] = packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize);
-                            completedData[2] = incomingPacketSendReceiveOptions;
-
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
                             {
+                                PriorityQueueItem item = new PriorityQueueItem(Thread.CurrentThread.Priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
                                 if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
-                                CompleteIncomingPacketWorker(completedData);
-                            }
-                            else if (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") && 
-                                incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"] != Enum.GetName(typeof(ThreadPriority), ThreadPriority.Normal))
-                            {
-                                Thread newHandleThread = new Thread(CompleteIncomingPacketWorker);
-                                newHandleThread.Priority = (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]);
-                                newHandleThread.Name = "CompleteIncomingPacketWorker-" + topPacketHeader.PacketType;
-
-                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching thread with priority '" + newHandleThread.Priority + "' to handle packet type '" + topPacketHeader.PacketType + "'. Loop index - " + loopCounter);
-                                newHandleThread.Start(completedData);
+                                NetworkComms.CompleteIncomingItemTask(item);
                             }
                             else
                             {
-                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... launching task to handle packet type '" + topPacketHeader.PacketType + "'. Loop index - " + loopCounter);
+                                ThreadPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : ThreadPriority.Normal);
+                                PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
+
                                 //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
-                                Task.Factory.StartNew(CompleteIncomingPacketWorker, completedData);
+                                //The tasks that we start here may not run the item we are addeding to the queue. i.e. it may end up running some higher priority item first
+                                if (!NetworkComms.IncomingPacketQueue.TryAdd(new KeyValuePair<int, PriorityQueueItem>((int)item.Priority, item)))
+                                    throw new PacketHandlerException("Failed to add packet to incoming packet queue.");
+
+                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);
+
+                                //If we have just added a high priority item we trigger the high priority thread
+                                if (itemPriority > ThreadPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
+
+                                //We will also trigger a new task below incase we have many higher priority items as we don't care which thread ends up running the item
+                                Task.Factory.StartNew(NetworkComms.CompleteIncomingItemTask, null);
                             }
 
                             //We clear the bytes we have just handed off
@@ -183,128 +176,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Once we have received all incoming data we can handle it further.
-        /// </summary>
-        /// <param name="packetBytes">The whole packet as a serialised byte array</param>
-        private void CompleteIncomingPacketWorker(object packetBytes)
-        {
-            try
-            {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... packet hand off task started.");
-
-                //Check for a shutdown connection
-                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) return;
-
-                //Idiot check
-                if (packetBytes == null) throw new NullReferenceException("Provided object packetBytes should really not be null.");
-
-                //Unwrap with an idiot check
-                object[] completedData = packetBytes as object[];
-                if (completedData == null) throw new NullReferenceException("Type cast to object[] failed in CompleteIncomingPacketWorker.");
-
-                //Unwrap with an idiot check
-                PacketHeader packetHeader = completedData[0] as PacketHeader;
-                if (packetHeader == null) throw new NullReferenceException("Type cast to PacketHeader failed in CompleteIncomingPacketWorker.");
-
-                //Unwrap with an idiot check
-                MemoryStream packetDataSection = completedData[1] as MemoryStream;
-                if (packetDataSection == null) throw new NullReferenceException("Type cast to byte[] failed in CompleteIncomingPacketWorker.");
-
-                SendReceiveOptions packetSendReceiveOptions = completedData[2] as SendReceiveOptions;
-                if (packetSendReceiveOptions == null) throw new NullReferenceException("Type cast to SendReceiveOptions failed in CompleteIncomingPacketWorker.");
-
-                //We only look at the check sum if we want to and if it has been set by the remote end
-                if (NetworkComms.EnablePacketCheckSumValidation && packetHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash))
-                {
-                    var packetHeaderHash = packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
-
-                    //Validate the checkSumhash of the data
-                    string packetDataSectionMD5 = NetworkComms.MD5Bytes(packetDataSection);
-                    if (packetHeaderHash != packetDataSectionMD5)
-                    {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
-
-                        //We have corruption on a resend request, something is very wrong so we throw an exception.
-                        if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
-
-                        if (packetHeader.PayloadPacketSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
-                        {
-                            //Instead of throwing an exception we can request the packet to be resent
-                            Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
-                            SendPacket(returnPacket);
-                            //We need to wait for the packet to be resent before going further
-                            return;
-                        }
-                        else
-                            throw new CheckSumException("Corrupted packet detected from "+ConnectionInfo+", expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
-                    }
-                }
-
-                //Remote end may have requested packet receive confirmation so we send that now
-                if (packetHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
-                {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
-
-                    var hash = packetHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? packetHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
-
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), hash, NetworkComms.InternalFixedSendReceiveOptions);
-                    SendPacket(returnPacket);
-                }
-
-                //We can now pass the data onto the correct delegate
-                //First we have to check for our reserved packet types
-                //The following large sections have been factored out to make reading and debugging a little easier
-                if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
-                    CheckSumFailResendHandler(packetDataSection);
-                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
-                    ConnectionSetupHandler(packetDataSection);
-                else if (packetHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) && 
-                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<byte[]>(packetDataSection, 
-                        NetworkComms.InternalFixedSendReceiveOptions.DataProcessors, 
-                        NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
-                {
-                    //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] {1}, NetworkComms.InternalFixedSendReceiveOptions);
-                    SendPacket(returnPacket);
-                }
-
-                //We allow users to add their own custom handlers for reserved packet types here
-                //else
-                if (true)
-                {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + packetHeader.PacketType + "' from " + ConnectionInfo);
-
-                    //We trigger connection specific handlers first
-                    bool connectionSpecificHandlersTriggered = TriggerSpecificPacketHandlers(packetHeader, packetDataSection, packetSendReceiveOptions);
-
-                    //We trigger global handlers second
-                    NetworkComms.TriggerGlobalPacketHandlers(packetHeader, this, packetDataSection, packetSendReceiveOptions, connectionSpecificHandlersTriggered);
-
-                    //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
-                    //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
-                    //GC.Collect();
-                }
-            }
-            catch (CommunicationException)
-            {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed.");
-                CloseConnection(true, 2);
-            }
-            catch (Exception ex)
-            {
-                //If anything goes wrong here all we can really do is log the exception
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
-
-                NetworkComms.LogError(ex, "CommsError");
-                CloseConnection(true, 3);
-            }
-        }
-
-        /// <summary>
         /// Handle an incoming CheckSumFailResend packet type
         /// </summary>
         /// <param name="packetDataSection"></param>
-        private void CheckSumFailResendHandler(MemoryStream packetDataSection)
+        internal void CheckSumFailResendHandler(MemoryStream packetDataSection)
         {
             //If we have been asked to resend a packet then we just go through the list and resend it.
             SentPacket packetToReSend;

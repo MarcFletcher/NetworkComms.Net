@@ -1,0 +1,51 @@
+﻿//  Copyright 2011-2012 Marc Fletcher, Matthew Dean
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//  A commercial license of this software can also be purchased. 
+//  Please see <http://www.networkcommsdotnet.com/licenses> for details.
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.IO;
+
+namespace NetworkCommsDotNet
+{
+    class PriorityQueueItem
+    {
+        public ThreadPriority Priority { get; private set; }
+        public Connection Connection { get; private set; }
+        public PacketHeader PacketHeader { get; private set; }
+        public MemoryStream DataStream { get; private set; }
+        public SendReceiveOptions SendReceiveOptions { get; private set; }
+
+        public PriorityQueueItem(ThreadPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendRecieveOptions)
+        {
+            //Nullreference checks
+            if (connection == null) throw new NullReferenceException("Provided connection parameter can not be null.");
+            if (packetHeader == null) throw new NullReferenceException("Provided packetHeader parameter can not be null.");
+            if (dataStream == null) throw new NullReferenceException("Provided dataStream parameter can not be null.");
+            if (sendRecieveOptions == null) throw new NullReferenceException("Provided sendRecieveOptions parameter can not be null.");
+
+            this.Priority = priority;
+            this.Connection = connection;
+            this.PacketHeader = packetHeader;
+            this.DataStream = dataStream;
+            this.SendReceiveOptions = sendRecieveOptions;
+        }
+    }
+}

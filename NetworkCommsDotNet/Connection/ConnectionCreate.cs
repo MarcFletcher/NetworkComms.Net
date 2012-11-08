@@ -169,7 +169,7 @@ namespace NetworkCommsDotNet
         /// Handle an incoming ConnectionSetup packet type
         /// </summary>
         /// <param name="packetDataSection">Serialised handshake data</param>
-        private void ConnectionSetupHandler(MemoryStream packetDataSection)
+        internal void ConnectionSetupHandler(MemoryStream packetDataSection)
         {
             //We should never be trying to handshake an established connection
             ConnectionInfo remoteConnectionInfo = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<ConnectionInfo>(packetDataSection,

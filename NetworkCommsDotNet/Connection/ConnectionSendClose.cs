@@ -394,7 +394,7 @@ namespace NetworkCommsDotNet
         /// Send the provided packet to the remoteEndPoint. Waits for recieve confirmation if required.
         /// </summary>
         /// <param name="packet">The packet to send</param>
-        private void SendPacket(Packet packet)
+        internal void SendPacket(Packet packet)
         {
             long packetSequenceNumber;
             SendPacket(packet, out packetSequenceNumber);
@@ -405,7 +405,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet">The packet to send</param>
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
-        private void SendPacket(Packet packet, out long packetSequenceNumber)
+        internal void SendPacket(Packet packet, out long packetSequenceNumber)
         {
             if (NetworkComms.loggingEnabled)
             {

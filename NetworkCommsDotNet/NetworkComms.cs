@@ -58,6 +58,11 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
+            IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
+            IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
+            IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
+            IncomingPacketQueueHighPrioThread.Start();
+
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
@@ -304,6 +309,8 @@ namespace NetworkCommsDotNet
                     startSent = (from current in stats select current.BytesSent).ToArray();
                     startRecieved = (from current in stats select current.BytesReceived).ToArray();
 
+                    if (commsShutdown) return;
+
                     Thread.Sleep(NetworkLoadUpdateWindowMS);
 
                     stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
@@ -384,6 +391,179 @@ namespace NetworkCommsDotNet
         /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to severe performance degredation.
         /// </summary>
         public static int SendBufferSizeBytes { get; set; }
+
+        /// <summary>
+        /// Custom queue for handling incoming packets using a simple priority scheduling model
+        /// </summary>
+        internal static PriorityQueue<PriorityQueueItem> IncomingPacketQueue = new PriorityQueue<PriorityQueueItem>(5);
+
+        /// <summary>
+        /// A thread which can be used to handle only higher than normal priority incoming packets incase the rest of the thread pool is busy
+        /// </summary>
+        internal static Thread IncomingPacketQueueHighPrioThread;
+
+        /// <summary>
+        /// A thread signal for IncomingPacketQueueHighPrioThread so that it only runs when required
+        /// </summary>
+        internal static AutoResetEvent IncomingPacketQueueHighPrioThreadWait = new AutoResetEvent(false);
+
+        /// <summary>
+        /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets
+        /// </summary>
+        private static void IncomingPacketQueueHighPrioWorker()
+        {
+            while (!commsShutdown)
+            {
+                try
+                {
+                    //Wait here to be triggered of atleast once every two seconds
+                    IncomingPacketQueueHighPrioThreadWait.WaitOne(2000);
+                    if (commsShutdown) return;
+
+                    //Keep looping over high priority items until they run out
+                    KeyValuePair<int, PriorityQueueItem> packetQueueItem;
+                    while(NetworkComms.IncomingPacketQueue.TryTake((int)ThreadPriority.AboveNormal, out packetQueueItem))
+                        CompleteIncomingItemTask(packetQueueItem.Value);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, "IncomingPacketQueueHighPrioWorkerError");
+                }
+            }
+
+            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("IncomingPacketQueueHighPrioWorker thread has ended.");
+        }
+
+        /// <summary>
+        /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different priorities.
+        /// </summary>
+        /// <param name="itemAsObj">Possible PriorityQueueItem. If null is provided an item will be removed from the global item queue</param>
+        internal static void CompleteIncomingItemTask(object itemAsObj)
+        {
+            PriorityQueueItem item = null;
+            try
+            {
+                //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
+                item = itemAsObj as PriorityQueueItem;
+                if (item == null)
+                {
+                    KeyValuePair<int, PriorityQueueItem> packetQueueItem;
+                    if (!NetworkComms.IncomingPacketQueue.TryTake(out packetQueueItem))
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Unable to get packet item from IncomingPacketQueue in CompleteIncomingPacketWorker.");
+                        return;
+                    }
+                    else
+                        item = packetQueueItem.Value;
+
+                    if (item == null)
+                        throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
+
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Pulled packet item from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
+
+                    if (Thread.CurrentThread.Priority != item.Priority) Thread.CurrentThread.Priority = item.Priority;
+                }
+
+                //Check for a shutdown connection
+                if (item.Connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown) return;
+
+                //We only look at the check sum if we want to and if it has been set by the remote end
+                if (NetworkComms.EnablePacketCheckSumValidation && item.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash))
+                {
+                    var packetHeaderHash = item.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
+
+                    //Validate the checkSumhash of the data
+                    string packetDataSectionMD5 = NetworkComms.MD5Bytes(item.DataStream);
+                    if (packetHeaderHash != packetDataSectionMD5)
+                    {
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
+
+                        //We have corruption on a resend request, something is very wrong so we throw an exception.
+                        if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
+
+                        if (item.PacketHeader.PayloadPacketSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
+                        {
+                            //Instead of throwing an exception we can request the packet to be resent
+                            Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
+                            item.Connection.SendPacket(returnPacket);
+                            //We need to wait for the packet to be resent before going further
+                            return;
+                        }
+                        else
+                            throw new CheckSumException("Corrupted packet detected from " + item.Connection.ConnectionInfo + ", expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
+                    }
+                }
+
+                //Remote end may have requested packet receive confirmation so we send that now
+                if (item.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
+
+                    var hash = item.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? item.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
+
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), hash, NetworkComms.InternalFixedSendReceiveOptions);
+                    item.Connection.SendPacket(returnPacket);
+                }
+
+                //We can now pass the data onto the correct delegate
+                //First we have to check for our reserved packet types
+                //The following large sections have been factored out to make reading and debugging a little easier
+                if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend))
+                    item.Connection.CheckSumFailResendHandler(item.DataStream);
+                else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
+                    item.Connection.ConnectionSetupHandler(item.DataStream);
+                else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) &&
+                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<byte[]>(item.DataStream,
+                        NetworkComms.InternalFixedSendReceiveOptions.DataProcessors,
+                        NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
+                {
+                    //If we have received a ping packet from the originating source we reply with true
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
+                    item.Connection.SendPacket(returnPacket);
+                }
+
+                //We allow users to add their own custom handlers for reserved packet types here
+                //else
+                if (true)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + item.PacketHeader.PacketType + "' from " + item.Connection.ConnectionInfo);
+
+                    //We trigger connection specific handlers first
+                    bool connectionSpecificHandlersTriggered = item.Connection.TriggerSpecificPacketHandlers(item.PacketHeader, item.DataStream, item.SendReceiveOptions);
+
+                    //We trigger global handlers second
+                    NetworkComms.TriggerGlobalPacketHandlers(item.PacketHeader, item.Connection, item.DataStream, item.SendReceiveOptions, connectionSpecificHandlersTriggered);
+
+                    //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
+                    //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
+                    //GC.Collect();
+                }
+            }
+            catch (CommunicationException)
+            {
+                if (item != null)
+                {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
+                    item.Connection.CloseConnection(true, 2);
+                }
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "CompleteIncomingItemTaskError");
+
+                if (item != null)
+                {
+                    //If anything goes wrong here all we can really do is log the exception
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed. See log file for more information.");
+                    item.Connection.CloseConnection(true, 3);
+                }
+            }
+            finally
+            {
+                //Ensure the thread returns to the pool with a normal priority
+                if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
+            }
+        }
         #endregion
 
         #region High CPU Usage Tuning
@@ -816,6 +996,7 @@ namespace NetworkCommsDotNet
         {
             commsShutdown = true;
 
+            IncomingPacketQueueHighPrioThreadWait.Set();
             Connection.ShutdownBase(threadShutdownTimeoutMS);
             TCPConnection.Shutdown(threadShutdownTimeoutMS);
             UDPConnection.Shutdown();
