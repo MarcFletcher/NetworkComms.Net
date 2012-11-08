@@ -230,8 +230,10 @@ namespace NetworkCommsDotNet
         public static int NetworkLoadUpdateWindowMS { get; set; }
 
         private static Thread NetworkLoadThread = null;
-        private static double currentNetworkLoad;
-        private static CommsMath currentNetworkLoadValues;
+        private static double currentNetworkLoadIncoming;
+        private static double currentNetworkLoadOutgoing;
+        private static CommsMath currentNetworkLoadValuesIncoming;
+        private static CommsMath currentNetworkLoadValuesOutgoing;
 
         /// <summary>
         /// The interface link speed in bits/sec used for network load calculations. Default is 100Mb/sec
@@ -239,9 +241,9 @@ namespace NetworkCommsDotNet
         public static long InterfaceLinkSpeed { get; set; }
 
         /// <summary>
-        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for either incoming or outgoing data loads from any available network adaptor. Triggers load analysis upon first call.
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network adaptor. Triggers load analysis upon first call.
         /// </summary>
-        public static double CurrentNetworkLoad
+        public static double CurrentNetworkLoadIncoming
         {
             get
             {
@@ -253,7 +255,8 @@ namespace NetworkCommsDotNet
                     {
                         if (!commsShutdown && NetworkLoadThread == null)
                         {
-                            currentNetworkLoadValues = new CommsMath();
+                            currentNetworkLoadValuesIncoming = new CommsMath();
+                            currentNetworkLoadValuesOutgoing = new CommsMath();
 
                             NetworkLoadThread = new Thread(NetworkLoadWorker);
                             NetworkLoadThread.Name = "NetworkLoadThread";
@@ -262,17 +265,47 @@ namespace NetworkCommsDotNet
                     }
                 }
 
-                return currentNetworkLoad;
+                return currentNetworkLoadIncoming;
             }
-            private set { currentNetworkLoad = value; }
+            private set { currentNetworkLoadIncoming = value; }
         }
 
         /// <summary>
-        /// Returns the averaged value of CurrentNetworkLoad, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network adaptor. Triggers load analysis upon first call.
+        /// </summary>
+        public static double CurrentNetworkLoadOutgoing
+        {
+            get
+            {
+                //We start the load thread when we first access the network load
+                //this helps cut down on uncessary threads if unrequired
+                if (!commsShutdown && NetworkLoadThread == null)
+                {
+                    lock (globalDictAndDelegateLocker)
+                    {
+                        if (!commsShutdown && NetworkLoadThread == null)
+                        {
+                            currentNetworkLoadValuesIncoming = new CommsMath();
+                            currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                            NetworkLoadThread = new Thread(NetworkLoadWorker);
+                            NetworkLoadThread.Name = "NetworkLoadThread";
+                            NetworkLoadThread.Start();
+                        }
+                    }
+                }
+
+                return currentNetworkLoadOutgoing;
+            }
+            private set { currentNetworkLoadOutgoing = value; }
+        }
+
+        /// <summary>
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
         /// </summary>
         /// <param name="secondsToAverage">Number of seconds over which historial data should be used to arrive at an average</param>
         /// <returns>Average network load as a double between 0 and 1</returns>
-        public static double AverageNetworkLoad(byte secondsToAverage)
+        public static double AverageNetworkLoadIncoming(byte secondsToAverage)
         {
             if (!commsShutdown && NetworkLoadThread == null)
             {
@@ -280,7 +313,8 @@ namespace NetworkCommsDotNet
                 {
                     if (!commsShutdown && NetworkLoadThread == null)
                     {
-                        currentNetworkLoadValues = new CommsMath();
+                        currentNetworkLoadValuesIncoming = new CommsMath();
+                        currentNetworkLoadValuesOutgoing = new CommsMath();
 
                         NetworkLoadThread = new Thread(NetworkLoadWorker);
                         NetworkLoadThread.Name = "NetworkLoadThread";
@@ -289,7 +323,33 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            return currentNetworkLoadValues.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+            return currentNetworkLoadValuesIncoming.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+        }
+
+        /// <summary>
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
+        /// </summary>
+        /// <param name="secondsToAverage">Number of seconds over which historial data should be used to arrive at an average</param>
+        /// <returns>Average network load as a double between 0 and 1</returns>
+        public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
+        {
+            if (!commsShutdown && NetworkLoadThread == null)
+            {
+                lock (globalDictAndDelegateLocker)
+                {
+                    if (!commsShutdown && NetworkLoadThread == null)
+                    {
+                        currentNetworkLoadValuesIncoming = new CommsMath();
+                        currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                        NetworkLoadThread = new Thread(NetworkLoadWorker);
+                        NetworkLoadThread.Name = "NetworkLoadThread";
+                        NetworkLoadThread.Start();
+                    }
+                }
+            }
+
+            return currentNetworkLoadValuesOutgoing.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
         }
 
         /// <summary>
@@ -332,14 +392,21 @@ namespace NetworkCommsDotNet
                         inUsage.Add((double)(endRecieved[i] - startRecieved[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
                     }
 
-                    double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
+                    //double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
+                    double inMax = inUsage.Max();
+                    double outMax = outUsage.Max();
 
                     //Limit to one
-                    CurrentNetworkLoad = (loadValue > 1 ? 1 : loadValue);
-                    currentNetworkLoadValues.AddValue(CurrentNetworkLoad);
+                    CurrentNetworkLoadIncoming = (inMax > 1 ? 1 : inMax);
+                    CurrentNetworkLoadOutgoing = (outMax > 1 ? 1 : outMax);
+
+                    currentNetworkLoadValuesIncoming.AddValue(CurrentNetworkLoadIncoming);
+                    currentNetworkLoadValuesOutgoing.AddValue(CurrentNetworkLoadOutgoing);
 
                     //We can only have upto 255 seconds worth of data in the average list
-                    currentNetworkLoadValues.TrimList((int)(255000.0 / NetworkLoadUpdateWindowMS));
+                    int maxListSize = (int)(255000.0 / NetworkLoadUpdateWindowMS);
+                    currentNetworkLoadValuesIncoming.TrimList(maxListSize);
+                    currentNetworkLoadValuesOutgoing.TrimList(maxListSize);
                 }
                 catch (Exception ex)
                 {

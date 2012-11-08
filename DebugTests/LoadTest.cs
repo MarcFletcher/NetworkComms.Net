@@ -64,7 +64,8 @@ namespace DebugTests
 
                 while (true)
                 {
-                    Console.WriteLine("{0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoad.ToString("0.000"), NetworkComms.AverageNetworkLoad(5).ToString("0.000"), NetworkComms.AverageNetworkLoad(15).ToString("0.000"));
+                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoadIncoming.ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(5).ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(15).ToString("0.000"));
+                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoadOutgoing.ToString("0.000"), NetworkComms.AverageNetworkLoadOutgoing(5).ToString("0.000"), NetworkComms.AverageNetworkLoadOutgoing(15).ToString("0.000"));
                     Thread.Sleep(1000);
                 }
             }
@@ -80,7 +81,8 @@ namespace DebugTests
                 Console.WriteLine("Let the catching begin, on port "+TCPConnection.ExistingLocalListenEndPoints().First().Port+"!\n");
                 while (true)
                 {
-                    Console.WriteLine("{0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoad.ToString("0.000"), NetworkComms.AverageNetworkLoad(5).ToString("0.000"), NetworkComms.AverageNetworkLoad(15).ToString("0.000"));
+                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoadIncoming.ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(5).ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(15).ToString("0.000"));
+                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoadOutgoing.ToString("0.000"), NetworkComms.AverageNetworkLoadOutgoing(5).ToString("0.000"), NetworkComms.AverageNetworkLoadOutgoing(15).ToString("0.000"));
                     Thread.Sleep(10000);
                 }
             }
