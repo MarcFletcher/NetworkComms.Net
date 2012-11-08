@@ -454,8 +454,9 @@ namespace DPSBase
                         numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
                     else
                     {
-                        byte[] temp = new byte[sizeof(int)];
-                        inputStream.Read(temp, (int)inputStream.Length - sizeof(int), sizeof(int));
+                        byte[] temp = new byte[sizeof(int)];                        
+                        inputStream.Seek(inputStream.Length - sizeof(int), SeekOrigin.Begin);
+                        inputStream.Read(temp, 0, sizeof(int));
                         numElements = (int)(BitConverter.ToUInt32(temp, 0));
                     }
 
