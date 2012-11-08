@@ -48,7 +48,7 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
-            if (true)
+            if (false)
             {
                 //Configure the logger here
                 NameValueCollection properties = new NameValueCollection();
@@ -65,9 +65,9 @@ namespace DebugTests
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
-            DebugTest.GoTCP();
+            //DebugTest.GoTCP();
             //DFSTest.RunExample();
-            //LoadTest.RunExample();
+            LoadTest.RunExample();
         }
     }
 }

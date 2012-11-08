@@ -77,6 +77,7 @@
     <Compile Include="Connection\UDP\UDPOptions.cs" />
     <Compile Include="Tools\Adler32.cs" />
     <Compile Include="Connection\ConnectionSendClose.cs" />
+    <Compile Include="Tools\LimitedParallelismTaskScheduler.cs" />
     <Compile Include="Tools\PacketBuilder.cs" />
     <Compile Include="Connection\TCP\TCPConnectionInstance.cs" />
     <Compile Include="Connection\TCP\TCPConnectionStatic.cs" />

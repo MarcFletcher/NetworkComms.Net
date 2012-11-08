@@ -61,6 +61,8 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
+            CommsTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(2 * Environment.ProcessorCount));
+
             IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
             IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
@@ -409,6 +411,11 @@ namespace NetworkCommsDotNet
         /// A thread signal for IncomingPacketQueueHighPrioThread so that it only runs when required
         /// </summary>
         internal static AutoResetEvent IncomingPacketQueueHighPrioThreadWait = new AutoResetEvent(false);
+
+        /// <summary>
+        /// A dedicated task factory for executing comms related tasks (e.g. packet handler delegates). Prevents comms from starting hundreds/thousands of potential threads.
+        /// </summary>
+        internal static TaskFactory CommsTaskFactory;
 
         /// <summary>
         /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets

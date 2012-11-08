@@ -97,6 +97,8 @@ namespace DistributedFileSystem
         /// </summary>
         static int concurrentNumLinkItems = 2;
 
+        internal static TaskFactory DFSTaskFactory;
+
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
 
@@ -105,12 +107,14 @@ namespace DistributedFileSystem
             MinTargetLocalPort = 10001;
             MaxTargetLocalPort = 10999;
 
+            DFSTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(Environment.ProcessorCount));
+
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
 
             highPrioRecieveSRO = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
-            highPrioRecieveSRO.Options.Add("ReceiveHandlePriority", Enum.GetName(typeof(ThreadPriority), ThreadPriority.AboveNormal));
+            //highPrioRecieveSRO.Options.Add("ReceiveHandlePriority", Enum.GetName(typeof(ThreadPriority), ThreadPriority.AboveNormal));
         }
 
         /// <summary>
@@ -723,7 +727,7 @@ namespace DistributedFileSystem
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
-            Task.Factory.StartNew(new Action(() =>
+            DFSTaskFactory.StartNew(new Action(() =>
             {
                 try
                 {

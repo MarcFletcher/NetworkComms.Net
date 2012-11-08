@@ -77,9 +77,12 @@ namespace DebugTests
 
                 TCPConnection.StartListening();
 
-                Console.WriteLine("Let the catching begin!\n");
+                Console.WriteLine("Let the catching begin, on port "+TCPConnection.ExistingLocalListenEndPoints().First().Port+"!\n");
                 while (true)
+                {
+                    Console.WriteLine("{0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoad.ToString("0.000"), NetworkComms.AverageNetworkLoad(5).ToString("0.000"), NetworkComms.AverageNetworkLoad(15).ToString("0.000"));
                     Thread.Sleep(10000);
+                }
             }
         }
     }

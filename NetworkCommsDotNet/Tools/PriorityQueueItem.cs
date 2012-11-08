@@ -25,6 +25,9 @@ using System.IO;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// Private wrapper class used for passing data to the incoming packet item worker
+    /// </summary>
     class PriorityQueueItem
     {
         public ThreadPriority Priority { get; private set; }
