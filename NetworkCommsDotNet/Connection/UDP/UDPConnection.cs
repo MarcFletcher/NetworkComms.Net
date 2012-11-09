@@ -79,8 +79,10 @@ namespace NetworkCommsDotNet
                     udpClientThreadSafe.Connect(ConnectionInfo.RemoteEndPoint);
                 }
 
-                //Allow NAT traversal by default for all udp clients
-                udpClientThreadSafe.AllowNatTraversal(true);
+                //Mono does not seem to have implemented AllowNatTraversal method and attempting the below method call will throw an exception
+                if (Type.GetType("Mono.Runtime") == null)
+                    //Allow NAT traversal by default for all udp clients
+                    udpClientThreadSafe.AllowNatTraversal(true);
 
                 if (listenForIncomingPackets)
                     StartIncomingDataListen();

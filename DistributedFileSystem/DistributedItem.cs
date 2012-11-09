@@ -166,7 +166,18 @@ namespace DistributedFileSystem
                     string existingFileMD5 = NetworkComms.MD5Bytes(file);
 
                     if (existingFileMD5 != assemblyConfig.ItemCheckSum)
-                        throw new Exception("File with name '" + fileName + "' already exists. Unfortunately the MD5 does match the expected DFS item. Unable to continue.");
+                    {
+                        try
+                        {
+                            File.Delete(fileName);
+                        }
+                        catch (Exception)
+                        {
+                            throw new Exception("File with name '" + fileName + "' already exists. Unfortunately the MD5 does match the expected DFS item. Unable to delete in order to continue.");
+                        }
+
+                        this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+                    }
                     else
                         this.ItemDataStream = new ThreadSafeStream(file);
                 }
