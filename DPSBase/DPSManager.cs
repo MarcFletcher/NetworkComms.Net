@@ -317,13 +317,18 @@ namespace DPSBase
                 //An aggregate catalog that combines multiple catalogs
                 var catalog = new AggregateCatalog();
 
-                //First add all currently loaded assemblies
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass => catalog.Catalogs.Add(new AssemblyCatalog(ass)));
-
                 //We're now going to look through the assemly reference tree to look for more components
                 //This will be done by first checking whether a relefection only load of each assembly and checking 
                 //for reference to DPSBase.  We will therefore get the full name of DPSBase
                 var dpsBaseAssembly = typeof(DPSManager).Assembly.GetName();
+
+                catalog.Catalogs.Add(new AssemblyCatalog(typeof(DPSManager).Assembly));
+
+                //First add all currently loaded assemblies
+                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass =>  {
+                    if (ass.GetReferencedAssemblies().Contains(dpsBaseAssembly, AssemblyComparer.Instance))
+                        catalog.Catalogs.Add(new AssemblyCatalog(ass));
+                });
 
                 System.Diagnostics.Debug.Print(dpsBaseAssembly.FullName);
 
@@ -363,7 +368,7 @@ namespace DPSBase
                             if (refAssembly.GetReferencedAssemblies().Contains(dpsBaseAssembly, AssemblyComparer.Instance))
                             {
                                 System.Diagnostics.Debug.Print(refAssembly.FullName);
-                                catalog.Catalogs.Add(new AssemblyCatalog(refAssembly.Location));
+                                catalog.Catalogs.Add(new AssemblyCatalog(System.Reflection.Assembly.Load(refAssembly.GetName())));
                             }
 
                             //We're changed allAssemblies and loadedAssemblies so restart
