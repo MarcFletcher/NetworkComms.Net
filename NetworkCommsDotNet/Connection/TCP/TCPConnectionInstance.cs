@@ -68,7 +68,8 @@ namespace NetworkCommsDotNet
                             packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
 
                             //If we have more data we might as well continue reading syncronously
-                            while (dataAvailable)
+                            //In order to deal with data as soon as we think we have sufficient we will leave this loop
+                            while (dataAvailable && packetBuilder.TotalBytesCount < packetBuilder.TotalBytesExpected)
                             {
                                 int bufferOffset = 0;
 

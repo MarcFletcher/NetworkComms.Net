@@ -48,8 +48,10 @@ namespace DebugTests
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
 
-                IPEndPoint catcherPoint = new IPEndPoint(IPAddress.Parse("131.111.73.200"), 10000);
+                //IPEndPoint catcherPoint = new IPEndPoint(IPAddress.Parse("131.111.73.200"), 10000);
+                IPEndPoint catcherPoint = new IPEndPoint(IPAddress.Parse("172.24.252.32"), 10000);
                 byte[] throwData = new byte[20*1024*1024];
+                //byte[] throwData = new byte[1024 * 50];
                 new Random().NextBytes(throwData);
 
                 Task.Factory.StartNew(() =>

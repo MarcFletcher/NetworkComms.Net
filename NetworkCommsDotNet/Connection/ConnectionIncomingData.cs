@@ -148,7 +148,7 @@ namespace NetworkCommsDotNet
                                 if (itemPriority > ThreadPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
 
                                 //We will also trigger a new task below incase we have many higher priority items as we don't care which thread ends up running the item
-                                NetworkComms.CommsTaskFactory.StartNew(NetworkComms.CompleteIncomingItemTask, null);
+                                NetworkComms.TaskFactory.StartNew(NetworkComms.CompleteIncomingItemTask, null);
                             }
 
                             //We clear the bytes we have just handed off

@@ -115,7 +115,7 @@ namespace NetworkCommsDotNet
             {
                 int innerIndex = i;
 
-                connectionCheckTasks.Add(NetworkComms.CommsTaskFactory.StartNew(new Action(() =>
+                connectionCheckTasks.Add(NetworkComms.TaskFactory.StartNew(new Action(() =>
                 {
                     try
                     {

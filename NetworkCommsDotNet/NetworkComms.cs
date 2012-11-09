@@ -52,6 +52,8 @@ namespace NetworkCommsDotNet
             DefaultListenPort = 10000;
             ListenOnAllAllowedInterfaces = true;
 
+            //The larger the better performance wise but this size is chosen because any larger and windows
+            //environments will start putting buffers on LOH leading to memory fragmentation
             ReceiveBufferSizeBytes = 80000;
             SendBufferSizeBytes = 80000;
 
@@ -61,7 +63,7 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            CommsTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(2 * Environment.ProcessorCount));
+            TaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(Environment.ProcessorCount));
 
             IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
@@ -480,9 +482,9 @@ namespace NetworkCommsDotNet
         internal static AutoResetEvent IncomingPacketQueueHighPrioThreadWait = new AutoResetEvent(false);
 
         /// <summary>
-        /// A dedicated task factory for executing comms related tasks (e.g. packet handler delegates). Prevents comms from starting hundreds/thousands of potential threads.
+        /// A dedicated task factory for executing comms related tasks (e.g. packet handler delegates). Used to manage comms when managing hundreds/thousands of potential connections.
         /// </summary>
-        internal static TaskFactory CommsTaskFactory;
+        public static TaskFactory TaskFactory { get; private set; }
 
         /// <summary>
         /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets
