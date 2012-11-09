@@ -113,7 +113,7 @@ namespace DistributedFileSystem
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
 
-            //highPrioRecieveSRO = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
+            highPrioRecieveSRO = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
             highPrioRecieveSRO.Options.Add("ReceiveHandlePriority", Enum.GetName(typeof(ThreadPriority), ThreadPriority.AboveNormal));
         }
 
