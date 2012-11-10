@@ -52,8 +52,8 @@ namespace NetworkCommsDotNet
         private UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
-            if (NetworkComms.loggingEnabled)
-                NetworkComms.logger.Trace("Creating new UDPConnection with " + connectionInfo);
+            if (NetworkComms.LoggingEnabled)
+                NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
             udpLevel = level;
 
@@ -138,7 +138,7 @@ namespace NetworkCommsDotNet
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
                 throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
@@ -151,7 +151,7 @@ namespace NetworkCommsDotNet
             if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Dispose();
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace NetworkCommsDotNet
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
                 throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
@@ -177,7 +177,7 @@ namespace NetworkCommsDotNet
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
 
         /// <summary>
@@ -190,7 +190,7 @@ namespace NetworkCommsDotNet
             {
                 try
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
                     //Send a single 0 byte
                     udpClientThreadSafe.Send(new byte[] { 0 }, 1, ConnectionInfo.RemoteEndPoint);
@@ -239,7 +239,7 @@ namespace NetworkCommsDotNet
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                 byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
                 if (isIsolatedUDPConnection)
                 {
@@ -302,7 +302,7 @@ namespace NetworkCommsDotNet
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                     byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
                     if (isIsolatedUDPConnection)
                     {
@@ -350,7 +350,7 @@ namespace NetworkCommsDotNet
             //Clear the listen thread object because the thread is about to end
             incomingDataListenThread = null;
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
     }
 }

@@ -511,6 +511,18 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
+        /// Closes all connections to peers who have completed items
+        /// </summary>
+        public static void CloseConnectionToCompletedPeers()
+        {
+            lock (globalDFSLocker)
+            {
+                foreach(var item in swarmedItemsDict.Values)
+                    item.SwarmChunkAvailability.CloseConnectionToCompletedPeers(item.TotalNumChunks);
+            }
+        }
+
+        /// <summary>
         /// Remove any items from the DFS with a matching itemTypeStr
         /// </summary>
         /// <param name="ItemTypeStr"></param>
@@ -855,7 +867,8 @@ namespace DistributedFileSystem
                         }
 
                         //Close any connections which are no longer required
-                        newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
+                        //Commented out incase we are building multiple items at once
+                        //newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
 
                         if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
                     }

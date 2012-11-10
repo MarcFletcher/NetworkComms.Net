@@ -88,16 +88,16 @@ namespace NetworkCommsDotNet
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
                 if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
                 {
-                    if (NetworkComms.loggingEnabled)
-                        NetworkComms.logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
+                    if (NetworkComms.LoggingEnabled)
+                        NetworkComms.Logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
 
                     establishIfRequired = false;
                     connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
                 }
                 else
                 {
-                    if (NetworkComms.loggingEnabled)
-                        NetworkComms.logger.Trace("Creating new TCPConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
+                    if (NetworkComms.LoggingEnabled)
+                        NetworkComms.Logger.Trace("Creating new TCPConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
 
                     //We add a reference to networkComms for this connection within the constructor
                     connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, tcpClient);
@@ -168,7 +168,7 @@ namespace NetworkCommsDotNet
             {
                 if (existingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
                 //Wait for the client to send its identification
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
@@ -176,7 +176,7 @@ namespace NetworkCommsDotNet
 
                 if (connectionSetupException)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ServerSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ServerSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
                     throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
                 }
 
@@ -186,7 +186,7 @@ namespace NetworkCommsDotNet
             }
             else
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
 
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
@@ -203,7 +203,7 @@ namespace NetworkCommsDotNet
 
                 if (connectionSetupException)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
                     throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                 }
             }
@@ -224,7 +224,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Connecting TCP client with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
 
                 //We now connect to our target
                 tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));
@@ -286,7 +286,7 @@ namespace NetworkCommsDotNet
                     tcpClientNetworkStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), tcpClientNetworkStream);
             }
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Listening for incoming data from " + ConnectionInfo);
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Listening for incoming data from " + ConnectionInfo);
         }
     }
 }

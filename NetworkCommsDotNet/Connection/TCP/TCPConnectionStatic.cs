@@ -108,7 +108,7 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                         throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
@@ -121,7 +121,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
                     tcpListenerDict.Add(ipEndPointUsed, newListenerInstance);
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
                 }
             }
 
@@ -202,7 +202,7 @@ namespace NetworkCommsDotNet
         {
             shutdownIncomingConnectionWorkerThread = false;
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("TCP IncomingConnectionWorker thread started.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("TCP IncomingConnectionWorker thread started.");
 
             try
             {
@@ -273,7 +273,7 @@ namespace NetworkCommsDotNet
             }
 
             //newIncomingListenThread = null;
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("TCP IncomingConnectionWorker thread ended.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("TCP IncomingConnectionWorker thread ended.");
         }
 
         /// <summary>

@@ -510,7 +510,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("IncomingPacketQueueHighPrioWorker thread has ended.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("IncomingPacketQueueHighPrioWorker thread has ended.");
         }
 
         /// <summary>
@@ -529,7 +529,7 @@ namespace NetworkCommsDotNet
                     KeyValuePair<int, PriorityQueueItem> packetQueueItem;
                     if (!NetworkComms.IncomingPacketQueue.TryTake(out packetQueueItem))
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Unable to get packet item from IncomingPacketQueue in CompleteIncomingPacketWorker.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unable to get packet item from IncomingPacketQueue in CompleteIncomingPacketWorker.");
                         return;
                     }
                     else
@@ -538,7 +538,7 @@ namespace NetworkCommsDotNet
                     if (item == null)
                         throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Pulled packet item from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Pulled packet item from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
 
                     if (Thread.CurrentThread.Priority != item.Priority) Thread.CurrentThread.Priority = item.Priority;
                 }
@@ -555,7 +555,7 @@ namespace NetworkCommsDotNet
                     string packetDataSectionMD5 = NetworkComms.MD5Bytes(item.DataStream);
                     if (packetHeaderHash != packetDataSectionMD5)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
 
                         //We have corruption on a resend request, something is very wrong so we throw an exception.
                         if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
@@ -576,7 +576,7 @@ namespace NetworkCommsDotNet
                 //Remote end may have requested packet receive confirmation so we send that now
                 if (item.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... sending requested receive confirmation packet.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... sending requested receive confirmation packet.");
 
                     var hash = item.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? item.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
 
@@ -605,7 +605,7 @@ namespace NetworkCommsDotNet
                 //else
                 if (true)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Triggering handlers for packet of type '" + item.PacketHeader.PacketType + "' from " + item.Connection.ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Triggering handlers for packet of type '" + item.PacketHeader.PacketType + "' from " + item.Connection.ConnectionInfo);
 
                     //We trigger connection specific handlers first
                     bool connectionSpecificHandlersTriggered = item.Connection.TriggerSpecificPacketHandlers(item.PacketHeader, item.DataStream, item.SendReceiveOptions);
@@ -622,7 +622,7 @@ namespace NetworkCommsDotNet
             {
                 if (item != null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
                     item.Connection.CloseConnection(true, 2);
                 }
             }
@@ -633,7 +633,7 @@ namespace NetworkCommsDotNet
                 if (item != null)
                 {
                     //If anything goes wrong here all we can really do is log the exception
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed. See log file for more information.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed. See log file for more information.");
                     item.Connection.CloseConnection(true, 3);
                 }
             }
@@ -753,7 +753,7 @@ namespace NetworkCommsDotNet
                 else
                     globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
 
-                if (loggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
+                if (LoggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
             }
         }
 
@@ -792,10 +792,10 @@ namespace NetworkCommsDotNet
                         if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                             globalIncomingPacketUnwrappers.Remove(packetTypeStr);
 
-                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
+                        if (LoggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
                     }
                     else
-                        if (loggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
+                        if (LoggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. Handlers remain.");
                 }
             }
         }
@@ -813,7 +813,7 @@ namespace NetworkCommsDotNet
                 {
                     globalIncomingPacketHandlers.Remove(packetTypeStr);
 
-                    if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
+                    if (LoggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
                 }
             }
         }
@@ -827,7 +827,7 @@ namespace NetworkCommsDotNet
             {
                 globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
-                if (loggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
+                if (LoggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
             }
         }
 
@@ -869,7 +869,7 @@ namespace NetworkCommsDotNet
                     if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
                     {
                         //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
                         LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                     }
 
@@ -888,7 +888,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
-                    if (loggingEnabled) logger.Trace(" ... passing completed data packet of type '"+packetHeader.PacketType+"' to selected global handlers.");
+                    if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '"+packetHeader.PacketType+"' to selected global handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -900,7 +900,7 @@ namespace NetworkCommsDotNet
                         }
                         catch (Exception ex)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
                             NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                         }
                     }
@@ -909,7 +909,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If anything goes wrong here all we can really do is log the exception
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
                 NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
             }
         }
@@ -1012,7 +1012,7 @@ namespace NetworkCommsDotNet
 
                 globalConnectionShutdownDelegateCount++;
 
-                if (loggingEnabled) logger.Info("Added globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
+                if (LoggingEnabled) logger.Info("Added globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
             }
         }
 
@@ -1027,7 +1027,7 @@ namespace NetworkCommsDotNet
                 globalConnectionShutdownDelegates -= connectionShutdownDelegate;
                 globalConnectionShutdownDelegateCount--;
 
-                if (loggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
+                if (LoggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
             }
         }
 
@@ -1046,7 +1046,7 @@ namespace NetworkCommsDotNet
 
                 globalConnectionEstablishDelegateCount++;
 
-                if (loggingEnabled) logger.Info("Added globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
+                if (LoggingEnabled) logger.Info("Added globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
             }
         }
 
@@ -1061,7 +1061,7 @@ namespace NetworkCommsDotNet
                 globalConnectionEstablishDelegates -= connectionEstablishDelegate;
                 globalConnectionEstablishDelegateCount--;
 
-                if (loggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
+                if (LoggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
             }
         }
 
@@ -1117,7 +1117,7 @@ namespace NetworkCommsDotNet
             }
 
             commsShutdown = false;
-            if (loggingEnabled) logger.Info("Network comms has shutdown");
+            if (LoggingEnabled) logger.Info("Network comms has shutdown");
         }
         #endregion
 
@@ -1139,8 +1139,11 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Logging
-        internal static bool loggingEnabled = false;
-        internal static ILog logger = LogManager.GetCurrentClassLogger();
+        /// <summary>
+        /// Returns true if comms logging has been enabled.
+        /// </summary>
+        public static bool LoggingEnabled { get; private set; }
+        private static ILog logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.
@@ -1158,7 +1161,7 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-                loggingEnabled = true;
+                LoggingEnabled = true;
                 Common.Logging.LogManager.Adapter = loggingAdaptor;
                 logger = LogManager.GetCurrentClassLogger();
             }
@@ -1171,7 +1174,7 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-                loggingEnabled = false;
+                LoggingEnabled = false;
                 Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
             }
         }
@@ -1215,7 +1218,7 @@ namespace NetworkCommsDotNet
 
             lock (errorLocker)
             {
-                if (loggingEnabled) logger.Fatal(fileName + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
+                if (LoggingEnabled) logger.Fatal(fileName + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
 
 #if iOS
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
@@ -1448,7 +1451,7 @@ namespace NetworkCommsDotNet
                                               select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToList();
             }
 
-            if (loggingEnabled) logger.Trace("Closing " + connectionsToClose.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("Closing " + connectionsToClose.Count + " connections.");
 
             foreach (Connection connection in connectionsToClose)
                 connection.CloseConnection(false, -6);
@@ -1479,9 +1482,10 @@ namespace NetworkCommsDotNet
                                 select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => {return entry != null;}).ToList();
             }
 
-            if (loggingEnabled) logger.Trace("RetrieveConnection by connectionType='"+connectionType+"'. Returning list of " + result.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("RetrieveConnection by connectionType='"+connectionType+"'. Returning list of " + result.Count + " connections.");
 
-            return result;
+            //Convert to new list incase we use as an enumeration
+            return result.ToList();
         }
 
         /// <summary>
@@ -1497,9 +1501,10 @@ namespace NetworkCommsDotNet
                 resultList = (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
 
             resultList = (resultList == null ? new List<Connection>() : resultList);
-            if (loggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'. Returning list of " + resultList.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'. Returning list of " + resultList.Count + " connections.");
 
-            return resultList;
+            //Convert to new list incase we use as an enumeration
+            return resultList.ToList();
         }
 
         /// <summary>
@@ -1513,7 +1518,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
                 result = (from current in NetworkComms.allConnectionsByEndPoint where current.Key.Equals(connectionInfo.RemoteEndPoint) && current.Value.ContainsKey(connectionInfo.ConnectionType) select current.Value[connectionInfo.ConnectionType]).FirstOrDefault();
 
-            if (loggingEnabled)
+            if (LoggingEnabled)
             {
                 if (result == null)
                     logger.Trace("RetrieveConnection by connectionInfo='"+connectionInfo+"'. No matching connection was found.");
@@ -1544,7 +1549,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (loggingEnabled)
+            if (LoggingEnabled)
             {
                 if (result == null)
                     logger.Trace("RetrieveConnection by remoteEndPoint='"+remoteEndPoint.Address+":"+remoteEndPoint.Port+"' and connectionType='"+connectionType+"'. No matching connection was found.");
@@ -1569,7 +1574,7 @@ namespace NetworkCommsDotNet
                     result = allConnectionsByEndPoint[connectionInfo.RemoteEndPoint].ContainsKey(connectionInfo.ConnectionType);
             }
 
-            if (loggingEnabled) logger.Trace("Checking for existing connection by connectionInfo='" + connectionInfo +"'");
+            if (LoggingEnabled) logger.Trace("Checking for existing connection by connectionInfo='" + connectionInfo +"'");
             return result;
         }
 
@@ -1591,7 +1596,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (loggingEnabled) logger.Trace("Checking for existing connection by identifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'");
+            if (LoggingEnabled) logger.Trace("Checking for existing connection by identifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'");
             return result;
         }
 
@@ -1610,7 +1615,7 @@ namespace NetworkCommsDotNet
                     result = allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType);
             }
 
-            if (loggingEnabled) logger.Trace("Checking for existing connection by endPoint='"+remoteEndPoint.Address + ":" + remoteEndPoint.Port+"' and connectionType='" + connectionType + "'");
+            if (LoggingEnabled) logger.Trace("Checking for existing connection by endPoint='"+remoteEndPoint.Address + ":" + remoteEndPoint.Port+"' and connectionType='" + connectionType + "'");
             return result;
         }
 
@@ -1622,7 +1627,7 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         internal static bool RemoveConnectionReference(Connection connection, bool maintainConnectionInfoHistory = true)
         {
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Entering RemoveConnectionReference for " + connection.ConnectionInfo);
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Entering RemoveConnectionReference for " + connection.ConnectionInfo);
 
             //We don't have the connection identifier until the connection has been established.
             //if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
@@ -1681,7 +1686,7 @@ namespace NetworkCommsDotNet
                     if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
                         allConnectionsById.Remove(connection.ConnectionInfo.NetworkIdentifier);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removed connection reference by ID for " + connection.ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by ID for " + connection.ConnectionInfo);
                 }
 
                 //We can now remove this connection by end point as well
@@ -1694,7 +1699,7 @@ namespace NetworkCommsDotNet
                     if (allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
                         allConnectionsByEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
                 }
                 #endregion
             }
@@ -1709,8 +1714,8 @@ namespace NetworkCommsDotNet
         /// <param name="endPointToUse">An optional override which forces a specific IPEndPoint</param>
         internal static void AddConnectionByReferenceEndPoint(Connection connection, IPEndPoint endPointToUse = null)
         {
-            if (NetworkComms.loggingEnabled)
-                NetworkComms.logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
+            if (NetworkComms.LoggingEnabled)
+                NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
 
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
             if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
@@ -1766,8 +1771,8 @@ namespace NetworkCommsDotNet
         /// <param name="newEndPoint"></param>
         internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newEndPoint)
         {
-            if (NetworkComms.loggingEnabled)
-                NetworkComms.logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newEndPoint != null ? " Provided new endPoint of " + newEndPoint.Address + ":" + newEndPoint.Port : ""));
+            if (NetworkComms.LoggingEnabled)
+                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newEndPoint != null ? " Provided new endPoint of " + newEndPoint.Address + ":" + newEndPoint.Port : ""));
 
             if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newEndPoint))
             {
@@ -1791,8 +1796,8 @@ namespace NetworkCommsDotNet
             if (connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                 throw new ConnectionSetupException("Should not be calling AddConnectionByIdentifierReference unless the connection remote identifier has been set.");
 
-            if (NetworkComms.loggingEnabled)
-                NetworkComms.logger.Trace("Adding connection reference by identifier. Connection=" + connection.ConnectionInfo + ".");
+            if (NetworkComms.LoggingEnabled)
+                NetworkComms.Logger.Trace("Adding connection reference by identifier. Connection=" + connection.ConnectionInfo + ".");
 
             lock (globalDictAndDelegateLocker)
             {

@@ -58,11 +58,11 @@ namespace NetworkCommsDotNet
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 1");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 1");
                         }
                         else
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
 
                             //If there is more data to get then add it to the packets lists;
                             packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
@@ -90,12 +90,12 @@ namespace NetworkCommsDotNet
                                     //If we have read a single byte which is 0 and we are not expecting other data
                                     if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                                     {
-                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 2");
+                                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 2");
                                         //LastTrafficTime = DateTime.Now;
                                     }
                                     else
                                     {
-                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+                                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
                                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                                         dataAvailable = netStream.DataAvailable;
                                     }
@@ -194,11 +194,11 @@ namespace NetworkCommsDotNet
                         //If we have read a single byte which is 0 and we are not expecting other data
                         if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingDataSyncWorker() from "+ConnectionInfo+".");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingDataSyncWorker() from "+ConnectionInfo+".");
                         }
                         else
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
                             packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                         }
                     }
@@ -239,7 +239,7 @@ namespace NetworkCommsDotNet
             //Clear the listen thread object because the thread is about to end
             incomingDataListenThread = null;
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
 
         /// <summary>
@@ -293,7 +293,7 @@ namespace NetworkCommsDotNet
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
             //tcpClientNetworkStream.Write(packet.PacketData.ToArray(), 0, packet.PacketData.Length);
@@ -303,11 +303,11 @@ namespace NetworkCommsDotNet
             if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Dispose();
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
 
             if (!tcpClient.Connected)
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
                 throw new CommunicationException("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
             }
         }
@@ -325,7 +325,7 @@ namespace NetworkCommsDotNet
                     //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
                     lock (sendLocker)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Sending null packet to " + ConnectionInfo);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
                         //Send a single 0 byte
                         tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);

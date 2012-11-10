@@ -129,7 +129,7 @@ namespace NetworkCommsDotNet
                         }
                         catch (Exception)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port + ". Will create an isolated udp connection instead.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port + ". Will create an isolated udp connection instead.");
                         }
                     }
 
@@ -202,7 +202,7 @@ namespace NetworkCommsDotNet
                         newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
                     else
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                         throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
@@ -214,7 +214,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     udpConnectionListeners.Add(ipEndPointUsed, newListeningConnection);
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
                 }
             }
 
@@ -357,7 +357,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception)
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
             }
 
             Packet sendPacket = new Packet(sendingPacketType, objectToSend, connectionToUse.ConnectionDefaultSendReceiveOptions);

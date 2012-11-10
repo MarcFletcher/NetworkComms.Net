@@ -237,12 +237,12 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled)
+                if (NetworkComms.LoggingEnabled)
                 {
                     if (closeDueToError)
-                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo + " due to error from [" + logLocation + "].");
+                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " due to error from [" + logLocation + "].");
                     else
-                        NetworkComms.logger.Debug("Closing connection with " + ConnectionInfo + " from [" + logLocation + "].");
+                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " from [" + logLocation + "].");
                 }
 
                 ConnectionInfo.NoteConnectionShutdown();
@@ -271,7 +271,7 @@ namespace NetworkCommsDotNet
                         if (!incomingDataListenThread.Join(50))
                         {
                             incomingDataListenThread.Abort();
-                            if (NetworkComms.loggingEnabled && ConnectionInfo != null) NetworkComms.logger.Warn("Incoming data listen thread with " + ConnectionInfo + " aborted.");
+                            if (NetworkComms.LoggingEnabled && ConnectionInfo != null) NetworkComms.Logger.Warn("Incoming data listen thread with " + ConnectionInfo + " aborted.");
                         }
                     }
                 }
@@ -289,7 +289,7 @@ namespace NetworkCommsDotNet
                     //Last thing is to call any connection specific shutdown delegates
                     if (firstClose && ConnectionSpecificShutdownDelegate != null)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
                         ConnectionSpecificShutdownDelegate(this);
                     }
                 }
@@ -303,7 +303,7 @@ namespace NetworkCommsDotNet
                     //Last but not least we call any global connection shutdown delegates
                     if (firstClose && NetworkComms.globalConnectionShutdownDelegates != null)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
                         NetworkComms.globalConnectionShutdownDelegates(this);
                     }
                 }
@@ -381,7 +381,7 @@ namespace NetworkCommsDotNet
 
                     responseTimeMS = timer.ElapsedMilliseconds;
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms.");
 
                     return returnValue[0] == 1;
                 }
@@ -410,13 +410,13 @@ namespace NetworkCommsDotNet
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
         internal void SendPacket(Packet packet, out long packetSequenceNumber)
         {
-            if (NetworkComms.loggingEnabled)
+            if (NetworkComms.LoggingEnabled)
             {
                 string packetDataMD5 = "";
                 if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash))
                     packetDataMD5 = packet.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
 
-                NetworkComms.logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo + (packetDataMD5 == "" ? "" : ". PacketCheckSum="+packetDataMD5));
+                NetworkComms.Logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo + (packetDataMD5 == "" ? "" : ". PacketCheckSum="+packetDataMD5));
             }
 
             //Multiple threads may try to send packets at the same time so wait one at a time here
@@ -502,7 +502,7 @@ namespace NetworkCommsDotNet
                     //If we required receive confirmation we now wait for that confirmation
                     if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) && bool.Parse(packet.PacketHeader.GetOption(PacketHeaderStringItems.ReceiveConfirmationRequired)))
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... waiting for receive confirmation packet.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... waiting for receive confirmation packet.");
 
                         if (!(confirmationWaitSignal.WaitOne(NetworkComms.PacketConfirmationTimeoutMS)))
                             throw new ConfirmationTimeoutException("Confirmation packet timeout.");
@@ -511,7 +511,7 @@ namespace NetworkCommsDotNet
                             throw new ConfirmationTimeoutException("Remote end closed connection before confirmation packet was returned.");
                         else
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... confirmation packet received.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... confirmation packet received.");
                         }
                     }
                     #endregion
@@ -543,7 +543,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Completed packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo);
         }
 
         /// <summary>

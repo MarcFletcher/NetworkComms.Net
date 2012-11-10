@@ -73,7 +73,7 @@ namespace NetworkCommsDotNet
         {
             shutdownWorkerThreads = false;
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Connection keep alive polling thread has started.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection keep alive polling thread has started.");
             DateTime lastPollCheck = DateTime.Now;
 
             do

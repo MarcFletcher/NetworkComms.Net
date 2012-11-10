@@ -64,7 +64,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached + " bytes read.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached + " bytes read.");
 
                 //Loop until we are finished with this packetBuilder
                 int loopCounter = 0;
@@ -74,7 +74,7 @@ namespace NetworkCommsDotNet
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (packetBuilder.FirstByte() == 0)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from "+ConnectionInfo+", loop index - " + loopCounter);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from "+ConnectionInfo+", loop index - " + loopCounter);
 
                         packetBuilder.ClearNTopBytes(1);
 
@@ -92,7 +92,7 @@ namespace NetworkCommsDotNet
                         //Do we have enough data to build a header?
                         if (packetBuilder.TotalBytesCached < packetHeaderSize)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet header.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet header.");
 
                             //Set the expected number of bytes and then return
                             packetBuilder.TotalBytesExpected = packetHeaderSize;
@@ -110,7 +110,7 @@ namespace NetworkCommsDotNet
                         //First case is when we have not yet received enough data
                         if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet payload.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload.");
 
                             //Set the expected number of bytes and then return
                             packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
@@ -123,13 +123,13 @@ namespace NetworkCommsDotNet
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
                             {
                                 PriorityQueueItem item = new PriorityQueueItem(Thread.CurrentThread.Priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
-                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
                                 NetworkComms.CompleteIncomingItemTask(item);
                             }
                             else
@@ -142,7 +142,7 @@ namespace NetworkCommsDotNet
                                 if (!NetworkComms.IncomingPacketQueue.TryAdd(new KeyValuePair<int, PriorityQueueItem>((int)item.Priority, item)))
                                     throw new PacketHandlerException("Failed to add packet to incoming packet queue.");
 
-                                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);
 
                                 //If we have just added a high priority item we trigger the high priority thread
                                 if (itemPriority > ThreadPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
@@ -152,7 +152,7 @@ namespace NetworkCommsDotNet
                             }
 
                             //We clear the bytes we have just handed off
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
                             packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
 
                             //Reset the expected bytes to 0 so that the next check starts from scratch
@@ -171,7 +171,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //Any error, throw an exception.
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("A fatal exception occured in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A fatal exception occured in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
 
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 16);
@@ -200,7 +200,7 @@ namespace NetworkCommsDotNet
             //If we have already tried resending the packet 10 times something has gone horribly wrong
             if (packetToReSend.SendCount > 10) throw new CheckSumException("Packet sent resulted in a catastropic checksum check exception.");
 
-            if (NetworkComms.loggingEnabled) NetworkComms.logger.Warn(" ... resending packet due to MD5 mismatch.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(" ... resending packet due to MD5 mismatch.");
 
             //Increment send count and then resend
             packetToReSend.IncrementSendCount();

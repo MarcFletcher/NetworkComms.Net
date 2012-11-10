@@ -104,13 +104,13 @@ namespace NetworkCommsDotNet
 
                 if (connectionAlreadyEstablishing)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Waiting for connection with " + ConnectionInfo + " to be established.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Waiting for connection with " + ConnectionInfo + " to be established.");
                     if (!WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS))
                         throw new ConnectionSetupException("Timeout waiting for connection to be succesfully established.");
                 }
                 else
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing new connection with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Establishing new connection with " + ConnectionInfo);
 
                     EstablishConnectionSpecific();
 
@@ -124,7 +124,7 @@ namespace NetworkCommsDotNet
                     NetworkComms.AddConnectionReferenceByIdentifier(this);
                     connectionEstablishWait.Set();
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
 
                     //Call the establish delegate if one is set
                     if (NetworkComms.globalConnectionEstablishDelegates != null)
@@ -162,8 +162,8 @@ namespace NetworkCommsDotNet
         /// <returns>True if the wait was triggered, false otherwise after the provided timeout.</returns>
         protected bool WaitForConnectionEstablish(int waitTimeoutMS)
         {
-            if (NetworkComms.loggingEnabled)
-                NetworkComms.logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
+            if (NetworkComms.LoggingEnabled)
+                NetworkComms.Logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
 
             if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
@@ -204,7 +204,7 @@ namespace NetworkCommsDotNet
                     if (possibleClashConnectionWithPeer_ByEndPoint)
                     {
                         //If we have a clash by endPoint we test the existing connection
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
                         if (existingConnection.ConnectionAlive(1000))
                         {
                             //If the existing connection comes back as alive we don't allow this one to go any further

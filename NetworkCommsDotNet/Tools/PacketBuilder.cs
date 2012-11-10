@@ -156,7 +156,7 @@ namespace NetworkCommsDotNet
                 packets.Add(partialPacket);
                 packetActualBytes.Add(packetBytes);
 
-                if (NetworkComms.loggingEnabled)
+                if (NetworkComms.LoggingEnabled)
                 {
                     if (TotalBytesExpected == 0 && totalBytesCached > (10 * 1024 * 1024))
                         NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when 0KB are currently expected.");

@@ -164,7 +164,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... passing completed data packet to selected connection specific handlers.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... passing completed data packet to selected connection specific handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -176,7 +176,7 @@ namespace NetworkCommsDotNet
                         }
                         catch (Exception ex)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
                             NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
                         }
                     }
@@ -185,7 +185,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If anything goes wrong here all we can really do is log the exception
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
                 NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
             }
 
@@ -256,7 +256,7 @@ namespace NetworkCommsDotNet
                 else
                     incomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Added connection specific incoming packetHandler for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added connection specific incoming packetHandler for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
             }
         }
 
@@ -326,10 +326,10 @@ namespace NetworkCommsDotNet
                         if (incomingPacketHandlers.ContainsKey(packetTypeStr))
                             incomingPacketHandlers.Remove(packetTypeStr);
 
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. No handlers remain with " + ConnectionInfo);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. No handlers remain with " + ConnectionInfo);
                     }
                     else
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. Handlers remain with " + ConnectionInfo);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Removed a connection specific packetHandler for '" + packetTypeStr + "' packetType. Handlers remain with " + ConnectionInfo);
                 }
             }
         }
@@ -347,7 +347,7 @@ namespace NetworkCommsDotNet
                 {
                     incomingPacketHandlers.Remove(packetTypeStr);
 
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed all connection specific incoming packetHandlers for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Removed all connection specific incoming packetHandlers for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
                 }
             }
         }
@@ -361,7 +361,7 @@ namespace NetworkCommsDotNet
             {
                 incomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Removed all connection specific incoming packetHandlers for all packetTypes with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Removed all connection specific incoming packetHandlers for all packetTypes with " + ConnectionInfo);
             }
         }
 
@@ -378,7 +378,7 @@ namespace NetworkCommsDotNet
                 else
                     ConnectionSpecificShutdownDelegate += handlerToAppend;
 
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Added a connection specific shutdown delegate to connection with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Added a connection specific shutdown delegate to connection with " + ConnectionInfo);
             }
         }
 
@@ -391,15 +391,15 @@ namespace NetworkCommsDotNet
             lock (delegateLocker)
             {
                 ConnectionSpecificShutdownDelegate -= handlerToRemove;
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Debug("Removed ConnectionSpecificShutdownDelegate to connection with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Removed ConnectionSpecificShutdownDelegate to connection with " + ConnectionInfo);
 
                 if (ConnectionSpecificShutdownDelegate == null)
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("No handlers remain for ConnectionSpecificShutdownDelegate with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("No handlers remain for ConnectionSpecificShutdownDelegate with " + ConnectionInfo);
                 }
                 else
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Info("Handlers remain for ConnectionSpecificShutdownDelegate with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Handlers remain for ConnectionSpecificShutdownDelegate with " + ConnectionInfo);
                 }
             }
         }
