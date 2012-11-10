@@ -40,6 +40,7 @@ namespace DistributedFileSystem
 
         public const int NumConcurrentRequests = 2;
         public const int NumTotalGlobalRequests = 8;
+        public const int MaxConcurrentLocalItemBuild = 4;
 
         public const int PeerBusyTimeoutMS = 500;
 
@@ -97,7 +98,10 @@ namespace DistributedFileSystem
         /// </summary>
         static int concurrentNumLinkItems = 2;
 
-        internal static TaskFactory DFSTaskFactory;
+        /// <summary>
+        /// A privte task factory for assembling new local DFS items. If we use the NetworkComms.TaskFactory we can end up deadlocking and prevent incoming packets from being handled.
+        /// </summary>
+        static TaskFactory DFSTaskFactory;
 
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
@@ -107,7 +111,7 @@ namespace DistributedFileSystem
             MinTargetLocalPort = 10001;
             MaxTargetLocalPort = 10999;
 
-            DFSTaskFactory = NetworkComms.TaskFactory;
+            DFSTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
 
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
@@ -727,7 +731,7 @@ namespace DistributedFileSystem
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
-            DFSTaskFactory.StartNew(new Action(() =>
+            NetworkComms.TaskFactory.StartNew(new Action(() =>
             {
                 try
                 {
@@ -800,74 +804,78 @@ namespace DistributedFileSystem
         /// <param name="incomingObjectBytes"></param>
         private static void IncomingLocalItemBuild(PacketHeader packetHeader, Connection connection, ItemAssemblyConfig assemblyConfig)
         {
-            DistributedItem newItem = null;
-
-            try
-            {
-                if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
-
-                //We check to see if we already have the necessary file locally
-                lock (globalDFSLocker)
+            //We start the build in the DFS task factory as it will be a long lived task
+            DFSTaskFactory.StartNew(() =>
                 {
-                    if (swarmedItemsDict.ContainsKey(assemblyConfig.ItemCheckSum))
+                    DistributedItem newItem = null;
+
+                    try
                     {
-                        if (swarmedItemsDict[assemblyConfig.ItemCheckSum].ItemBytesLength != assemblyConfig.TotalItemSizeInBytes)
-                            throw new Exception("Possible MD5 conflict detected.");
+                        if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
+
+                        //We check to see if we already have the necessary file locally
+                        lock (globalDFSLocker)
+                        {
+                            if (swarmedItemsDict.ContainsKey(assemblyConfig.ItemCheckSum))
+                            {
+                                if (swarmedItemsDict[assemblyConfig.ItemCheckSum].ItemBytesLength != assemblyConfig.TotalItemSizeInBytes)
+                                    throw new Exception("Possible MD5 conflict detected.");
+                                else
+                                    newItem = swarmedItemsDict[assemblyConfig.ItemCheckSum];
+                            }
+                            else
+                            {
+                                newItem = new DistributedItem(assemblyConfig);
+                                swarmedItemsDict.Add(assemblyConfig.ItemCheckSum, newItem);
+                            }
+                        }
+
+                        //Build the item from the swarm
+                        //If the item is already complete this will return immediately
+                        newItem.AssembleItem((int)(ItemBuildTimeoutSecsPerMB * (assemblyConfig.TotalItemSizeInBytes / 1024.0)));
+
+                        //Copy the result to the disk if required by the build target
+                        if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
+                        {
+                            using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                                newItem.CopyItemDataStream(sw);
+                        }
+
+                        SendReceiveOptions nullOptions = new SendRecieveOptions<NullSerializer>(new Dictionary<string, string>());
+
+                        //Once complete we pass the item bytes back into network comms
+                        //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
+                        if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
+                        {
+                            PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                            //We set the item checksum so that the entire distributed item can be easily retrieved later
+                            itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+                            byte[] itemBytes = newItem.AccessItemBytes();
+                            NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(itemBytes, 0, itemBytes.Length, false, true), nullOptions);
+                        }
+
+                        //Close any connections which are no longer required
+                        newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
+
+                        if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
+                    }
+                    catch (CommsException)
+                    {
+                        //Crap an error has happened, let people know we probably don't have a good file
+                        RemoveItem(assemblyConfig.ItemCheckSum);
+                        //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
+                    }
+                    catch (Exception e)
+                    {
+                        //Crap an error has happened, let people know we probably don't have a good file
+                        RemoveItem(assemblyConfig.ItemCheckSum);
+
+                        if (newItem != null)
+                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
                         else
-                            newItem = swarmedItemsDict[assemblyConfig.ItemCheckSum];
+                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
                     }
-                    else
-                    {
-                        newItem = new DistributedItem(assemblyConfig);
-                        swarmedItemsDict.Add(assemblyConfig.ItemCheckSum, newItem);
-                    }
-                }
-
-                //Build the item from the swarm
-                //If the item is already complete this will return immediately
-                newItem.AssembleItem((int)(ItemBuildTimeoutSecsPerMB * (assemblyConfig.TotalItemSizeInBytes / 1024.0)));
-
-                //Copy the result to the disk if required by the build target
-                if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
-                {
-                    using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
-                        newItem.CopyItemDataStream(sw);
-                }
-
-                SendReceiveOptions nullOptions = new SendRecieveOptions<NullSerializer>(new Dictionary<string,string>());
-
-                //Once complete we pass the item bytes back into network comms
-                //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
-                if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
-                {
-                    PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
-                    //We set the item checksum so that the entire distributed item can be easily retrieved later
-                    itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
-                    byte[] itemBytes = newItem.AccessItemBytes();
-                    NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(itemBytes, 0, itemBytes.Length, false, true), nullOptions);
-                }
-
-                //Close any connections which are no longer required
-                newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
-
-                if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
-            }
-            catch (CommsException)
-            {
-                //Crap an error has happened, let people know we probably don't have a good file
-                RemoveItem(assemblyConfig.ItemCheckSum);
-                //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
-            }
-            catch (Exception e)
-            {
-                //Crap an error has happened, let people know we probably don't have a good file
-                RemoveItem(assemblyConfig.ItemCheckSum);
-
-                if (newItem != null)
-                    NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
-                else
-                    NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
-            }
+                });
         }
 
         /// <summary>

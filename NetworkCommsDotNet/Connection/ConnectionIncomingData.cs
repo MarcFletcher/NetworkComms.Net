@@ -64,7 +64,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCount + " bytes read.");
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached + " bytes read.");
 
                 //Loop until we are finished with this packetBuilder
                 int loopCounter = 0;
@@ -74,7 +74,7 @@ namespace NetworkCommsDotNet
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (packetBuilder.FirstByte() == 0)
                     {
-                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff(), loop index - " + loopCounter);
+                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from "+ConnectionInfo+", loop index - " + loopCounter);
 
                         packetBuilder.ClearNTopBytes(1);
 
@@ -82,7 +82,7 @@ namespace NetworkCommsDotNet
                         packetBuilder.TotalBytesExpected = 0;
 
                         //If we have run out of data completely then we can return immediately
-                        if (packetBuilder.TotalBytesCount == 0) return;
+                        if (packetBuilder.TotalBytesCached == 0) return;
                     }
                     else
                     {
@@ -90,7 +90,7 @@ namespace NetworkCommsDotNet
                         int packetHeaderSize = packetBuilder.FirstByte() + 1;
 
                         //Do we have enough data to build a header?
-                        if (packetBuilder.TotalBytesCount < packetHeaderSize)
+                        if (packetBuilder.TotalBytesCached < packetHeaderSize)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet header.");
 
@@ -108,7 +108,7 @@ namespace NetworkCommsDotNet
 
                         //We can now use the header to establish if we have enough payload data
                         //First case is when we have not yet received enough data
-                        if (packetBuilder.TotalBytesCount < packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
                             if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... ... more data required for complete packet payload.");
 
@@ -117,7 +117,7 @@ namespace NetworkCommsDotNet
                             return;
                         }
                         //Second case is we have enough data
-                        else if (packetBuilder.TotalBytesCount >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        else if (packetBuilder.TotalBytesCached >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
@@ -159,7 +159,7 @@ namespace NetworkCommsDotNet
                             packetBuilder.TotalBytesExpected = 0;
 
                             //If we have run out of data completely then we can return immediately
-                            if (packetBuilder.TotalBytesCount == 0) return;
+                            if (packetBuilder.TotalBytesCached == 0) return;
                         }
                         else
                             throw new CommunicationException("This should be impossible!");

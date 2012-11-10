@@ -53,13 +53,13 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The total number of cached bytes. This is the sum of all bytes across all cached partial packets. See <see cref="TotalPartialPacketCount"/>.
         /// </summary>
-        public int TotalBytesCount
+        public int TotalBytesCached
         {
             get { return totalBytesCached; }
         }
 
         /// <summary>
-        /// The total number of cached partial packets. This is different from <see cref="TotalBytesCount"/> because each partial packet may contain a variable number of bytes.
+        /// The total number of cached partial packets. This is different from <see cref="TotalBytesCached"/> because each partial packet may contain a variable number of bytes.
         /// </summary>
         public int TotalPartialPacketCount
         {
@@ -155,6 +155,14 @@ namespace NetworkCommsDotNet
 
                 packets.Add(partialPacket);
                 packetActualBytes.Add(packetBytes);
+
+                if (NetworkComms.loggingEnabled)
+                {
+                    if (TotalBytesExpected == 0 && totalBytesCached > (10 * 1024 * 1024))
+                        NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when 0KB are currently expected.");
+                    else if (totalBytesCached > totalBytesExpected * 2)
+                        NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when only " + (TotalBytesExpected / 1024.0).ToString("0.0") + " bytes were expected.");
+                }
             }
         }
 

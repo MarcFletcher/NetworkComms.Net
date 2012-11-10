@@ -91,6 +91,7 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.loggingEnabled)
                         NetworkComms.logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
 
+                    establishIfRequired = false;
                     connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
                 }
                 else
@@ -223,7 +224,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing TCP client with " + ConnectionInfo);
+                if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Connecting TCP client with " + ConnectionInfo);
 
                 //We now connect to our target
                 tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));

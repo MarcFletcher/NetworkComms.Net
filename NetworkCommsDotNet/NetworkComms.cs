@@ -978,9 +978,19 @@ namespace NetworkCommsDotNet
         internal static ConnectionEstablishShutdownDelegate globalConnectionShutdownDelegates;
 
         /// <summary>
+        /// Delegate counter for debugging.
+        /// </summary>
+        internal static int globalConnectionShutdownDelegateCount = 0;
+
+        /// <summary>
         /// Multicast delegate pointer for connection establishments.
         /// </summary>
         internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegates;
+
+        /// <summary>
+        /// Delegate counter for debugging.
+        /// </summary>
+        internal static int globalConnectionEstablishDelegateCount = 0;
 
         /// <summary>
         /// Comms shutdown event. This will be triggered when calling NetworkComms.Shutdown
@@ -1000,7 +1010,9 @@ namespace NetworkCommsDotNet
                 else
                     globalConnectionShutdownDelegates += connectionShutdownDelegate;
 
-                if (loggingEnabled) logger.Info("Added globalConnectionShutdownDelegates.");
+                globalConnectionShutdownDelegateCount++;
+
+                if (loggingEnabled) logger.Info("Added globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
             }
         }
 
@@ -1013,17 +1025,9 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 globalConnectionShutdownDelegates -= connectionShutdownDelegate;
+                globalConnectionShutdownDelegateCount--;
 
-                if (loggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates.");
-
-                if (globalConnectionShutdownDelegates == null)
-                {
-                    if (loggingEnabled) logger.Info("No handlers remain for globalConnectionShutdownDelegates.");
-                }
-                else
-                {
-                    if (loggingEnabled) logger.Info("Handlers remain for globalConnectionShutdownDelegates.");
-                }
+                if (loggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
             }
         }
 
@@ -1040,7 +1044,9 @@ namespace NetworkCommsDotNet
                 else
                     globalConnectionEstablishDelegates += connectionEstablishDelegate;
 
-                if (loggingEnabled) logger.Info("Added globalConnectionEstablishDelegates.");
+                globalConnectionEstablishDelegateCount++;
+
+                if (loggingEnabled) logger.Info("Added globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
             }
         }
 
@@ -1053,17 +1059,9 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 globalConnectionEstablishDelegates -= connectionEstablishDelegate;
+                globalConnectionEstablishDelegateCount--;
 
-                if (loggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates.");
-
-                if (globalConnectionEstablishDelegates == null)
-                {
-                    if (loggingEnabled) logger.Info("No handlers remain for globalConnectionEstablishDelegates.");
-                }
-                else
-                {
-                    if (loggingEnabled) logger.Info("Handlers remain for globalConnectionEstablishDelegates.");
-                }
+                if (loggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
             }
         }
 
@@ -1768,6 +1766,9 @@ namespace NetworkCommsDotNet
         /// <param name="newEndPoint"></param>
         internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newEndPoint)
         {
+            if (NetworkComms.loggingEnabled)
+                NetworkComms.logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newEndPoint != null ? " Provided new endPoint of " + newEndPoint.Address + ":" + newEndPoint.Port : ""));
+
             if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newEndPoint))
             {
                 lock (globalDictAndDelegateLocker)
@@ -1789,6 +1790,9 @@ namespace NetworkCommsDotNet
 
             if (connection.ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                 throw new ConnectionSetupException("Should not be calling AddConnectionByIdentifierReference unless the connection remote identifier has been set.");
+
+            if (NetworkComms.loggingEnabled)
+                NetworkComms.logger.Trace("Adding connection reference by identifier. Connection=" + connection.ConnectionInfo + ".");
 
             lock (globalDictAndDelegateLocker)
             {

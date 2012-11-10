@@ -91,28 +91,26 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.loggingEnabled)
-                    NetworkComms.logger.Trace("Establishing new connection with " + ConnectionInfo);
-
-                bool connectionEstablishing = false;
+                bool connectionAlreadyEstablishing = false;
                 lock (delegateLocker)
                 {
                     if (ConnectionInfo.ConnectionState == ConnectionState.Established) return;
                     else if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection. Please create a new connection instead.");
                     else if (ConnectionInfo.ConnectionState == ConnectionState.Establishing)
-                        connectionEstablishing = true;
+                        connectionAlreadyEstablishing = true;
                     else
                         ConnectionInfo.NoteStartConnectionEstablish();
                 }
 
-                if (connectionEstablishing)
+                if (connectionAlreadyEstablishing)
                 {
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Waiting for connection with " + ConnectionInfo + " to be established.");
                     if (!WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS))
                         throw new ConnectionSetupException("Timeout waiting for connection to be succesfully established.");
                 }
                 else
                 {
-                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing connection with " + ConnectionInfo);
+                    if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace("Establishing new connection with " + ConnectionInfo);
 
                     EstablishConnectionSpecific();
 
@@ -125,6 +123,8 @@ namespace NetworkCommsDotNet
                     ConnectionInfo.NoteCompleteConnectionEstablish();
                     NetworkComms.AddConnectionReferenceByIdentifier(this);
                     connectionEstablishWait.Set();
+
+                    if (NetworkComms.loggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
 
                     //Call the establish delegate if one is set
                     if (NetworkComms.globalConnectionEstablishDelegates != null)
@@ -164,6 +164,9 @@ namespace NetworkCommsDotNet
         {
             if (NetworkComms.loggingEnabled)
                 NetworkComms.logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
+
+            if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
 
             return connectionSetupWait.WaitOne(waitTimeoutMS);
         }

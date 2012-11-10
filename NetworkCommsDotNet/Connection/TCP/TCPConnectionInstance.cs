@@ -56,9 +56,9 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
 
                         //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler().");
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 1");
                         }
                         else
                         {
@@ -69,7 +69,7 @@ namespace NetworkCommsDotNet
 
                             //If we have more data we might as well continue reading syncronously
                             //In order to deal with data as soon as we think we have sufficient we will leave this loop
-                            while (dataAvailable && packetBuilder.TotalBytesCount < packetBuilder.TotalBytesExpected)
+                            while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
                             {
                                 int bufferOffset = 0;
 
@@ -88,9 +88,9 @@ namespace NetworkCommsDotNet
                                     ConnectionInfo.UpdateLastTrafficTime();
 
                                     //If we have read a single byte which is 0 and we are not expecting other data
-                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
+                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                                     {
-                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler(). 2");
+                                        if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 2");
                                         //LastTrafficTime = DateTime.Now;
                                     }
                                     else
@@ -106,7 +106,7 @@ namespace NetworkCommsDotNet
                         }
                     }
 
-                    if (packetBuilder.TotalBytesCount > 0 && packetBuilder.TotalBytesCount >= packetBuilder.TotalBytesExpected)
+                    if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
                     {
                         //Once we think we might have enough data we call the incoming packet handle handoff
                         //Should we have a complete packet this method will start the appriate task
@@ -192,9 +192,9 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
 
                         //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCount == 0)
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                         {
-                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingDataSyncWorker().");
+                            if (NetworkComms.loggingEnabled) NetworkComms.logger.Trace(" ... null packet removed in IncomingDataSyncWorker() from "+ConnectionInfo+".");
                         }
                         else
                         {
@@ -210,7 +210,7 @@ namespace NetworkCommsDotNet
                     }
 
                     //If we have read some data and we have more or equal what was expected we attempt a data handoff
-                    if (packetBuilder.TotalBytesCount > 0 && packetBuilder.TotalBytesCount >= packetBuilder.TotalBytesExpected)
+                    if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
                         IncomingPacketHandleHandOff(packetBuilder);
                 }
             }
