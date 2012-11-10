@@ -149,6 +149,31 @@ namespace DebugTests
             }
         }
 
+        public static void GoDFSLogParse()
+        {
+            string[] allLines = File.ReadAllLines("log.txt");
+
+            using (StreamWriter sw = new StreamWriter("out.csv", false))
+            {
+                for (int i = 0; i < allLines.Length; i++)
+                {
+                    string line = allLines[i];
+
+                    if (line.Contains(" payload bytes."))
+                    {
+                        int stringend = line.IndexOf(" payload bytes.", 0);
+                        int stringStart = line.LastIndexOf("and ") + 4;
+
+                        int timeEnd = line.IndexOf(" - ", 0);
+
+                        double payloadSize = double.Parse(line.Substring(stringStart, stringend-stringStart));
+
+                        sw.WriteLine(payloadSize + "," + line);
+                    }
+                }
+            }
+        }
+
         [ProtoBuf.ProtoContract]
         class SerialiseTest
         {

@@ -67,7 +67,8 @@ namespace DebugTests
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
-            LoadTest.RunExample();
+            //LoadTest.RunExample();
+            DebugTest.GoDFSLogParse();
         }
     }
 }
