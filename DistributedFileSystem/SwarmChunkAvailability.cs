@@ -540,7 +540,7 @@ namespace DistributedFileSystem
                 {
                     ShortGuid peerIdentifier = peerIdentifierInner;
                     //Removed tasks as this wants to run in the same thread as the originating call
-                    unknownPeersUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                    unknownPeersUpdateTasks.Add(DFS.GeneralTaskFactory.StartNew(new Action(() =>
                     {
                         try
                         {
@@ -599,7 +599,7 @@ namespace DistributedFileSystem
             {
                 ShortGuid peerIdentifier = peerIdentifierOuter;
                 //Removed tasks as this wants to run in the same thread as the originating call
-                originalPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                originalPeerAvailabilityFlagUpdateTasks.Add(DFS.GeneralTaskFactory.StartNew(new Action(() =>
                 {
                     try
                     {
@@ -657,7 +657,7 @@ namespace DistributedFileSystem
                     {
                         string peerContactInfo = peerContactInfoOuter;
                         //Removed tasks as this wants to run in the same thread as the originating call
-                        unknownPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
+                        unknownPeerAvailabilityFlagUpdateTasks.Add(DFS.GeneralTaskFactory.StartNew(new Action(() =>
                         {
                             try
                             {
@@ -846,7 +846,7 @@ namespace DistributedFileSystem
                 ShortGuid peerIdentifier = outerPeerIdentifier;
 
                 //Do this with a task so that it does not block
-                Task.Factory.StartNew(new Action(() =>
+                DFS.GeneralTaskFactory.StartNew(new Action(() =>
                 {
                     try
                     {

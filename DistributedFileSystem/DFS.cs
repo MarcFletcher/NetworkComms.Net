@@ -40,7 +40,7 @@ namespace DistributedFileSystem
 
         public const int NumConcurrentRequests = 2;
         public const int NumTotalGlobalRequests = 8;
-        public const int MaxConcurrentLocalItemBuild = 4;
+        public const int MaxConcurrentLocalItemBuild = 3;
         public const int MaxPeerTimeoutCount = 3;
 
         public const int PeerBusyTimeoutMS = 500;
@@ -102,7 +102,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// A privte task factory for assembling new local DFS items. If we use the NetworkComms.TaskFactory we can end up deadlocking and prevent incoming packets from being handled.
         /// </summary>
-        static TaskFactory DFSTaskFactory;
+        static TaskFactory BuildTaskFactory;
+        internal static TaskFactory GeneralTaskFactory;
 
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
@@ -112,7 +113,8 @@ namespace DistributedFileSystem
             MinTargetLocalPort = 10001;
             MaxTargetLocalPort = 10999;
 
-            DFSTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            BuildTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            GeneralTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
 
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
@@ -744,7 +746,7 @@ namespace DistributedFileSystem
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
-            Task.Factory.StartNew(new Action(() =>
+            GeneralTaskFactory.StartNew(new Action(() =>
             {
                 try
                 {
@@ -818,7 +820,7 @@ namespace DistributedFileSystem
         private static void IncomingLocalItemBuild(PacketHeader packetHeader, Connection connection, ItemAssemblyConfig assemblyConfig)
         {
             //We start the build in the DFS task factory as it will be a long lived task
-            DFSTaskFactory.StartNew(() =>
+            BuildTaskFactory.StartNew(() =>
                 {
                     DistributedItem newItem = null;
                     byte[] itemBytes = null;

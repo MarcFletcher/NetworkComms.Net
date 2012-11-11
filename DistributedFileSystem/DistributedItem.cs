@@ -611,7 +611,7 @@ namespace DistributedFileSystem
                             }
                         });
 
-                        Task.Factory.StartNew(requestAction);
+                        DFS.GeneralTaskFactory.StartNew(requestAction);
                     }
                 }
 
