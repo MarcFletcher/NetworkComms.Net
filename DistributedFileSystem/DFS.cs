@@ -41,6 +41,7 @@ namespace DistributedFileSystem
         public const int NumConcurrentRequests = 2;
         public const int NumTotalGlobalRequests = 8;
         public const int MaxConcurrentLocalItemBuild = 4;
+        public const int MaxPeerTimeoutCount = 3;
 
         public const int PeerBusyTimeoutMS = 500;
 
@@ -49,7 +50,7 @@ namespace DistributedFileSystem
         /// </summary>
         public const double PeerBusyNetworkLoadThreshold = 0.8;
 
-        public const int ItemBuildTimeoutSecsPerMB = 6;
+        public const int ItemBuildTimeoutSecsPerMB = 5;
 
         static object globalDFSLocker = new object();
         /// <summary>
@@ -479,8 +480,6 @@ namespace DistributedFileSystem
                 if (swarmedItemsDict.ContainsKey(itemCheckSum))
                 {
                     itemToRemove = swarmedItemsDict[itemCheckSum];
-
-                    //Remove the item locally
                     swarmedItemsDict.Remove(itemCheckSum);
                 }
             }
@@ -491,6 +490,8 @@ namespace DistributedFileSystem
                 if(broadcastRemoval)
                 //Broadcast to the swarm we are removing this file
                     itemToRemove.SwarmChunkAvailability.BroadcastItemRemoval(itemCheckSum, removeSwarmWide);
+
+                itemToRemove.AbortBuild = true;
 
                 //Dispose of the distributed item incase it has any open file handles
                 itemToRemove.Dispose();
@@ -743,7 +744,7 @@ namespace DistributedFileSystem
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
-            NetworkComms.TaskFactory.StartNew(new Action(() =>
+            Task.Factory.StartNew(new Action(() =>
             {
                 try
                 {
@@ -820,6 +821,7 @@ namespace DistributedFileSystem
             DFSTaskFactory.StartNew(() =>
                 {
                     DistributedItem newItem = null;
+                    byte[] itemBytes = null;
 
                     try
                     {
@@ -844,49 +846,52 @@ namespace DistributedFileSystem
 
                         //Build the item from the swarm
                         //If the item is already complete this will return immediately
-                        newItem.AssembleItem((int)(ItemBuildTimeoutSecsPerMB * (assemblyConfig.TotalItemSizeInBytes / 1024.0)));
-
-                        //Copy the result to the disk if required by the build target
-                        if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
-                        {
-                            using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
-                                newItem.CopyItemDataStream(sw);
-                        }
-
-                        SendReceiveOptions nullOptions = new SendRecieveOptions<NullSerializer>(new Dictionary<string, string>());
+                        newItem.AssembleItem((int)(ItemBuildTimeoutSecsPerMB * (assemblyConfig.TotalItemSizeInBytes / (1024.0 * 1024.0))));
 
                         //Once complete we pass the item bytes back into network comms
                         //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
                         if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
                         {
-                            PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
-                            //We set the item checksum so that the entire distributed item can be easily retrieved later
-                            itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
-                            byte[] itemBytes = newItem.AccessItemBytes();
-                            NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, new MemoryStream(itemBytes, 0, itemBytes.Length, false, true), nullOptions);
+                            if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
+
+                            //Copy the result to the disk if required by the build target
+                            if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
+                            {
+                                using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                                    newItem.CopyItemDataStream(sw);
+                            }
+
+                            itemBytes = newItem.AccessItemBytes();
                         }
-
-                        //Close any connections which are no longer required
-                        //Commented out incase we are building multiple items at once
-                        //newItem.SwarmChunkAvailability.CloseConnectionToCompletedPeers(newItem.TotalNumChunks);
-
-                        if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
+                        else if (assemblyConfig.CompletedPacketType != "")
+                            RemoveItem(assemblyConfig.ItemCheckSum);
                     }
                     catch (CommsException)
                     {
                         //Crap an error has happened, let people know we probably don't have a good file
                         RemoveItem(assemblyConfig.ItemCheckSum);
+                        //connection.CloseConnection(true, 30);
                         //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
                     }
                     catch (Exception e)
                     {
                         //Crap an error has happened, let people know we probably don't have a good file
                         RemoveItem(assemblyConfig.ItemCheckSum);
+                        //connection.CloseConnection(true, 31);
 
                         if (newItem != null)
                             NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
                         else
                             NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
+                    }
+                    finally
+                    {
+
+                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                        //We set the item checksum so that the entire distributed item can be easily retrieved later
+                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+
+                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendRecieveOptions<NullSerializer>(new Dictionary<string, string>()));
                     }
                 });
         }

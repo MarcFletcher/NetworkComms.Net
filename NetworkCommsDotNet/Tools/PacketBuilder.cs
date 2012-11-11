@@ -161,7 +161,7 @@ namespace NetworkCommsDotNet
                     if (TotalBytesExpected == 0 && totalBytesCached > (10 * 1024 * 1024))
                         NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when 0KB are currently expected.");
                     else if (TotalBytesExpected > 0 && totalBytesCached > totalBytesExpected * 2)
-                        NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when only " + (TotalBytesExpected / 1024.0).ToString("0.0") + " bytes were expected.");
+                        NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when only " + (TotalBytesExpected / 1024.0).ToString("0.0") + "KB were expected.");
                 }
             }
         }

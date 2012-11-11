@@ -105,14 +105,10 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (establishIfRequired)
-            {
-                if (newConnection) connection.EstablishConnection(); 
-                else connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
-            }
+            if (newConnection && establishIfRequired) connection.EstablishConnection(); 
+            else if (!newConnection) connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
 
-            if (!NetworkComms.commsShutdown)
-                TriggerConnectionKeepAliveThread();
+            if (!NetworkComms.commsShutdown) TriggerConnectionKeepAliveThread();
 
             return connection;
         }

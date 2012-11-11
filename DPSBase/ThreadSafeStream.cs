@@ -35,7 +35,7 @@ namespace DPSBase
         /// <summary>
         /// If true the internal stream will be disposed once the data has been written to the network
         /// </summary>
-        public bool DisposeStreamAfterSend { get; private set; }
+        public bool CloseStreamAfterSend { get; private set; }
 
         /// <summary>
         /// Create a thread safe stream. Once any actions are complete the stream must be correctly disposed by the user.
@@ -43,7 +43,7 @@ namespace DPSBase
         /// <param name="stream">The stream to make thread safe</param>
         public ThreadSafeStream(Stream stream)
         {
-            this.DisposeStreamAfterSend = false;
+            this.CloseStreamAfterSend = false;
 
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
@@ -56,10 +56,10 @@ namespace DPSBase
         /// Create a thread safe stream.
         /// </summary>
         /// <param name="stream">The stream to make thread safe.</param>
-        /// <param name="disposeStreamAfterSend">If true the provided stream will be disposed once data has been written to the network. If false the stream must be disposed of correctly by the user</param>
-        public ThreadSafeStream(Stream stream, bool disposeStreamAfterSend)
+        /// <param name="closeStreamAfterSend">If true the provided stream will be disposed once data has been written to the network. If false the stream must be disposed of correctly by the user</param>
+        public ThreadSafeStream(Stream stream, bool closeStreamAfterSend)
         {
-            this.DisposeStreamAfterSend = disposeStreamAfterSend;
+            this.CloseStreamAfterSend = closeStreamAfterSend;
 
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
@@ -177,11 +177,19 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Call Dispose on the internal stream
+        /// Call Close on the internal stream
         /// </summary>
         public void Dispose()
         {
-            lock (streamLocker) stream.Dispose();
+            lock (streamLocker) stream.Close();
+        }
+
+        /// <summary>
+        /// Call Close on the internal stream
+        /// </summary>
+        public void Close()
+        {
+            lock (streamLocker) stream.Close();
         }
     }
 }

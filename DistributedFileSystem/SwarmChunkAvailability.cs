@@ -222,6 +222,9 @@ namespace DistributedFileSystem
         public DateTime PeerBusyAnnounce { get; private set; }
         public bool PeerBusy { get; private set; }
 
+        public int timeoutCount;
+        public int CurrentTimeoutCount { get { return timeoutCount; } }
+
         private PeerAvailabilityInfo() { }
 
         public PeerAvailabilityInfo(ChunkFlags peerChunkFlags, bool superPeer)
@@ -239,6 +242,15 @@ namespace DistributedFileSystem
         public void ClearBusy()
         {
             PeerBusy = false;
+        }
+
+        /// <summary>
+        /// Returns the new timeout count value after incrementing the current count.
+        /// </summary>
+        /// <returns></returns>
+        public int GetNewTimeoutCount()
+        {
+            return Interlocked.Increment(ref timeoutCount);
         }
     }
 
@@ -395,6 +407,17 @@ namespace DistributedFileSystem
             }
         }
 
+        public int GetNewTimeoutCount(ShortGuid networkIdentifier)
+        {
+            lock (peerLocker)
+            {
+                if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
+                    return 0;
+
+                return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetNewTimeoutCount();
+            }
+        }
+
         /// <summary>
         /// Converts a provided network identifier into an ip address. There is no guarantee the ip is connectable.
         /// </summary>
@@ -431,11 +454,12 @@ namespace DistributedFileSystem
                         peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
 
                         if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
+                        {
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " from item.");
                             peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
-
-                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
-
-                        //Console.WriteLine("... removing peer " + networkIdentifier + ".");
+                        }
+                        else
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
                     }
                 }
             }
@@ -496,7 +520,7 @@ namespace DistributedFileSystem
         /// Update the chunk availability by contacting all existing peers. If a cascade depth greater than 1 is provided will also contact each peers peers.
         /// </summary>
         /// <param name="cascadeDepth"></param>
-        public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseTimeoutMS = 1000)
+        public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseTimeoutMS = 5000)
         {
             string[] currentPeerKeys;
             lock (peerLocker) currentPeerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
@@ -516,7 +540,7 @@ namespace DistributedFileSystem
                 {
                     ShortGuid peerIdentifier = peerIdentifierInner;
                     //Removed tasks as this wants to run in the same thread as the originating call
-                    unknownPeersUpdateTasks.Add(NetworkComms.TaskFactory.StartNew(new Action(() =>
+                    unknownPeersUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
                     {
                         try
                         {
@@ -575,7 +599,7 @@ namespace DistributedFileSystem
             {
                 ShortGuid peerIdentifier = peerIdentifierOuter;
                 //Removed tasks as this wants to run in the same thread as the originating call
-                originalPeerAvailabilityFlagUpdateTasks.Add(NetworkComms.TaskFactory.StartNew(new Action(() =>
+                originalPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
                 {
                     try
                     {
@@ -633,7 +657,7 @@ namespace DistributedFileSystem
                     {
                         string peerContactInfo = peerContactInfoOuter;
                         //Removed tasks as this wants to run in the same thread as the originating call
-                        unknownPeerAvailabilityFlagUpdateTasks.Add(NetworkComms.TaskFactory.StartNew(new Action(() =>
+                        unknownPeerAvailabilityFlagUpdateTasks.Add(Task.Factory.StartNew(new Action(() =>
                         {
                             try
                             {
@@ -822,7 +846,7 @@ namespace DistributedFileSystem
                 ShortGuid peerIdentifier = outerPeerIdentifier;
 
                 //Do this with a task so that it does not block
-                NetworkComms.TaskFactory.StartNew(new Action(() =>
+                Task.Factory.StartNew(new Action(() =>
                 {
                     try
                     {

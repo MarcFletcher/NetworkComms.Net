@@ -162,13 +162,18 @@ namespace NetworkCommsDotNet
         /// <returns>True if the wait was triggered, false otherwise after the provided timeout.</returns>
         protected bool WaitForConnectionEstablish(int waitTimeoutMS)
         {
-            if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
+            if (ConnectionInfo.ConnectionState == ConnectionState.Established)
+                return true;
+            else
+            {
+                if (NetworkComms.LoggingEnabled)
+                    NetworkComms.Logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
 
-            if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
-                throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                    throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
 
-            return connectionSetupWait.WaitOne(waitTimeoutMS);
+                return connectionSetupWait.WaitOne(waitTimeoutMS);
+            }
         }
 
         /// <summary>

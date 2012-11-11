@@ -90,6 +90,8 @@ namespace DistributedFileSystem
         AutoResetEvent itemBuildWait = new AutoResetEvent(false);
         ManualResetEvent itemBuildComplete = new ManualResetEvent(false);
 
+        public volatile bool AbortBuild;
+
         /// <summary>
         /// Tracks which chunks are currently being provided to other peers
         /// </summary>
@@ -296,9 +298,11 @@ namespace DistributedFileSystem
             });
 
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionShutdownDuringBuild);
+            
+            AbortBuild = false;
 
             //Loop until the local file is complete
-            while (!LocalItemComplete())
+            while (!LocalItemComplete() && !AbortBuild)
             {
                 #region BuildItem
                 //The requests we are going to make this loop
@@ -339,14 +343,19 @@ namespace DistributedFileSystem
                         {
                             if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > DFS.ChunkRequestTimeoutMS)
                             {
-                                if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
+                                if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier) > DFS.MaxPeerTimeoutCount)
                                 {
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " peer from AssembleItem due to potential timeout.");
-                                    AddBuildLogLine("Removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " from AssembleItem due to potential timeout.");
-                                    SwarmChunkAvailability.RemovePeerFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
+                                    if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
+                                    {
+                                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " peer from AssembleItem due to potential timeout.");
+                                        AddBuildLogLine("Removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " from AssembleItem due to potential timeout.");
+                                        SwarmChunkAvailability.RemovePeerFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
+                                    }
+                                    else
+                                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
                                 }
                                 else
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
+                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
 
                                 itemBuildTrackerDict.Remove(currentTrackerKeys[i]);
                             }
@@ -394,6 +403,7 @@ namespace DistributedFileSystem
                                                                            where !currentRequestIdentifiers.Contains(current.Key.NetworkIdentifier)
                                                                            //See comments within /**/ below for ordering notes
                                                                            orderby
+                                                                               current.Value.CurrentTimeoutCount ascending,
                                                                                (useCompletedPeers ? 0 : current.Value.PeerChunkFlags.NumCompletedChunks()) ascending,
                                                                                (useCompletedPeers ? current.Value.PeerChunkFlags.NumCompletedChunks() : 0) descending,
                                                                                randGen.NextDouble() ascending
@@ -409,6 +419,9 @@ namespace DistributedFileSystem
                                 
                                     10/4/12
                                     We are modifying this sorting when over half the swarm peers have already completed the item
+                                     
+                                    11/11/12
+                                    Added an initial ordering based on timeout count so that we go to peers who do not timeout first
                                     */
 
                                     //We can only make a request if there are available peers
@@ -598,13 +611,14 @@ namespace DistributedFileSystem
                             }
                         });
 
-                        NetworkComms.TaskFactory.StartNew(requestAction);
+                        Task.Factory.StartNew(requestAction);
                     }
                 }
 
                 #endregion
 
-                AddBuildLogLine("Made " + newRequests.Count + " new chunk requests.");
+                if (DFS.loggingEnabled) DFS.logger.Trace("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
+                AddBuildLogLine("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
 
                 #endregion
 
@@ -623,7 +637,10 @@ namespace DistributedFileSystem
                     WaitHandle.WaitAny(new WaitHandle[] { itemBuildWait, itemBuildComplete }, DFS.PeerBusyTimeoutMS);
 
                 if ((DateTime.Now - assembleStartTime).TotalSeconds > assembleTimeoutSecs)
+                {
+                    
                     throw new TimeoutException("AssembleItem() has taken longer than " + assembleTimeoutSecs + " secs so has been timed out.");
+                }
 
                 if (DFS.DFSShutdownRequested)
                     return;
@@ -638,9 +655,16 @@ namespace DistributedFileSystem
             //Close connections to other completed clients which are not a super peer
             //SwarmChunkAvailability.CloseConnectionToCompletedPeers(TotalNumChunks);
 
-            if (DFS.loggingEnabled) DFS.logger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
-
-            AddBuildLogLine("Completed assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+            if (AbortBuild)
+            {
+                if (DFS.loggingEnabled) DFS.logger.Debug(" ... aborted DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+                AddBuildLogLine("Aborted assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+            }
+            else
+            {
+                if (DFS.loggingEnabled) DFS.logger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+                AddBuildLogLine("Completed assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+            }
 
             //try { GC.Collect(); }
             //catch (Exception) { }
@@ -650,12 +674,17 @@ namespace DistributedFileSystem
         {
             try
             {
+                string logString = "";
                 if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
-                    AddBuildLogLine("Incoming SUCCESS reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")");
+                    logString = "Incoming SUCCESS reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
-                    AddBuildLogLine("Incoming FAILURE reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")");
+                    logString = "Incoming FAILURE reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else
-                    AddBuildLogLine("Incoming BUSY reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")");
+                    logString = "Incoming BUSY reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+
+                AddBuildLogLine(logString);
+
+                if (DFS.loggingEnabled) DFS.logger.Trace(logString);
 
                 //We want to remove the chunk from the incoming build tracker so that it no longer counts as an outstanding request
                 bool integrateChunk = false;
@@ -901,7 +930,7 @@ namespace DistributedFileSystem
         public void Dispose()
         {
             if (ItemDataStream != null)
-                ItemDataStream.Dispose();
+                ItemDataStream.Close();
         }
 
         /// <summary>

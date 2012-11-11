@@ -484,7 +484,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// A dedicated task factory for executing comms related tasks (e.g. packet handler delegates). Used to manage comms when managing hundreds/thousands of potential connections.
         /// </summary>
-        public static TaskFactory TaskFactory { get; private set; }
+        internal static TaskFactory TaskFactory { get; set; }
 
         /// <summary>
         /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets
@@ -538,7 +538,7 @@ namespace NetworkCommsDotNet
                     if (item == null)
                         throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
 
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Pulled packet item from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Pulled packet item with packetType='"+item.PacketHeader.PacketType+"' from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
 
                     if (Thread.CurrentThread.Priority != item.Priority) Thread.CurrentThread.Priority = item.Priority;
                 }
@@ -617,8 +617,6 @@ namespace NetworkCommsDotNet
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
                     //GC.Collect();
                 }
-
-
             }
             catch (CommunicationException)
             {
@@ -642,7 +640,7 @@ namespace NetworkCommsDotNet
             finally
             {
                 //We need to dispose the data stream correctly
-                if (item!=null) item.DataStream.Dispose();
+                if (item!=null) item.DataStream.Close();
 
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;

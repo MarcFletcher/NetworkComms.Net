@@ -300,8 +300,8 @@ namespace NetworkCommsDotNet
             packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length);
 
             //Correctly dispose the stream if we are finished with it
-            if (packet.PacketData.ThreadSafeStream.DisposeStreamAfterSend)
-                packet.PacketData.ThreadSafeStream.Dispose();
+            if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
+                packet.PacketData.ThreadSafeStream.Close();
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
 
