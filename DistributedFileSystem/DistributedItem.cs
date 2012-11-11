@@ -162,24 +162,27 @@ namespace DistributedFileSystem
                 if (File.Exists(fileName))
                 {
                     //If the file already exists the MD5 had better match otherwise we have a problem
-                    FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                    string existingFileMD5 = NetworkComms.MD5Bytes(file);
-
-                    if (existingFileMD5 != assemblyConfig.ItemCheckSum)
+                    FileStream file;
+                    try
+                    {
+                        file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                        if (NetworkComms.MD5Bytes(file) != assemblyConfig.ItemCheckSum)
+                            throw new Exception("Wrong place, wrong time, wrong file!");
+                    }
+                    catch (Exception)
                     {
                         try
                         {
                             File.Delete(fileName);
+                            file = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
                         }
                         catch (Exception)
                         {
                             throw new Exception("File with name '" + fileName + "' already exists. Unfortunately the MD5 does match the expected DFS item. Unable to delete in order to continue.");
                         }
-
-                        this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
                     }
-                    else
-                        this.ItemDataStream = new ThreadSafeStream(file);
+
+                    this.ItemDataStream = new ThreadSafeStream(file);
                 }
                 else
                     this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));

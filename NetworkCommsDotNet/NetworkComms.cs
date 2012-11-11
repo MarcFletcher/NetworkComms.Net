@@ -617,6 +617,8 @@ namespace NetworkCommsDotNet
                     //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
                     //GC.Collect();
                 }
+
+
             }
             catch (CommunicationException)
             {
@@ -639,6 +641,9 @@ namespace NetworkCommsDotNet
             }
             finally
             {
+                //We need to dispose the data stream correctly
+                if (item!=null) item.DataStream.Dispose();
+
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
             }
@@ -836,11 +841,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetHeader">The packet header</param>
         /// <param name="connection">The incoming connection</param>
-        /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
+        /// <param name="incomingDataStream">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
-        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options)
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingDataStream, SendReceiveOptions options)
         {
-            TriggerGlobalPacketHandlers(packetHeader, connection, incomingObjectBytes, options, IgnoreUnknownPacketTypes);
+            TriggerGlobalPacketHandlers(packetHeader, connection, incomingDataStream, options, IgnoreUnknownPacketTypes);
         }
 
         /// <summary>
@@ -848,10 +853,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetHeader">The packet header</param>
         /// <param name="connection">The incoming connection</param>
-        /// <param name="incomingObjectBytes">The bytes corresponding to the incoming object</param>
+        /// <param name="incomingDataStream">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
         /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
-        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingObjectBytes, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
+        internal static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingDataStream, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride = false)
         {
             try
             {
@@ -885,7 +890,7 @@ namespace NetworkCommsDotNet
                         throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
                     //Deserialise the object only once
-                    object returnObject = handlersCopy[0].DeSerialize(incomingObjectBytes, options);
+                    object returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
 
                     //Pass the data onto the handler and move on.
                     if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '"+packetHeader.PacketType+"' to selected global handlers.");
