@@ -1,10 +1,15 @@
-Version 2.0 - Released xxxx
+Version 2.0 Beta 1 - Released 12/11/12
 
-- Custom thread priority handling
-- Auto detection of incoming compression / serialisation.
-- API changes
-- UDP
-- Encryption
+- UDP support.
+- Encryption support.
+- IPv6 suppport.
+- Automatic serialisation and compression detection.
+- Packet prioritisation.
+- Support for sending v.large files.
+- Multiple adaptor improvements.
+- Improved Remote Procedure Call support.
+- Significant improvements in flexibility, extendibility and performance.
+- Better documentation.
 
 Version 1.3 - Released 03/6/12
 
