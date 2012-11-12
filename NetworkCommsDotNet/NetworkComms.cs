@@ -1743,8 +1743,8 @@ namespace NetworkCommsDotNet
                     existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
-                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). New details - " + connection.ConnectionInfo +
-                            ". Existing connection is '" + existingConnection.ConnectionInfo.ConnectionState.ToString() + "' at " + existingConnection.ConnectionInfo.ConnectionEstablishedTime + " details - " + existingConnection.ConnectionInfo);
+                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
+                            ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime) + " - " + " details - " + existingConnection.ConnectionInfo);
                     }
                     else
                     {
