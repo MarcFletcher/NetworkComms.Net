@@ -283,7 +283,7 @@ namespace DistributedFileSystem
             DateTime assembleStartTime = DateTime.Now;
 
             //Contact all known peers and request an update
-            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, ItemBuildCascadeDepth);
+            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, ItemBuildCascadeDepth, 2000, AddBuildLogLine);
 
             NetworkComms.ConnectionEstablishShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionEstablishShutdownDelegate((Connection connection) =>
             {
@@ -343,6 +343,7 @@ namespace DistributedFileSystem
                         {
                             if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > DFS.ChunkRequestTimeoutMS)
                             {
+                                //We are going to consider this request potentially timed out
                                 if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier) > DFS.MaxPeerTimeoutCount)
                                 {
                                     if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
@@ -352,10 +353,16 @@ namespace DistributedFileSystem
                                         SwarmChunkAvailability.RemovePeerFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
                                     }
                                     else
+                                    {
+                                        AddBuildLogLine(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
                                         if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
+                                    }
                                 }
                                 else
+                                {
                                     if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
+                                    AddBuildLogLine(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
+                                }
 
                                 itemBuildTrackerDict.Remove(currentTrackerKeys[i]);
                             }
@@ -574,6 +581,8 @@ namespace DistributedFileSystem
                                         //If not we have no idea what chunks the new peer might have
                                         //Start by removing the old peer
                                         SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
+
+                                        AddBuildLogLine("Removed "+request.Key.NetworkIdentifier+" from swarm as the networkIdentifier no longer matches that expected.");
                                         //Request an availability update from the one we just connected to
                                         //It's possible it will have sent one because of the DFS_ChunkAvailabilityInterestRequest but this makes double sure
                                         peerConnection.SendObject("DFS_ChunkAvailabilityRequest", ItemCheckSum);
@@ -587,6 +596,7 @@ namespace DistributedFileSystem
                                 //If we can't connect to a peer we assume it's dead and don't try again
                                 SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
 
+                                AddBuildLogLine("Removed " + request.Key.NetworkIdentifier + " from swarm due to CommsException while requesting a chunk.");
                                 //Console.WriteLine("CommsException {0} - Removing requests for peer " + request.Key.NetworkIdentifier, DateTime.Now.ToString("HH:mm:ss.fff"));
                                 //NetworkComms.LogError(ex, "ChunkRequestError");
 

@@ -35,7 +35,7 @@ namespace DistributedFileSystem
     /// </summary>
     public static class DFS
     {
-        public const int ChunkRequestTimeoutMS = 10000;
+        public const int ChunkRequestTimeoutMS = 20000;
         public const int MinChunkSizeInBytes = 2097152;
 
         public const int NumConcurrentRequests = 2;

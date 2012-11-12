@@ -520,8 +520,10 @@ namespace DistributedFileSystem
         /// Update the chunk availability by contacting all existing peers. If a cascade depth greater than 1 is provided will also contact each peers peers.
         /// </summary>
         /// <param name="cascadeDepth"></param>
-        public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseTimeoutMS = 5000)
+        public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseTimeoutMS = 2000, Action<string> buildLog = null)
         {
+            if (buildLog != null) buildLog("Starting UpdatePeerAvailability update.");
+
             string[] currentPeerKeys;
             lock (peerLocker) currentPeerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
 
@@ -555,7 +557,11 @@ namespace DistributedFileSystem
                             string[] result = null;
                             //We don't want to contact ourselves plus we check the possible exception lists
                             if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                            {
+                                if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_KnownPeersRequest.");
                                 result = TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<string[]>("DFS_KnownPeersRequest", "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                if (buildLog != null) buildLog(" ... completed DFS_KnownPeersRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
+                            }
 
                             //We take all of the results and put them in our summary list
                             if (result != null)
@@ -574,6 +580,7 @@ namespace DistributedFileSystem
                         {
                             //If a peer has disconnected or fails to respond we just remove them from the list
                             RemovePeerFromSwarm(peerIdentifier);
+                            if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to CommsException.");
                         }
                         catch (KeyNotFoundException)
                         {
@@ -582,6 +589,7 @@ namespace DistributedFileSystem
                             //We could probably be a bit more carefull with how we maintain these references but we either catch the
                             //exception here or networkcomms will throw one when we try to connect to an old peer.
                             RemovePeerFromSwarm(peerIdentifier);
+                            if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to KeyNotFoundException.");
                         }
                         catch (Exception ex)
                         {
@@ -613,12 +621,17 @@ namespace DistributedFileSystem
 
                         //We don't want to contact ourselves and for now that includes anything having the same ip as us
                         if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                        {
+                            if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_ChunkAvailabilityRequest.");
                             TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                            if (buildLog != null) buildLog(" ... completed DFS_ChunkAvailabilityRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
+                        }
                     }
                     catch (CommsException)
                     {
                         //If a peer has disconnected we just remove them from the list
                         RemovePeerFromSwarm(peerIdentifier);
+                        if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to CommsException.");
                         //NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityCommsError");
                     }
                     catch (KeyNotFoundException)
@@ -628,6 +641,7 @@ namespace DistributedFileSystem
                         //We could probably be a bit more carefull with how we maintain these references but we either catch the
                         //exception here or networkcomms will throw one when we try to connect to an old peer.
                         RemovePeerFromSwarm(peerIdentifier);
+                        if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to KeyNotFoundException.");
                     }
                     catch (Exception ex)
                     {
@@ -665,11 +679,15 @@ namespace DistributedFileSystem
 
                                 //We don't want to contact ourselves and for now that includes anything having the same ip as us
                                 if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && PeerContactAllowed(peerEndPoint.Address, false))
+                                {
+                                    if (buildLog != null) buildLog("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest.");
                                     TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                    if (buildLog != null) buildLog(" ... completed DFS_ChunkAvailabilityRequest with " + peerContactInfo);
+                                }
                             }
                             catch (CommsException)
                             {
-
+                                if (buildLog != null) buildLog("Removing " + peerContactInfo + " from item swarm due to CommsException.");
                             }
                             catch (Exception ex)
                             {
@@ -684,6 +702,7 @@ namespace DistributedFileSystem
 
             //All our original and unknown peers have upto the timeout to sort out their shit otherwise we move on without them responding.
             Task.WaitAll(originalPeerAvailabilityFlagUpdateTasks.Union(unknownPeerAvailabilityFlagUpdateTasks).ToArray(), responseTimeoutMS);
+            if (buildLog != null) buildLog("Completed SwarmChunkAvailability update.");
         }
 
         /// <summary>
