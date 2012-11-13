@@ -251,7 +251,7 @@ namespace DistributedFileSystem
             lock (itemLocker) PushCount++;
         }
 
-        private void AddBuildLogLine(string newLine)
+        public void AddBuildLogLine(string newLine)
         {
             lock (assembleLogLocker)
             {
@@ -560,8 +560,8 @@ namespace DistributedFileSystem
                         KeyValuePair<ConnectionInfo, List<ChunkAvailabilityRequest>> request = outerRequest;
 
                         //We can contact every peer seperately so that no single peer can hold up the build
-                        Action requestAction = new Action(() =>
-                        {
+                        //Action requestAction = new Action(() =>
+                        //{
                             try
                             {
                                 if (request.Value.Count > DFS.NumConcurrentRequests)
@@ -572,21 +572,22 @@ namespace DistributedFileSystem
                                     #region RequestChunkFromPeer
                                     //Console.WriteLine("({0}) requesting chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
 
-                                    TCPConnection peerConnection = TCPConnection.GetConnection(new ConnectionInfo(request.Key.LocalEndPoint));
-                                    peerConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i]);
+                                    //TCPConnection peerConnection = TCPConnection.GetConnection(new ConnectionInfo(request.Key.LocalEndPoint));
+                                    //peerConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i]);
+                                    UDPConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i], request.Key.LocalEndPoint, DFS.nullCompressionSRO);
 
                                     //We can double check here that the ip address we have just succesfully connected to is still the same peer as in the swarm info
-                                    if (peerConnection.ConnectionInfo.NetworkIdentifier != request.Key.NetworkIdentifier)
-                                    {
-                                        //If not we have no idea what chunks the new peer might have
-                                        //Start by removing the old peer
-                                        SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
+                                    //if (peerConnection.ConnectionInfo.NetworkIdentifier != request.Key.NetworkIdentifier)
+                                    //{
+                                    //    //If not we have no idea what chunks the new peer might have
+                                    //    //Start by removing the old peer
+                                    //    SwarmChunkAvailability.RemovePeerFromSwarm(request.Key.NetworkIdentifier);
 
-                                        AddBuildLogLine("Removed "+request.Key.NetworkIdentifier+" from swarm as the networkIdentifier no longer matches that expected.");
-                                        //Request an availability update from the one we just connected to
-                                        //It's possible it will have sent one because of the DFS_ChunkAvailabilityInterestRequest but this makes double sure
-                                        peerConnection.SendObject("DFS_ChunkAvailabilityRequest", ItemCheckSum);
-                                    }
+                                    //    AddBuildLogLine("Removed "+request.Key.NetworkIdentifier+" from swarm as the networkIdentifier no longer matches that expected.");
+                                    //    //Request an availability update from the one we just connected to
+                                    //    //It's possible it will have sent one because of the DFS_ChunkAvailabilityInterestRequest but this makes double sure
+                                    //    peerConnection.SendObject("DFS_ChunkAvailabilityRequest", ItemCheckSum);
+                                    //}
                                     #endregion
                                     //Console.WriteLine("      ..({0}) chunk {1} requested from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
                                 }
@@ -619,9 +620,9 @@ namespace DistributedFileSystem
                                 //Trigger a loop as there has been an error
                                 itemBuildWait.Set();
                             }
-                        });
+                        //});
 
-                        DFS.GeneralTaskFactory.StartNew(requestAction);
+                        //DFS.GeneralTaskFactory.StartNew(requestAction);
                     }
                 }
 
@@ -647,10 +648,7 @@ namespace DistributedFileSystem
                     WaitHandle.WaitAny(new WaitHandle[] { itemBuildWait, itemBuildComplete }, DFS.PeerBusyTimeoutMS);
 
                 if ((DateTime.Now - assembleStartTime).TotalSeconds > assembleTimeoutSecs)
-                {
-                    
                     throw new TimeoutException("AssembleItem() has taken longer than " + assembleTimeoutSecs + " secs so has been timed out.");
-                }
 
                 if (DFS.DFSShutdownRequested)
                     return;
@@ -680,17 +678,17 @@ namespace DistributedFileSystem
             //catch (Exception) { }
         }
 
-        public void HandleIncomingChunkReply(ChunkAvailabilityReply incomingReply, Connection connection)
+        public void HandleIncomingChunkReply(ChunkAvailabilityReply incomingReply, ConnectionInfo connectionInfo)
         {
             try
             {
                 string logString = "";
                 if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
-                    logString = "Incoming SUCCESS reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming SUCCESS reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
-                    logString = "Incoming FAILURE reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming FAILURE reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else
-                    logString = "Incoming BUSY reply from " + connection + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming BUSY reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
 
                 AddBuildLogLine(logString);
 
@@ -719,9 +717,9 @@ namespace DistributedFileSystem
                                 //If no data was included it probably means our availability for this peer is wrong
                                 //If we remove the peer here it prevents us from nailing it
                                 //if the peer still has the file an availability update should be on it's way to us
-                                SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
+                                SwarmChunkAvailability.RemovePeerFromSwarm(connectionInfo.NetworkIdentifier);
                             else if (incomingReply.ReplyState == ChunkReplyState.PeerBusy)
-                                SwarmChunkAvailability.SetPeerBusy(connection.ConnectionInfo.NetworkIdentifier);
+                                SwarmChunkAvailability.SetPeerBusy(connectionInfo.NetworkIdentifier);
 
                             //If no data was included, regardless of state, we need to remove the request and allow it to be recreated
                             if (!itemBuildTrackerDict[incomingReply.ChunkIndex].RequestIncoming)
@@ -735,7 +733,7 @@ namespace DistributedFileSystem
                         if (ItemCheckSum == incomingReply.ItemCheckSum && incomingReply.ReplyState == ChunkReplyState.DataIncluded && !SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, incomingReply.ChunkIndex))
                         {
                             //We pretend we made the request already
-                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connection.ConnectionInfo);
+                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connectionInfo);
                             request.RequestIncoming = true;
                             itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);
 
@@ -775,7 +773,7 @@ namespace DistributedFileSystem
                         else
                         {
                             //We pretend we made the request already
-                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connection.ConnectionInfo);
+                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connectionInfo);
                             request.RequestComplete = true;
                             request.RequestIncoming = true;
                             itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);

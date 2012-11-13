@@ -65,7 +65,7 @@ namespace DebugTests
                 NetworkComms.AppendGlobalIncomingPacketHandler<int>("NullMessage", (header, connection, message) => { Console.WriteLine("\n  ... Incoming trigger from " + connection.ConnectionInfo); });
                 NetworkComms.AppendGlobalIncomingPacketHandler<long[]>("SRtest", (header, connection, message) => 
                 {
-                    Console.WriteLine("Recieved long[] with values" + message.Aggregate("", (a, b) => { return a + ", " + b.ToString(); }));
+                    Console.WriteLine("Received long[] with values" + message.Aggregate("", (a, b) => { return a + ", " + b.ToString(); }));
                     connection.SendObject("SRresponse", "test good!"); 
                 });
 

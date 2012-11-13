@@ -83,12 +83,12 @@ namespace DistributedFileSystem
         /// <summary>
         /// We keep a reference to sendReceiveOptions which use no data compression in the DFS
         /// </summary>
-        static SendReceiveOptions nullCompressionSRO;
+        internal static SendReceiveOptions nullCompressionSRO;
 
         /// <summary>
-        /// We keep a reference to sendReceiveOptions which use a high recieve priority
+        /// We keep a reference to sendReceiveOptions which use a high Receive priority
         /// </summary>
-        static SendReceiveOptions highPrioRecieveSRO;
+        static SendReceiveOptions highPrioReceiveSRO;
 
         public static bool IsLinked { get; private set; }
         public static DFSLinkMode LinkMode { get; private set; }
@@ -110,7 +110,7 @@ namespace DistributedFileSystem
 
         static DFS()
         {
-            MinTargetLocalPort = 10001;
+            MinTargetLocalPort = 10000;
             MaxTargetLocalPort = 10999;
 
             BuildTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
@@ -120,8 +120,8 @@ namespace DistributedFileSystem
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
 
-            highPrioRecieveSRO = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
-            highPrioRecieveSRO.Options.Add("ReceiveHandlePriority", Enum.GetName(typeof(ThreadPriority), ThreadPriority.AboveNormal));
+            highPrioReceiveSRO = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
+            highPrioReceiveSRO.Options.Add("ReceiveHandlePriority", Enum.GetName(typeof(ThreadPriority), ThreadPriority.AboveNormal));
         }
 
         /// <summary>
@@ -131,6 +131,9 @@ namespace DistributedFileSystem
         {
             try
             {
+                if (initialPort > MaxTargetLocalPort || initialPort < MinTargetLocalPort)
+                    throw new CommsSetupShutdownException("Provided initial DFS port must be within the MinTargetLocalPort and MaxTargetLocalPort range.");
+
                 if (TCPConnection.ExistingLocalListenEndPoints().Count > 0)
                     throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
@@ -145,17 +148,25 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<ItemAssemblyConfig>("DFS_IncomingLocalItemBuild", IncomingLocalItemBuild);
                 NetworkComms.AppendGlobalIncomingPacketHandler<string[]>("DFS_RequestLocalItemBuild", RequestLocalItemBuilds);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest, highPrioRecieveSRO);
+                //UDP
+                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest, highPrioReceiveSRO);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("DFS_ChunkAvailabilityInterestReplyData", IncomingChunkInterestReplyData);
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest);//, highPrioRecieveSRO);
-                NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate);//, highPrioRecieveSRO);
+                //UDP
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest);//, highPrioReceiveSRO);
+                //UDP
+                NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate);//, highPrioReceiveSRO);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate);//, highPrioRecieveSRO);
+                //UDP
+                NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate);//, highPrioReceiveSRO);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest);//, highPrioRecieveSRO);
+                //UDP
+                NetworkComms.AppendGlobalIncomingPacketHandler<KnownPeerEndPoints>("DFS_KnownPeersUpdate", KnownPeersUpdate);
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest);//, highPrioReceiveSRO);
+
+                //TCP
                 NetworkComms.AppendGlobalIncomingPacketHandler<DFSLinkRequest>("DFS_ItemLinkRequest", IncomingRemoteItemLinkRequest);
 
                 NetworkComms.AppendGlobalConnectionCloseHandler(DFSConnectionShutdown);
@@ -168,9 +179,12 @@ namespace DistributedFileSystem
                 {
                     localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
                     TCPConnection.StartListening(localEndPointAttempts, false);
+                    UDPConnection.StartListening(localEndPointAttempts, false);
                 }
                 catch (Exception)
                 {
+                    NetworkComms.Shutdown();
+
                     if (rangeRandomPortFailover)
                     {
                         for (int tryPort = MinTargetLocalPort; tryPort <= MaxTargetLocalPort; tryPort++)
@@ -179,9 +193,10 @@ namespace DistributedFileSystem
                             {
                                 localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
                                 TCPConnection.StartListening(localEndPointAttempts, false);
+                                UDPConnection.StartListening(localEndPointAttempts, false);
                                 break;
                             }
-                            catch (Exception) { }
+                            catch (Exception) { NetworkComms.Shutdown(); }
 
                             if (tryPort == MaxTargetLocalPort)
                                 throw new CommsSetupShutdownException("Failed to find local available listen port while trying to initialise DFS.");
@@ -263,7 +278,7 @@ namespace DistributedFileSystem
                             //Make the request for items we do not have
                             if (itemsToRequest.Length > 0)
                             {
-                                primaryServer.SendObject("DFS_RequestLocalItemBuild", itemsToRequest.Take(concurrentNumLinkItems).ToArray());
+                                primaryServer.SendObject("DFS_RequestLocalItemBuild", itemsToRequest.Take(concurrentNumLinkItems).ToArray(), nullCompressionSRO);
                                 if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker made a request to link " + itemsToRequest.Take(concurrentNumLinkItems).Count() + " items.");
                             }
                         }
@@ -583,14 +598,14 @@ namespace DistributedFileSystem
                         itemToDistribute = swarmedItemsDict[itemToDistribute.ItemCheckSum];
 
                     //We add the requester to the item swarm at this point
-                    itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection, new ChunkFlags(0));
+                    itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection.ConnectionInfo, new ChunkFlags(0));
                     itemToDistribute.IncrementPushCount();
                 }
 
                 //We could contact other known super peers to see if they also have this file
 
                 //Send the config information to the client that wanted the file
-                peerConnection.SendObject("DFS_IncomingLocalItemBuild", new ItemAssemblyConfig(itemToDistribute, completedPacketType));
+                peerConnection.SendObject("DFS_IncomingLocalItemBuild", new ItemAssemblyConfig(itemToDistribute, completedPacketType), nullCompressionSRO);
 
                 if (DFS.loggingEnabled) DFS.logger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + peerConnection + ".");
             }
@@ -660,7 +675,7 @@ namespace DistributedFileSystem
             try
             {
                 //NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
-                TCPConnection.GetConnection(new ConnectionInfo(peerIP, peerPort)).SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
+                TCPConnection.GetConnection(new ConnectionInfo(peerIP, peerPort)).SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false), nullCompressionSRO);
             }
             catch (CommsException)
             {
@@ -793,13 +808,15 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                 {
                     //Reply with an empty "DFS_KnownPeersUpdate" so that we don't hold up the peer
-                    connection.SendObject("DFS_KnownPeersUpdate", new string[] { "" }, nullCompressionSRO);
+                    //connection.SendObject("DFS_KnownPeersUpdate", new string[] { "" }, nullCompressionSRO);
 
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
-                    connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
+                    //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 }
                 else
-                    connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints(), nullCompressionSRO);
+                    //connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints(), nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.ItemCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
             }
             catch (CommsException)
             {
@@ -808,6 +825,60 @@ namespace DistributedFileSystem
             catch (Exception e)
             {
                 NetworkComms.LogError(e, "Error_KnownPeersRequest");
+            }
+        }
+
+        private static void KnownPeersUpdate(PacketHeader packetHeader, Connection connection, KnownPeerEndPoints peerList)
+        {
+            try
+            {
+                DistributedItem currentItem = null;
+
+                lock (globalDFSLocker)
+                {
+                    if (swarmedItemsDict.ContainsKey(peerList.ItemChecksm))
+                        currentItem = swarmedItemsDict[peerList.ItemChecksm];
+                }
+
+                if (currentItem != null)
+                {
+                    List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+
+                    //If we have some unknown peers we can request an update from them as well
+                    foreach (string peerContactInfoOuter in peerList.PeerEndPoints)
+                    {
+                        string peerContactInfo = peerContactInfoOuter;
+                        try
+                        {
+                            IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
+
+                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && currentItem.SwarmChunkAvailability.PeerContactAllowed(peerEndPoint.Address, false))
+                            {
+                                currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest.");
+                                //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
+                                UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", peerList.ItemChecksm, peerEndPoint, nullCompressionSRO);
+                                currentItem.AddBuildLogLine(" ... completed DFS_ChunkAvailabilityRequest with " + peerContactInfo);
+                            }
+                        }
+                        catch (CommsException)
+                        {
+                            currentItem.AddBuildLogLine("Removing " + peerContactInfo + " from item swarm due to CommsException.");
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_3");
+                        }
+                    }
+                }
+            }
+            catch (CommsException)
+            {
+                //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
+            }
+            catch (Exception e)
+            {
+                NetworkComms.LogError(e, "Error_KnownPeersUpdate");
             }
         }
 
@@ -893,7 +964,7 @@ namespace DistributedFileSystem
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
                         itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
 
-                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendRecieveOptions<NullSerializer>(new Dictionary<string, string>()));
+                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
                     }
                 });
         }
@@ -949,10 +1020,11 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                 {
                     //First reply and say the peer can't have the requested data. This prevents a request timing out
-                    connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
+                    connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
                     //Inform peer that we don't actually have the requested item
-                    connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
+                    //connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 }
                 else
                 {
@@ -960,11 +1032,12 @@ namespace DistributedFileSystem
                     {
                         //First reply and say the peer can't have the requested data. This prevents a request timing out
                         //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), ProtobufSerializer.Instance, NullCompressor.Instance);
-                        connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
+                        connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
                         //If the peer thinks we have a chunk we dont we send them an update so that they are corrected
                         //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                        connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
+                        //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
+                        UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                     }
                     else
                     {
@@ -973,7 +1046,7 @@ namespace DistributedFileSystem
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
-                            connection.SendObject("DFS_ChunkAvailabilityInterestReply", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
+                            connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
                         }
                         else
                         {
@@ -985,11 +1058,14 @@ namespace DistributedFileSystem
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
                             long packetSequenceNumber;
-                            connection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
+                            //connection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
+                            //This is received via UDP but we want to reply using TCP to ensure delivery
+                            var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
+                            clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkInfo to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
-                            
-                            connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetSequenceNumber), nullCompressionSRO);
+
+                            clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetSequenceNumber), nullCompressionSRO);
 
                             lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
                             
@@ -1024,6 +1100,9 @@ namespace DistributedFileSystem
             try
             {
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
+
+                if (connection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
+                    throw new Exception("IncomingChunkInterestReplyData should only be recieved using TCP.");
 
                 ChunkAvailabilityReply existingChunkAvailabilityReply = null;
 
@@ -1075,7 +1154,7 @@ namespace DistributedFileSystem
                     }
 
                     if (item != null)
-                        item.HandleIncomingChunkReply(existingChunkAvailabilityReply, connection);
+                        item.HandleIncomingChunkReply(existingChunkAvailabilityReply, connection.ConnectionInfo);
                 }
 
                 CheckForChunkDataCacheTimeouts();
@@ -1096,6 +1175,7 @@ namespace DistributedFileSystem
         {
             try
             {
+                ConnectionInfo incomingConnectionInfo = new ConnectionInfo(connection.ConnectionInfo.ConnectionType, incomingReply.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
 
                 DistributedItem item = null;
@@ -1111,28 +1191,28 @@ namespace DistributedFileSystem
                     lock (chunkDataCacheLocker)
                     {
                         //Given we always send the data first it would be a really fucked up if the data is not where we expect it to be
-                        if (chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) && chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(incomingReply.DataSequenceNumber))
+                        if (chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier) && chunkDataCache[incomingReply.SourceNetworkIdentifier].ContainsKey(incomingReply.DataSequenceNumber))
                         {
-                            incomingReply.SetChunkData(chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][incomingReply.DataSequenceNumber].Data);
-                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(incomingReply.DataSequenceNumber);
+                            incomingReply.SetChunkData(chunkDataCache[incomingReply.SourceNetworkIdentifier][incomingReply.DataSequenceNumber].Data);
+                            chunkDataCache[incomingReply.SourceNetworkIdentifier].Remove(incomingReply.DataSequenceNumber);
 
-                            if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
-                                chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                            if (chunkDataCache[incomingReply.SourceNetworkIdentifier].Count == 0)
+                                chunkDataCache.Remove(incomingReply.SourceNetworkIdentifier);
                         }
                         else if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
                         {
                             //throw new Exception("Unable to locate chunk data (this info is probably really late) in cache for item:" + item.ItemCheckSum + ", chunkIndex:" + incomingReply.ChunkIndex + ", dataSequenceNumber:" + incomingReply.DataSequenceNumber);
                             //We have beaten the data, we will add the chunkavailability reply instead and wait then let the incoming data trigger the handle
-                            if (!chunkDataCache.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
-                                chunkDataCache.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
+                            if (!chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier))
+                                chunkDataCache.Add(incomingReply.SourceNetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
 
-                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(incomingReply.DataSequenceNumber, new ChunkDataWrapper(incomingReply));
+                            chunkDataCache[incomingReply.SourceNetworkIdentifier].Add(incomingReply.DataSequenceNumber, new ChunkDataWrapper(incomingReply));
                             if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkAvailabilityReply to chunkDataCache (awaiting data) from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
                         }
                     }
 
                     if (incomingReply.ChunkDataSet || incomingReply.ReplyState != ChunkReplyState.DataIncluded)
-                        item.HandleIncomingChunkReply(incomingReply, connection);
+                        item.HandleIncomingChunkReply(incomingReply, incomingConnectionInfo);
                 }
             }
             catch (Exception e)
@@ -1161,10 +1241,15 @@ namespace DistributedFileSystem
                 }
 
                 if (selectedItem != null)
-                    selectedItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection, updateDetails.ChunkFlags);
+                {
+                    ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, updateDetails.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
+                    selectedItem.AddBuildLogLine("Updated chunk flags for " + connectionInfo);
+                    selectedItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connectionInfo, updateDetails.ChunkFlags);
+                }
                 else
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
-                    connection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum);
+                    //connection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
             }
             catch (CommsException)
             {
@@ -1196,9 +1281,11 @@ namespace DistributedFileSystem
 
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
-                    connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
+                    //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 else
-                    connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
+                    //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }
@@ -1231,7 +1318,7 @@ namespace DistributedFileSystem
                             RemoveItem(itemRemovalUpdate.ItemCheckSum, false);
                         else
                             //If this is not a swarm wide removal we just remove this peer from our local swarm copy
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier, true);
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, true);
                     }
                 }
 
@@ -1273,7 +1360,7 @@ namespace DistributedFileSystem
                         {
                             //If we still have the item then we add the remote end as a new super peer
                             if (swarmedItemsDict.ContainsKey(itemsToLink[i]))
-                                swarmedItemsDict[itemsToLink[i]].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection, new ChunkFlags(swarmedItemsDict[itemsToLink[i]].TotalNumChunks), true);
+                                swarmedItemsDict[itemsToLink[i]].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection.ConnectionInfo, new ChunkFlags(swarmedItemsDict[itemsToLink[i]].TotalNumChunks), true);
                         }
                     }
                 }

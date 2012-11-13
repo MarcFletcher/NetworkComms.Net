@@ -354,7 +354,7 @@ namespace NetworkCommsDotNet
         /// Uses the current connection and returns a bool dependant on the remote end responding to a SendReceiveObject call within the provided aliveRespondTimeoutMS
         /// </summary>
         /// <param name="aliveRespondTimeoutMS">The time to wait in milliseconds before returning false</param>
-        /// <param name="responseTimeMS">The number of milliseconds taken for a succesfull response to be recieved</param>
+        /// <param name="responseTimeMS">The number of milliseconds taken for a succesfull response to be received</param>
         /// <returns></returns>
         public bool ConnectionAlive(int aliveRespondTimeoutMS, out long responseTimeMS)
         {
@@ -394,7 +394,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided packet to the remoteEndPoint. Waits for recieve confirmation if required.
+        /// Send the provided packet to the remoteEndPoint. Waits for receive confirmation if required.
         /// </summary>
         /// <param name="packet">The packet to send</param>
         internal void SendPacket(Packet packet)
@@ -404,7 +404,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided packet to the remoteEndPoint. Waits for recieve confirmation if required.
+        /// Send the provided packet to the remoteEndPoint. Waits for receive confirmation if required.
         /// </summary>
         /// <param name="packet">The packet to send</param>
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>

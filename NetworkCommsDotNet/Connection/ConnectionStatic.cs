@@ -57,7 +57,7 @@ namespace NetworkCommsDotNet
         {
             lock (staticConnectionLocker)
             {
-                if (!shutdownWorkerThreads && connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped)
+                if (!shutdownWorkerThreads && (connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped))
                 {
                     connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
                     connectionKeepAliveWorker.Name = "ConnectionKeepAliveWorker";
@@ -71,12 +71,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void ConnectionKeepAliveWorker()
         {
-            shutdownWorkerThreads = false;
-
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection keep alive polling thread has started.");
             DateTime lastPollCheck = DateTime.Now;
 
-            do
+            while (!shutdownWorkerThreads)
             {
                 try
                 {
@@ -97,7 +95,7 @@ namespace NetworkCommsDotNet
                 {
                     NetworkComms.LogError(ex, "ConnectionKeepAlivePollError");
                 }
-            } while (!shutdownWorkerThreads);
+            }
         }
 
         /// <summary>
@@ -161,6 +159,10 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "CommsShutdownError");
+            }
+            finally
+            {
+                shutdownWorkerThreads = false;
             }
         }
     }

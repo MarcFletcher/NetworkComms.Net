@@ -81,7 +81,7 @@ namespace NetworkCommsDotNet
             if (connectionSpecificHandlers && globalHandlers)
             {
                 if (!connectionSpecificOptions.OptionsCompatible(globalOptions))
-                    throw new PacketHandlerException("Attempted to determine correct sendRecieveOptions for packet of type '" + header.PacketType + "'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
+                    throw new PacketHandlerException("Attempted to determine correct sendReceiveOptions for packet of type '" + header.PacketType + "'. Unable to continue as connection specific and global sendReceiveOptions are not equal.");
 
                 //We need to combine options in this case using the connection specific option in preference if both are present
                 var combinedOptions = new Dictionary<string, string>(globalOptions.Options);

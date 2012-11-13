@@ -78,6 +78,8 @@ namespace DistributedFileSystem
         public ChunkReplyState ReplyState { get; private set; }
         [ProtoMember(4)]
         public long DataSequenceNumber { get; private set; }
+        [ProtoMember(5)]
+        public string SourceNetworkIdentifier { get; private set; }
 
         public byte[] ChunkData { get; private set; }
         public bool ChunkDataSet { get; private set; }
@@ -89,8 +91,9 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="itemCheckSum"></param>
         /// <param name="chunkIndex"></param>
-        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
+        public ChunkAvailabilityReply(string sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
         {
+            this.SourceNetworkIdentifier = sourceNetworkIdentifier;
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
             this.ReplyState = replyState;
@@ -102,8 +105,9 @@ namespace DistributedFileSystem
         /// <param name="itemMD5"></param>
         /// <param name="chunkIndex"></param>
         /// <param name="chunkData"></param>
-        public ChunkAvailabilityReply(string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
+        public ChunkAvailabilityReply(string sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
         {
+            this.SourceNetworkIdentifier = sourceNetworkIdentifier;
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
             this.DataSequenceNumber = dataSequenceNumber;

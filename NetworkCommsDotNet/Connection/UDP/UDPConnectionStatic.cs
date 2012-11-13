@@ -32,6 +32,12 @@ namespace NetworkCommsDotNet
     public partial class UDPConnection : Connection
     {
         /// <summary>
+        /// By default a UDP datagram sent to an unreachable destination will result in an ICMP Destination Unreachable packet. This can result in a SocketException on the local end.
+        /// To avoid this behaviour these ICMP packets are ignored by default, i.e. this value is set to true. Setting this value to false could cause new UDP connections to close, possibly unexpectedly.
+        /// </summary>
+        public static bool IgnoreICMPDestinationUnreachable { get; set; }
+
+        /// <summary>
         /// The local udp connection listeners
         /// </summary>
         static Dictionary<IPEndPoint, UDPConnection> udpConnectionListeners = new Dictionary<IPEndPoint, UDPConnection>();
@@ -53,11 +59,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         static UDPConnection()
         {
-            lock (udpRogueSenderCreationLocker)
-            {
-                if (udpRogueSender == null && !NetworkComms.commsShutdown)
-                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
-            }
+            IgnoreICMPDestinationUnreachable = true;
         }
 
         /// <summary>
@@ -78,25 +80,25 @@ namespace NetworkCommsDotNet
         /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/>.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
-        /// <param name="defaultSendRecieveOptions">The SendReceiveOptions to use as defaults for this connection</param>
+        /// <param name="defaultSendReceiveOptions">The SendReceiveOptions to use as defaults for this connection</param>
         /// <param name="level">The UDP options to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets can be received</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true)
         {
-            return GetConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, null);
+            return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null);
         }
 
         /// <summary>
         /// Internal UDP creation method that performs the necessary tasks
         /// </summary>
         /// <param name="connectionInfo"></param>
-        /// <param name="defaultSendRecieveOptions"></param>
+        /// <param name="defaultSendReceiveOptions"></param>
         /// <param name="level"></param>
         /// <param name="listenForReturnPackets"></param>
         /// <param name="existingConnection"></param>
         /// <returns></returns>
-        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendRecieveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
+        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
         {
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
@@ -133,7 +135,7 @@ namespace NetworkCommsDotNet
                         }
                     }
 
-                    connection = new UDPConnection(connectionInfo, defaultSendRecieveOptions, level, listenForReturnPackets, existingConnection);
+                    connection = new UDPConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, existingConnection);
                 }
             }
 
@@ -287,6 +289,9 @@ namespace NetworkCommsDotNet
             {
                 NetworkComms.LogError(ex, "UDPCommsShutdownError");
             }
+
+            //Set the rouge sender to null so that it is recreated if we restart anything
+            udpRogueSender = null;
         }
 
         /// <summary>
@@ -336,13 +341,38 @@ namespace NetworkCommsDotNet
         /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint)
         {
-            UDPConnection connectionToUse = udpRogueSender;
+            SendObject(sendingPacketType, objectToSend, ipEndPoint, null);
+        }
+
+        /// <summary>
+        /// Sends a single object to the provided endPoint. NOTE: Any possible reply will be ignored unless listening for incoming udp packets. 
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send</param>
+        /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
+        /// <param name="sendReceiveOptions">The sendReceiveOptions to use for this send</param>
+        public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions)
+        {
+            UDPConnection connectionToUse;
+            lock (udpRogueSenderCreationLocker)
+            {
+                if (NetworkComms.commsShutdown)
+                    throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
+                else if (udpRogueSender == null)
+                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
+
+                //Get the rouge sender here
+                connectionToUse = udpRogueSender;
+            }
+
+            //Get connection defaults if no sendReceiveOptions were provided
+            if (sendReceiveOptions == null) sendReceiveOptions = connectionToUse.ConnectionDefaultSendReceiveOptions;
 
             //If we are listening on what will be the outgoing adaptor we send with that client to ensure reply packets are collected
             //Determining this is annoyingly non-trivial
 
             //For now we will use the following method and look to improve upon it in future
-            //Some very quick testing gave an average runtime of this method to be 0.12ms (1000 iterations) (perhaps not so bad after all)
+            //Some very quick testing gave an average runtime of this method to be 0.12ms (averageover 1000 iterations) (perhaps not so bad after all)
             try
             {
                 Socket testSocket = new Socket(ipEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
@@ -360,7 +390,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
             }
 
-            Packet sendPacket = new Packet(sendingPacketType, objectToSend, connectionToUse.ConnectionDefaultSendReceiveOptions);
+            Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
             connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
     }

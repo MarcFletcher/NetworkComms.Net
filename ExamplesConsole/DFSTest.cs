@@ -114,7 +114,6 @@ namespace ExamplesConsole
                 NetworkComms.AppendGlobalConnectionCloseHandler(clientShutdownDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("BigDataRequest", ReplyDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientInfo", InfoDelegate);
-                //TCPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nListening for incoming connections on:");
                 foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
@@ -229,7 +228,6 @@ namespace ExamplesConsole
 
                 NetworkComms.AppendGlobalIncomingPacketHandler("BigDataRequestResponse", ReplyDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientCommand", ShutdownDelegate);
-                //TCPConnection.AddNewLocalListener();
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
                 Console.WriteLine("\nListening for incoming objects on:");

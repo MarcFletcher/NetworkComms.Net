@@ -239,7 +239,7 @@ namespace NetworkCommsDotNet
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                 byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
                 if (isIsolatedUDPConnection)
                 {
@@ -261,7 +261,6 @@ namespace NetworkCommsDotNet
                         throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
                 }
 
-                //Listen for more udp packets!!
                 client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
             }
             //On any error here we close the connection
@@ -279,6 +278,8 @@ namespace NetworkCommsDotNet
             }
             catch (SocketException)
             {
+                //Recieve may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
+                //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
                 CloseConnection(true, 28);
             }
             catch (InvalidOperationException)
@@ -302,7 +303,7 @@ namespace NetworkCommsDotNet
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                     byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Recieved " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
 
                     if (isIsolatedUDPConnection)
                     {
@@ -340,6 +341,8 @@ namespace NetworkCommsDotNet
             }
             catch (SocketException)
             {
+                //Recieve may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
+                //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
                 CloseConnection(true, 23);
             }
             catch (InvalidOperationException)

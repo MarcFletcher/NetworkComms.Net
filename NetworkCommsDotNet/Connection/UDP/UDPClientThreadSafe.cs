@@ -34,9 +34,18 @@ namespace NetworkCommsDotNet
         bool isConnected;
         object locker = new object();
 
+        /// <summary>
+        /// IOControl value used to ignore ICMP destination unreachable packets which result in the socket closing
+        /// </summary>
+        const int SIO_UDP_CONNRESET = -1744830452;
+
         public UdpClientThreadSafe(UdpClient udpClient)
         {
             this.udpClient = udpClient;
+
+            //By default we ignore ICMP destination unreachable packets so that we can continue to use the udp client even if we send something down a black hole
+            if (UDPConnection.IgnoreICMPDestinationUnreachable)
+                this.udpClient.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
         }
 
         public void Send(byte[] dgram, int bytes, IPEndPoint endPoint)
@@ -97,7 +106,7 @@ namespace NetworkCommsDotNet
 
         public byte[] Receive(ref IPEndPoint remoteEP)
         {
-            //We are best of avoiding a lock here as this call will block until data is recieved
+            //We are best of avoiding a lock here as this call will block until data is received
             return udpClient.Receive(ref remoteEP);
         }
 

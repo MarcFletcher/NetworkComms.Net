@@ -232,6 +232,7 @@ namespace NetworkCommsDotNet
         public static int NetworkLoadUpdateWindowMS { get; set; }
 
         private static Thread NetworkLoadThread = null;
+        private static ManualResetEvent NetworkLoadThreadWait;
         private static double currentNetworkLoadIncoming;
         private static double currentNetworkLoadOutgoing;
         private static CommsMath currentNetworkLoadValuesIncoming;
@@ -359,11 +360,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void NetworkLoadWorker()
         {
+            NetworkLoadThreadWait = new ManualResetEvent(false);
+
             //Get all interfaces
             NetworkInterface[] interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces()
                                                   select outer).ToArray();
 
-            long[] startSent, startRecieved, endSent, endRecieved;
+            long[] startSent, startReceived, endSent, endReceived;
 
             while (!commsShutdown)
             {
@@ -374,15 +377,18 @@ namespace NetworkCommsDotNet
 
                     IPv4InterfaceStatistics[] stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
                     startSent = (from current in stats select current.BytesSent).ToArray();
-                    startRecieved = (from current in stats select current.BytesReceived).ToArray();
+                    startReceived = (from current in stats select current.BytesReceived).ToArray();
 
                     if (commsShutdown) return;
 
-                    Thread.Sleep(NetworkLoadUpdateWindowMS);
+                    //Thread.Sleep(NetworkLoadUpdateWindowMS);
+                    NetworkLoadThreadWait.WaitOne(NetworkLoadUpdateWindowMS);
+
+                    if (commsShutdown) return;
 
                     stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
                     endSent = (from current in stats select current.BytesSent).ToArray();
-                    endRecieved = (from current in stats select current.BytesReceived).ToArray();
+                    endReceived = (from current in stats select current.BytesReceived).ToArray();
 
                     DateTime endTime = DateTime.Now;
 
@@ -391,12 +397,17 @@ namespace NetworkCommsDotNet
                     for(int i=0; i<startSent.Length; i++)
                     {
                         outUsage.Add((double)(endSent[i] - startSent[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
-                        inUsage.Add((double)(endRecieved[i] - startRecieved[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
+                        inUsage.Add((double)(endReceived[i] - startReceived[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
                     }
 
                     //double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
                     double inMax = inUsage.Max();
                     double outMax = outUsage.Max();
+
+                    //If either of the usage levels have gone above 2 it suggests we are most likely on a faster connection that we think
+                    //As such we will bump the interfacelinkspeed upto 1Gbps so that future load calcualtions more acurately reflect the 
+                    //actual load.
+                    if (inMax > 2 || outMax > 2) InterfaceLinkSpeed = 950000000;
 
                     //Limit to one
                     CurrentNetworkLoadIncoming = (inMax > 1 ? 1 : inMax);
@@ -1069,7 +1080,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Shutdown all connections, comms threads and execute OnCommsShutdown event. If any comms activity has taken place this should be called on application close.
+        /// Shutdown all connections, comms threads and execute OnCommsShutdown event. Any packet handlers are left unchanged. If any comms activity has taken place this should be called on application close.
         /// </summary>
         /// <param name="threadShutdownTimeoutMS">The time to wait for worker threads to close before attempting a thread abort.</param>
         public static void Shutdown(int threadShutdownTimeoutMS = 1000)
@@ -1098,6 +1109,7 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkLoadThread != null)
                 {
+                    NetworkLoadThreadWait.Set();
                     if (!NetworkLoadThread.Join(threadShutdownTimeoutMS))
                     {
                         NetworkLoadThread.Abort();

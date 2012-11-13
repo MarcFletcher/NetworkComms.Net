@@ -65,7 +65,7 @@ namespace NetworkCommsDotNet
         PacketType,
 
         /// <summary>
-        /// Specifies if a recieve confirmation is required for this packet. String option as takes up less space for a boolean option.
+        /// Specifies if a receive confirmation is required for this packet. String option as takes up less space for a boolean option.
         /// </summary>
         ReceiveConfirmationRequired,
 
@@ -78,6 +78,11 @@ namespace NetworkCommsDotNet
         /// A checksum corresponding to the payload data.
         /// </summary>
         CheckSumHash,
+
+        /// <summary>
+        /// The network identifier of the packet source
+        /// </summary>
+        SourceNetworkIdentifier,
 
         /// <summary>
         /// Optional packet identifier.
@@ -108,7 +113,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStr">The packet type to be used.</param>
         /// <param name="payloadPacketSize">The size on bytes of the payload</param>
         /// <param name="requestedReturnPacketTypeStr">An optional field representing the expected return packet type</param>
-        /// <param name="receiveConfirmationRequired">An optional boolean stating that a recieve confirmation is required for this packet</param>
+        /// <param name="receiveConfirmationRequired">An optional boolean stating that a receive confirmation is required for this packet</param>
         /// <param name="checkSumHash">An optional field representing the payload checksum</param>
         /// <param name="includeConstructionTime">An optional boolean which if true will record the DateTime this packet was created</param>
         public PacketHeader(string packetTypeStr, long payloadPacketSize, string requestedReturnPacketTypeStr = null, bool receiveConfirmationRequired = false, string checkSumHash = null, bool includeConstructionTime = false)

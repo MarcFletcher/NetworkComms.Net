@@ -641,7 +641,7 @@ namespace DPSBase
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
         public static object DeserialiseStreamSendWrapper(byte[] receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            throw new Exception("NetworkComms should never be expected a type of StreamSendWrapper. Any data sent using a StreamSendWrapper should be handled on recieve as byte[].");
+            throw new Exception("NetworkComms should never be expected a type of StreamSendWrapper. Any data sent using a StreamSendWrapper should be handled on receive as byte[].");
         }
     }
 }

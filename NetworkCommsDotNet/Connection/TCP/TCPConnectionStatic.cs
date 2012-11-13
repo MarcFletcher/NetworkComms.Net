@@ -186,7 +186,7 @@ namespace NetworkCommsDotNet
         {
             lock (staticTCPConnectionLocker)
             {
-                if (newIncomingConnectionWorker == null || newIncomingConnectionWorker.ThreadState == ThreadState.Stopped)
+                if (!NetworkComms.commsShutdown && (newIncomingConnectionWorker == null || newIncomingConnectionWorker.ThreadState == ThreadState.Stopped))
                 {
                     newIncomingConnectionWorker = new Thread(IncomingConnectionWorker);
                     newIncomingConnectionWorker.Name = "TCPNewConnectionWorker";
@@ -200,13 +200,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         private static void IncomingConnectionWorker()
         {
-            shutdownIncomingConnectionWorkerThread = false;
-
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("TCP IncomingConnectionWorker thread started.");
 
             try
             {
-                do
+                while (!shutdownIncomingConnectionWorkerThread)
                 {
                     try
                     {
@@ -224,7 +222,9 @@ namespace NetworkCommsDotNet
 
                                 //Pick up the new connection
                                 TcpClient newClient = listener.AcceptTcpClient();
-                                GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true);
+
+                                //Perform the establish in a task so that we can continue picking up new connections here
+                                NetworkComms.TaskFactory.StartNew(() => { GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true); });
                             }
                         }
 
@@ -260,7 +260,7 @@ namespace NetworkCommsDotNet
                                 NetworkComms.LogError(ex, "CommsSetupError");
                         }
                     }
-                } while (!shutdownIncomingConnectionWorkerThread);
+                }
             }
             catch (Exception ex)
             {
@@ -294,6 +294,10 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "TCPCommsShutdownError");
+            }
+            finally
+            {
+                shutdownIncomingConnectionWorkerThread = false;
             }
         }
 

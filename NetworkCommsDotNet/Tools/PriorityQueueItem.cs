@@ -36,19 +36,19 @@ namespace NetworkCommsDotNet
         public MemoryStream DataStream { get; private set; }
         public SendReceiveOptions SendReceiveOptions { get; private set; }
 
-        public PriorityQueueItem(ThreadPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendRecieveOptions)
+        public PriorityQueueItem(ThreadPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendReceiveOptions)
         {
             //Nullreference checks
             if (connection == null) throw new NullReferenceException("Provided connection parameter can not be null.");
             if (packetHeader == null) throw new NullReferenceException("Provided packetHeader parameter can not be null.");
             if (dataStream == null) throw new NullReferenceException("Provided dataStream parameter can not be null.");
-            if (sendRecieveOptions == null) throw new NullReferenceException("Provided sendRecieveOptions parameter can not be null.");
+            if (sendReceiveOptions == null) throw new NullReferenceException("Provided sendReceiveOptions parameter can not be null.");
 
             this.Priority = priority;
             this.Connection = connection;
             this.PacketHeader = packetHeader;
             this.DataStream = dataStream;
-            this.SendReceiveOptions = sendRecieveOptions;
+            this.SendReceiveOptions = sendReceiveOptions;
         }
     }
 }

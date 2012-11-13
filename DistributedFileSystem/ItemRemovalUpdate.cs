@@ -29,14 +29,16 @@ namespace DistributedFileSystem
     {
         [ProtoMember(1)]
         public string ItemCheckSum { get; private set; }
-
         [ProtoMember(2)]
         public bool RemoveSwarmWide { get; private set; }
+        [ProtoMember(3)]
+        public string SourceNetworkIdentifier { get; private set; }
 
         private ItemRemovalUpdate() { }
 
-        public ItemRemovalUpdate(string itemCheckSum, bool removeSwarmWide)
+        public ItemRemovalUpdate(string sourceNetworkIdentifier, string itemCheckSum, bool removeSwarmWide)
         {
+            this.SourceNetworkIdentifier = sourceNetworkIdentifier;
             this.ItemCheckSum = itemCheckSum;
             this.RemoveSwarmWide = removeSwarmWide;
         }
