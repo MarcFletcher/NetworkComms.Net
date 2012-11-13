@@ -44,8 +44,9 @@ namespace NetworkCommsDotNet
             this.udpClient = udpClient;
 
             //By default we ignore ICMP destination unreachable packets so that we can continue to use the udp client even if we send something down a black hole
-            if (UDPConnection.IgnoreICMPDestinationUnreachable)
-                this.udpClient.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
+            //This is unsupported in Mono but also not required as the same behaviour is not observed.
+            if (UDPConnection.IgnoreICMPDestinationUnreachable && Type.GetType("Mono.Runtime") == null)
+                this.udpClient.Client.IOControl(SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, new byte[] { 0, 0, 0, 0 });
         }
 
         public void Send(byte[] dgram, int bytes, IPEndPoint endPoint)

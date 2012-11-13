@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ProtoBuf;
+using NetworkCommsDotNet;
 
 namespace DistributedFileSystem
 {
@@ -36,8 +37,11 @@ namespace DistributedFileSystem
 
         private ItemRemovalUpdate() { }
 
-        public ItemRemovalUpdate(string sourceNetworkIdentifier, string itemCheckSum, bool removeSwarmWide)
+        public ItemRemovalUpdate(ShortGuid sourceNetworkIdentifier, string itemCheckSum, bool removeSwarmWide)
         {
+            if (sourceNetworkIdentifier == null)
+                throw new NullReferenceException("Unable to create ItemRemovalUpdate unless a valid sourceNetworkIdentifier is provided.");
+
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
             this.ItemCheckSum = itemCheckSum;
             this.RemoveSwarmWide = removeSwarmWide;
