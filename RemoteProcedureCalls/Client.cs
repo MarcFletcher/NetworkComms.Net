@@ -191,9 +191,7 @@ namespace RemoteProcedureCalls
                 il.Emit(OpCodes.Ldarg_2);
                 il.Emit(OpCodes.Stfld, networkConnection);
                 il.Emit(OpCodes.Ret);
-
-
-
+                               
                 //Loop through each method in the interface but exclude any event methods
                 foreach (var method in typeof(T).GetMethods().Except(typeof(T).GetEvents().SelectMany(a => { return new MethodInfo[] { a.GetAddMethod(), a.GetRemoveMethod() }; })))
                 {
@@ -206,7 +204,6 @@ namespace RemoteProcedureCalls
 
                     //Get the ILGenerator for the method
                     il = methodImpl.GetILGenerator();
-                    il.Emit(OpCodes.Ldarg_0);
 
                     //Create a local array to store the parameters
                     LocalBuilder array = il.DeclareLocal(typeof(object[]));
@@ -294,7 +291,7 @@ namespace RemoteProcedureCalls
 
                     //The method we want to call is private and static so we need binding flags as such
                     int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
-
+                    
                     //Get the the type for this static class
                     il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
                     il.Emit(OpCodes.Call, getTypeMethod);
@@ -303,7 +300,7 @@ namespace RemoteProcedureCalls
                     il.Emit(OpCodes.Ldstr, "RemoteCallClient");
                     il.Emit(OpCodes.Ldc_I4, bindingFlags);
                     il.Emit(OpCodes.Callvirt, getgetMethod);
-
+                    
                     //Invoke the method using reflection
                     il.Emit(OpCodes.Ldloc, zeroPtr);
                     il.Emit(OpCodes.Ldloc, reflectionParamArray);
@@ -312,6 +309,10 @@ namespace RemoteProcedureCalls
                     //If the return type is a value type we need to unbox
                     if (method.ReturnType.IsValueType && method.ReturnType != typeof(void))
                         il.Emit(OpCodes.Unbox_Any, method.ReturnType);
+
+                    //If the return type is a reference type cast back to the correct type
+                    if (!method.ReturnType.IsValueType)
+                        il.Emit(OpCodes.Castclass, method.ReturnType);
 
                     //If any ref or out paramters were defined we need to set their values
                     for (int i = 0; i < args.Length; i++)
@@ -337,7 +338,7 @@ namespace RemoteProcedureCalls
                             il.Emit(OpCodes.Stobj, args[i].ParameterType.GetElementType());
                         }
                     }
-
+                    
                     //Return
                     il.Emit(OpCodes.Ret);
 
@@ -361,7 +362,6 @@ namespace RemoteProcedureCalls
 
                         var getMethod = type.DefineMethod("get_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
                         il = getMethod.GetILGenerator();
-                        il.Emit(OpCodes.Ldarg_0);
 
                         //Create a local array to store the parameters
                         LocalBuilder array = il.DeclareLocal(typeof(object[]));
@@ -452,6 +452,9 @@ namespace RemoteProcedureCalls
                         if (getMethod.ReturnType.IsValueType)
                             il.Emit(OpCodes.Unbox_Any, getMethod.ReturnType);
 
+                        if (!getMethod.ReturnType.IsValueType)
+                            il.Emit(OpCodes.Castclass, getMethod.ReturnType);
+
                         //Return
                         il.Emit(OpCodes.Ret);
 
@@ -466,8 +469,7 @@ namespace RemoteProcedureCalls
 
                         var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
                         il = setMethod.GetILGenerator();
-                        il.Emit(OpCodes.Ldarg_0);
-
+                        
                         //Create a local array to store the parameters
                         LocalBuilder array = il.DeclareLocal(typeof(object[]));
 
