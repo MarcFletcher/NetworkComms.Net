@@ -206,6 +206,9 @@ namespace NetworkCommsDotNet
         /// <returns>A new Guid</returns>
         public static Guid Decode(string value)
         {
+            //Sometimes we might be comparing a shortGUID to null in which case we should be comparing the empty values
+            if (value == null) return Guid.Empty;
+
             value = value.Replace("_", "/").Replace("-", "+");
             byte[] buffer = Convert.FromBase64String(value + "==");
             return new Guid(buffer);

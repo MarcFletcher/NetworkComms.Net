@@ -141,6 +141,9 @@ namespace NetworkCommsDotNet
         {
             try
             {
+                if (packetData == null) throw new NullReferenceException("Provided packetData parameter was null.");
+                if (sendReceiveOptions == null) throw new NullReferenceException("Provided sendReceiveOptions parameter was null.");
+
                 if (packetData.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 

@@ -765,14 +765,18 @@ namespace DistributedFileSystem
             {
                 try
                 {
-                    lock (globalDFSLocker)
+                    //We can only rely on the network identifier if this is a TCP connection shutting down
+                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                     {
-                        //Remove peer from any items
-                        foreach (var item in swarmedItemsDict)
-                            item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
-                    }
+                        lock (globalDFSLocker)
+                        {
+                            //Remove peer from any items
+                            foreach (var item in swarmedItemsDict)
+                                item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
+                        }
 
-                    if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown triggered for peer " + connection + ".");
+                        if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown triggered for peer " + connection + ".");
+                    }
                 }
                 catch (CommsException e)
                 {
@@ -855,10 +859,10 @@ namespace DistributedFileSystem
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
                             if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && currentItem.SwarmChunkAvailability.PeerContactAllowed(peerEndPoint.Address, false))
                             {
-                                currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest.");
+                                currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest from within KnownPeersUpdate.");
                                 //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                                 UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", peerList.ItemChecksm, peerEndPoint, nullCompressionSRO);
-                                currentItem.AddBuildLogLine(" ... completed DFS_ChunkAvailabilityRequest with " + peerContactInfo);
+                                //currentItem.AddBuildLogLine(" ... completed DFS_ChunkAvailabilityRequest with " + peerContactInfo);
                             }
                         }
                         catch (CommsException)
@@ -1311,6 +1315,8 @@ namespace DistributedFileSystem
             {
                 lock (globalDFSLocker)
                 {
+                    if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
+
                     if (swarmedItemsDict.ContainsKey(itemRemovalUpdate.ItemCheckSum))
                     {
                         if (itemRemovalUpdate.RemoveSwarmWide)
@@ -1330,7 +1336,11 @@ namespace DistributedFileSystem
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingPeerItemRemovalUpdate");
+                string commentStr = "";
+                if (itemRemovalUpdate != null)
+                    commentStr = "itemCheckSum:" + itemRemovalUpdate.ItemCheckSum + ", swarmWide:"+itemRemovalUpdate.RemoveSwarmWide + ", identifier" + itemRemovalUpdate.SourceNetworkIdentifier;
+
+                NetworkComms.LogError(e, "Error_IncomingPeerItemRemovalUpdate", commentStr);
             }
         }
 

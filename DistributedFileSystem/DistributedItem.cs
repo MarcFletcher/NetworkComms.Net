@@ -288,12 +288,15 @@ namespace DistributedFileSystem
             NetworkComms.ConnectionEstablishShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionEstablishShutdownDelegate((Connection connection) =>
             {
                 //On a closed conneciton we make sure we have no outstanding requests with that client
-                lock (itemLocker)
+                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 {
-                    //Console.WriteLine("Disconnected - Removing requests to peer "+ connectionId);
-                    SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
-                    itemBuildTrackerDict = (from current in itemBuildTrackerDict where current.Value.PeerConnectionInfo.NetworkIdentifier != connection.ConnectionInfo.NetworkIdentifier select current).ToDictionary(dict => dict.Key, dict => dict.Value);
-                    itemBuildWait.Set();
+                    lock (itemLocker)
+                    {
+                        //Console.WriteLine("Disconnected - Removing requests to peer "+ connectionId);
+                        SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
+                        itemBuildTrackerDict = (from current in itemBuildTrackerDict where current.Value.PeerConnectionInfo.NetworkIdentifier != connection.ConnectionInfo.NetworkIdentifier select current).ToDictionary(dict => dict.Key, dict => dict.Value);
+                        itemBuildWait.Set();
+                    }
                 }
             });
 
@@ -323,7 +326,7 @@ namespace DistributedFileSystem
                     //if were werent chances are we are actually done
                     if (nonLocalChunkExistence.Count > 0)
                     {
-                        AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required.");
+                        AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerAvailabilityInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count() + " unique peers.");
 
                         //We will want to know how many unique peers we can potentially contact
                         int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.PeerBusy)).Max();
@@ -338,10 +341,14 @@ namespace DistributedFileSystem
 
                         //Check for request timeouts
                         #region ChunkRequestTimeout
+                        int maxChunkTimeoutMS = Math.Min(assembleTimeoutSecs*1000 / 2, DFS.ChunkRequestTimeoutMS);
                         byte[] currentTrackerKeys = itemBuildTrackerDict.Keys.ToArray();
                         for (int i = 0; i < currentTrackerKeys.Length; i++)
                         {
-                            if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > DFS.ChunkRequestTimeoutMS)
+                            if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete)
+                                AddBuildLogLine(" .... outstanding request for chunk " + itemBuildTrackerDict[currentTrackerKeys[i]].ChunkIndex + " from " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo);
+
+                            if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > maxChunkTimeoutMS)
                             {
                                 //We are going to consider this request potentially timed out
                                 if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier) > DFS.MaxPeerTimeoutCount)

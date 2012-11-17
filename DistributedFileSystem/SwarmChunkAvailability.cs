@@ -459,7 +459,7 @@ namespace DistributedFileSystem
         /// <param name="networkIdentifier"></param>
         public void RemovePeerFromSwarm(ShortGuid networkIdentifier, bool forceRemove = false)
         {
-            if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
+            if (networkIdentifier==null || networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
             lock (peerLocker)
             {
@@ -652,10 +652,10 @@ namespace DistributedFileSystem
                         //We don't want to contact ourselves and for now that includes anything having the same ip as us
                         if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
                         {
-                            if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_ChunkAvailabilityRequest.");
+                            if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
                             //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                             UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", itemCheckSum, peerEndPoint, DFS.nullCompressionSRO);
-                            if (buildLog != null) buildLog(" ... completed DFS_ChunkAvailabilityRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
+                            //if (buildLog != null) buildLog(" ... completed DFS_ChunkAvailabilityRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
                         }
                     }
                     catch (CommsException)
@@ -859,6 +859,9 @@ namespace DistributedFileSystem
                 {
                     try
                     {
+                        if (peerIdentifier == null) throw new NullReferenceException("peerIdentifier should not be null at this point.");
+                        if (NetworkComms.NetworkIdentifier == null) throw new NullReferenceException("Local networkIdentifier really should NOT be null at this point.");
+
                         IPEndPoint peerEndPoint;
                         bool superPeer;
                         lock (peerLocker)

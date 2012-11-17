@@ -247,7 +247,8 @@ namespace NetworkCommsDotNet
                 {
                     //This connection was created for a specific remoteEndPoint so we can handle the data internally
                     packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                    IncomingPacketHandleHandOff(packetBuilder);
+
+                    if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
                 }
                 else
                 {
@@ -257,7 +258,8 @@ namespace NetworkCommsDotNet
 
                     //We pass the data off to the specific connection
                     connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                    connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+
+                    if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                     if (connection.packetBuilder.TotalPartialPacketCount > 0)
                         throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
@@ -311,7 +313,8 @@ namespace NetworkCommsDotNet
                     {
                         //This connection was created for a specific remoteEndPoint so we can handle the data internally
                         packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                        IncomingPacketHandleHandOff(packetBuilder);
+
+                        if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
                     }
                     else
                     {
@@ -321,7 +324,8 @@ namespace NetworkCommsDotNet
 
                         //We pass the data off to the specific connection
                         connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                        connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+
+                        if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
                             throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
