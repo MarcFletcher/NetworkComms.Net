@@ -118,7 +118,7 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation">An optional debug parameter.</param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
-            Console.WriteLine("UDPConnectionClosed - " + this.ConnectionInfo);
+            //Console.WriteLine("UDPConnectionClosed - " + this.ConnectionInfo);
 
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
             if (udpClientThreadSafe != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))))
