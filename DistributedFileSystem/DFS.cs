@@ -1323,7 +1323,7 @@ namespace DistributedFileSystem
                 {
                     if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
                     if (itemRemovalUpdate.SourceNetworkIdentifier == null || itemRemovalUpdate.SourceNetworkIdentifier == ShortGuid.Empty)
-                        throw new NullReferenceException("itemRemovalUpdate.SourceNetworkIdentifier was null / empty. " + itemRemovalUpdate.SourceNetworkIdentifier != null ? itemRemovalUpdate.SourceNetworkIdentifier);
+                        throw new NullReferenceException("itemRemovalUpdate.SourceNetworkIdentifier was null / empty. " + itemRemovalUpdate.SourceNetworkIdentifier != null ? itemRemovalUpdate.SourceNetworkIdentifier : "");
 
                     if (swarmedItemsDict.ContainsKey(itemRemovalUpdate.ItemCheckSum))
                     {
