@@ -816,7 +816,7 @@ namespace DistributedFileSystem
 
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 }
                 else
                     //connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints(), nullCompressionSRO);
@@ -963,12 +963,18 @@ namespace DistributedFileSystem
                     }
                     finally
                     {
+                        try
+                        {
+                            PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                            //We set the item checksum so that the entire distributed item can be easily retrieved later
+                            itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
 
-                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
-                        //We set the item checksum so that the entire distributed item can be easily retrieved later
-                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
-
-                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
+                            NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "Error_IncomingLocalItemBuildFinal");
+                        }
                     }
                 });
         }
@@ -1028,7 +1034,7 @@ namespace DistributedFileSystem
 
                     //Inform peer that we don't actually have the requested item
                     //connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 }
                 else
                 {
@@ -1253,7 +1259,7 @@ namespace DistributedFileSystem
                 else
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //connection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, updateDetails.ItemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
             }
             catch (CommsException)
             {
@@ -1286,7 +1292,7 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 else
                     //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
                     UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
@@ -1316,6 +1322,8 @@ namespace DistributedFileSystem
                 lock (globalDFSLocker)
                 {
                     if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
+                    if (itemRemovalUpdate.SourceNetworkIdentifier == null || itemRemovalUpdate.SourceNetworkIdentifier == ShortGuid.Empty)
+                        throw new NullReferenceException("itemRemovalUpdate.SourceNetworkIdentifier was null / empty. " + itemRemovalUpdate.SourceNetworkIdentifier != null ? itemRemovalUpdate.SourceNetworkIdentifier);
 
                     if (swarmedItemsDict.ContainsKey(itemRemovalUpdate.ItemCheckSum))
                     {

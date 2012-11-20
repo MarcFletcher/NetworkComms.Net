@@ -459,30 +459,37 @@ namespace DistributedFileSystem
         /// <param name="networkIdentifier"></param>
         public void RemovePeerFromSwarm(ShortGuid networkIdentifier, bool forceRemove = false)
         {
-            if (networkIdentifier==null || networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
-
-            lock (peerLocker)
+            try
             {
-                //We only remove the peer if we have more than one and it is not a super peer
-                if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                {
-                    //We can remove this peer if
-                    //1. We have set force remove
-                    //or
-                    //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other one in order to remove
-                    if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer || (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
-                    {
-                        peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
+                if (networkIdentifier == null || networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
-                        if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
+                lock (peerLocker)
+                {
+                    //We only remove the peer if we have more than one and it is not a super peer
+                    if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
+                    {
+                        //We can remove this peer if
+                        //1. We have set force remove
+                        //or
+                        //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other one in order to remove
+                        if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer || (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
                         {
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " from item.");
-                            peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
+                            peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
+
+                            if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
+                            {
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " from item.");
+                                peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
+                            }
+                            else
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
                         }
-                        else
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_RemovePeerFromSwarm");
             }
         }
 

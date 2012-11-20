@@ -66,6 +66,9 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached + " bytes read.");
 
+                if (packetBuilder.TotalPartialPacketCount == 0)
+                    throw new Exception("Executing IncomingPacketHandleHandOff when no packets exist in packetbuilder.");
+
                 //Loop until we are finished with this packetBuilder
                 int loopCounter = 0;
                 while (true)

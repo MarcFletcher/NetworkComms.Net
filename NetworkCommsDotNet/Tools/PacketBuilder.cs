@@ -37,7 +37,7 @@ namespace NetworkCommsDotNet
         List<byte[]> packets = new List<byte[]>();
         List<int> packetActualBytes = new List<int>();
 
-        object locker = new object();
+        public object Locker { get; private set; }
 
         int totalBytesCached = 0;
         int totalBytesExpected = 0;
@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public PacketBuilder()
         {
-
+            Locker = new object();
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public int TotalPartialPacketCount
         {
-            get { lock (locker) return packets.Count; }
+            get { lock (Locker) return packets.Count; }
         }
 
         /// <summary>
@@ -71,8 +71,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         public int TotalBytesExpected
         {
-            get { lock (locker) return totalBytesExpected; }
-            set { lock (locker) totalBytesExpected = value; }
+            get { lock (Locker) return totalBytesExpected; }
+            set { lock (Locker) totalBytesExpected = value; }
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace NetworkCommsDotNet
         /// <param name="numBytesToRemove">The total number of bytes to be removed.</param>
         public void ClearNTopBytes(int numBytesToRemove)
         {
-            lock (locker)
+            lock (Locker)
             {
                 if (numBytesToRemove > 0)
                 {
@@ -149,7 +149,7 @@ namespace NetworkCommsDotNet
         /// <param name="partialPacket">A buffer which may or may not be full with valid bytes</param>
         public void AddPartialPacket(int packetBytes, byte[] partialPacket)
         {
-            lock (locker)
+            lock (Locker)
             {
                 totalBytesCached += packetBytes;
 
@@ -174,7 +174,7 @@ namespace NetworkCommsDotNet
         /// <returns>A byte[] corresponding with the last added partial packet</returns>
         public byte[] RemoveMostRecentPartialPacket(ref int lastPacketBytesRead)
         {
-            lock (locker)
+            lock (Locker)
             {
                 if (packets.Count > 0)
                 {
@@ -201,7 +201,7 @@ namespace NetworkCommsDotNet
         /// <returns>The number of unused bytes in the most recently cached partial packet.</returns>
         public int NumUnusedBytesMostRecentPartialPacket()
         {
-            lock (locker)
+            lock (Locker)
             {
                 if (packets.Count > 0)
                 {
@@ -219,7 +219,7 @@ namespace NetworkCommsDotNet
         /// <returns>The value of the first cached byte.</returns>
         public byte FirstByte()
         {
-            lock (locker)
+            lock (Locker)
                 return packets[0][0];
         }
 
@@ -229,7 +229,7 @@ namespace NetworkCommsDotNet
         /// <returns>All cached data as a single byte[]</returns>
         public byte[] GetAllData()
         {
-            lock (locker)
+            lock (Locker)
             {
                 byte[] returnArray = new byte[totalBytesCached];
 
@@ -252,7 +252,7 @@ namespace NetworkCommsDotNet
         /// <returns>The requested bytes as a single array.</returns>
         public MemoryStream ReadDataSection(int startIndex, int length)
         {
-            lock (locker)
+            lock (Locker)
             {
                 byte[] returnArray = new byte[length];
                 int runningTotal = 0, writeTotal = 0;

@@ -288,7 +288,7 @@ namespace DistributedFileSystem
             NetworkComms.ConnectionEstablishShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionEstablishShutdownDelegate((Connection connection) =>
             {
                 //On a closed conneciton we make sure we have no outstanding requests with that client
-                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
+                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.ConnectionState == ConnectionState.Established)
                 {
                     lock (itemLocker)
                     {

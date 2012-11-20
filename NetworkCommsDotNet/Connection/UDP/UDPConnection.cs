@@ -246,9 +246,12 @@ namespace NetworkCommsDotNet
                 if (isIsolatedUDPConnection)
                 {
                     //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                    packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-
-                    if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
+                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                    lock (packetBuilder.Locker)
+                    {
+                        packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                        if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
+                    }
                 }
                 else
                 {
@@ -257,12 +260,15 @@ namespace NetworkCommsDotNet
                     UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
 
                     //We pass the data off to the specific connection
-                    connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                    lock (connection.packetBuilder.Locker)
+                    {
+                        connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                        if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
-                    if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
-
-                    if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                        throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                        if (connection.packetBuilder.TotalPartialPacketCount > 0)
+                            throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                    }
                 }
 
                 client.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), client);
@@ -312,9 +318,12 @@ namespace NetworkCommsDotNet
                     if (isIsolatedUDPConnection)
                     {
                         //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                        packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-
-                        if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
+                        //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                        lock (packetBuilder.Locker)
+                        {
+                            packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                            if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
+                        }
                     }
                     else
                     {
@@ -322,10 +331,13 @@ namespace NetworkCommsDotNet
                         //This ensures that all further processing knows about the correct endPoint
                         UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
 
-                        //We pass the data off to the specific connection
-                        connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-
-                        if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+                        //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                        lock (connection.packetBuilder.Locker)
+                        {
+                            //We pass the data off to the specific connection
+                            connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
+                            if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+                        }
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
                             throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
