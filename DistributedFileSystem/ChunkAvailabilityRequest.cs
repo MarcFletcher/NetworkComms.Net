@@ -120,8 +120,8 @@ namespace DistributedFileSystem
         /// <param name="chunkData"></param>
         public void SetChunkData(byte[] chunkData)
         {
-            ChunkDataSet = true;
             this.ChunkData = chunkData;
+            ChunkDataSet = true;
         }
     }
 

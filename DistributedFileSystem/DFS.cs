@@ -1127,6 +1127,7 @@ namespace DistributedFileSystem
                             throw new Exception("The dataSequenceNumber option appears to missing from the packetHeader. What has been changed?");
 
                         long dataSequenceNumber = packetHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                        //If we already have the info then we can finish this chunk off
                         if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(dataSequenceNumber))
                         {
                             if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber] == null)
@@ -1138,12 +1139,14 @@ namespace DistributedFileSystem
                             existingChunkAvailabilityReply = chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][dataSequenceNumber].ChunkAvailabilityReply;
                             existingChunkAvailabilityReply.SetChunkData(incomingData);
 
-                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(existingChunkAvailabilityReply.DataSequenceNumber);
+                            chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Remove(dataSequenceNumber);
+
                             if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
                                 chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
                         }
                         else
                         {
+                            //If we don't have the info we just need to log the data
                             chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
                             if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
                         }
@@ -1154,6 +1157,7 @@ namespace DistributedFileSystem
                     NetworkComms.LogError(ex, "Error_IncomingChunkInterestReplyDataInner");
                 }
 
+                //Only true if we have both the data and info
                 if (existingChunkAvailabilityReply != null)
                 {
                     DistributedItem item = null;
@@ -1198,31 +1202,36 @@ namespace DistributedFileSystem
                 if (item != null)
                 {
                     //Do we have the data yet?
+                    bool handleReply = false;
                     lock (chunkDataCacheLocker)
                     {
-                        //Given we always send the data first it would be a really fucked up if the data is not where we expect it to be
+                        //We generally expect the data to arrive first, but we handle both situations anyway
                         if (chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier) && chunkDataCache[incomingReply.SourceNetworkIdentifier].ContainsKey(incomingReply.DataSequenceNumber))
                         {
                             incomingReply.SetChunkData(chunkDataCache[incomingReply.SourceNetworkIdentifier][incomingReply.DataSequenceNumber].Data);
                             chunkDataCache[incomingReply.SourceNetworkIdentifier].Remove(incomingReply.DataSequenceNumber);
+
+                            if (DFS.loggingEnabled) DFS.logger.Trace("Completed ChunkAvailabilityReply using data in chunkDataCache from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
 
                             if (chunkDataCache[incomingReply.SourceNetworkIdentifier].Count == 0)
                                 chunkDataCache.Remove(incomingReply.SourceNetworkIdentifier);
                         }
                         else if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
                         {
-                            //throw new Exception("Unable to locate chunk data (this info is probably really late) in cache for item:" + item.ItemCheckSum + ", chunkIndex:" + incomingReply.ChunkIndex + ", dataSequenceNumber:" + incomingReply.DataSequenceNumber);
-                            //We have beaten the data, we will add the chunkavailability reply instead and wait then let the incoming data trigger the handle
+                            //We have beaten the data, we will add the chunkavailability reply instead and wait, letting the incoming data trigger the handle
                             if (!chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier))
                                 chunkDataCache.Add(incomingReply.SourceNetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
 
                             chunkDataCache[incomingReply.SourceNetworkIdentifier].Add(incomingReply.DataSequenceNumber, new ChunkDataWrapper(incomingReply));
                             if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkAvailabilityReply to chunkDataCache (awaiting data) from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
                         }
+
+                        //We decide if we are going to handle the data within the lock to avoid possible handle contention
+                        if (incomingReply.ChunkDataSet || incomingReply.ReplyState != ChunkReplyState.DataIncluded)
+                            handleReply = true;
                     }
 
-                    if (incomingReply.ChunkDataSet || incomingReply.ReplyState != ChunkReplyState.DataIncluded)
-                        item.HandleIncomingChunkReply(incomingReply, incomingConnectionInfo);
+                    if (handleReply) item.HandleIncomingChunkReply(incomingReply, incomingConnectionInfo);
                 }
             }
             catch (Exception e)
