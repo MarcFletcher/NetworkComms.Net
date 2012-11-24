@@ -487,35 +487,42 @@ namespace DistributedFileSystem
         /// <param name="broadcastRemoval"></param>
         public static void RemoveItem(string itemCheckSum, bool broadcastRemoval = true, bool removeSwarmWide = false)
         {
-            if (!broadcastRemoval && removeSwarmWide)
-                throw new Exception("BroadcastRemoval must be true if RemoveSwarmWide is also true.");
-
-            DistributedItem itemToRemove = null;
-
-            lock (globalDFSLocker)
+            try
             {
-                if (swarmedItemsDict.ContainsKey(itemCheckSum))
+                if (!broadcastRemoval && removeSwarmWide)
+                    throw new Exception("BroadcastRemoval must be true if RemoveSwarmWide is also true.");
+
+                DistributedItem itemToRemove = null;
+
+                lock (globalDFSLocker)
                 {
-                    itemToRemove = swarmedItemsDict[itemCheckSum];
-                    swarmedItemsDict.Remove(itemCheckSum);
+                    if (swarmedItemsDict.ContainsKey(itemCheckSum))
+                    {
+                        itemToRemove = swarmedItemsDict[itemCheckSum];
+                        swarmedItemsDict.Remove(itemCheckSum);
+                    }
                 }
-            }
 
-            //This BroadcastItemRemoval has to be outside lock (globalDFSLocker) otherwise it can deadlock
-            if (itemToRemove != null)
+                //This BroadcastItemRemoval has to be outside lock (globalDFSLocker) otherwise it can deadlock
+                if (itemToRemove != null)
+                {
+                    if (broadcastRemoval)
+                        //Broadcast to the swarm we are removing this file
+                        itemToRemove.SwarmChunkAvailability.BroadcastItemRemoval(itemCheckSum, removeSwarmWide);
+
+                    itemToRemove.AbortBuild = true;
+
+                    //Dispose of the distributed item incase it has any open file handles
+                    itemToRemove.Dispose();
+                }
+
+                //try { GC.Collect(); }
+                //catch (Exception) { }
+            }
+            catch (Exception e)
             {
-                if(broadcastRemoval)
-                //Broadcast to the swarm we are removing this file
-                    itemToRemove.SwarmChunkAvailability.BroadcastItemRemoval(itemCheckSum, removeSwarmWide);
-
-                itemToRemove.AbortBuild = true;
-
-                //Dispose of the distributed item incase it has any open file handles
-                itemToRemove.Dispose();
+                NetworkComms.LogError(e, "DFS_RemoveItemError");
             }
-
-            //try { GC.Collect(); }
-            //catch (Exception) { }
         }
 
         public static void RemoveAllItemsFromLocalOnly(bool broadcastRemoval = false)
@@ -943,12 +950,17 @@ namespace DistributedFileSystem
                         else if (assemblyConfig.CompletedPacketType != "")
                             RemoveItem(assemblyConfig.ItemCheckSum);
                     }
-                    catch (CommsException)
+                    catch (CommsException e)
                     {
                         //Crap an error has happened, let people know we probably don't have a good file
                         RemoveItem(assemblyConfig.ItemCheckSum);
                         //connection.CloseConnection(true, 30);
                         //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
+
+                        if (newItem != null)
+                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuildComms", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                        else
+                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuildComms", "newItem==null so no build log was available.");
                     }
                     catch (Exception e)
                     {
