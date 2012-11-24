@@ -296,6 +296,11 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 29);
             }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
+                CloseConnection(true, 30);
+            }
         }
 
         /// <summary>
@@ -337,10 +342,10 @@ namespace NetworkCommsDotNet
                             //We pass the data off to the specific connection
                             connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                             if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
-                        }
 
-                        if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                            if (connection.packetBuilder.TotalPartialPacketCount > 0)
+                                throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                        }
                     }
                 }
             }
@@ -366,6 +371,11 @@ namespace NetworkCommsDotNet
             catch (InvalidOperationException)
             {
                 CloseConnection(true, 24);
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
+                CloseConnection(true, 30);
             }
 
             //Clear the listen thread object because the thread is about to end

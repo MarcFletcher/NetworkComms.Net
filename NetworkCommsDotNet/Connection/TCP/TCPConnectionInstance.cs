@@ -151,6 +151,11 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 15);
             }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                CloseConnection(true, 31);
+            }
 
             Thread.CurrentThread.Priority = ThreadPriority.Normal;
         }
@@ -234,6 +239,11 @@ namespace NetworkCommsDotNet
             catch (InvalidOperationException)
             {
                 CloseConnection(true, 11);
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                CloseConnection(true, 31);
             }
 
             //Clear the listen thread object because the thread is about to end
