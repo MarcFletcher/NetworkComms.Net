@@ -34,7 +34,7 @@ namespace NetworkCommsDotNet
     {
         //Each internal queue in the array represents a priority level.  
         //We keep the priority associated with each item so that when eventually returned the priority can be easily included
-        private ConcurrentQueue<KeyValuePair<int, TValue>>[] internalQueues = null;
+        private Queue<KeyValuePair<int, TValue>>[] internalQueues = null;
 
         //The number of queues we store internally. 
         private int numDistinctPriorities = 0;
@@ -49,9 +49,9 @@ namespace NetworkCommsDotNet
         public PriorityQueue(int numDistinctPriorities)
         {
             this.numDistinctPriorities = numDistinctPriorities;
-            internalQueues = new ConcurrentQueue<KeyValuePair<int, TValue>>[numDistinctPriorities];
+            internalQueues = new Queue<KeyValuePair<int, TValue>>[numDistinctPriorities];
             for (int i = 0; i < numDistinctPriorities; i++)
-                internalQueues[i] = new ConcurrentQueue<KeyValuePair<int, TValue>>();
+                internalQueues[i] = new Queue<KeyValuePair<int, TValue>>();
         }
 
         /// <summary>
@@ -64,8 +64,12 @@ namespace NetworkCommsDotNet
             if (item.Key < 0 || item.Key > numDistinctPriorities - 1)
                 throw new ArgumentOutOfRangeException("The provided item contains a priority value which is outside the allowed range.");
 
-            internalQueues[item.Key].Enqueue(item);
-            Interlocked.Increment(ref totalNumberQueuedItems);
+            lock (internalQueues)
+            {
+                internalQueues[item.Key].Enqueue(item);
+                Interlocked.Increment(ref totalNumberQueuedItems);
+            }
+
             return true;
         }
 
@@ -76,8 +80,6 @@ namespace NetworkCommsDotNet
         /// <returns>True if an item was succesfully removed from the queue</returns>
         public bool TryTake(out KeyValuePair<int, TValue> item)
         {
-            bool success = false;
-
             // Loop through the queues in priority order. Higher priority first
             for (int i = numDistinctPriorities - 1; i >= 0; i--)
             {
@@ -85,12 +87,14 @@ namespace NetworkCommsDotNet
                 // operation and the updating of m_count are atomic. 
                 lock (internalQueues)
                 {
-                    success = internalQueues[i].TryDequeue(out item);
-                    if (success)
+                    if (internalQueues[i].Count > 0)
                     {
+                        item = internalQueues[i].Dequeue();
                         Interlocked.Decrement(ref totalNumberQueuedItems);
                         return true;
                     }
+                    else
+                        continue;
                 }
             }
 
@@ -107,21 +111,21 @@ namespace NetworkCommsDotNet
         /// <returns>True if an item was succesfully removed from the queue</returns>
         public bool TryTake(int minimumPriority, out KeyValuePair<int, TValue> item)
         {
-            bool success = false;
-
             // Loop through the queues in priority order. Higher priority first
             for (int i = numDistinctPriorities - 1; i >= minimumPriority; i--)
             {
                 // Lock the internal data so that the Dequeue 
-                // operation and the updating of m_count are atomic. 
+                // operation and the updating of m_count are atomic.                 
                 lock (internalQueues)
                 {
-                    success = internalQueues[i].TryDequeue(out item);
-                    if (success)
+                    if (internalQueues[i].Count > 0)
                     {
+                        item = internalQueues[i].Dequeue();
                         Interlocked.Decrement(ref totalNumberQueuedItems);
                         return true;
                     }
+                    else
+                        continue;
                 }
             }
 
@@ -184,10 +188,13 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public IEnumerator<KeyValuePair<int, TValue>> GetEnumerator()
         {
-            for (int i = numDistinctPriorities - 1; i >= 0; i--)
+            lock (internalQueues)
             {
-                foreach (var item in internalQueues[i])
-                    yield return item;
+                for (int i = numDistinctPriorities - 1; i >= 0; i--)
+                {
+                    foreach (var item in internalQueues[i])
+                        yield return item;
+                }
             }
         }
 
