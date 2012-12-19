@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
-using System.Threading;
 
 namespace DebugTests
 {
@@ -41,7 +40,7 @@ namespace DebugTests
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
 
             //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.StartListening()
-            TCPConnection.StartListening();
+            TCPConnection.StartListening(true);
 
             //Print the IP addresses and ports we are listening on.
             Console.WriteLine("Listening for messages on:");
@@ -58,6 +57,9 @@ namespace DebugTests
                 if (message == "exit") break;
                 else
                 {
+                    ConnectionInfo targetServerConnectionInfo;
+                    ExampleHelper.GetServerDetails(out targetServerConnectionInfo);
+
                     //Once we have a message we need to know where to send it
                     //Expecting user to enter ip address as 192.168.0.1:4000
                     Console.WriteLine("Please enter the destination IP address and press enter, e.g '192.168.0.1'");
@@ -67,7 +69,7 @@ namespace DebugTests
                     string ipAddressStr = Console.ReadLine();
 
                     //Send the message to the provided destination, voila!
-                    NetworkComms.SendObject("Message", ipAddressStr, message);
+                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, message);
                 }
             }
 
@@ -75,5 +77,4 @@ namespace DebugTests
             NetworkComms.Shutdown();
         }
     }
-
 }

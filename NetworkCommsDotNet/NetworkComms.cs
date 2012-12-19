@@ -1293,30 +1293,32 @@ namespace NetworkCommsDotNet
 
         #region Connection Access
         /// <summary>
-        /// Send the provided object to the specified destination using TCP. Uses default sendReceiveOptions and port. For more control over options see connection specific methods.
+        /// Send the provided object to the specified destination using TCP. Uses default sendReceiveOptions. For more control over options see connection specific methods.
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use for send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
+        /// <param name="destinationPort">The destination listen port</param>
         /// <param name="sendObject">The obect to send</param>
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, object sendObject)
+        public static void SendObject(string packetTypeStr, string destinationIPAddress, int destinationPort, object sendObject)
         {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
             conn.SendObject(packetTypeStr, sendObject);
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination and wait for a return object using TCP. Uses default sendReceiveOptions and port. For more control over options see connection specific methods.
+        /// Send the provided object to the specified destination and wait for a return object using TCP. Uses default sendReceiveOptions. For more control over options see connection specific methods.
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination ip address</param>
+        /// <param name="destinationPort">The destination listen port</param>
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int destinationPort, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
         {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
+            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
             return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
