@@ -16,7 +16,7 @@
     <Name>Documentation</Name>
     <!-- SHFB properties -->
     <OutputPath>.\Help\</OutputPath>
-    <HtmlHelpName>Documentation</HtmlHelpName>
+    <HtmlHelpName>APIReference</HtmlHelpName>
     <Language>en-US</Language>
     <BuildAssemblerVerbosity>AllMessages</BuildAssemblerVerbosity>
     <HelpFileFormat>HtmlHelp1, Website</HelpFileFormat>
@@ -80,7 +80,8 @@
 <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
 <NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
 <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem></NamespaceSummaries>
+<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
+<NamespaceSummaryItem name="(global)" isDocumented="False" /></NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcomms.net</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />

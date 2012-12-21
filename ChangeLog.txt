@@ -1,15 +1,20 @@
-Version 2.0 Beta 1 - Released 12/11/12
+Version 2.0 - Released 20/12/12
 
 - UDP support.
 - Encryption support.
 - IPv6 suppport.
+- Significant API changes.
 - Automatic serialisation and compression detection.
 - Packet prioritisation.
-- Support for sending v.large files.
+- Support for sending v.large files via streams.
 - Multiple adaptor improvements.
-- Improved Remote Procedure Call support.
+- Connection specific feature granulation.
+- Improved RPC support.
 - Significant improvements in flexibility, extendibility and performance.
 - Better documentation.
+- Dedicated website.
+
+Version 2.0 Beta 1 - Released 12/11/12
 
 Version 1.3 - Released 03/6/12
 
