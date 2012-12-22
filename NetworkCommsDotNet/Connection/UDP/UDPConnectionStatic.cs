@@ -135,6 +135,12 @@ namespace NetworkCommsDotNet
                         }
                     }
 
+                    //If an existing connection does not exist but the info we are using suggests it should we need to reset the info
+                    //so that it can be reused correctly. This case generally happens when using Comms in the format 
+                    //UDPConnection.GetConnection(info).SendObject(packetType, objToSend);
+                    if (connectionInfo.ConnectionState == ConnectionState.Established || connectionInfo.ConnectionState == ConnectionState.Shutdown)
+                        connectionInfo.ResetConnectionInfo();
+
                     connection = new UDPConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, existingConnection);
                 }
             }

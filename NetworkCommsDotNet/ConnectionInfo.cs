@@ -218,8 +218,11 @@ namespace NetworkCommsDotNet
         [ProtoBeforeSerialization]
         private void OnSerialise()
         {
-            localEndPointIPStr = LocalEndPoint.Address.ToString();
-            localEndPointPort = LocalEndPoint.Port;
+            lock (internalLocker)
+            {
+                localEndPointIPStr = LocalEndPoint.Address.ToString();
+                localEndPointPort = LocalEndPoint.Port;
+            }
         }
 
         [ProtoAfterDeserialization]
@@ -277,7 +280,8 @@ namespace NetworkCommsDotNet
         /// <param name="localEndPoint"></param>
         internal void UpdateLocalEndPointInfo(IPEndPoint localEndPoint)
         {
-            this.LocalEndPoint = localEndPoint;
+            lock (internalLocker)
+                this.LocalEndPoint = localEndPoint;
         }
 
         /// <summary>
@@ -286,9 +290,12 @@ namespace NetworkCommsDotNet
         /// <param name="handshakeInfo"><see cref="ConnectionInfo"/> provided by remoteEndPoint during connection handshake.</param>
         internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo)
         {
-            NetworkIdentifier = handshakeInfo.NetworkIdentifier;
-            RemoteEndPoint = handshakeInfo.LocalEndPoint;
-            IsConnectable = handshakeInfo.IsConnectable;
+            lock (internalLocker)
+            {
+                NetworkIdentifier = handshakeInfo.NetworkIdentifier;
+                RemoteEndPoint = handshakeInfo.LocalEndPoint;
+                IsConnectable = handshakeInfo.IsConnectable;
+            }
         }
 
         /// <summary>
@@ -304,9 +311,21 @@ namespace NetworkCommsDotNet
         /// Replaces the current networkIdentifier with that provided
         /// </summary>
         /// <param name="networkIdentifier">The new networkIdentifier for this connectionInfo</param>
-        public void SetNetworkIdentifer(ShortGuid networkIdentifier)
+        public void ResetNetworkIdentifer(ShortGuid networkIdentifier)
         {
             NetworkIdentifier = networkIdentifier;
+        }
+
+        /// <summary>
+        /// A connectionInfo object may be used across multiple connection sessions, i.e. due to a possible timeout. 
+        /// This method resets the state of the connectionInfo object so that it may be reused.
+        /// </summary>
+        internal void ResetConnectionInfo()
+        {
+            lock (internalLocker)
+            {
+                ConnectionState = ConnectionState.Undefined;
+            }
         }
 
         /// <summary>

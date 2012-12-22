@@ -99,6 +99,15 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.LoggingEnabled)
                         NetworkComms.Logger.Trace("Creating new TCPConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
 
+                    if (connectionInfo.ConnectionState == ConnectionState.Establishing)
+                        throw new ConnectionSetupException("Connection state for connection " + connectionInfo + " is marked as establishing. This should only be the case here due to a bug.");
+
+                    //If an existing connection does not exist but the info we are using suggests it should we need to reset the info
+                    //so that it can be reused correctly. This case generally happens when using Comms in the format 
+                    //TCPConnection.GetConnection(info).SendObject(packetType, objToSend);
+                    if (connectionInfo.ConnectionState == ConnectionState.Established || connectionInfo.ConnectionState == ConnectionState.Shutdown)
+                        connectionInfo.ResetConnectionInfo();
+
                     //We add a reference to networkComms for this connection within the constructor
                     connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, tcpClient);
                     newConnection = true;
