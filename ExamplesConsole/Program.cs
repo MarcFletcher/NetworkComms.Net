@@ -28,8 +28,13 @@ namespace ExamplesConsole
     {
         static void Main(string[] args)
         {
-            Console.SetBufferSize(120, 200);
-            Console.SetWindowSize(120, 25);
+            try
+            {
+                Console.SetBufferSize(120, 200);
+                Console.SetWindowSize(120, 25);
+            }
+            catch (NotImplementedException) { }
+
             Thread.CurrentThread.Name = "MainThread";
 
             Console.WriteLine("Initiating NetworkCommsDotNet examples.\n");
