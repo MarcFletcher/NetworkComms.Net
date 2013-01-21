@@ -3,12 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
 	ProjectSection(SolutionItems) = preProject
-		ChangeLog.txt = ChangeLog.txt
-		Common.Logging.dll = Common.Logging.dll
-		Common.Logging.Log4Net.dll = Common.Logging.Log4Net.dll
 		COPYING.txt = COPYING.txt
-		log4net.dll = log4net.dll
-		protobuf-net.dll = protobuf-net.dll
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkCommsDotNet", "NetworkCommsDotNet\NetworkCommsDotNet.csproj", "{7DB00305-F5ED-4545-9D83-542132C8177E}"
@@ -41,6 +36,12 @@ Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "Documentation", "Documentat
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteProcedureCalls", "RemoteProcedureCalls\RemoteProcedureCalls.csproj", "{BFB67E36-9DF1-473D-B5DC-D94C5199C624}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Net40_DLL", "Net40_DLL", "{EA10E909-9440-42B6-B62C-E1440088A44F}"
+	ProjectSection(SolutionItems) = preProject
+		DLL\Net40\NLog.dll = DLL\Net40\NLog.dll
+		DLL\Net40\protobuf-net.dll = DLL\Net40\protobuf-net.dll
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -114,5 +115,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EA10E909-9440-42B6-B62C-E1440088A44F} = {BA3D7587-33C2-443D-97F9-86C1BB72DED3}
 	EndGlobalSection
 EndGlobal
