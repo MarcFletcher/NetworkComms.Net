@@ -239,54 +239,63 @@ namespace DPSBase
             else
             {
                 //Otherwise we will need another stream
-                using (MemoryStream tempStream = new MemoryStream())
+                using (MemoryStream tempStream1 = new MemoryStream())
                 {
                     //variable will store the number of bytes in the output stream at each processing stage
                     long writtenBytes;
                     //Data processing for deserialization is done in reverse so run the last element
-                    dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
+                    dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputStream, tempStream1, options, out writtenBytes);
 
                     //If we have more than 1 processor we will now run the remaining processors pair wise
                     if (dataProcessors.Count > 1)
                     {
-                        //Data processing for deserialization is done in reverse so run from a high index down in steps of 2. Each loop processes data temp -> input -> temp
-                        for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
+                        using (MemoryStream tempStream2 = new MemoryStream())
                         {
-                            //Seek streams to zero and truncate the last output stream to the data size
-                            inputStream.Seek(0, 0);
-                            tempStream.Seek(0, 0); tempStream.SetLength(writtenBytes);
-                            //Process the data
-                            dataProcessors[i].ReverseProcessDataStream(tempStream, inputStream, options, out writtenBytes);
-
-                            //if the second processor exists run it
-                            if (i - 1 >= 0)
+                            //Data processing for deserialization is done in reverse so run from a high index down in steps of 2. Each loop processes data temp -> input -> temp
+                            for (int i = dataProcessors.Count - 2; i >= 0; i -= 2)
                             {
                                 //Seek streams to zero and truncate the last output stream to the data size
-                                inputStream.Seek(0, 0); inputStream.SetLength(writtenBytes);
-                                tempStream.Seek(0, 0);
+                                tempStream2.Seek(0, 0);
+                                tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
                                 //Process the data
-                                dataProcessors[i].ReverseProcessDataStream(inputStream, tempStream, options, out writtenBytes);
+                                dataProcessors[i].ReverseProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+                                //if the second processor exists run it
+                                if (i - 1 >= 0)
+                                {
+                                    //Seek streams to zero and truncate the last output stream to the data size
+                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                    tempStream1.Seek(0, 0);
+                                    //Process the data
+                                    dataProcessors[i].ReverseProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
+                                }
+                            }
+
+                            //Depending on whether the number of processors is even or odd a different stream will hold the final data
+                            if (dataProcessors.Count % 2 == 0)
+                            {
+                                //Seek to the begining and truncate the output stream
+                                tempStream2.Seek(0, 0);
+                                tempStream2.SetLength(writtenBytes);
+                                //Return the resultant bytes
+                                return (T)DeserialiseDataObjectInt(tempStream2, typeof(T), options);
+                            }
+                            else
+                            {
+                                //Seek to the begining and truncate the output stream
+                                tempStream1.Seek(0, 0);
+                                tempStream1.SetLength(writtenBytes);
+                                //Return the resultant bytes
+                                return (T)DeserialiseDataObjectInt(tempStream1, typeof(T), options);
                             }
                         }
                     }
 
-                    //Depending on whether the number of processors is even or odd a different stream will hold the final data
-                    if (dataProcessors.Count % 2 == 0)
-                    {
-                        //Seek to the begining and truncate the output stream
-                        inputStream.Seek(0, 0);
-                        inputStream.SetLength(writtenBytes);
-                        //Return the resultant bytes
-                        return (T)DeserialiseDataObjectInt(inputStream, typeof(T), options);
-                    }
-                    else
-                    {
-                        //Seek to the begining and truncate the output stream
-                        tempStream.Seek(0, 0);
-                        tempStream.SetLength(writtenBytes);
-                        //Return the resultant bytes
-                        return (T)DeserialiseDataObjectInt(tempStream, typeof(T), options);
-                    }
+                    //Seek to the begining and truncate the output stream
+                    tempStream1.Seek(0, 0);
+                    tempStream1.SetLength(writtenBytes);
+                    //Return the resultant bytes
+                    return (T)DeserialiseDataObjectInt(tempStream1, typeof(T), options);
                 }
             }
         }
