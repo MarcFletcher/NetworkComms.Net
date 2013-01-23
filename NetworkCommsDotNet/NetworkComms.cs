@@ -801,10 +801,7 @@ namespace NetworkCommsDotNet
                     if (globalIncomingPacketHandlers[packetTypeStr] == null || globalIncomingPacketHandlers[packetTypeStr].Count == 0)
                     {
                         globalIncomingPacketHandlers.Remove(packetTypeStr);
-
-                        //Remove any entries in the unwrappers dict as well as we are done with this packetTypeStr
-                        if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                            globalIncomingPacketUnwrappers.Remove(packetTypeStr);
+                        globalIncomingPacketUnwrappers.Remove(packetTypeStr);
 
                         if (LoggingEnabled) logger.Info("Removed a packetHandler for '" + packetTypeStr + "' packetType. No handlers remain.");
                     }
@@ -826,6 +823,7 @@ namespace NetworkCommsDotNet
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
                     globalIncomingPacketHandlers.Remove(packetTypeStr);
+                    globalIncomingPacketUnwrappers.Remove(packetTypeStr);
 
                     if (LoggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
                 }
@@ -840,6 +838,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 globalIncomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
+                globalIncomingPacketUnwrappers = new Dictionary<string, PacketTypeUnwrapper>();
 
                 if (LoggingEnabled) logger.Info("Removed all incoming packetHandlers for all packetTypes");
             }

@@ -115,9 +115,9 @@ namespace ExamplesConsole
             }
 
             if (connectionTypeToUse == ConnectionType.TCP)
-                TCPConnection.StartListening();
+                TCPConnection.StartListening(true);
             else
-                UDPConnection.StartListening();
+                UDPConnection.StartListening(true);
 
             //***************************************************************//
             //                End of interesting stuff                       //

@@ -232,11 +232,12 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
 
                 //We now connect to our target
-                tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));
+                tcpClient = new TcpClient(ConnectionInfo.RemoteEndPoint.AddressFamily);
 
                 bool connectSuccess = true;
 
                 //Start the connection using the asyn version
+                //This allows us to choose our own connection establish timeout
                 IAsyncResult ar = tcpClient.BeginConnect(ConnectionInfo.RemoteEndPoint.Address, ConnectionInfo.RemoteEndPoint.Port, null, null);
                 WaitHandle connectionWait = ar.AsyncWaitHandle;
                 try

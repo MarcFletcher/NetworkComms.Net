@@ -57,8 +57,9 @@ namespace ExamplesConsole
                     }
                     else
                     {
-                        string serverIP = userEnteredStr.Split(':')[0];
-                        int serverPort = int.Parse(userEnteredStr.Split(':')[1]);
+                        int lastColonPosition = userEnteredStr.LastIndexOf(':');
+                        string serverIP = userEnteredStr.Substring(0, lastColonPosition);
+                        int serverPort = int.Parse(userEnteredStr.Substring(lastColonPosition + 1, userEnteredStr.Length - lastColonPosition - 1));
 
                         lastServerIP = serverIP;
                         lastServerPort = serverPort;

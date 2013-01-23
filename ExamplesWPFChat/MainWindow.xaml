@@ -1,0 +1,20 @@
+﻿<Window x:Class="ExamplesWPFChat.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NetworkComms.Net WPF Chat Example" Height="287" Width="505" Background="#FF7CA0FF" Closing="Window_Closing" ResizeMode="CanMinimize">
+    <Grid>
+        <TextBox Height="23" HorizontalAlignment="Left" Margin="68,7,0,0" Name="masterIP" VerticalAlignment="Top" Width="97" />
+        <Label Content="Master IP:" Height="28" HorizontalAlignment="Left" Margin="8,5,0,0" Name="label1" VerticalAlignment="Top" />
+        <TextBox Height="23" HorizontalAlignment="Left" Margin="199,7,0,0" Name="masterPort" VerticalAlignment="Top" Width="47" />
+        <Label Content="Port:" Height="28" HorizontalAlignment="Left" Margin="166,5,0,0" Name="label2" VerticalAlignment="Top" />
+        <TextBox Height="188" HorizontalAlignment="Left" Margin="11,37,0,0" Name="chatBox" VerticalAlignment="Top" Width="356" IsReadOnly="True" VerticalScrollBarVisibility="Visible" />
+        <Label Content="Messages from:" Height="28" HorizontalAlignment="Left" Margin="370,59,0,0" Name="label3" VerticalAlignment="Top" Width="98" />
+        <TextBox Height="142" HorizontalAlignment="Left" Margin="373,83,0,0" Name="messagesFrom" VerticalAlignment="Top" Width="117" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
+        <Label Content="Local Name:" Height="28" HorizontalAlignment="Left" Margin="293,6,0,0" Name="label4" VerticalAlignment="Top" />
+        <TextBox Height="23" HorizontalAlignment="Left" Margin="373,7,0,0" Name="localName" VerticalAlignment="Top" Width="117" />
+        <Label Content="Message:" Height="28" HorizontalAlignment="Left" Margin="5,228,0,0" Name="label5" VerticalAlignment="Top" />
+        <TextBox Height="23" HorizontalAlignment="Left" Margin="62,230,0,0" Name="messageText" VerticalAlignment="Top" Width="305" KeyUp="messageText_KeyUp" />
+        <Button Content="Send" Height="23" HorizontalAlignment="Left" Margin="373,230,0,0" Name="sendMessageButton" VerticalAlignment="Top" Width="117" Click="sendMessageButton_Click" />
+        <CheckBox Content="Use Encryption" Height="16" HorizontalAlignment="Left" Margin="373,41,0,0" Name="useEncryptionBox" VerticalAlignment="Top" Checked="useEncryptionBox_Checked" Unchecked="useEncryptionBox_Unchecked" />
+    </Grid>
+</Window>

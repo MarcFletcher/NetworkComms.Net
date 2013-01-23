@@ -71,7 +71,7 @@ namespace NetworkCommsDotNet
                     isIsolatedUDPConnection = true;
 
                     if (ConnectionInfo.LocalEndPoint == null)
-                        udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(new IPEndPoint(IPAddress.Any, 0)));
+                        udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(ConnectionInfo.RemoteEndPoint.AddressFamily));
                     else
                         udpClientThreadSafe = new UdpClientThreadSafe(new UdpClient(ConnectionInfo.LocalEndPoint));
 
