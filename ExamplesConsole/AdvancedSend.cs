@@ -201,34 +201,38 @@ namespace ExamplesConsole
             if (loggingEnableKey.Key == ConsoleKey.Y)
             {
                 //////////////////////////////////////////////////////////////////////
-                /////////////// VERY SIMPLE CONOLSE ONLY LOGGER AVAILABLE ////////////
+                //// SIMPLE CONSOLE ONLY LOGGING
+                //// See http://nlog-project.org/ for more information
+                //// Requires that the file NLog.dll is present 
                 //////////////////////////////////////////////////////////////////////
-                //NameValueCollection properties = new NameValueCollection();
-                //properties["showDateTime"] = "true";
-                //properties["showLogName"] = "false";
-                //properties["level"] = "All";
-                //NetworkComms.EnableLogging(new Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter(properties));
+                //LoggingConfiguration logConfig = new LoggingConfiguration();
+                //ConsoleTarget consoleTarget = new ConsoleTarget();
+                //consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
+                //logConfig.AddTarget("console", consoleTarget);
+                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                //NetworkComms.EnableLogging(logConfig);
 
                 //////////////////////////////////////////////////////////////////////
-                //// THE FOLLOWING LOGGER USES THE MUCH MORE VERSATILE LOG4NET////////
-                //// Requires the prescense of Common.Logging.Log4Net.dll & log4net.dll 
+                //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
+                //// See http://nlog-project.org/ for more information
+                //// Requires that the file NLog.dll is present 
                 //////////////////////////////////////////////////////////////////////
                 LoggingConfiguration logConfig = new LoggingConfiguration();
                 FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/file.txt";
-                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} ${logger} ${message}";
+                fileTarget.FileName = "${basedir}/log.txt";
+                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
+                ConsoleTarget consoleTarget = new ConsoleTarget();
+                consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} ${message}";
 
                 logConfig.AddTarget("file", fileTarget);
+                logConfig.AddTarget("console", consoleTarget);
 
-                LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
-                logConfig.LoggingRules.Add(rule);
-                
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
                 NetworkComms.EnableLogging(logConfig);
 
-                Console.WriteLine(" ... logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
-
                 //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled");
+                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
             }
         }
 
