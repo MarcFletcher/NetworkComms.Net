@@ -1,3 +1,10 @@
+Version 2.1 - Released 29/01/13
+
+- Switched from log4net to NLog to allow future mobile framework development.
+- Solution layout improvements.
+- Bug fixes to IPv6.
+- More examples.
+
 Version 2.0 - Released 20/12/12
 
 - UDP support.
