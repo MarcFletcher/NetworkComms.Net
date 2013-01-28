@@ -23,7 +23,7 @@ using System.Text;
 using ProtoBuf;
 using NetworkCommsDotNet;
 using System.Collections.Specialized;
-using Common.Logging.Log4Net;
+using NLog;
 
 namespace ExamplesConsole
 {

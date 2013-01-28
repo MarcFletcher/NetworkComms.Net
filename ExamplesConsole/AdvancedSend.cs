@@ -24,8 +24,10 @@ using DPSBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
-using Common.Logging.Log4Net;
+using NLog;
 using System.Net;
+using NLog.Config;
+using NLog.Targets;
 
 namespace ExamplesConsole
 {
@@ -211,10 +213,17 @@ namespace ExamplesConsole
                 //// THE FOLLOWING LOGGER USES THE MUCH MORE VERSATILE LOG4NET////////
                 //// Requires the prescense of Common.Logging.Log4Net.dll & log4net.dll 
                 //////////////////////////////////////////////////////////////////////
-                NameValueCollection properties = new NameValueCollection();
-                properties["configType"] = "FILE";
-                properties["configFile"] = "log4net.config";
-                NetworkComms.EnableLogging(new Log4NetLoggerFactoryAdapter(properties));
+                LoggingConfiguration logConfig = new LoggingConfiguration();
+                FileTarget fileTarget = new FileTarget();
+                fileTarget.FileName = "${basedir}/file.txt";
+                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} ${logger} ${message}";
+
+                logConfig.AddTarget("file", fileTarget);
+
+                LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
+                logConfig.LoggingRules.Add(rule);
+                
+                NetworkComms.EnableLogging(logConfig);
 
                 Console.WriteLine(" ... logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
 
