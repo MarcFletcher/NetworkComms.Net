@@ -27,7 +27,7 @@ COPY ..\RemoteProcedureCalls\bin\%1\RemoteProcedureCalls.pdb .\%1\RemoteProcedur
 md ".\%1\Complete"
 md ".\%1\Core"
 
-.\ILMerge.exe /targetplatform:v4 /out:.\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
+.\ILMerge.exe /targetplatform:v4 /out:.\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll
 .\ILMerge.exe /targetplatform:v4 /out:.\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll .\%1\DistributedFileSystem.dll .\%1\RemoteProcedureCalls.dll
 
 DEL .\%1\*.dll .\%1\*.pdb
