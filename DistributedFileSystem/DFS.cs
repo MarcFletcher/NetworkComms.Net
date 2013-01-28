@@ -24,9 +24,10 @@ using System.Threading.Tasks;
 using System.IO;
 using NetworkCommsDotNet;
 using System.Threading;
-using Common.Logging;
+using NLog;
 using System.Net;
 using DPSBase;
+using NLog.Config;
 
 namespace DistributedFileSystem
 {
@@ -358,12 +359,12 @@ namespace DistributedFileSystem
         #region Logging
         internal static object loggingLocker = new object();
         internal static bool loggingEnabled = false;
-        internal static ILog logger = LogManager.GetCurrentClassLogger();
+        internal static Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Access the networkComms logger externally. Allows logging from external sources
         /// </summary>
-        public static ILog Logger
+        public static Logger Logger
         {
             get { return logger; }
         }
@@ -372,13 +373,14 @@ namespace DistributedFileSystem
         /// Enable logging in networkComms using the provided logging adaptor
         /// </summary>
         /// <param name="loggingAdaptor"></param>
-        public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
+        public static void EnableLogging(LoggingConfiguration loggingAdaptor)
         {
             lock (loggingLocker)
             {
                 loggingEnabled = true;
-                Common.Logging.LogManager.Adapter = loggingAdaptor;
+                LogManager.Configuration = loggingAdaptor;
                 logger = LogManager.GetCurrentClassLogger();
+                LogManager.EnableLogging();
             }
         }
 
@@ -390,7 +392,7 @@ namespace DistributedFileSystem
             lock (loggingLocker)
             {
                 loggingEnabled = false;
-                Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
+                LogManager.DisableLogging();
             }
         }
         #endregion

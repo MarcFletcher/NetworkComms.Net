@@ -22,15 +22,12 @@ using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
 using System.Collections.Specialized;
-using Common.Logging.Simple;
-using Common.Logging;
-using Common.Logging.Log4Net;
-using log4net.Repository;
-using log4net.Layout;
-using log4net.Appender;
+using NLog;
 using System.Threading;
 using System.IO;
 using DistributedFileSystem;
+using NLog.Config;
+using NLog.Targets;
 //using DistributedFileSystem;
 
 namespace DebugTests
@@ -51,13 +48,18 @@ namespace DebugTests
             if (false)
             {
                 //Configure the logger here
-                NameValueCollection properties = new NameValueCollection();
-                properties["configType"] = "FILE";
-                properties["configFile"] = "log4net_comms.config";
-                var logger = new Log4NetLoggerFactoryAdapter(properties);
+                LoggingConfiguration logConfig = new LoggingConfiguration();
+                FileTarget fileTarget = new FileTarget();
+                fileTarget.FileName = "${basedir}/file.txt";
+                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} ${logger} ${message}";
 
-                NetworkComms.EnableLogging(logger);
-                DFS.EnableLogging(logger);
+                logConfig.AddTarget("file", fileTarget);
+
+                LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
+                logConfig.LoggingRules.Add(rule);
+
+                NetworkComms.EnableLogging(logConfig);                
+                DFS.EnableLogging(logConfig);
             }
 
             //NetworkComms.ListenOnAllAllowedInterfaces = false;

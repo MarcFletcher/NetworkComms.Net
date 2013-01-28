@@ -27,9 +27,10 @@ using System.Threading.Tasks;
 using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
-using Common.Logging;
+using NLog;
 using System.Diagnostics;
 using System.IO;
+using NLog.Config;
 
 namespace NetworkCommsDotNet
 {
@@ -1157,27 +1158,28 @@ namespace NetworkCommsDotNet
         /// Returns true if comms logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
-        private static ILog logger = LogManager.GetCurrentClassLogger();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.
         /// </summary>
-        public static ILog Logger
+        public static Logger Logger
         {
             get { return logger; }
         }
 
         /// <summary>
         /// Enable logging using the provided common.logging adaptor. See examples for usage.
-        /// </summary>
-        /// <param name="loggingAdaptor">The logging adaptor to use for all logging.</param>
-        public static void EnableLogging(ILoggerFactoryAdapter loggingAdaptor)
+        /// </summary>        
+        /// <param name="loggingConfiguration"></param>
+        public static void EnableLogging(LoggingConfiguration loggingConfiguration)
         {
             lock (globalDictAndDelegateLocker)
             {
                 LoggingEnabled = true;
-                Common.Logging.LogManager.Adapter = loggingAdaptor;
+                LogManager.Configuration = loggingConfiguration;                
                 logger = LogManager.GetCurrentClassLogger();
+                LogManager.EnableLogging();
             }
         }
 
@@ -1189,7 +1191,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 LoggingEnabled = false;
-                Common.Logging.LogManager.Adapter = new Common.Logging.Simple.NoOpLoggerFactoryAdapter();
+                LogManager.DisableLogging();
             }
         }
 
