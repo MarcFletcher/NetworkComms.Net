@@ -11,3 +11,4 @@ ipch/**
 SingleDllBuild/Debug/*
 SingleDllBuild/Release/*
 Documentation/Help/*
+*.orig
