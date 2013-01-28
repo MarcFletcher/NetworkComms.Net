@@ -35,7 +35,7 @@ namespace ExamplesWPFChat
         /// <summary>
         /// An encryption key to use should one be required
         /// </summary>
-        string encryptionKey = "123456789s";
+        string encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
 
         /// <summary>
         /// A local counter used to track the number of messages sent
@@ -147,6 +147,9 @@ namespace ExamplesWPFChat
 
         private void SendMessage()
         {
+            //We want to make a quick check for a zero length string
+            if (messageText.Text.Trim() == "") return;
+
             ConnectionInfo masterConnectionInfo = null;
 
             if (masterIP.Text != "")
@@ -203,18 +206,13 @@ namespace ExamplesWPFChat
 
         private void useEncryptionBox_Checked(object sender, RoutedEventArgs e)
         {
-            NetworkComms.RemoveGlobalIncomingPacketHandler("ChatMessage");
-            Dictionary<string, string> options = new Dictionary<string, string>();
-            RijndaelPSKEncrypter.AddPasswordToOptions(options, encryptionKey);
-            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions<ProtobufSerializer, LZMACompressor, RijndaelPSKEncrypter>(options);
-            NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
+            RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, encryptionKey);
+            NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
         }
 
         private void useEncryptionBox_Unchecked(object sender, RoutedEventArgs e)
         {
-            NetworkComms.RemoveGlobalIncomingPacketHandler("ChatMessage");
-            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions<ProtobufSerializer, LZMACompressor>();
-            NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
+            NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
         }
     }
 }
