@@ -58,6 +58,7 @@ namespace NetworkCommsDotNet
             SendBufferSizeBytes = 80000;
 
             CheckSumMismatchSentPacketCacheMaxByteLimit = 75000;
+            MinimumSentPacketCacheTimeMinutes = 1;
 
             ConnectionEstablishTimeoutMS = 30000;
             PacketConfirmationTimeoutMS = 5000;
@@ -105,12 +106,6 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static List<IPAddress> AllAllowedIPs()
         {
-            //This is probably the most awesome linq expression ever
-            //It loops through every known network adaptor and tries to pull out any 
-            //ip addresses which match the provided prefixes
-            //If multiple matches are found then we rank by prefix order at the end
-            //Credit: M.Fletcher & M.Dean
-
             //We want to ignore IP's that have been autoassigned
             IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
             IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
@@ -587,8 +582,8 @@ namespace NetworkCommsDotNet
             {
                 try
                 {                    
-                    //Wait here to be triggered of atleast once every two seconds
-                    IncomingPacketQueueHighPrioThreadWait.WaitOne(2000);
+                    //Wait here to be triggered of atleast once every 500ms
+                    IncomingPacketQueueHighPrioThreadWait.WaitOne(500);
                     if (commsShutdown) return;
 
                     //Keep looping over high priority items until they run out
@@ -760,6 +755,16 @@ namespace NetworkCommsDotNet
         /// When checksum validation is enabled sets the limit below which sent packets are cached to ensure successful delivery. Default 75KB.
         /// </summary>
         public static int CheckSumMismatchSentPacketCacheMaxByteLimit { get; set; }
+
+        /// <summary>
+        /// When a sent packet has been cached for a possible resend this is the minimum length of time it will be retained. Default is 1.0 minutes.
+        /// </summary>
+        public static double MinimumSentPacketCacheTimeMinutes { get; set; }
+
+        /// <summary>
+        /// Records the last sent packet cache cleanup time. Prevents the sent packet cache from being checked too frequently.
+        /// </summary>
+        internal static DateTime LastSentPacketCacheCleanup { get; set; }
         #endregion
 
         #region PacketType Config and Global Handlers
@@ -841,9 +846,14 @@ namespace NetworkCommsDotNet
                     PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
 
                     bool delegateAlreadyExists = false;
-
                     foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
-                        delegateAlreadyExists |= handler == toCompareDelegate;
+                    {
+                        if (handler == toCompareDelegate)
+                        {
+                            delegateAlreadyExists = true;
+                            break;
+                        }
+                    }
                                         
                     if (delegateAlreadyExists)
                         throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
@@ -1496,16 +1506,12 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-
                 foreach (var pair in allConnectionsByEndPoint)
                 {
                     foreach (var connection in pair.Value.Values)
                     {
                         if (connection.ConnectionInfo != null && connection.ConnectionInfo.NetworkIdentifier == networkIdentifier)
-                        {
-                            if (!returnList.Contains(connection.ConnectionInfo))
                                 returnList.Add(connection.ConnectionInfo);
-                        }
                     }
                 }
 
@@ -1517,7 +1523,6 @@ namespace NetworkCommsDotNet
                         {
                             foreach (var infoList in pair.Value.Values)
                                 foreach (var info in infoList)
-                                    if (!returnList.Contains(info))
                                         returnList.Add(info);
 
                             break;
@@ -1525,8 +1530,13 @@ namespace NetworkCommsDotNet
                     }                    
                 }
             }
-            
-            return returnList;
+
+            List<ConnectionInfo> distinctList = new List<ConnectionInfo>();
+            foreach (var info in returnList)
+                if (!distinctList.Contains(info))
+                    distinctList.Add(info);
+
+            return distinctList;
         }
 
         /// <summary>
@@ -1598,7 +1608,7 @@ namespace NetworkCommsDotNet
                 {
                     foreach (var innerPair in pair.Value)
                     {
-                        if (connectionTypeToClose == ConnectionType.Undefined || innerPair.Key == connectionTypeToClose)
+                        if (innerPair.Value != null && (connectionTypeToClose == ConnectionType.Undefined || innerPair.Key == connectionTypeToClose))
                         {
                             bool dontClose = false;
 
@@ -1611,7 +1621,7 @@ namespace NetworkCommsDotNet
                                 }
                             }
 
-                            if (!dontClose && innerPair.Value != null)
+                            if (!dontClose )
                                 connectionsToClose.Add(innerPair.Value);
                         }
                     }
@@ -2016,549 +2026,6 @@ namespace NetworkCommsDotNet
                     allConnectionsById.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<Connection>>() { { connection.ConnectionInfo.ConnectionType, new List<Connection>() {connection}} });
             }
         }
-        #endregion
-
-        #region Obsolete Send Receive Methods - These will be removed in the release after 2.0
-        #region SendObjectDefault
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and sets the networkIdentifier. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and sets the networkIdentifier. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));            
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified networkIdentifier. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="networkIdentifier">Destination networkIdentifier</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject)
-        {
-            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options));
-        }
-
-        #endregion SendObjectDefault
-        #region SendObjectSpecific
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and sets the networkIdentifier. Uses the provided compressor and serializer delegates
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="serializer">The specific serializer delegate to use</param>
-        /// <param name="compressor">The specific compressor delegate to use</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
-
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and sets the networkIdentifier. Uses the provided compressor and serializer delegates
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="serializer">The specific serializer delegate to use</param>
-        /// <param name="compressor">The specific compressor delegate to use</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port. Uses the provided compressor and serializer delegates
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="serializer">The specific serializer delegate to use</param>
-        /// <param name="compressor">The specific compressor delegate to use</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port. Uses the provided compressor and serializer delegates
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="serializer">The specific serializer delegate to use</param>
-        /// <param name="compressor">The specific compressor delegate to use</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conn.SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));   
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified networkIdentifier. Uses the provided compressor and serializer delegates
-        /// </summary>
-        /// <param name="packetTypeStr">Packet type to use during send</param>
-        /// <param name="networkIdentifier">Destination networkIdentifier</param>
-        /// <param name="receiveConfirmationRequired">If true will return only when object is successfully received at destination</param>
-        /// <param name="sendObject">The obect to send</param>
-        /// <param name="serializer">The specific serializer delegate to use</param>
-        /// <param name="compressor">The specific compressor delegate to use</param>
-        [Obsolete]
-        public static void SendObject(string packetTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, object sendObject, DataSerializer serializer, DataProcessor compressor)
-        {
-            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            conns[0].SendObject(packetTypeStr, sendObject, new SendReceiveOptions(serializer, new List<DataProcessor>() { compressor }, options));
-        }
-        #endregion
-
-        #region SendReceiveObjectDefault
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port, setting the networkIdentifier, and wait for the return object. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port, setting the networkIdentifier, and wait for the return object. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and wait for the return object. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and wait for the return object. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified networkIdentifier and wait for the return object. Uses the network comms default compressor and serializer
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="networkIdentifier">Destination networkIdentifier</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
-        {
-            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
-
-            var options = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                options["ReceiveConfirmationRequired"] = (true).ToString();
-
-            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject, new SendReceiveOptions(DefaultSendReceiveOptions.DataSerializer, DefaultSendReceiveOptions.DataProcessors, options), DefaultSendReceiveOptions);
-        }
-
-        #endregion SendReceiveObjectDefault
-        #region SendReceiveObjectSpecific
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port, setting the networkIdentifier, and wait for the return object. Uses the provided compressors and serializers
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="serializerOutgoing">Serializer to use for outgoing object</param>
-        /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
-        /// <param name="serializerIncoming">Serializer to use for return object</param>
-        /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-
-            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
-
-            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
-                returnOptions.Remove("ReceiveConfirmationRequired");
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
-                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
-                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port, setting the networkIdentifier, and wait for the return object. Uses the provided compressors and serializers
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="serializerOutgoing">Serializer to use for outgoing object</param>
-        /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
-        /// <param name="serializerIncoming">Serializer to use for return object</param>
-        /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <param name="networkIdentifier">The networkIdentifier used to complete the send. Can be used in subsequent sends without requiring ip address</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming, ref ShortGuid networkIdentifier)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-            networkIdentifier = conn.ConnectionInfo.NetworkIdentifier;
-
-            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
-
-            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
-                returnOptions.Remove("ReceiveConfirmationRequired");
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
-                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
-                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));                        
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on the default comms port and wait for the return object. Uses the provided compressors and serializers
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="serializerOutgoing">Serializer to use for outgoing object</param>
-        /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
-        /// <param name="serializerIncoming">Serializer to use for return object</param>
-        /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, DefaultListenPort));
-
-            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
-
-            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
-                returnOptions.Remove("ReceiveConfirmationRequired");
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
-                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
-                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified destination on a specific comms port and wait for the return object. Uses the provided compressors and serializers
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
-        /// <param name="commsPort">The destination comms port</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="serializerOutgoing">Serializer to use for outgoing object</param>
-        /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
-        /// <param name="serializerIncoming">Serializer to use for return object</param>
-        /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int commsPort, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
-        {
-            TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, commsPort));
-
-            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
-
-            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
-                returnOptions.Remove("ReceiveConfirmationRequired");
-
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
-                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
-                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));            
-        }
-
-        /// <summary>
-        /// Send the provided object to the specified networkIdentifier and wait for the return object. Uses the provided compressors and serializers
-        /// </summary>
-        /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
-        /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="networkIdentifier">Destination networkIdentifier</param>
-        /// <param name="receiveConfirmationRequired">If true will throw an exception if object is not received at destination within PacketConfirmationTimeoutMS timeout. This may be significantly less than the provided returnPacketTimeOutMilliSeconds.</param>
-        /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
-        /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
-        /// <param name="sendObject">Object to send</param>
-        /// <param name="serializerOutgoing">Serializer to use for outgoing object</param>
-        /// <param name="compressorOutgoing">Compressor to use for outgoing object</param>
-        /// <param name="serializerIncoming">Serializer to use for return object</param>
-        /// <param name="compressorIncoming">Compressor to use for return object</param>
-        /// <returns>The expected return object</returns>
-        [Obsolete]
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, ShortGuid networkIdentifier, bool receiveConfirmationRequired, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject, DataSerializer serializerOutgoing, DataProcessor compressorOutgoing, DataSerializer serializerIncoming, DataProcessor compressorIncoming)
-        {
-            List<Connection> conns = GetExistingConnection(networkIdentifier, ConnectionType.TCP);
-            if (conns.Count == 0) throw new InvalidNetworkIdentifierException("Unable to locate connection with provided networkIdentifier.");
-
-            var sendOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (receiveConfirmationRequired)
-                sendOptions["ReceiveConfirmationRequired"] = (true).ToString();
-
-            var returnOptions = new Dictionary<string, string>(DefaultSendReceiveOptions.Options);
-
-            if (returnOptions.ContainsKey("ReceiveConfirmationRequired"))
-                returnOptions.Remove("ReceiveConfirmationRequired");
-
-            return conns[0].SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject,
-                new SendReceiveOptions(serializerOutgoing, new List<DataProcessor>() { compressorOutgoing }, sendOptions),
-                new SendReceiveOptions(serializerIncoming, new List<DataProcessor>() { compressorIncoming }, returnOptions));            
-        }
-        #endregion SendReceiveObjectSpecific
         #endregion
     }
 }

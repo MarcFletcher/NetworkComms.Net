@@ -126,17 +126,23 @@ namespace NetworkCommsDotNet
                     totalBytesCached -= bytesRemoved;
                     
                     //Get rid of any null packets
-                    while(packets.Remove(null));
- 
+                    List<byte[]> newPackets = new List<byte[]>(packets.Count);
+                    for (int i = 0; i < packets.Count; i++)
+                    {
+                        if (packets[i] != null)
+                            newPackets.Add(packets[i]);
+                    }
+                    packets = newPackets;
+
+                    //Remove any -1 entries
+                    List<int> newPacketActualBytes = new List<int>(packetActualBytes.Count);
                     for (int i = 0; i < packetActualBytes.Count; i++)
                     {
-                        if (packetActualBytes[i] < 0)
-                        {
-                            packetActualBytes.RemoveAt(i);
-                            --i;
-                        }
+                        if (packetActualBytes[i] > -1)
+                            newPacketActualBytes.Add(packetActualBytes[i]);
                     }
-                    
+                    packetActualBytes = newPacketActualBytes;
+
                     //This is a really bad place to put a garbage collection as it hammers the CPU
                     //GC.Collect();
                 }

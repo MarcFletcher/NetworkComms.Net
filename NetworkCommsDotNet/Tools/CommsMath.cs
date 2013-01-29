@@ -63,9 +63,11 @@ namespace NetworkCommsDotNet
             {
                 if (values.Count > maxCount)
                 {
+                    int itemsToSkip = values.Count - maxCount;
+
                     List<double> tempList = new List<double>(values.Count - maxCount);
 
-                    for(int i = maxCount; i < values.Count; i++)
+                    for (int i = itemsToSkip; i < values.Count; i++)
                         tempList.Add(values[i]);
 
                     values = tempList;
@@ -107,13 +109,13 @@ namespace NetworkCommsDotNet
             {
                 int itemsToSkip = 0;
 
-                if (lastNValues < this.values.Count)
-                    itemsToSkip = this.values.Count - lastNValues;
+                if (lastNValues < values.Count)
+                    itemsToSkip = values.Count - lastNValues;
 
                 List<double> itemsForMean = new List<double>(lastNValues);
 
-                for (int i = itemsToSkip; i < this.values.Count; ++i)
-                    itemsForMean.Add(this.values[i]);
+                for (int i = itemsToSkip; i < values.Count; ++i)
+                    itemsForMean.Add(values[i]);
 
                 return CommsMath.CalculateMean(itemsForMean);
             }

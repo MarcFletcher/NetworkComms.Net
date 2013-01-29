@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace NetworkCommsDotNet
+namespace DistributedFileSystem
 {
     ///<summary>
     /// Provides a task scheduler that ensures a maximum concurrency level. Prevents thread thrashing if maintaining alot of connections.

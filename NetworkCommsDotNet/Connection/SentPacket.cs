@@ -29,9 +29,11 @@ namespace NetworkCommsDotNet
     {
         public int SendCount { get; private set; }
         public Packet Packet { get; private set; }
+        public DateTime SentPacketCreationTime { get; private set; }
 
         public SentPacket(Packet packet)
         {
+            this.SentPacketCreationTime = DateTime.Now;
             this.Packet = packet;
             this.SendCount = 1;
         }
@@ -43,11 +45,7 @@ namespace NetworkCommsDotNet
 
         public override string ToString()
         {
-            if (Packet.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketCreationTime))
-                return "[" + (new DateTime(Packet.PacketHeader.GetOption(PacketHeaderLongItems.PacketCreationTime))).ToShortTimeString() + "] " +
-                    Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
-            else
-                return "[Unknown] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
+            return "[" + (SentPacketCreationTime).ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
         }
     }
 }

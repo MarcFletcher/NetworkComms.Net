@@ -129,7 +129,14 @@ namespace NetworkCommsDotNet
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             bool isReservedType = false;
                             foreach (var tName in NetworkComms.reservedPacketTypeNames)
-                                isReservedType |= topPacketHeader.PacketType == tName;
+                            {
+                                //isReservedType |= topPacketHeader.PacketType == tName;
+                                if (topPacketHeader.PacketType == tName)
+                                {
+                                    isReservedType = true;
+                                    break;
+                                }
+                            }
 
                             if (isReservedType)
                             {

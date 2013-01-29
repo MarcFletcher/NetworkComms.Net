@@ -487,22 +487,18 @@ namespace NetworkCommsDotNet
                     //If sent packets is greater than 40 we delete anything older than a minute
                     lock (sentPacketsLocker)
                     {
-                        int maxStoredPackets = 40;
-
-                        if (sentPackets.Count > maxStoredPackets)
+                        if ((DateTime.Now - NetworkComms.LastSentPacketCacheCleanup).TotalMinutes > NetworkComms.MinimumSentPacketCacheTimeMinutes / 2)
                         {
-                            //This replaces a Skip method on a dictionary.  I am simply guessing whether this is right
-                            var enumerator = sentPackets.GetEnumerator();
+                            Dictionary<string, SentPacket> newSentPackets = new Dictionary<string, SentPacket>();
+                            DateTime thresholdTime = DateTime.Now.AddMinutes(-NetworkComms.MinimumSentPacketCacheTimeMinutes);
+                            foreach (var storedPacket in sentPackets)
+                            {
+                                if (storedPacket.Value.SentPacketCreationTime >= thresholdTime)
+                                    newSentPackets.Add(storedPacket.Key, storedPacket.Value);
+                            }
 
-                            for(int i = 0; i < sentPackets.Count - maxStoredPackets; i++)
-                                enumerator.MoveNext();
-
-                            Dictionary<string, SentPacket> newSentPackets = new Dictionary<string,SentPacket>();
-
-                            for(int  i = sentPackets.Count - maxStoredPackets; i< sentPackets.Count; i++)
-                                newSentPackets.Add(enumerator.Current.Key, enumerator.Current.Value);
-
-                            sentPackets = newSentPackets;                            
+                            sentPackets = newSentPackets;
+                            NetworkComms.LastSentPacketCacheCleanup = DateTime.Now;
                         }
                     }
                     #endregion

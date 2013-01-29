@@ -114,8 +114,8 @@ namespace DistributedFileSystem
             MinTargetLocalPort = 10000;
             MaxTargetLocalPort = 10999;
 
-            BuildTaskFactory = Task.Factory;// new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
-            GeneralTaskFactory = Task.Factory;// new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            BuildTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            GeneralTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
 
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
