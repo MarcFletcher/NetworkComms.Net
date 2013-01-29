@@ -72,6 +72,7 @@
     <Compile Include="ItemBuildTarget.cs" />
     <Compile Include="ItemLinkRequest.cs" />
     <Compile Include="ItemRemovalUpdate.cs" />
+    <Compile Include="LimitedParallelismTaskScheduler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SwarmChunkAvailability.cs" />
   </ItemGroup>
