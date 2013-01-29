@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
@@ -52,14 +51,28 @@ namespace NetworkCommsDotNet
 
                 var interfaces = NetworkInterface.GetAllNetworkInterfaces();
 
-                var bestInterface = (from current in interfaces
-                                     where current.GetIPProperties().GetIPv4Properties().Index == interfaceindex
-                                     select current).First();
+                NetworkInterface bestInterface = null;
 
-                var ipAddressBest = (from current in bestInterface.GetIPProperties().UnicastAddresses
-                                     where current.Address.AddressFamily == AddressFamily.InterNetwork
-                                     select current.Address).First();
+                foreach (var iFace in interfaces)
+                {
+                    if (iFace.GetIPProperties().GetIPv4Properties().Index == interfaceindex)
+                    {
+                        bestInterface = iFace;
+                        break;
+                    }
+                }
 
+                IPAddress ipAddressBest = null;
+
+                foreach (var address in bestInterface.GetIPProperties().UnicastAddresses)
+                {
+                    if (address.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        ipAddressBest = address.Address;
+                        break;
+                    }
+                }
+                
                 if (ipAddressBest != null)
                     return ipAddressBest;
             }

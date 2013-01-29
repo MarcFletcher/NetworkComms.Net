@@ -18,11 +18,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
 using System.IO;
@@ -126,16 +124,19 @@ namespace NetworkCommsDotNet
 
                     //Reset the totalBytesRead
                     totalBytesCached -= bytesRemoved;
-
+                    
                     //Get rid of any null packets
-                    packets = (from current in packets
-                               where current != null
-                               select current).ToList();
-
-                    packetActualBytes = (from current in packetActualBytes
-                                         where current > -1
-                                         select current).ToList();
-
+                    while(packets.Remove(null));
+ 
+                    for (int i = 0; i < packetActualBytes.Count; i++)
+                    {
+                        if (packetActualBytes[i] < 0)
+                        {
+                            packetActualBytes.RemoveAt(i);
+                            --i;
+                        }
+                    }
+                    
                     //This is a really bad place to put a garbage collection as it hammers the CPU
                     //GC.Collect();
                 }

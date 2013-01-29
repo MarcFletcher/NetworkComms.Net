@@ -18,11 +18,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
 
@@ -107,13 +105,15 @@ namespace NetworkCommsDotNet
             //Loop through all connections and test the alive state
             List<Connection> allConnections = NetworkComms.GetExistingConnection();
 
-            List<Task> connectionCheckTasks = new List<Task>();
+            List<WaitHandle> connectionCheckHandles = new List<WaitHandle>();
 
             for (int i = 0; i < allConnections.Count; i++)
             {
                 int innerIndex = i;
-
-                connectionCheckTasks.Add(NetworkComms.TaskFactory.StartNew(new Action(() =>
+                ManualResetEvent handle = new ManualResetEvent(false);
+                               
+                connectionCheckHandles.Add(handle);
+                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {
                     try
                     {
@@ -137,10 +137,11 @@ namespace NetworkCommsDotNet
                         }
                     }
                     catch (Exception) { }
-                })));
+                    finally { handle.Set(); }
+                }));
             }
 
-            if (!returnImmediately) Task.WaitAll(connectionCheckTasks.ToArray());
+            if (!returnImmediately) WaitHandle.WaitAll(connectionCheckHandles.ToArray());
         }
 
         /// <summary>

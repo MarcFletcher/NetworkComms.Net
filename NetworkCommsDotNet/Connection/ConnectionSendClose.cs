@@ -18,11 +18,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
 
@@ -493,7 +491,18 @@ namespace NetworkCommsDotNet
 
                         if (sentPackets.Count > maxStoredPackets)
                         {
-                            sentPackets = sentPackets.Skip(sentPackets.Count - maxStoredPackets).ToDictionary(p => p.Key, p => p.Value);
+                            //This replaces a Skip method on a dictionary.  I am simply guessing whether this is right
+                            var enumerator = sentPackets.GetEnumerator();
+
+                            for(int i = 0; i < sentPackets.Count - maxStoredPackets; i++)
+                                enumerator.MoveNext();
+
+                            Dictionary<string, SentPacket> newSentPackets = new Dictionary<string,SentPacket>();
+
+                            for(int  i = sentPackets.Count - maxStoredPackets; i< sentPackets.Count; i++)
+                                newSentPackets.Add(enumerator.Current.Key, enumerator.Current.Value);
+
+                            sentPackets = newSentPackets;                            
                         }
                     }
                     #endregion

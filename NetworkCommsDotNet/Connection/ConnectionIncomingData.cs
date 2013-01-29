@@ -18,11 +18,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
 using System.IO;
@@ -129,7 +127,11 @@ namespace NetworkCommsDotNet
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
 
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
-                            if (NetworkComms.reservedPacketTypeNames.Contains(topPacketHeader.PacketType))
+                            bool isReservedType = false;
+                            foreach (var tName in NetworkComms.reservedPacketTypeNames)
+                                isReservedType |= topPacketHeader.PacketType == tName;
+
+                            if (isReservedType)
                             {
                                 PriorityQueueItem item = new PriorityQueueItem(Thread.CurrentThread.Priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
@@ -151,7 +153,7 @@ namespace NetworkCommsDotNet
                                 if (itemPriority > ThreadPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
 
                                 //We will also trigger a new task below incase we have many higher priority items as we don't care which thread ends up running the item
-                                NetworkComms.TaskFactory.StartNew(NetworkComms.CompleteIncomingItemTask, null);
+                                ThreadPool.QueueUserWorkItem(NetworkComms.CompleteIncomingItemTask, null);
                             }
 
                             //We clear the bytes we have just handed off

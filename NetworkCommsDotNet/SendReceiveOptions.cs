@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using DPSBase;
 using System.Threading;
@@ -67,10 +66,16 @@ namespace NetworkCommsDotNet
                     throw new ArgumentException("Only 7 data Processors are supported");
 
                 //validate the list to make sure all the data processors are the same
-                if (value.Distinct().SequenceEqual(value))
-                    _dataProcessors = value;
-                else
-                    throw new ArgumentException("Same data processor cannot be applied twice");
+                List<DataProcessor> distinctProcessors = new List<DataProcessor>();
+                foreach (var processor in value)
+                {
+                    if(distinctProcessors.Contains(processor))
+                        throw new ArgumentException("Same data processor cannot be applied twice");
+                    
+                    distinctProcessors.Add(processor);
+                }
+
+                _dataProcessors = value;
             }
         }
 
@@ -121,7 +126,12 @@ namespace NetworkCommsDotNet
         /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DataProcessor"/>s</remarks>
         public bool OptionsCompatible(SendReceiveOptions options)
         {
-            return options.DataProcessors.SequenceEqual(DataProcessors) && options.DataSerializer == DataSerializer;                    
+            bool equal = options.DataSerializer == DataSerializer;
+
+            for (int i = 0; i < options.DataProcessors.Count; i++)
+                equal &= options.DataProcessors[i] == DataProcessors[i];
+
+            return equal;
         }
 
         #region ICloneable Members

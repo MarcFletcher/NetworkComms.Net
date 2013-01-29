@@ -18,11 +18,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Net.Sockets;
 using System.IO;
@@ -247,7 +245,16 @@ namespace NetworkCommsDotNet
                 {
                     //Make sure we avoid duplicates
                     PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
-                    bool delegateAlreadyExists = (from current in incomingPacketHandlers[packetTypeStr] where current == toCompareDelegate select current).Count() > 0;
+                    bool delegateAlreadyExists = false;
+                    foreach (var handler in incomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler == toCompareDelegate)
+                        {
+                            delegateAlreadyExists = true;
+                            break;
+                        }
+                    }
+                        
                     if (delegateAlreadyExists)
                         throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
 
@@ -283,8 +290,9 @@ namespace NetworkCommsDotNet
             {
                 if (incomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
-                    if ((from current in incomingPacketHandlers[packetTypeStr] where current.EqualsDelegate(packetHandlerDelgatePointer) select current).Count() > 0)
-                        return true;
+                    foreach (var handler in incomingPacketHandlers[packetTypeStr])
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                            return true;
                 }
             }
 

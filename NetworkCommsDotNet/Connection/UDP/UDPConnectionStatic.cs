@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
@@ -257,7 +256,13 @@ namespace NetworkCommsDotNet
         public static List<IPEndPoint> ExistingLocalListenEndPoints()
         {
             lock (udpClientListenerLocker)
-                return udpConnectionListeners.Keys.ToList();
+            {
+                List<IPEndPoint> res = new List<IPEndPoint>();
+                foreach (var pair in udpConnectionListeners)
+                    res.Add(pair.Key);
+
+                return res;
+            }
         }
 
         /// <summary>
@@ -268,7 +273,13 @@ namespace NetworkCommsDotNet
         public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
         {
             lock (udpClientListenerLocker)
-                return (from current in udpConnectionListeners.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
+            {
+                foreach (var pair in udpConnectionListeners)
+                    if (pair.Key.Address.Equals(ipAddress))
+                        return pair.Key;
+
+                return default(IPEndPoint);
+            }
         }
 
         /// <summary>

@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace NetworkCommsDotNet
@@ -63,7 +62,14 @@ namespace NetworkCommsDotNet
             lock (locker)
             {
                 if (values.Count > maxCount)
-                    values = values.Skip(values.Count - maxCount).ToList();
+                {
+                    List<double> tempList = new List<double>(values.Count - maxCount);
+
+                    for(int i = maxCount; i < values.Count; i++)
+                        tempList.Add(values[i]);
+
+                    values = tempList;
+                }
             }
         }
 
@@ -104,7 +110,12 @@ namespace NetworkCommsDotNet
                 if (lastNValues < this.values.Count)
                     itemsToSkip = this.values.Count - lastNValues;
 
-                return CommsMath.CalculateMean(this.values.Skip(itemsToSkip).ToList());
+                List<double> itemsForMean = new List<double>(lastNValues);
+
+                for (int i = itemsToSkip; i < this.values.Count; ++i)
+                    itemsForMean.Add(this.values[i]);
+
+                return CommsMath.CalculateMean(itemsForMean);
             }
         }
 

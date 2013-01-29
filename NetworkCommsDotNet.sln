@@ -5,8 +5,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
 		COPYING.txt = COPYING.txt
-		DLL\Net40\NLog.dll = DLL\Net40\NLog.dll
-		DLL\Net40\protobuf-net.dll = DLL\Net40\protobuf-net.dll
+		DLL\Net20\NLog.dll = DLL\Net20\NLog.dll
+		DLL\Net20\protobuf-net.dll = DLL\Net20\protobuf-net.dll
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkCommsDotNet", "NetworkCommsDotNet\NetworkCommsDotNet.csproj", "{7DB00305-F5ED-4545-9D83-542132C8177E}"

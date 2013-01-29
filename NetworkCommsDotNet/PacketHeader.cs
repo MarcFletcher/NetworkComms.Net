@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using ProtoBuf;
 using System.IO;
@@ -152,8 +151,13 @@ namespace NetworkCommsDotNet
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else
                 {
-                    stringItems = tempObject.stringItems.ToDictionary(s => s.Key, s=> String.Copy(s.Value));
-                    longItems = tempObject.longItems.ToDictionary(s => s.Key, s => s.Value);
+                    stringItems = new Dictionary<PacketHeaderStringItems, string>();
+                    foreach (var pair in tempObject.stringItems)
+                        stringItems.Add(pair.Key, String.Copy(pair.Value));
+
+                    longItems = new Dictionary<PacketHeaderLongItems, long>();
+                    foreach (var pair in tempObject.longItems)
+                        longItems.Add(pair.Key, pair.Value);
                 }
             }
             catch (Exception ex)

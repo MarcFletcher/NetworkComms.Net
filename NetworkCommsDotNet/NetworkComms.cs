@@ -18,12 +18,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
@@ -31,6 +29,7 @@ using NLog;
 using System.Diagnostics;
 using System.IO;
 using NLog.Config;
+
 
 namespace NetworkCommsDotNet
 {
@@ -63,9 +62,7 @@ namespace NetworkCommsDotNet
             ConnectionEstablishTimeoutMS = 30000;
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
-
-            TaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(Environment.ProcessorCount));
-
+            
             IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
             IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
@@ -118,40 +115,111 @@ namespace NetworkCommsDotNet
             IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
             IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
 
-            return (from current in NetworkInterface.GetAllNetworkInterfaces()
-                    where
-                        //First we need to select interfaces that contain address information
-                    (from inside in current.GetIPProperties().UnicastAddresses
-                     where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
-                        (AllowedAdaptorNames == null ? true :  AllowedAdaptorNames.Contains(current.Id))
-                     && (AllowedIPPrefixes == null ? true : AllowedIPPrefixes.Contains(inside.Address.ToString(), new IPComparer()))  
-                     select inside).Count() > 0
-                    //We only want adaptors which are operational
-                    //&& current.OperationalStatus == OperationalStatus.Up //This line causes problems in mono
-                    select
-                    (
-                        //Once we have adaptors that contain address information we are after the address
-                    from inside in current.GetIPProperties().UnicastAddresses
-                    where (inside.Address.AddressFamily == AddressFamily.InterNetwork || inside.Address.AddressFamily == AddressFamily.InterNetworkV6) &&
-                        !(IsAddressInSubnet(inside.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4)) &&
-                        (AllowedAdaptorNames == null ? true : AllowedAdaptorNames.Contains(current.Id))
-                    && (AllowedIPPrefixes == null ? true : AllowedIPPrefixes.Contains(inside.Address.ToString(), new IPComparer()))
-                    select inside.Address
-                    ).ToArray()).Aggregate(new IPAddress[] { IPAddress.None }, (i, j) => { return i.Union(j).ToArray(); }).OrderBy(ip =>
-                    {
-                        //If we have no preffered addresses we just return a default
-                        if (AllowedIPPrefixes == null)
-                            return int.MaxValue;
-                        else
-                        {
-                            //We can check the preffered and return the index at which the IP occurs
-                            for (int i = 0; i < AllowedIPPrefixes.Length; i++)
-                                if (ip.ToString().StartsWith(AllowedIPPrefixes[i])) return i;
+            List<IPAddress> validIPAddresses = new List<IPAddress>();
+            IPComparer comparer = new IPComparer();
+            
+            foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                bool interfaceValid = false;
+                var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
 
-                            //If there was no match for this IP in the preffered IP range we just return maxValue
-                            return int.MaxValue;
+                foreach (var address in unicastAddresses)
+                {
+                    if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                    {
+                        if (AllowedAdaptorNames != null)
+                        {
+                            foreach (var id in AllowedAdaptorNames)
+                                if (iFace.Id == id)
+                                {
+                                    interfaceValid = true;
+                                    break;
+                                }
                         }
-                    }).Where(ip => { return ip != IPAddress.None; }).ToList();
+                        else
+                            interfaceValid = true;
+
+                        if (interfaceValid)
+                            break;
+                    }
+                }
+
+                if (!interfaceValid)
+                    continue;
+
+                foreach (var address in unicastAddresses)
+                {
+                    if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                    {
+                        if (!IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        {
+                            bool allowed = false;
+
+                            if (AllowedAdaptorNames != null)
+                            {
+                                foreach (var id in AllowedAdaptorNames)
+                                {
+                                    if(id == iFace.Id)
+                                    {
+                                        allowed = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                                allowed = true;
+
+                            if (!allowed)
+                                continue;
+
+                            allowed = false;
+
+                            if (AllowedIPPrefixes != null)
+                            {
+                                foreach (var ip in AllowedIPPrefixes)
+                                {
+                                    if (comparer.Equals(address.Address.ToString(), ip))
+                                    {
+                                        allowed = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                                allowed = true;
+
+                            if (!allowed)
+                                continue;
+
+                            if (address.Address != IPAddress.None)
+                                validIPAddresses.Add(address.Address);
+                        }
+                    }
+                }               
+            }
+
+            if (AllowedIPPrefixes != null)
+            {
+                validIPAddresses.Sort((a, b) =>
+                {
+                    for (int i = 0; i < AllowedIPPrefixes.Length; i++)
+                    {
+                        if (a.ToString().StartsWith(AllowedIPPrefixes[i]))
+                        {
+                            if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
+                                return 0;
+                            else
+                                return 1;
+                        }
+                        else if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
+                            return -1;
+                    }
+
+                    return 0;
+                });
+            }
+
+            return validIPAddresses;
         }
 
         /// <summary>
@@ -364,8 +432,7 @@ namespace NetworkCommsDotNet
             NetworkLoadThreadWait = new ManualResetEvent(false);
 
             //Get all interfaces
-            NetworkInterface[] interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces()
-                                                  select outer).ToArray();
+            NetworkInterface[] interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
 
             long[] startSent, startReceived, endSent, endReceived;
 
@@ -376,10 +443,17 @@ namespace NetworkCommsDotNet
                     //we need to look at the load across all adaptors, by default we will probably choose the adaptor with the highest usage
                     DateTime startTime = DateTime.Now;
 
-                    IPv4InterfaceStatistics[] stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
-                    startSent = (from current in stats select current.BytesSent).ToArray();
-                    startReceived = (from current in stats select current.BytesReceived).ToArray();
+                    IPv4InterfaceStatistics[] stats = new IPv4InterfaceStatistics[interfacesToUse.Length];
+                    startSent = new long[interfacesToUse.Length];
+                    startReceived = new long[interfacesToUse.Length];
 
+                    for (int i = 0; i < interfacesToUse.Length; ++i)
+                    {
+                        stats[i] = interfacesToUse[i].GetIPv4Statistics();
+                        startSent[i] = stats[i].BytesSent;
+                        startReceived[i] = stats[i].BytesReceived;
+                    }
+                    
                     if (commsShutdown) return;
 
                     //Thread.Sleep(NetworkLoadUpdateWindowMS);
@@ -387,10 +461,17 @@ namespace NetworkCommsDotNet
 
                     if (commsShutdown) return;
 
-                    stats = (from current in interfacesToUse select current.GetIPv4Statistics()).ToArray();
-                    endSent = (from current in stats select current.BytesSent).ToArray();
-                    endReceived = (from current in stats select current.BytesReceived).ToArray();
+                    stats = new IPv4InterfaceStatistics[interfacesToUse.Length];
+                    endSent = new long[interfacesToUse.Length];
+                    endReceived = new long[interfacesToUse.Length];
 
+                    for (int i = 0; i < interfacesToUse.Length; ++i)
+                    {
+                        stats[i] = interfacesToUse[i].GetIPv4Statistics();
+                        endSent[i] = stats[i].BytesSent;
+                        endReceived[i] = stats[i].BytesReceived;
+                    }
+                    
                     DateTime endTime = DateTime.Now;
 
                     List<double> outUsage = new List<double>();
@@ -402,9 +483,13 @@ namespace NetworkCommsDotNet
                     }
 
                     //double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
-                    double inMax = inUsage.Max();
-                    double outMax = outUsage.Max();
-
+                    double inMax = double.MinValue, outMax = double.MinValue;
+                    for (int i = 0; i < startSent.Length; ++i)
+                    {
+                        if (inUsage[i] > inMax) inMax = inUsage[i];
+                        if (outUsage[i] > outMax) outMax = outUsage[i];
+                    }
+                                        
                     //If either of the usage levels have gone above 2 it suggests we are most likely on a faster connection that we think
                     //As such we will bump the interfacelinkspeed upto 1Gbps so that future load calcualtions more acurately reflect the 
                     //actual load.
@@ -427,7 +512,7 @@ namespace NetworkCommsDotNet
                     LogError(ex, "NetworkLoadWorker");
                     
                     //It may be the interfaces available to the OS have changed so we will reset them here
-                    interfacesToUse = (from outer in NetworkInterface.GetAllNetworkInterfaces() select outer).ToArray();
+                    interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
                     //If an error has happened we dont want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
                     Thread.Sleep(5000);
                 }
@@ -492,12 +577,7 @@ namespace NetworkCommsDotNet
         /// A thread signal for IncomingPacketQueueHighPrioThread so that it only runs when required
         /// </summary>
         internal static AutoResetEvent IncomingPacketQueueHighPrioThreadWait = new AutoResetEvent(false);
-
-        /// <summary>
-        /// A dedicated task factory for executing comms related tasks (e.g. packet handler delegates). Used to manage comms when managing hundreds/thousands of potential connections.
-        /// </summary>
-        internal static TaskFactory TaskFactory { get; set; }
-
+                
         /// <summary>
         /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets
         /// </summary>
@@ -506,7 +586,7 @@ namespace NetworkCommsDotNet
             while (!commsShutdown)
             {
                 try
-                {
+                {                    
                     //Wait here to be triggered of atleast once every two seconds
                     IncomingPacketQueueHighPrioThreadWait.WaitOne(2000);
                     if (commsShutdown) return;
@@ -759,7 +839,12 @@ namespace NetworkCommsDotNet
                 {
                     //Make sure we avoid duplicates
                     PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
-                    bool delegateAlreadyExists = (from current in globalIncomingPacketHandlers[packetTypeStr] where current == toCompareDelegate select current).Count() > 0;
+
+                    bool delegateAlreadyExists = false;
+
+                    foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
+                        delegateAlreadyExists |= handler == toCompareDelegate;
+                                        
                     if (delegateAlreadyExists)
                         throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
 
@@ -880,7 +965,18 @@ namespace NetworkCommsDotNet
                 if (handlersCopy == null && !IgnoreUnknownPacketTypes && !ignoreUnknownPacketTypeOverride)
                 {
                     //We may get here if we have not added any custom delegates for reserved packet types
-                    if (!reservedPacketTypeNames.Contains(packetHeader.PacketType))
+                    bool isReservedType = false;
+
+                    for (int i = 0; i < reservedPacketTypeNames.Length; i++)
+                    {
+                        if (reservedPacketTypeNames[i] == packetHeader.PacketType)
+                        {
+                            isReservedType = true;
+                            break;
+                        }
+                    }
+
+                    if (!isReservedType)
                     {
                         //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
@@ -970,8 +1066,11 @@ namespace NetworkCommsDotNet
             {
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
-                    if ((from current in globalIncomingPacketHandlers[packetTypeStr] where current.EqualsDelegate(packetHandlerDelgatePointer) select current).Count() > 0)
-                        return true;
+                    foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                            return true;
+                    }
                 }
             }
 
@@ -1356,23 +1455,33 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-                returnList.AddRange((from current in allConnectionsByEndPoint
-                        select current.Value.Values.Select(connection =>
-                        {
-                            return connection.ConnectionInfo;
-                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
-
+                foreach (var connectionsByEndPoint in allConnectionsByEndPoint)
+                {
+                    foreach (var connection in connectionsByEndPoint.Value.Values)
+                    {
+                        if (connection.ConnectionInfo != null)
+                            returnList.Add(connection.ConnectionInfo);
+                    }
+                }
+                
                 if (includeClosedConnections)
                 {
-                    var allClosedConnections = (from current in oldNetworkIdentifierToConnectionInfo
-                                         select current.Value.Values.ToList()).ToList();
-
-                    foreach (List<List<ConnectionInfo>> networkIdentifierConnections in allClosedConnections)
-                        returnList.AddRange(networkIdentifierConnections.Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+                    foreach (var pair in oldNetworkIdentifierToConnectionInfo)
+                    {
+                        foreach (var infoList in pair.Value.Values)
+                        {
+                            returnList.AddRange(infoList);
+                        }
+                    }
                 }
             }
 
-            return returnList.Distinct().ToList();
+            List<ConnectionInfo> distinctList = new List<ConnectionInfo>();
+            foreach (var info in returnList)
+                if (!distinctList.Contains(info))
+                    distinctList.Add(info);
+
+            return distinctList;
         }
 
         /// <summary>
@@ -1388,24 +1497,36 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
 
-                returnList.AddRange((from current in allConnectionsByEndPoint
-                        select current.Value.Values.Select(connection =>
+                foreach (var pair in allConnectionsByEndPoint)
+                {
+                    foreach (var connection in pair.Value.Values)
+                    {
+                        if (connection.ConnectionInfo != null && connection.ConnectionInfo.NetworkIdentifier == networkIdentifier)
                         {
-                            if (connection.ConnectionInfo.NetworkIdentifier == networkIdentifier)
-                                return connection.ConnectionInfo;
-                            else
-                                return null;
-                        })).Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+                            if (!returnList.Contains(connection.ConnectionInfo))
+                                returnList.Add(connection.ConnectionInfo);
+                        }
+                    }
+                }
 
                 if (includeClosedConnections)
                 {
-                    var possibleOldConnections = (from current in NetworkComms.oldNetworkIdentifierToConnectionInfo where current.Key == networkIdentifier select current.Value).FirstOrDefault();
-                    if (possibleOldConnections != null)
-                        returnList.AddRange(possibleOldConnections.Values.Aggregate(new List<ConnectionInfo> { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }));
+                    foreach (var pair in oldNetworkIdentifierToConnectionInfo)
+                    {
+                        if (pair.Key == networkIdentifier)
+                        {
+                            foreach (var infoList in pair.Value.Values)
+                                foreach (var info in infoList)
+                                    if (!returnList.Contains(info))
+                                        returnList.Add(info);
+
+                            break;
+                        }
+                    }                    
                 }
             }
-
-            return returnList.Distinct().ToList();
+            
+            return returnList;
         }
 
         /// <summary>
@@ -1415,7 +1536,14 @@ namespace NetworkCommsDotNet
         public static int TotalNumConnections()
         {
             lock (globalDictAndDelegateLocker)
-                return (from current in allConnectionsByEndPoint select current.Value.Count).Sum();
+            {
+                int sum = 0;
+
+                foreach (var current in allConnectionsByEndPoint)
+                    sum += current.Value.Count;
+
+                return sum;
+            }
         }
 
         /// <summary>
@@ -1427,8 +1555,14 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-                return (from current in allConnectionsByEndPoint
-                        select current.Value.Count(connection => { return connection.Value.ConnectionInfo.RemoteEndPoint.Address.Equals(matchIP); })).Sum();
+                int sum = 0;
+
+                foreach (var current in allConnectionsByEndPoint)
+                    foreach (var connection in current.Value)
+                        if (connection.Value.ConnectionInfo.RemoteEndPoint.Address.Equals(matchIP))
+                            sum++;
+
+                return sum;
             }
         }
 
@@ -1456,15 +1590,32 @@ namespace NetworkCommsDotNet
         /// <param name="closeAllExceptTheseEndPoints">Close all except those with provided <see cref="IPEndPoint"/> array</param>
         public static void CloseAllConnections(ConnectionType connectionTypeToClose, IPEndPoint[] closeAllExceptTheseEndPoints)
         {
-            List<Connection> connectionsToClose;
+            List<Connection> connectionsToClose = new List<Connection>();
 
             lock (globalDictAndDelegateLocker)
             {
-                connectionsToClose = (from current in allConnectionsByEndPoint.Values
-                                      select (from inner in current
-                                              where (connectionTypeToClose == ConnectionType.Undefined ? true : inner.Key == connectionTypeToClose)
-                                              where !closeAllExceptTheseEndPoints.Contains(inner.Value.ConnectionInfo.RemoteEndPoint)
-                                              select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => { return entry != null; }).ToList();
+                foreach (var pair in allConnectionsByEndPoint)
+                {
+                    foreach (var innerPair in pair.Value)
+                    {
+                        if (connectionTypeToClose == ConnectionType.Undefined || innerPair.Key == connectionTypeToClose)
+                        {
+                            bool dontClose = false;
+
+                            foreach (var endPointToNotClose in closeAllExceptTheseEndPoints)
+                            {
+                                if (endPointToNotClose == innerPair.Value.ConnectionInfo.RemoteEndPoint)
+                                {
+                                    dontClose = true;
+                                    break;
+                                }
+                            }
+
+                            if (!dontClose && innerPair.Value != null)
+                                connectionsToClose.Add(innerPair.Value);
+                        }
+                    }
+                }                
             }
 
             if (LoggingEnabled) logger.Trace("Closing " + connectionsToClose.Count + " connections.");
@@ -1489,19 +1640,22 @@ namespace NetworkCommsDotNet
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
         public static List<Connection> GetExistingConnection(ConnectionType connectionType)
         {
-            List<Connection> result;
+            List<Connection> result = new List<Connection>();
             lock (globalDictAndDelegateLocker)
             {
-                result = (from current in allConnectionsByEndPoint.Values
-                        select (from inner in current
-                                where (connectionType == ConnectionType.Undefined ? true : inner.Key == connectionType)
-                                select inner.Value)).Aggregate(new List<Connection>() { null }, (left, right) => { return left.Union(right).ToList(); }).Where(entry => {return entry != null;}).ToList();
+                foreach (var current in allConnectionsByEndPoint)
+                {
+                    foreach (var inner in current.Value)
+                    {
+                        if (connectionType == ConnectionType.Undefined || inner.Key == connectionType)
+                            result.Add(inner.Value);
+                    }
+                }
             }
 
             if (LoggingEnabled) logger.Trace("RetrieveConnection by connectionType='"+connectionType+"'. Returning list of " + result.Count + " connections.");
 
-            //Convert to new list incase we use as an enumeration
-            return result.ToList();
+            return result;
         }
 
         /// <summary>
@@ -1512,15 +1666,22 @@ namespace NetworkCommsDotNet
         /// <returns>A list of connections to the desired peer. If no matching connections exist returns empty list.</returns>
         public static List<Connection> GetExistingConnection(ShortGuid networkIdentifier, ConnectionType connectionType)
         {
-            List<Connection> resultList;
+            List<Connection> resultList = new List<Connection>();
             lock (globalDictAndDelegateLocker)
-                resultList = (from current in NetworkComms.allConnectionsById where current.Key == networkIdentifier && current.Value.ContainsKey(connectionType) select current.Value[connectionType]).FirstOrDefault();
+            {
+                foreach (var pair in allConnectionsById)
+                {
+                    if (pair.Key == networkIdentifier && pair.Value.ContainsKey(connectionType))
+                    {
+                        resultList.AddRange(pair.Value[connectionType]);
+                        break;
+                    }
+                }                
+            }
 
-            resultList = (resultList == null ? new List<Connection>() : resultList);
             if (LoggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'. Returning list of " + resultList.Count + " connections.");
 
-            //Convert to new list incase we use as an enumeration
-            return resultList.ToList();
+            return resultList;
         }
 
         /// <summary>
@@ -1530,9 +1691,18 @@ namespace NetworkCommsDotNet
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection GetExistingConnection(ConnectionInfo connectionInfo)
         {
-            Connection result;
+            Connection result = null;
             lock (globalDictAndDelegateLocker)
-                result = (from current in NetworkComms.allConnectionsByEndPoint where current.Key.Equals(connectionInfo.RemoteEndPoint) && current.Value.ContainsKey(connectionInfo.ConnectionType) select current.Value[connectionInfo.ConnectionType]).FirstOrDefault();
+            {
+                foreach (var pair in allConnectionsByEndPoint)
+                {
+                    if(pair.Key.Equals(connectionInfo.RemoteEndPoint) && pair.Value.ContainsKey(connectionInfo.ConnectionType))
+                    {
+                        result = pair.Value[connectionInfo.ConnectionType];
+                        break;
+                    }
+                }                
+            }
 
             if (LoggingEnabled)
             {
@@ -1608,7 +1778,7 @@ namespace NetworkCommsDotNet
                 if (allConnectionsById.ContainsKey(networkIdentifier))
                 {
                     if (allConnectionsById[networkIdentifier].ContainsKey(connectionType))
-                        result = allConnectionsById[networkIdentifier][connectionType].Count() > 0;
+                        result = allConnectionsById[networkIdentifier][connectionType].Count > 0;
                 }
             }
 
@@ -1828,10 +1998,11 @@ namespace NetworkCommsDotNet
                     {
                         if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                         {
-                            if ((from current in allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType]
-                                 where current.ConnectionInfo.RemoteEndPoint.Equals(connection.ConnectionInfo.RemoteEndPoint)
-                                 select current).Count() > 0)
-                                throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere.");
+                            foreach (var current in allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType])
+                            {
+                                if (current.ConnectionInfo.RemoteEndPoint.Equals(connection.ConnectionInfo.RemoteEndPoint))
+                                    throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere.");
+                            }
                         }
                         else
                         {

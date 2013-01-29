@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
@@ -79,10 +78,11 @@ namespace NetworkCommsDotNet
                     udpClientThreadSafe.Connect(ConnectionInfo.RemoteEndPoint);
                 }
 
+                //NAT traversal does not work in .net 2.0
                 //Mono does not seem to have implemented AllowNatTraversal method and attempting the below method call will throw an exception
-                if (Type.GetType("Mono.Runtime") == null)
+                //if (Type.GetType("Mono.Runtime") == null)
                     //Allow NAT traversal by default for all udp clients
-                    udpClientThreadSafe.AllowNatTraversal(true);
+                //    udpClientThreadSafe.AllowNatTraversal(true);
 
                 if (listenForIncomingPackets)
                     StartIncomingDataListen();

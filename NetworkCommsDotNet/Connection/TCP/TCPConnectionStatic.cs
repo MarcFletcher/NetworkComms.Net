@@ -18,13 +18,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Threading;
 using System.Net;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace NetworkCommsDotNet
 {
@@ -155,7 +153,13 @@ namespace NetworkCommsDotNet
         public static List<IPEndPoint> ExistingLocalListenEndPoints()
         {
             lock (staticTCPConnectionLocker)
-                return tcpListenerDict.Keys.ToList();
+            {
+                List<IPEndPoint> res = new List<IPEndPoint>();
+                foreach (var pair in tcpListenerDict)
+                    res.Add(pair.Key);
+                
+                return res;
+            }
         }
 
         /// <summary>
@@ -166,7 +170,13 @@ namespace NetworkCommsDotNet
         public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
         {
             lock (staticTCPConnectionLocker)
-                return (from current in tcpListenerDict.Keys where current.Address.Equals(ipAddress) select current).FirstOrDefault();
+            {                
+                foreach (var pair in tcpListenerDict)
+                    if (pair.Key.Address.Equals(ipAddress))
+                        return pair.Key;
+                
+                return default(IPEndPoint);                
+            }
         }
 
         /// <summary>
@@ -210,9 +220,12 @@ namespace NetworkCommsDotNet
                     {
                         bool pickedUpNewConnection = false;
 
-                        List<TcpListener> currentTCPListeners;
+                        List<TcpListener> currentTCPListeners = new List<TcpListener>();
                         lock (staticTCPConnectionLocker)
-                            currentTCPListeners = tcpListenerDict.Values.ToList();
+                        {
+                            foreach (var pair in tcpListenerDict)
+                                currentTCPListeners.Add(pair.Value);
+                        }
 
                         foreach (var listener in currentTCPListeners)
                         {
@@ -224,7 +237,10 @@ namespace NetworkCommsDotNet
                                 TcpClient newClient = listener.AcceptTcpClient();
 
                                 //Perform the establish in a task so that we can continue picking up new connections here
-                                NetworkComms.TaskFactory.StartNew(() => { GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true); });
+                                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
+                                {
+                                    GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true);
+                                }));
                             }
                         }
 

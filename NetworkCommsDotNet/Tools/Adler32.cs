@@ -17,7 +17,6 @@
 //  Please see <http://www.networkcommsdotnet.com/licenses> for details.
 
 using System;
-using System.Linq;
 
 namespace NetworkCommsDotNet
 {
@@ -76,7 +75,10 @@ namespace NetworkCommsDotNet
             uint BASE = 65521;
             uint checksum = 1;
 
-            int count = (from current in splitBuffer where current != null select current.Length).Sum();
+            int count = 0;
+            for (int i = 0; i < splitBuffer.Length; ++i)
+                count += splitBuffer[i] == null ? 0 : splitBuffer[i].Length;
+
             int offset = 0;
             int currentIndex = 0;
 

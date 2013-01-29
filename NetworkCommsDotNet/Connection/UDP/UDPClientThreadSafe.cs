@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
@@ -76,8 +75,10 @@ namespace NetworkCommsDotNet
 
         public void AllowNatTraversal(bool allowed)
         {
-            lock (locker)
-                udpClient.AllowNatTraversal(allowed);
+            throw new Exception("Cannot enable NAT traversal on .net 2.0");
+
+            //lock (locker)
+            //    udpClient.AllowNatTraversal(allowed);
         }
 
         public void CloseClient()
@@ -87,8 +88,7 @@ namespace NetworkCommsDotNet
                 try
                 {
                     udpClient.Client.Disconnect(false);
-                    udpClient.Client.Close();
-                    udpClient.Client.Dispose();
+                    udpClient.Client.Close();                    
                 }
                 catch (Exception)
                 {

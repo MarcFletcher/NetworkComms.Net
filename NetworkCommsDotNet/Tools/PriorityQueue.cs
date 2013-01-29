@@ -18,9 +18,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Collections;
 
@@ -30,7 +28,7 @@ namespace NetworkCommsDotNet
     /// Custom queue which contains features to add and remove items using a basic priority model.
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
-    public class PriorityQueue<TValue> : IProducerConsumerCollection<KeyValuePair<int, TValue>>
+    public class PriorityQueue<TValue>
     {
         //Each internal queue in the array represents a priority level.  
         //We keep the priority associated with each item so that when eventually returned the priority can be easily included
@@ -214,14 +212,5 @@ namespace NetworkCommsDotNet
             get { throw new Exception("All access to PriorityQueue is thread safe so calling SyncRoot() is unncessary."); }
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        void ICollection.CopyTo(Array array, int index)
-        {
-            CopyTo(array as KeyValuePair<int, TValue>[], index);
-        }
     }
 }
