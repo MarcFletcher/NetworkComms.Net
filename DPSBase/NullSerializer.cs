@@ -18,9 +18,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.ComponentModel.Composition;
 using System.IO;
 
 namespace DPSBase
@@ -28,6 +26,7 @@ namespace DPSBase
     /// <summary>
     /// Use only when serializing only primitive arrays. Will throw an exception otherwise
     /// </summary>    
+    [DataSerializerProcessor(0)]
     public class NullSerializer : DataSerializer
     {
         static DataSerializer instance;
@@ -50,10 +49,7 @@ namespace DPSBase
         private NullSerializer() { }
 
         #region ISerialize Members
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 0; } }
-
+        
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {

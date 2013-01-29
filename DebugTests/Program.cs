@@ -25,7 +25,7 @@ using System.Collections.Specialized;
 using NLog;
 using System.Threading;
 using System.IO;
-using DistributedFileSystem;
+//using DistributedFileSystem;
 using NLog.Config;
 using NLog.Targets;
 //using DistributedFileSystem;
@@ -58,8 +58,8 @@ namespace DebugTests
                 LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
                 logConfig.LoggingRules.Add(rule);
 
-                NetworkComms.EnableLogging(logConfig);                
-                DFS.EnableLogging(logConfig);
+                //NetworkComms.EnableLogging(logConfig);                
+                //DFS.EnableLogging(logConfig);
             }
 
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
@@ -67,7 +67,7 @@ namespace DebugTests
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
-            //DebugTest.GoTCP();
+            DebugTest.GoTCP();
             //DFSTest.RunExample();
             LoadTest.RunExample();
             //DebugTest.GoDFSLogParse();

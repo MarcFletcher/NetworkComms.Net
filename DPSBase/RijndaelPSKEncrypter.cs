@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
 using System.IO;
@@ -28,6 +27,7 @@ namespace DPSBase
     /// <summary>
     /// <see cref="DataProcessor"/> which encrypts/decrypts data using the Rijndael algorithm and a pre-shared password
     /// </summary>
+    [DataSerializerProcessor(4)]
     public class RijndaelPSKEncrypter : DataProcessor
     {        
         private static readonly string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
@@ -36,10 +36,7 @@ namespace DPSBase
         RijndaelManaged encrypter = new RijndaelManaged();
         
         private RijndaelPSKEncrypter() { }
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 4; } }
-
+        
         /// <inheritdoc />
         public override void ForwardProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
@@ -48,7 +45,7 @@ namespace DPSBase
             var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16));
             
             CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            inStream.CopyTo(csEncrypt);
+            AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
             inStream.Flush();
             csEncrypt.FlushFinalBlock();
 
@@ -63,7 +60,7 @@ namespace DPSBase
             var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16));
 
             CryptoStream csDecrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            inStream.CopyTo(csDecrypt);
+            AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
             inStream.Flush();
             csDecrypt.FlushFinalBlock();
 

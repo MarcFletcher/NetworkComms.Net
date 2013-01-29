@@ -18,19 +18,18 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using ProtoBuf;
 using System.IO;
 using System.Runtime.InteropServices;
 using ProtoBuf.Meta;
-using System.ComponentModel.Composition;
 
 namespace DPSBase
 {
     /// <summary>
     /// <see cref="DataSerializer"/> using <see href="http://code.google.com/p/protobuf-net/">ProtoBuf-Net</see> to serialize an <see cref="object"/> to bytes
     /// </summary>
+    [DataSerializerProcessor(1)]
     public class ProtobufSerializer : DataSerializer
     {        
         private static int metaDataTimeoutMS = 150000;
@@ -64,10 +63,7 @@ namespace DPSBase
         #endregion
         
         #region ISerialize Members
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 1; } }
-
+                
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {               

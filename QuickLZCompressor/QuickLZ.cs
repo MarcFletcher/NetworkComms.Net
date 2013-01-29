@@ -18,18 +18,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using DPSBase;
 using System.IO;
-using System.ComponentModel.Composition;
 
 namespace QuickLZCompressor
 {
     /// <summary>
     /// Compressor that utilizes native quicklz compression provided by the <see href="http://www.quicklz.com/">QuickLZ</see> library 
     /// </summary>
+    [DataSerializerProcessor(3)]
     public class QuickLZ : DataProcessor
     {
         private static string DllDir = Path.Combine(Path.GetTempPath(), "QuickLZTemp");
@@ -175,9 +174,6 @@ namespace QuickLZCompressor
             else
                 state_decompress = new byte[qlz_get_setting(2)];
         }
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 3; } }
 
         private void Compress(byte[] Source, byte[] dest, out int destLength)
         {

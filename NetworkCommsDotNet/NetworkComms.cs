@@ -1276,9 +1276,7 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Serializers and Compressors
-        private static Dictionary<Type, DataSerializer> allKnownSerializers = DPSManager.GetAllDataSerializes();
-        private static Dictionary<Type, DataProcessor> allKnownCompressors = DPSManager.GetAllDataProcessors();
-
+        
         /// <summary>
         /// The following are used for internal comms objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50 bytes)

@@ -18,18 +18,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using DPSBase;
 using System.IO;
 using LZMA;
-using System.ComponentModel.Composition;
 
 namespace SevenZipLZMACompressor
 {
     /// <summary>
     /// Compressor utilizing LZMA algorithm from <see href="http://www.7-zip.org/">7zip</see>
-    /// </summary>    
+    /// </summary>  
+    [DataSerializerProcessor(1)]
     public class LZMACompressor : DataProcessor
     {
         static DataProcessor instance;
@@ -50,10 +49,7 @@ namespace SevenZipLZMACompressor
         }
 
         private LZMACompressor() { }
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 1; } }
-
+        
         /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {

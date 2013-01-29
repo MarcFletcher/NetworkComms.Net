@@ -18,10 +18,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Reflection;
 
@@ -30,7 +28,6 @@ namespace DPSBase
     /// <summary>
     /// Provides methods that convert an <see cref="object"/> into a <see cref="byte"/>[]
     /// </summary>
-    [InheritedExport(typeof(DataSerializer))]
     public abstract class DataSerializer
     {
         /// <summary>
@@ -303,7 +300,18 @@ namespace DPSBase
         /// <summary>
         /// Returns a unique identifier for the serializer type.  Used in automatic serialization/compression detection
         /// </summary>
-        public abstract byte Identifier { get; }
+        public byte Identifier
+        {
+            get
+            {
+                var attributes = this.GetType().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+
+                if (attributes.Length == 1)
+                    return (attributes[0] as DataSerializerProcessorAttribute).Identifier;
+                else
+                    throw new Exception("Data serializer and processor types must have a DataSerializerProcessorAttribute specifying a unique id");
+            }
+        }
         
         /// <summary>
         /// Serialises an object to a stream using any relavent options provided
@@ -367,7 +375,7 @@ namespace DPSBase
                         {
                             if (dataProcessors == null || dataProcessors.Count == 0)
                             {
-                                inputDataStream.CopyTo(tempStream1);
+                                AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
                                 //return tempStream1.ToArray();
                                 return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
                             }
@@ -543,7 +551,7 @@ namespace DPSBase
                                     if (dataProcessors != null && dataProcessors.Count == 1)
                                         dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
                                     else
-                                        inputBytesStream.CopyTo(finalOutputStream);
+                                        AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
                                 }
                             }
                         }

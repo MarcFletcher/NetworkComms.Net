@@ -18,10 +18,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.IO;
-using System.ComponentModel.Composition;
 using System.Reflection;
 
 namespace DPSBase
@@ -32,7 +30,6 @@ namespace DPSBase
     /// <example>
     /// <code source="..\DPSBase\RijndaelPSKEncrypter.cs" lang="cs" title="Implementation Example" />
     /// </example>
-    [InheritedExport(typeof(DataProcessor))]
     public abstract class DataProcessor
     {
         /// <summary>
@@ -69,7 +66,18 @@ namespace DPSBase
         /// <summary>
         /// Returns a unique identifier for the compressor type. Used in automatic serialization/compression detection
         /// </summary>
-        public abstract byte Identifier { get; }
+        public byte Identifier
+        {
+            get
+            {
+                var attributes = this.GetType().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+
+                if (attributes.Length == 1)
+                    return (attributes[0] as DataSerializerProcessorAttribute).Identifier;
+                else
+                    throw new Exception("Data serializer and processor types must have a DataSerializerProcessorAttribute specifying a unique id");
+            }
+        }
 
         /// <summary>
         /// Processes data held in a stream and outputs it to another stream

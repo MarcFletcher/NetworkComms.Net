@@ -18,17 +18,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
-using System.ComponentModel.Composition;
 
 namespace DPSBase
 {
     /// <summary>
     /// DataSerializer that uses .Net <see cref="System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"/> to perform <see cref="object"/> serialization
     /// </summary>
+    [DataSerializerProcessor(2)]
     public class BinaryFormaterSerializer : DataSerializer
     {
         static DataSerializer instance;
@@ -51,10 +50,7 @@ namespace DPSBase
         private BinaryFormaterSerializer() { }
 
         #region ISerialize Members
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 2; } }
-
+        
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
         {            

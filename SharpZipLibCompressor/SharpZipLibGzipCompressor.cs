@@ -18,18 +18,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
 using DPSBase;
 using System.IO;
-using System.ComponentModel.Composition;
 
 namespace SharpZipLibCompressor
 {
     /// <summary>
     /// Compresor using Gzip compression from <see href="http://www.icsharpcode.net/opensource/sharpziplib/">SharpZipLib</see>
     /// </summary>
+    [DataSerializerProcessor(2)]
     public class SharpZipLibGzipCompressor : DataProcessor
     {
         static DataProcessor instance;
@@ -50,17 +49,14 @@ namespace SharpZipLibCompressor
         }
 
         private SharpZipLibGzipCompressor() { }
-
-        /// <inheritdoc />
-        public override byte Identifier { get { return 2; } }
-
+        
         /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             using (GZipOutputStream gzStream = new GZipOutputStream(outStream))
             {
                 gzStream.IsStreamOwner = false;
-                inStream.CopyTo(gzStream);
+                AsyncStreamCopier.CopyStreamTo(inStream, gzStream);
             }
 
             writtenBytes = outStream.Position;
@@ -70,7 +66,7 @@ namespace SharpZipLibCompressor
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             using (GZipInputStream zip = new GZipInputStream(inStream))
-                zip.CopyTo(outStream);
+                AsyncStreamCopier.CopyStreamTo(zip, outStream);
 
             writtenBytes = outStream.Position;
         }

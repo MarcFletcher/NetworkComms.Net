@@ -18,11 +18,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.ComponentModel.Composition.Hosting;
 using DPSBase;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Reflection;
 
@@ -35,70 +32,25 @@ namespace DPSBase
     public sealed class DPSManager
     {
         #region Comparers
-
-        class SerializerComparer : IEqualityComparer<DataSerializer>
+                
+        class ReflectedTypeComparer : IEqualityComparer<Type>
         {
-            public static SerializerComparer Instance { get; private set; }
+            public static ReflectedTypeComparer Instance { get; private set; }
 
-            static SerializerComparer() { Instance = new SerializerComparer(); }
+            static ReflectedTypeComparer() { Instance = new ReflectedTypeComparer(); }
 
-            public SerializerComparer() { }
-
-            #region IEqualityComparer<ISerialize> Members
-
-            public bool Equals(DataSerializer x, DataSerializer y)
-            {
-                if (x.Identifier == y.Identifier)
-                {
-                    Type xType = x.GetType();
-                    Type yType = y.GetType();
-
-                    if (xType != yType)
-                        throw new InvalidOperationException("Cannot have two different serializer types with same identifier");
-                    else
-                        return true;
-                }
-                else
-                    return false;
-            }
-
-            public int GetHashCode(DataSerializer obj)
-            {
-                return obj.Identifier.GetHashCode() ^ obj.GetType().GetHashCode();
-            }
-
-            #endregion
-        }
-
-        class DataProcessorComparer : IEqualityComparer<DataProcessor>
-        {
-            public static DataProcessorComparer Instance { get; private set; }
-
-            static DataProcessorComparer() { Instance = new DataProcessorComparer(); }
-
-            public DataProcessorComparer() { }
+            public ReflectedTypeComparer() { }
 
             #region IEqualityComparer<ICompress> Members
 
-            public bool Equals(DataProcessor x, DataProcessor y)
+            public bool Equals(Type x, Type y)
             {
-                if (x.Identifier == y.Identifier)
-                {
-                    Type xType = x.GetType();
-                    Type yType = y.GetType();
-
-                    if (xType != yType)
-                        throw new InvalidOperationException("Cannot have two different serializer types with same identifier");
-                    else
-                        return true;
-                }
-                else
-                    return false;
+                return x.AssemblyQualifiedName == y.AssemblyQualifiedName;
             }
 
-            public int GetHashCode(DataProcessor obj)
+            public int GetHashCode(Type obj)
             {
-                return obj.Identifier.GetHashCode() ^ obj.GetType().GetHashCode();
+                return obj.AssemblyQualifiedName.GetHashCode();
             }
 
             #endregion
@@ -129,18 +81,13 @@ namespace DPSBase
 
         #endregion
 
-        private CompositionContainer _container;
+        private Dictionary<string, bool> AssembliesToLoad = new Dictionary<string, bool>();
 
-        [ImportMany(typeof(DataSerializer))]
-        private IEnumerable<DataSerializer> serializers = null;
+        private Dictionary<Type, DataSerializer> SerializersByType = new Dictionary<Type, DataSerializer>(ReflectedTypeComparer.Instance);
+        private Dictionary<Type, DataProcessor> DataProcessorsByType = new Dictionary<Type, DataProcessor>(ReflectedTypeComparer.Instance);
 
-        [ImportMany(typeof(DataProcessor))]
-        private IEnumerable<DataProcessor> compressors = null;
-
-        private Dictionary<Type, DataSerializer> SerializersByType = new Dictionary<Type, DataSerializer>();
-        private Dictionary<byte, DataSerializer> SerializersByID = new Dictionary<byte, DataSerializer>();
-        private Dictionary<Type, DataProcessor> DataProcessorsByType = new Dictionary<Type, DataProcessor>();
-        private Dictionary<byte, DataProcessor> DataProcessorsByID = new Dictionary<byte, DataProcessor>();
+        private Dictionary<byte, Type> DataSerializerIdToType = new Dictionary<byte, Type>();
+        private Dictionary<byte, Type> DataProcessorIdToType = new Dictionary<byte, Type>();
 
         static DPSManager instance;
 
@@ -148,16 +95,7 @@ namespace DPSBase
         {
             instance = new DPSManager();
         }
-
-        /// <summary>
-        /// Retrieves all <see cref="DataSerializer"/>s known to the DPSManager
-        /// </summary>
-        /// <returns>A dictionary whose key is the <see cref="System.Type"/> of the <see cref="DataSerializer"/> instance that is the value</returns>
-        public static Dictionary<Type, DataSerializer> GetAllDataSerializes()
-        {
-            return instance.SerializersByType;
-        }
-
+        
         /// <summary>
         /// Retrieves the singleton instance of the <see cref="DataSerializer"/> with <see cref="System.Type"/> T
         /// </summary>
@@ -166,7 +104,7 @@ namespace DPSBase
         public static DataSerializer GetDataSerializer<T>() where T : DataSerializer
         {
             if (instance.SerializersByType.ContainsKey(typeof(T)))
-                return instance.SerializersByType[typeof(T)];
+                return GetDataSerializer(typeof(T));
             else
                 return null;
         }
@@ -178,21 +116,34 @@ namespace DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
         public static DataSerializer GetDataSerializer(byte Id)
         {
-            if (instance.SerializersByID.ContainsKey(Id))
-                return instance.SerializersByID[Id];
+            if (instance.DataSerializerIdToType.ContainsKey(Id))
+                return GetDataSerializer(instance.DataSerializerIdToType[Id]);
             else
                 return null;
         }
 
-        /// <summary>
-        /// Retrieves all <see cref="DataProcessor"/>s known to the DPSManager
-        /// </summary>
-        /// <returns>A dictionary whose key is the <see cref="System.Type"/> of the <see cref="DataProcessor"/> instance that is the value</returns>
-        public static Dictionary<Type, DataProcessor> GetAllDataProcessors()
+        private static DataSerializer GetDataSerializer(Type t)
         {
-            return instance.DataProcessorsByType;
-        }
+            var serializer = instance.SerializersByType[t];
 
+            if (serializer == null)
+            {
+                var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+                var typeToCreate = Type.GetType(t.AssemblyQualifiedName);
+
+                var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
+
+                if (constructor == null)
+                    constructor = typeToCreate.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
+
+                serializer = constructor.Invoke(null) as DataSerializer;
+
+                instance.SerializersByType[t] = serializer;
+            }
+
+            return serializer;            
+        }
+                
         /// <summary>
         /// Retrieves the singleton instance of the <see cref="DataProcessor"/> with <see cref="System.Type"/> T
         /// </summary>
@@ -201,7 +152,7 @@ namespace DPSBase
         public static DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
             if (instance.DataProcessorsByType.ContainsKey(typeof(T)))
-                return instance.DataProcessorsByType[typeof(T)];
+                return GetDataProcessor(typeof(T));
             else
                 return null;
         }
@@ -213,10 +164,32 @@ namespace DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor(byte Id)
         {
-            if (instance.DataProcessorsByID.ContainsKey(Id))
-                return instance.DataProcessorsByID[Id];
+            if (instance.DataProcessorIdToType.ContainsKey(Id))
+                return GetDataProcessor(instance.DataProcessorIdToType[Id]);
             else
                 return null;
+        }
+
+        private static DataProcessor GetDataProcessor(Type t)
+        {
+            var processor = instance.DataProcessorsByType[t];
+
+            if (processor == null)
+            {
+                var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+                var typeToCreate = Type.GetType(t.AssemblyQualifiedName);
+
+                var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
+
+                if (constructor == null)
+                    constructor = typeToCreate.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
+
+                processor = constructor.Invoke(null) as DataProcessor;
+
+                instance.DataProcessorsByType[t] = processor;
+            }
+
+            return processor;
         }
 
         /// <summary>
@@ -233,7 +206,7 @@ namespace DPSBase
                     return;
 
             instance.DataProcessorsByType.Add(dataProcessor.GetType(), dataProcessor);
-            instance.DataProcessorsByID.Add(dataProcessor.Identifier, dataProcessor);
+            instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType());
         }
 
         /// <summary>
@@ -250,7 +223,7 @@ namespace DPSBase
                     return;
 
             instance.SerializersByType.Add(dataSerializer.GetType(), dataSerializer);
-            instance.SerializersByID.Add(dataSerializer.Identifier, dataSerializer);
+            instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType());
         }
 
         /// <summary>
@@ -317,34 +290,69 @@ namespace DPSBase
         {
             try
             {
-                //An aggregate catalog that combines multiple catalogs
-                var catalog = new AggregateCatalog();
+                //Store the serializer and processor types as we will need then repeatedly
+                var serializerType = typeof(DPSBase.DataSerializer);
+                var processorType = typeof(DPSBase.DataProcessor);
 
                 //We're now going to look through the assemly reference tree to look for more components
                 //This will be done by first checking whether a relefection only load of each assembly and checking 
-                //for reference to DPSBase.  We will therefore get the full name of DPSBase
-                var dpsBaseAssembly = typeof(DPSManager).Assembly.GetName();
+                //for reference to DPSBase.  We will therefore get a reference to DPSBase
+                var dpsBaseAssembly = typeof(DPSManager).Assembly;
+                                
+                //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
+                var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
 
-                catalog.Catalogs.Add(new AssemblyCatalog(typeof(DPSManager).Assembly));
+                //We are also going to keep a track of all assemblies with which we have considered types within
+                var dicOfSearchedAssemblies = new Dictionary<string, Assembly>();
 
-                //First add all currently loaded assemblies
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(ass =>  {
-                    if (ass.GetReferencedAssemblies().Contains(dpsBaseAssembly, AssemblyComparer.Instance))
-                        catalog.Catalogs.Add(new AssemblyCatalog(ass));
-                });
-
-                System.Diagnostics.Debug.Print(dpsBaseAssembly.FullName);
-
-                //Keep track of all assemblies that have been loaded
-                var allAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToDictionary(ass => ass.FullName, ass => ass);
                 //And all the assembly names we have tried to load
-                var loadedAssemblies = new List<string>();
+                var listofConsideredAssemblies = new List<string>();
+                
+                foreach (var ass in alreadyLoadedAssemblies)
+                {
+                    foreach (var refAss in ass.GetReferencedAssemblies())
+                    {
+                        if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss) || ass == dpsBaseAssembly)
+                        {
+                            foreach (var type in ass.GetTypes())
+                            {
+                                byte id;
+                                var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
 
+                                if (attributes.Length == 1)
+                                {
+                                    id = (attributes[0] as DataSerializerProcessorAttribute).Identifier;
+                                }
+                                else
+                                    continue;
+
+                                if (serializerType.IsAssignableFrom(type) && !type.IsAbstract &&
+                                    (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
+                                {
+                                    SerializersByType.Add(type, null);
+                                    DataSerializerIdToType.Add(id, type);
+                                }
+
+                                if (processorType.IsAssignableFrom(type) && !type.IsAbstract &&
+                                    (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
+                                {
+                                    DataProcessorsByType.Add(type, null);
+                                    DataProcessorIdToType.Add(id, type);
+                                }
+                            }
+
+                            break;
+                        }
+                    }
+
+                    dicOfSearchedAssemblies.Add(ass.FullName, ass);
+                }
+                
                 //Set an identifier to come back to as we load assemblies
                 AssemblySearchStart:
 
                 //Loop through all assemblies
-                foreach (var pair in allAssemblies)
+                foreach (var pair in dicOfSearchedAssemblies)
                 {
                     var assembly = pair.Value;
 
@@ -352,61 +360,76 @@ namespace DPSBase
                     foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
                     {
                         //If we've already tried this assembly name then keep going.  Otherwise record that we will have tried this assembly
-                        if (loadedAssemblies.Contains(referencedAssembly.FullName))
+                        if (listofConsideredAssemblies.Contains(referencedAssembly.FullName))
                             continue;
                         else
-                            loadedAssemblies.Add(referencedAssembly.FullName);
+                            listofConsideredAssemblies.Add(referencedAssembly.FullName);
 
                         //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
                         var refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
 
                         //Note that multiple assembly names/versions could resolve to this assembly so check if we're already considered the actual
                         //loaded assembly
-                        if (!allAssemblies.ContainsKey(refAssembly.FullName))
+                        if (!dicOfSearchedAssemblies.ContainsKey(refAssembly.FullName))
                         {
                             //if not add it to the considered list
-                            allAssemblies.Add(refAssembly.FullName, refAssembly);
+                            dicOfSearchedAssemblies.Add(refAssembly.FullName, refAssembly);
 
                             //if it references DPSBase directly it might contain components. Add the assembly to the catalog
-                            if (refAssembly.GetReferencedAssemblies().Contains(dpsBaseAssembly, AssemblyComparer.Instance))
+                            foreach(var refAss in refAssembly.GetReferencedAssemblies())
                             {
-                                System.Diagnostics.Debug.Print(refAssembly.FullName);
-                                catalog.Catalogs.Add(new AssemblyCatalog(System.Reflection.Assembly.Load(refAssembly.GetName())));
+                                if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss))
+                                {
+                                    foreach (var type in refAssembly.GetTypes())
+                                    {
+                                        bool idSet = false;
+                                        byte id = 0;
+                                        //var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+                                        var attributes = CustomAttributeData.GetCustomAttributes(type);
+
+                                        foreach (var attr in attributes)
+                                        {
+                                            if (attr.Constructor.ReflectedType.AssemblyQualifiedName == typeof(DataSerializerProcessorAttribute).AssemblyQualifiedName)
+                                            {
+                                                id = (byte)attr.ConstructorArguments[0].Value;
+                                                idSet = true;
+                                            }
+                                        }
+
+                                        if (!idSet)
+                                            continue;
+
+                                        Type baseType = type.BaseType;
+
+                                        while (baseType != null)
+                                        {
+                                            if (baseType.AssemblyQualifiedName == serializerType.AssemblyQualifiedName)
+                                            {
+                                                SerializersByType.Add(type, null);
+                                                DataSerializerIdToType.Add(id, type);
+                                                break;
+                                            }
+
+                                            if (baseType.AssemblyQualifiedName == processorType.AssemblyQualifiedName)
+                                            {
+                                                DataProcessorsByType.Add(type, null);
+                                                DataProcessorIdToType.Add(id, type);
+                                                break;
+                                            }
+
+                                            baseType = baseType.BaseType;
+                                        }
+                                    }
+
+                                    break;
+                                }                                                              
                             }
 
                             //We're changed allAssemblies and loadedAssemblies so restart
                             goto AssemblySearchStart;
                         }
                     }
-
-                }
-
-                _container = new CompositionContainer(catalog);
-
-                //Fill the imports of this object
-                try
-                {
-                    _container.ComposeParts(this);
-                }
-                catch (CompositionException compositionException)
-                {
-                    Console.WriteLine(compositionException.ToString());
-                }
-
-                var serializersToAdd = serializers.Distinct(SerializerComparer.Instance).Where(s => !SerializersByType.ContainsKey(s.GetType())).ToArray();
-                var dataProcessorsToAdd = compressors.Distinct(DataProcessorComparer.Instance).Where(c => !DataProcessorsByType.ContainsKey(c.GetType())).ToArray();
-
-                foreach (var instance in serializersToAdd)
-                {
-                    SerializersByType.Add(instance.GetType(), instance);
-                    SerializersByID.Add(instance.Identifier, instance);
-                }
-
-                foreach (var instance in dataProcessorsToAdd)
-                {
-                    DataProcessorsByType.Add(instance.GetType(), instance);
-                    DataProcessorsByID.Add(instance.Identifier, instance);
-                }
+                }                                
             }
             catch (Exception ex)
             {
