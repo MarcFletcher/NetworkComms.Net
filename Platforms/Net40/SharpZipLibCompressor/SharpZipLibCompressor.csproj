@@ -5,14 +5,13 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{BFB67E36-9DF1-473D-B5DC-D94C5199C624}</ProjectGuid>
+    <ProjectGuid>{F27F6581-D3FF-4EF1-8DC6-8DF8E53E4132}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RemoteProcedureCalls</RootNamespace>
-    <AssemblyName>RemoteProcedureCalls</AssemblyName>
+    <RootNamespace>SharpZipLibCompressor</RootNamespace>
+    <AssemblyName>SharpZipLibCompressor</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +21,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\RemoteProcedureCalls.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,9 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="protobuf-net, Version=2.0.0.580, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net20\protobuf-net.dll</HintPath>
+      <HintPath>..\..\..\SharpZipLibCompressor\Dlls\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -46,21 +44,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\SharpZipLibCompressor\SharpZipLibGzipCompressor.cs">
+      <Link>SharpZipLibGzipCompressor.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Client.cs" />
-    <Compile Include="RPCException.cs" />
-    <Compile Include="Server.cs" />
-    <Compile Include="Wrappers.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
+      <Project>{9A8E342F-2EB6-44ED-A305-A6E0074540C0}</Project>
+      <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
     </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet %28Net20\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\..\SharpZipLibCompressor\Dlls\ICSharpCode.SharpZipLib.dll">
+      <Link>Dlls\ICSharpCode.SharpZipLib.dll</Link>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

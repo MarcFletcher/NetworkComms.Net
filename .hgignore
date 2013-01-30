@@ -10,5 +10,11 @@ ipch/**
 *.vcxproj.user
 SingleDllBuild/Debug/*
 SingleDllBuild/Release/*
+SingleDllBuild/Net20/Debug/*
+SingleDllBuild/Net20/Release/*
+SingleDllBuild/Net35/Debug/*
+SingleDllBuild/Net35/Release/*
+SingleDllBuild/Net40/Debug/*
+SingleDllBuild/Net40/Release/*
 Documentation/Help/*
 *.orig

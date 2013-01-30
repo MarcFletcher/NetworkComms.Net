@@ -5,14 +5,13 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{BFB67E36-9DF1-473D-B5DC-D94C5199C624}</ProjectGuid>
+    <ProjectGuid>{9A8E342F-2EB6-44ED-A305-A6E0074540C0}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RemoteProcedureCalls</RootNamespace>
-    <AssemblyName>RemoteProcedureCalls</AssemblyName>
+    <RootNamespace>DPSBase</RootNamespace>
+    <AssemblyName>DPSBase</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\RemoteProcedureCalls.XML</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,11 +30,11 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="protobuf-net, Version=2.0.0.580, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net20\protobuf-net.dll</HintPath>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\DLL\Net40\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -46,21 +45,40 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\DPSBase\AsyncStreamCopier.cs">
+      <Link>AsyncStreamCopier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\BinaryFormaterSerializer.cs">
+      <Link>BinaryFormaterSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataProcessor.cs">
+      <Link>DataProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataSerializer.cs">
+      <Link>DataSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataSerializerProcessorAttribute.cs">
+      <Link>DataSerializerProcessorAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DPSManager.cs">
+      <Link>DPSManager.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\NullSerializer.cs">
+      <Link>NullSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\ProtobufSerializer.cs">
+      <Link>ProtobufSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\RijndaelPSKEncrypter.cs">
+      <Link>RijndaelPSKEncrypter.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\StreamSendWrapper.cs">
+      <Link>StreamSendWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
+      <Link>ThreadSafeStream.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Client.cs" />
-    <Compile Include="RPCException.cs" />
-    <Compile Include="Server.cs" />
-    <Compile Include="Wrappers.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet %28Net20\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

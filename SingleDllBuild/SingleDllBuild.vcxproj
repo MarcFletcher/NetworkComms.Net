@@ -13,6 +13,9 @@
   <ItemGroup>
     <None Include="ILMerge.exe" />
     <None Include="SingleDll.bat" />
+    <None Include="SingleDll_Net20.bat" />
+    <None Include="SingleDll_Net35.bat" />
+    <None Include="SingleDll_Net40.bat" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">

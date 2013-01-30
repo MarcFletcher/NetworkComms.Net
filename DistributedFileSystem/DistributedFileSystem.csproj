@@ -79,11 +79,11 @@
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase</Name>
+      <Name>DPSBase %28Core\DPSBase%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet</Name>
+      <Name>NetworkCommsDotNet %28Core\NetworkCommsDotNet%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
