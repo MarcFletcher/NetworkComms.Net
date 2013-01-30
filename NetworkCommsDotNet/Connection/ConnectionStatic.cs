@@ -141,7 +141,7 @@ namespace NetworkCommsDotNet
                 }));
             }
 
-            if (!returnImmediately) WaitHandle.WaitAll(connectionCheckHandles.ToArray());
+            if (!returnImmediately && connectionCheckHandles.Count > 0) WaitHandle.WaitAll(connectionCheckHandles.ToArray());
         }
 
         /// <summary>
