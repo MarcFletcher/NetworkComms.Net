@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
+using System.Net;
 
 namespace ExamplesConsole
 {
@@ -29,8 +30,7 @@ namespace ExamplesConsole
     /// </summary>
     public static class ExampleHelper
     {
-        static string lastServerIP = "";
-        static int lastServerPort = -1;
+        static IPEndPoint lastServerIPEndPoint = null;
 
         /// <summary>
         /// Request user to provide server details and returns the result as a <see cref="ConnectionInfo"/> object. Performs the necessary validation and prevents code duplication across examples.
@@ -38,8 +38,8 @@ namespace ExamplesConsole
         /// <param name="connectionInfo"></param>
         public static void GetServerDetails(out ConnectionInfo connectionInfo)
         {
-            if (lastServerIP != "")
-                Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:",lastServerIP,lastServerPort);
+            if (lastServerIPEndPoint != null)
+                Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:", lastServerIPEndPoint.Address, lastServerIPEndPoint.Port);
             else
                 Console.WriteLine("Please enter the destination IP address and port, e.g. '192.168.0.1:10000':");
 
@@ -50,21 +50,11 @@ namespace ExamplesConsole
                     //Parse the provided information
                     string userEnteredStr = Console.ReadLine();
 
-                    if (userEnteredStr.Trim() == "r" && lastServerIP != "")
-                    {
-                        connectionInfo = new ConnectionInfo(lastServerIP, lastServerPort);
+                    if (userEnteredStr.Trim() == "r" && lastServerIPEndPoint != null)
                         break;
-                    }
                     else
                     {
-                        int lastColonPosition = userEnteredStr.LastIndexOf(':');
-                        string serverIP = userEnteredStr.Substring(0, lastColonPosition);
-                        int serverPort = int.Parse(userEnteredStr.Substring(lastColonPosition + 1, userEnteredStr.Length - lastColonPosition - 1));
-
-                        lastServerIP = serverIP;
-                        lastServerPort = serverPort;
-
-                        connectionInfo = new ConnectionInfo(serverIP, serverPort);
+                        lastServerIPEndPoint = IPTools.ParseEndPointFromString(userEnteredStr);
                         break;
                     }
                 }
@@ -73,6 +63,8 @@ namespace ExamplesConsole
                     Console.WriteLine("Unable to determine host IP address and port. Check format and try again:");
                 }
             }
+
+            connectionInfo = new ConnectionInfo(lastServerIPEndPoint);
         }
     }
 }

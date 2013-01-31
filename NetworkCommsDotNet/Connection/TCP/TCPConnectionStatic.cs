@@ -239,7 +239,40 @@ namespace NetworkCommsDotNet
                                 //Perform the establish in a task so that we can continue picking up new connections here
                                 ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                                 {
-                                    GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true);
+                                    #region Pickup The New Connection
+                                    try
+                                    {
+                                        GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint), NetworkComms.DefaultSendReceiveOptions, newClient, true);
+                                    }
+                                    catch (ConfirmationTimeoutException)
+                                    {
+                                        //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+                                    }
+                                    catch (CommunicationException)
+                                    {
+                                        //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+                                    }
+                                    catch (ConnectionSetupException)
+                                    {
+                                        //If we are the server end and we did not pick the incoming connection up then tooo bad!
+                                    }
+                                    catch (SocketException)
+                                    {
+                                        //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        //For some odd reason SocketExceptions don't always get caught above, so another check
+                                        if (ex.GetBaseException().GetType() != typeof(SocketException))
+                                        {
+                                            //Can we catch the socketException by looking at the string error text?
+                                            if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
+                                                NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                                            else
+                                                NetworkComms.LogError(ex, "ConnectionSetupError");
+                                        }
+                                    }
+                                    #endregion
                                 }));
                             }
                         }
