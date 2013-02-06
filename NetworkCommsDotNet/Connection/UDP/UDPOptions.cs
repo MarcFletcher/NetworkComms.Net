@@ -32,10 +32,23 @@ namespace NetworkCommsDotNet
     public enum UDPOptions
     {
         /// <summary>
-        /// The most basic UDP option. All UDP packets are sent contionless with no error handling
+        /// The most basic UDP option. All UDP packets are sent connectionless with no error handling, sequencing or duplication prevention.
         /// </summary>
         None = 0x0,
 
-        //EstablishHandshake = 0x1, //This will probably be the first feature implemented post 2.0
+        /// <summary>
+        /// Handshake the connection before sending user data. Ensures the remote end is actually listening.
+        /// </summary>
+        //Handshake = 0x1,
+
+        /// <summary>
+        /// Ensures packets can only be received in the order they were sent. e.g. Prevents old messages arriving late from being handled.
+        /// </summary>
+        //Sequenced = 0x2,
+
+        /// <summary>
+        /// Guarantees that every packet sent 'eventually' arrives. If used together with 'Sequenced' flag essentially repoduces TCP.
+        /// </summary>
+        //Reliable = 0x3
     }
 }
