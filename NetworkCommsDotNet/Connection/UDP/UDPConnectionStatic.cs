@@ -114,7 +114,18 @@ namespace NetworkCommsDotNet
                         try
                         {
                             Socket testSocket = new Socket(connectionInfo.RemoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                            testSocket.Connect(connectionInfo.RemoteEndPoint);
+                            
+                            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
+
+                            var args = new SocketAsyncEventArgs();
+                            args.RemoteEndPoint = connectionInfo.RemoteEndPoint;
+                            args.Completed += (o, a) =>
+                            {
+                                ev.Set();
+                            };
+
+                            testSocket.ConnectAsync(args);
+                            ev.WaitOne();
 
                             lock (udpClientListenerLocker)
                             {
@@ -214,7 +225,11 @@ namespace NetworkCommsDotNet
                     }
                 }
 
+#if WINDOWS_PHONE
+                IPEndPoint ipEndPointUsed = new IPEndPoint(IPAddress.Parse(newListeningConnection.socket.Information.LocalAddress.ToString()), int.Parse(newListeningConnection.socket.Information.LocalPort)); 
+#else
                 IPEndPoint ipEndPointUsed = (IPEndPoint)newListeningConnection.udpClientThreadSafe.LocalEndPoint;
+#endif
 
                 if (udpConnectionListeners.ContainsKey(ipEndPointUsed))
                     throw new CommsSetupShutdownException("Unable to add new UDP listenerInstance to udpConnectionListeners as there is an existing entry.");
@@ -393,7 +408,18 @@ namespace NetworkCommsDotNet
             try
             {
                 Socket testSocket = new Socket(ipEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                testSocket.Connect(ipEndPoint);
+
+                System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
+
+                var args = new SocketAsyncEventArgs();
+                args.RemoteEndPoint = ipEndPoint;
+                args.Completed += (o, a) =>
+                    {
+                        ev.Set();
+                    };
+
+                testSocket.ConnectAsync(args);
+                ev.WaitOne();
 
                 lock (udpClientListenerLocker)
                 {

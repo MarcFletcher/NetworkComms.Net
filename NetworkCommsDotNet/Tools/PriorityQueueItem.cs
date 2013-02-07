@@ -22,6 +22,12 @@ using System.Text;
 using System.Threading;
 using System.IO;
 
+#if WINDOWS_PHONE
+using QueueItemPriority = Windows.System.Threading.WorkItemPriority;
+#else
+using QueueItemPriority = ThreadPriority;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -29,13 +35,14 @@ namespace NetworkCommsDotNet
     /// </summary>
     class PriorityQueueItem
     {
-        public ThreadPriority Priority { get; private set; }
+
+        public QueueItemPriority Priority { get; private set; }
         public Connection Connection { get; private set; }
         public PacketHeader PacketHeader { get; private set; }
         public MemoryStream DataStream { get; private set; }
         public SendReceiveOptions SendReceiveOptions { get; private set; }
 
-        public PriorityQueueItem(ThreadPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendReceiveOptions)
+        public PriorityQueueItem(QueueItemPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendReceiveOptions)
         {
             //Nullreference checks
             if (connection == null) throw new NullReferenceException("Provided connection parameter can not be null.");

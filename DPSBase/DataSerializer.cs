@@ -88,7 +88,12 @@ namespace DPSBase
             else if (objectToSerialiseType == typeof(StreamSendWrapper))
                 return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamSendWrapper, dataProcessors, options);
 
-            StreamSendWrapper baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
+            StreamSendWrapper baseRes = null;
+            
+#if WINDOWS_PHONE
+#else
+            baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
+#endif
 
             //if the object was an array baseres will != null
             if (baseRes != null) 
@@ -218,7 +223,13 @@ namespace DPSBase
             receivedObjectStream.Seek(0, SeekOrigin.Begin);
 
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
-            object baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectStream, typeof(T), dataProcessors, options);
+            object baseRes = null;
+                
+#if WINDOWS_PHONE
+#else
+            baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectStream, typeof(T), dataProcessors, options);
+#endif
+
             if (baseRes != null)
                 return (T)baseRes;
             else
@@ -330,6 +341,9 @@ namespace DPSBase
         /// <returns>The deserialised object</returns>
         protected abstract object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options);
     }
+
+#if WINDOWS_PHONE
+#else
 
     /// <summary>
     /// Class that provides optimised method for serializing arrays of primitive data types.
@@ -568,6 +582,8 @@ namespace DPSBase
             return null;
         }
     }
+
+#endif
 
     /// <summary>
     /// Class that provides optimised method for serializing arrays of primitive data types.

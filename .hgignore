@@ -1,6 +1,7 @@
 syntax: glob
 **/bin/**
 **/obj/**
+**/Bin/**
 *.suo
 x64/**
 ipch/**

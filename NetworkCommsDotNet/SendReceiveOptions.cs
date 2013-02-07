@@ -28,7 +28,7 @@ namespace NetworkCommsDotNet
     /// Contains options and flags for sending and receiving data such as serialisation method, data processors, encryption etc.
     /// Several static constructors are provided to help create SendReceiveOptions in the most common formats.
     /// </summary>
-    public class SendReceiveOptions : ICloneable
+    public class SendReceiveOptions
     {
         private DataSerializer _dataSerializer;
         private List<DataProcessor> _dataProcessors;
@@ -134,15 +134,15 @@ namespace NetworkCommsDotNet
             return equal;
         }
 
-        #region ICloneable Members
-
-        /// <inheritdoc />
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public object Clone()
         {
             return new SendReceiveOptions(DataSerializer, new List<DataProcessor>(DataProcessors), new Dictionary<string,string>(Options));
         }
-
-        #endregion
+        
     }
 
     /// <inheritdoc />

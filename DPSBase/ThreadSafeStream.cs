@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace DPSBase
 {
@@ -47,8 +48,11 @@ namespace DPSBase
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
 
+#if WINDOWS_PHONE
+            this.stream = stream;
+#else
             this.stream = Stream.Synchronized(stream);
-            //this.stream = stream;
+#endif
         }
 
         /// <summary>
@@ -63,8 +67,11 @@ namespace DPSBase
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
 
+#if WINDOWS_PHONE
+            this.stream = stream;
+#else
             this.stream = Stream.Synchronized(stream);
-            //this.stream = stream;
+#endif
         }
 
         /// <summary>
@@ -129,7 +136,14 @@ namespace DPSBase
             lock (streamLocker)
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+                HashAlgorithm md5;
+
+#if WINDOWS_PHONE
+                    md5 = new DPSBase.MD5.MD5Managed();
+#else
+                    md5 = System.Security.Cryptography.MD5.Create();
+#endif
+
                 return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "");
             }
         }

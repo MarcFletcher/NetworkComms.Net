@@ -33,15 +33,22 @@ namespace DPSBase
         private static readonly string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
         private static readonly byte[] SALT = new byte[] { 118, 100, 123, 136, 20, 242, 170, 227, 97, 168, 101, 177, 214, 211, 118, 137 };
 
-        RijndaelManaged encrypter = new RijndaelManaged();
-        
-        private RijndaelPSKEncrypter() { }
+#if WINDOWS_PHONE
+        SymmetricAlgorithm encrypter = new AesManaged();
+#else
+        SymmetricAlgorithm encrypter = new RijndaelManaged();
+#endif
+
+        private RijndaelPSKEncrypter() 
+        {
+            encrypter.BlockSize = 128; 
+        }
         
         /// <inheritdoc />
         public override void ForwardProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
-
+            
             var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16));
             
             CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);

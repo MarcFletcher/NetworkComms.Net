@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace LZMA.CommandLineParser
 {
@@ -65,7 +66,7 @@ namespace LZMA.CommandLineParser
 	{
 		internal bool ThereIs;
 		internal bool WithMinus;
-		internal ArrayList PostStrings = new ArrayList();
+		internal List<string> PostStrings = new List<string>();
 		internal int PostCharIndex;
 		internal SwitchResult()
 		{
@@ -75,7 +76,7 @@ namespace LZMA.CommandLineParser
 
 	internal class Parser
 	{
-		internal ArrayList NonSwitchStrings = new ArrayList();
+		internal List<string> NonSwitchStrings = new List<string>();
 		SwitchResult[] _switches;
 
 		internal Parser(int numSwitches)
@@ -106,7 +107,7 @@ namespace LZMA.CommandLineParser
 					if (switchLen <= maxLen || pos + switchLen > len)
 						continue;
 					if (String.Compare(switchForms[switchIndex].IDString, 0,
-							srcString, pos, switchLen, true) == 0)
+							srcString, pos, switchLen, StringComparison.CurrentCulture) == 0)
 					{
 						matchedSwitchIndex = switchIndex;
 						maxLen = switchLen;
@@ -232,7 +233,7 @@ namespace LZMA.CommandLineParser
 		}
 
 		static bool ParseSubCharsCommand(int numForms, CommandSubCharsSet[] forms,
-			string commandString, ArrayList indices)
+			string commandString, List<int> indices)
 		{
 			indices.Clear();
 			int numUsedChars = 0;

@@ -24,8 +24,220 @@ using System.Threading;
 using System.Net;
 using System.IO;
 
+#if WINDOWS_PHONE
+using Windows.Networking.Sockets;
+#endif
+
 namespace NetworkCommsDotNet
 {
+#if WINDOWS_PHONE
+    
+    /// <summary>
+    /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
+    /// </summary>
+    public partial class TCPConnection : Connection
+    {
+        static object staticTCPConnectionLocker = new object();
+        static Dictionary<IPEndPoint, StreamSocketListener> tcpListenerDict = new Dictionary<IPEndPoint, StreamSocketListener>();
+        
+        /// <summary>
+        /// By default usage of <see href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's algorithm</see> during TCP exchanges is disabled for performance reasons. If you wish it to be used for newly established connections set this property to true.
+        /// </summary>
+        public static bool EnableNagleAlgorithmForNewConnections { get; set; }
+
+        /// <summary>
+        /// Accept new incoming TCP connections on all allowed IP's and Port's
+        /// </summary>
+        /// <param name="useRandomPortFailOver">If true and the default local port is not available will select one at random. If false and a port is unavailable listening will not be enabled on that adaptor</param>
+        public static void StartListening(bool useRandomPortFailOver = false)
+        {
+            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
+
+            if (NetworkComms.ListenOnAllAllowedInterfaces)
+            {
+                try
+                {
+                    foreach (IPAddress ip in localIPs)
+                    {
+                        try
+                        {
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                        }
+                        catch (CommsSetupShutdownException)
+                        {
+
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    //If there is an exception here we remove any added listeners and then rethrow
+                    Shutdown();
+                    throw;
+                }
+            }
+            else
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Accept new incoming TCP connections on specified <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        {
+            lock (staticTCPConnectionLocker)
+            {
+                //If as listener is already added there is not need to continue
+                if (tcpListenerDict.ContainsKey(newLocalEndPoint)) return;
+
+                StreamSocketListener newListenerInstance = new StreamSocketListener();
+                newListenerInstance.ConnectionReceived += newListenerInstance_ConnectionReceived;
+
+                try
+                {                    
+                    newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), newLocalEndPoint.Port.ToString()).AsTask().RunSynchronously();
+                }
+                catch (SocketException)
+                {
+                    //If the port we wanted is not available
+                    if (useRandomPortFailOver)
+                    {
+                        newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), "").AsTask().RunSynchronously();    
+                    }
+                    else
+                    {
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                    }
+                }
+
+                IPEndPoint ipEndPointUsed = new IPEndPoint(newLocalEndPoint.Address, int.Parse(newListenerInstance.Information.LocalPort));                    
+
+                if (tcpListenerDict.ContainsKey(ipEndPointUsed))
+                    throw new CommsSetupShutdownException("Unable to add new TCP listenerInstance to tcpListenerDict as there is an existing entry.");
+                else
+                {
+                    //If we were succesfull we can add the new localEndPoint to our dict
+                    tcpListenerDict.Add(ipEndPointUsed, newListenerInstance);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
+                }
+            }            
+        }
+
+        /// <summary>
+        /// Accept new TCP connections on specified list of <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        {
+            try
+            {
+                foreach (var endPoint in localEndPoints)
+                    StartListening(endPoint, useRandomPortFailOver);
+            }
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                Shutdown();
+                throw;
+            }
+        }
+
+        private static void newListenerInstance_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
+        {
+            var newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.ToString()), int.Parse(args.Socket.Information.RemotePort)));
+            TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
+        }
+
+        /// <summary>
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners
+        /// </summary>
+        /// <returns>List of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners</returns>
+        public static List<IPEndPoint> ExistingLocalListenEndPoints()
+        {
+            lock (staticTCPConnectionLocker)
+            {
+                List<IPEndPoint> res = new List<IPEndPoint>();
+                foreach (var pair in tcpListenerDict)
+                    res.Add(pair.Key);
+
+                return res;
+            }
+        }
+
+        /// <summary>
+        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
+        /// </summary>
+        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
+        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
+        public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
+        {
+            lock (staticTCPConnectionLocker)
+            {
+                foreach (var pair in tcpListenerDict)
+                    if (pair.Key.Address.Equals(ipAddress))
+                        return pair.Key;
+
+                return default(IPEndPoint);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if there is atleast one local TCP listeners
+        /// </summary>
+        /// <returns>True if there is atleast one local TCP listeners</returns>
+        public static bool Listening()
+        {
+            lock (staticTCPConnectionLocker)
+                return tcpListenerDict.Count > 0;
+        }
+
+        /// <summary>
+        /// Shutdown everything TCP related
+        /// </summary>
+        internal static void Shutdown(int threadShutdownTimeoutMS = 1000)
+        {
+            try
+            {
+                CloseAndRemoveAllLocalConnectionListeners();
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "TCPCommsShutdownError");
+            }            
+        }
+
+        /// <summary>
+        /// Close down all local TCP listeners
+        /// </summary>
+        private static void CloseAndRemoveAllLocalConnectionListeners()
+        {
+            lock (staticTCPConnectionLocker)
+            {
+                try
+                {
+                    foreach (var listener in tcpListenerDict.Values)
+                    {
+                        try
+                        {
+                            if (listener != null) listener.Dispose();
+                        }
+                        catch (Exception) { }
+                    }
+                }
+                catch (Exception) { }
+                finally
+                {
+                    //Once we have stopped all listeners we set the list to null incase we want to resart listening
+                    tcpListenerDict = new Dictionary<IPEndPoint,StreamSocketListener>();
+                }
+            }
+        }
+    }
+#else
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
     /// </summary>
@@ -344,4 +556,5 @@ namespace NetworkCommsDotNet
             }
         }
     }
+#endif
 }

@@ -24,8 +24,179 @@ using System.Threading;
 using System.Net;
 using System.IO;
 
+#if WINDOWS_PHONE
+using Windows.Networking.Sockets;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Storage.Streams;
+#endif
+
 namespace NetworkCommsDotNet
 {
+#if WINDOWS_PHONE
+
+    public partial class TCPConnection : Connection
+    {
+        /// <summary>
+        /// Asynchronous incoming connection data delegate
+        /// </summary>
+        /// <param name="ar">The call back state object</param>
+        async Task IncomingTCPPacketHandler(StreamSocket socket)
+        {               
+            try
+            {
+                while (true)
+                {
+                    int count = (int)(await socket.InputStream.ReadAsync(WindowsRuntimeBufferExtensions.AsBuffer(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead), (uint)(dataBuffer.Length - totalBytesRead), Windows.Storage.Streams.InputStreamOptions.Partial)).Length;
+                    totalBytesRead = count + totalBytesRead;
+
+                    if (totalBytesRead > 0)
+                    {
+                        ConnectionInfo.UpdateLastTrafficTime();
+
+                        //If we have read a single byte which is 0 and we are not expecting other data
+                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
+                        {
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 1");
+                        }
+                        else
+                        {
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+
+                            //If there is more data to get then add it to the packets lists;
+                            packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
+                        }
+                    }
+
+                    if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
+                    {
+                        //Once we think we might have enough data we call the incoming packet handle handoff
+                        //Should we have a complete packet this method will start the appriate task
+                        //This method will now clear byes from the incoming packets if we have received something complete.
+                        IncomingPacketHandleHandOff(packetBuilder);
+                    }
+
+                    if (totalBytesRead == 0 && ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                    {
+                        CloseConnection(false, -2);
+                        break;
+                    }
+                    else
+                    {
+                        //We need a buffer for our incoming data
+                        //First we try to reuse a previous buffer
+                        if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                            dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref totalBytesRead);
+                        else
+                        {
+                            //If we have nothing to reuse we allocate a new buffer
+                            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                            totalBytesRead = 0;
+                        }                        
+                    }
+                }     
+            }
+            catch (IOException)
+            {
+                CloseConnection(true, 12);
+            }
+            catch (ObjectDisposedException)
+            {
+                CloseConnection(true, 13);
+            }
+            catch (SocketException)
+            {
+                CloseConnection(true, 14);
+            }
+            catch (InvalidOperationException)
+            {
+                CloseConnection(true, 15);
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                CloseConnection(true, 31);
+            }
+        }
+
+        /// <summary>
+        /// Closes the <see cref="TCPConnection"/>
+        /// </summary>
+        /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
+        /// <param name="logLocation">Optional debug parameter.</param>
+        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
+        {            
+            //Try to close the socket
+            try
+            {
+                socket.Dispose();
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        /// <summary>
+        /// Sends the provided packet to the remote end point
+        /// </summary>
+        /// <param name="packet">Packet to send</param>
+        protected override void SendPacketSpecific(Packet packet)
+        {
+            //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
+            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+
+            Stream outputStream = socket.OutputStream.AsStreamForWrite();
+            outputStream.Write(headerBytes, 0, headerBytes.Length);            
+            
+            packet.PacketData.ThreadSafeStream.CopyTo(outputStream, packet.PacketData.Start, packet.PacketData.Length);
+            outputStream.Flush();
+
+            //Correctly dispose the stream if we are finished with it
+            if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
+                packet.PacketData.ThreadSafeStream.Close();
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");            
+        }
+
+        /// <summary>
+        /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
+        /// </summary>
+        protected override void SendNullPacket()
+        {
+            try
+            {
+                //Only once the connection has been established do we send null packets
+                if (ConnectionInfo.ConnectionState == ConnectionState.Established)
+                {
+                    //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
+                    lock (sendLocker)
+                    {
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
+
+                        var stream = socket.OutputStream.AsStreamForWrite();
+                        stream.Write(new byte[] { 0 }, 0, 1);
+                        stream.Flush();
+
+                        //Update the traffic time after we have written to netStream
+                        ConnectionInfo.UpdateLastTrafficTime();
+                    }
+                }
+
+                //If the connection is shutdown we should call close
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -8);
+            }
+            catch (Exception)
+            {
+                CloseConnection(true, 19);
+            }
+        }
+    }
+
+#else
+
+
     public partial class TCPConnection : Connection
     {
         /// <summary>
@@ -351,4 +522,5 @@ namespace NetworkCommsDotNet
             }
         }
     }
+#endif
 }

@@ -1437,7 +1437,13 @@ namespace NetworkCommsDotNet
         /// <returns>The MD5 checksum as a string</returns>
         public static string MD5Bytes(Stream streamToMD5)
         {
-            System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+            System.Security.Cryptography.HashAlgorithm md5;
+
+#if WINDOWS_PHONE
+            md5 = new DPSBase.MD5.MD5Managed();
+#else
+            md5 = System.Security.Cryptography.MD5.Create();
+#endif
 
             //If we don't ensure the position is consistent the MD5 changes
             streamToMD5.Seek(0, SeekOrigin.Begin);

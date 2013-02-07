@@ -25,6 +25,13 @@ using DPSBase;
 using System.Net.Sockets;
 using System.IO;
 
+#if WINDOWS_PHONE
+using QueueItemPriority = Windows.System.Threading.WorkItemPriority;
+#else
+using QueueItemPriority = ThreadPriority;
+#endif
+
+
 namespace NetworkCommsDotNet
 {
     public abstract partial class Connection
@@ -140,13 +147,19 @@ namespace NetworkCommsDotNet
 
                             if (isReservedType)
                             {
-                                PriorityQueueItem item = new PriorityQueueItem(Thread.CurrentThread.Priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
+#if WINDOWS_PHONE
+                                var priority = QueueItemPriority.Normal;
+#else
+                                var priority = Thread.CurrentThread.Priority;
+#endif
+
+                                PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
                                 NetworkComms.CompleteIncomingItemTask(item);
                             }
                             else
                             {
-                                ThreadPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (ThreadPriority)Enum.Parse(typeof(ThreadPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : ThreadPriority.Normal);
+                                QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
                                 PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
 
                                 //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
@@ -157,7 +170,7 @@ namespace NetworkCommsDotNet
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);
 
                                 //If we have just added a high priority item we trigger the high priority thread
-                                if (itemPriority > ThreadPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
+                                if (itemPriority > QueueItemPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
 
                                 //We will also trigger a new task below incase we have many higher priority items as we don't care which thread ends up running the item
                                 ThreadPool.QueueUserWorkItem(NetworkComms.CompleteIncomingItemTask, null);

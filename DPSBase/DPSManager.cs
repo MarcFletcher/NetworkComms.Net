@@ -195,7 +195,7 @@ namespace DPSBase
         /// <summary>
         /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
         /// </summary>
-        /// <param name="dataProcessor">The <see cref="DataProcessor"/> to make the see <see cref="DPSManager"/> aware of</param>
+        /// <param name="dataProcessor">The <see cref="DataProcessor"/> to make the <see cref="DPSManager"/> aware of</param>
         /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
@@ -207,6 +207,31 @@ namespace DPSBase
 
             instance.DataProcessorsByType.Add(dataProcessor.GetType(), dataProcessor);
             instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType());
+        }
+
+        /// <summary>
+        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// </summary>
+        /// <typeparam name="T">The type of <see cref="DataProcessor"/> to make the <see cref="DPSManager"/> aware of</typeparam>
+        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the <see cref="DataProcessor"/> type does not have a hidden or visible paramerterless constructor</exception>
+        public static void AddDataProcessor<T>() where T : DataProcessor
+        {
+            Type processorType = typeof(T);
+
+            if (instance.DataProcessorsByType.ContainsKey(processorType))
+                return;
+
+            var constructor = processorType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
+
+            if (constructor == null)
+                constructor = processorType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
+
+            if (constructor == null)
+                throw new ArgumentException("Data processors should have a paramerterless constructor");
+
+            DataProcessor res = constructor.Invoke(null) as DataProcessor;
+
+            AddDataProcessor(res);
         }
 
         /// <summary>
@@ -224,6 +249,31 @@ namespace DPSBase
 
             instance.SerializersByType.Add(dataSerializer.GetType(), dataSerializer);
             instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType());
+        }
+
+        /// <summary>
+        /// Allows the addition of <see cref="DataSerializer"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// </summary>
+        /// <typeparam name="T">The type of <see cref="DataSerializer"/> to make the <see cref="DPSManager"/> aware of</typeparam>
+        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the <see cref="DataSerializer"/> type does not have a hidden or visible paramerterless constructor</exception>
+        public static void AddDataSerializer<T>() where T : DataSerializer
+        {
+            Type serializerType = typeof(T);
+
+            if (instance.SerializersByType.ContainsKey(serializerType))
+                return;
+
+            var constructor = serializerType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
+
+            if (constructor == null)
+                constructor = serializerType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
+
+            if (constructor == null)
+                throw new ArgumentException("Data processors should have a paramerterless constructor");
+
+            DataSerializer res = constructor.Invoke(null) as DataSerializer;
+
+            AddDataSerializer(res);
         }
 
         /// <summary>
@@ -288,17 +338,21 @@ namespace DPSBase
 
         private DPSManager()
         {
+            //This constructor loops through referenced assemblies looking for types that inherit off of DataSerializer and DataProcessor.  On windows this should mean perfect autodetection
+            //of serializers and compressors. On windows phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  Any others that are used will
+            //have to be added manually
+
             try
             {
                 //Store the serializer and processor types as we will need then repeatedly
                 var serializerType = typeof(DPSBase.DataSerializer);
                 var processorType = typeof(DPSBase.DataProcessor);
-
+                                
                 //We're now going to look through the assemly reference tree to look for more components
                 //This will be done by first checking whether a relefection only load of each assembly and checking 
                 //for reference to DPSBase.  We will therefore get a reference to DPSBase
                 var dpsBaseAssembly = typeof(DPSManager).Assembly;
-                                
+                
                 //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
                 var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
 
@@ -307,13 +361,16 @@ namespace DPSBase
 
                 //And all the assembly names we have tried to load
                 var listofConsideredAssemblies = new List<string>();
-                
+
                 foreach (var ass in alreadyLoadedAssemblies)
                 {
+#if WINDOWS_PHONE
+#else
                     foreach (var refAss in ass.GetReferencedAssemblies())
                     {
                         if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss) || ass == dpsBaseAssembly)
                         {
+#endif
                             foreach (var type in ass.GetTypes())
                             {
                                 byte id;
@@ -340,16 +397,19 @@ namespace DPSBase
                                     DataProcessorIdToType.Add(id, type);
                                 }
                             }
-
+#if WINDOWS_PHONE
+#else
                             break;
                         }
                     }
-
+#endif
                     dicOfSearchedAssemblies.Add(ass.FullName, ass);
                 }
-                
+
+#if WINDOWS_PHONE
+#else
                 //Set an identifier to come back to as we load assemblies
-                AssemblySearchStart:
+            AssemblySearchStart:
 
                 //Loop through all assemblies
                 foreach (var pair in dicOfSearchedAssemblies)
@@ -376,7 +436,7 @@ namespace DPSBase
                             dicOfSearchedAssemblies.Add(refAssembly.FullName, refAssembly);
 
                             //if it references DPSBase directly it might contain components. Add the assembly to the catalog
-                            foreach(var refAss in refAssembly.GetReferencedAssemblies())
+                            foreach (var refAss in refAssembly.GetReferencedAssemblies())
                             {
                                 if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss))
                                 {
@@ -422,14 +482,15 @@ namespace DPSBase
                                     }
 
                                     break;
-                                }                                                              
+                                }
                             }
 
                             //We're changed allAssemblies and loadedAssemblies so restart
                             goto AssemblySearchStart;
                         }
                     }
-                }                                
+                }
+#endif
             }
             catch (Exception ex)
             {

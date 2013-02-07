@@ -16,6 +16,9 @@
 //  A commercial license of this software can also be purchased. 
 //  Please see <http://www.networkcommsdotnet.com/licenses> for details.
 
+#if WINDOWS_PHONE
+#else
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -152,3 +155,4 @@ namespace NetworkCommsDotNet
     }
 
 }
+#endif
