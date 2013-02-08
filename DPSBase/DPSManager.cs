@@ -23,6 +23,9 @@ using DPSBase;
 using System.IO;
 using System.Reflection;
 
+#if WINDOWS_PHONE
+using MarshalByRefObject = System.Object;
+#endif
 
 namespace DPSBase
 {
@@ -82,12 +85,12 @@ namespace DPSBase
         #endregion
 
         private Dictionary<string, bool> AssembliesToLoad = new Dictionary<string, bool>();
+        
+        private Dictionary<string, DataSerializer> SerializersByType = new Dictionary<string, DataSerializer>();        
+        private Dictionary<string, DataProcessor> DataProcessorsByType = new Dictionary<string, DataProcessor>();
 
-        private Dictionary<Type, DataSerializer> SerializersByType = new Dictionary<Type, DataSerializer>(ReflectedTypeComparer.Instance);
-        private Dictionary<Type, DataProcessor> DataProcessorsByType = new Dictionary<Type, DataProcessor>(ReflectedTypeComparer.Instance);
-
-        private Dictionary<byte, Type> DataSerializerIdToType = new Dictionary<byte, Type>();
-        private Dictionary<byte, Type> DataProcessorIdToType = new Dictionary<byte, Type>();
+        private Dictionary<byte, string> DataSerializerIdToType = new Dictionary<byte, string>();
+        private Dictionary<byte, string> DataProcessorIdToType = new Dictionary<byte, string>();
 
         static DPSManager instance;
 
@@ -103,10 +106,10 @@ namespace DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
         public static DataSerializer GetDataSerializer<T>() where T : DataSerializer
         {
-            if (instance.SerializersByType.ContainsKey(typeof(T)))
-                return GetDataSerializer(typeof(T));
+            if (instance.SerializersByType.ContainsKey(typeof(T).AssemblyQualifiedName))
+                return GetDataSerializer(typeof(T).AssemblyQualifiedName);
             else
-                return null;
+                return null;            
         }
 
         /// <summary>
@@ -122,14 +125,14 @@ namespace DPSBase
                 return null;
         }
 
-        private static DataSerializer GetDataSerializer(Type t)
+        private static DataSerializer GetDataSerializer(string t)
         {
             var serializer = instance.SerializersByType[t];
 
             if (serializer == null)
             {
-                var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
-                var typeToCreate = Type.GetType(t.AssemblyQualifiedName);
+                //var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+                var typeToCreate = Type.GetType(t);
 
                 var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
@@ -151,8 +154,8 @@ namespace DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
-            if (instance.DataProcessorsByType.ContainsKey(typeof(T)))
-                return GetDataProcessor(typeof(T));
+            if (instance.DataProcessorsByType.ContainsKey(typeof(T).AssemblyQualifiedName))
+                return GetDataProcessor(typeof(T).AssemblyQualifiedName);
             else
                 return null;
         }
@@ -170,14 +173,14 @@ namespace DPSBase
                 return null;
         }
 
-        private static DataProcessor GetDataProcessor(Type t)
+        private static DataProcessor GetDataProcessor(string t)
         {
             var processor = instance.DataProcessorsByType[t];
 
             if (processor == null)
             {
-                var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
-                var typeToCreate = Type.GetType(t.AssemblyQualifiedName);
+                //var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+                var typeToCreate = Type.GetType(t);
 
                 var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
@@ -199,14 +202,14 @@ namespace DPSBase
         /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
-            if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType()))
-                if (instance.DataProcessorsByType[dataProcessor.GetType()] != dataProcessor)
+            if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType().AssemblyQualifiedName))
+                if (instance.DataProcessorsByType[dataProcessor.GetType().AssemblyQualifiedName] != dataProcessor)
                     throw new ArgumentException("A different DataProcessor of the same Type or Id has already been added to DPSManager");
                 else
                     return;
 
-            instance.DataProcessorsByType.Add(dataProcessor.GetType(), dataProcessor);
-            instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType());
+            instance.DataProcessorsByType.Add(dataProcessor.GetType().AssemblyQualifiedName, dataProcessor);
+            instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType().AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -218,7 +221,7 @@ namespace DPSBase
         {
             Type processorType = typeof(T);
 
-            if (instance.DataProcessorsByType.ContainsKey(processorType))
+            if (instance.DataProcessorsByType.ContainsKey(processorType.AssemblyQualifiedName))
                 return;
 
             var constructor = processorType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
@@ -241,14 +244,14 @@ namespace DPSBase
         /// <exception cref="ArgumentException">Thrown if A different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataSerializer(DataSerializer dataSerializer)
         {
-            if (instance.SerializersByType.ContainsKey(dataSerializer.GetType()))
-                if (instance.SerializersByType[dataSerializer.GetType()] != dataSerializer)
+            if (instance.SerializersByType.ContainsKey(dataSerializer.GetType().AssemblyQualifiedName))
+                if (instance.SerializersByType[dataSerializer.GetType().AssemblyQualifiedName] != dataSerializer)
                     throw new ArgumentException("A different DataSerializer of the same Type or Id has already been added to DPSManager");
                 else
                     return;
 
-            instance.SerializersByType.Add(dataSerializer.GetType(), dataSerializer);
-            instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType());
+            instance.SerializersByType.Add(dataSerializer.GetType().AssemblyQualifiedName, dataSerializer);
+            instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType().AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -260,7 +263,7 @@ namespace DPSBase
         {
             Type serializerType = typeof(T);
 
-            if (instance.SerializersByType.ContainsKey(serializerType))
+            if (instance.SerializersByType.ContainsKey(serializerType.AssemblyQualifiedName))
                 return;
 
             var constructor = serializerType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
@@ -340,163 +343,236 @@ namespace DPSBase
         {
             //This constructor loops through referenced assemblies looking for types that inherit off of DataSerializer and DataProcessor.  On windows this should mean perfect autodetection
             //of serializers and compressors. On windows phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  Any others that are used will
-            //have to be added manually
+            //have to be added manually.  On windows this will be done from a new app domain so we can unload it afterwards
 
-            try
+#if !WINDOWS_PHONE
+
+            AppDomain tempDomain = AppDomain.CreateDomain("Temp");
+            var loader = (AssemblyLoader)tempDomain.CreateInstanceAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
+
+            var args = new ProcessArgument();
+            args.entryDomain = Assembly.GetEntryAssembly().FullName;
+
+            loader.ProcessApplicationAssemblies(args);
+
+            //app.DoCallBack(new CrossAppDomainDelegate(loader.ProcessApplicationAssemblies));
+            AppDomain.Unload(tempDomain);
+            tempDomain = null;
+            GC.Collect();
+
+#else
+            var loader = new AssemblyLoader();
+            var args = new ProcessArgument();
+
+            loader.ProcessApplicationAssemblies(args);
+
+#endif
+
+            foreach (var serializer in args.serializerTypes)
             {
-                //Store the serializer and processor types as we will need then repeatedly
-                var serializerType = typeof(DPSBase.DataSerializer);
-                var processorType = typeof(DPSBase.DataProcessor);
-                                
-                //We're now going to look through the assemly reference tree to look for more components
-                //This will be done by first checking whether a relefection only load of each assembly and checking 
-                //for reference to DPSBase.  We will therefore get a reference to DPSBase
-                var dpsBaseAssembly = typeof(DPSManager).Assembly;
-                
-                //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
-                var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                SerializersByType.Add(serializer.Value, null);
+                DataSerializerIdToType.Add(serializer.Key, serializer.Value);
+            }
 
-                //We are also going to keep a track of all assemblies with which we have considered types within
-                var dicOfSearchedAssemblies = new Dictionary<string, Assembly>();
+            foreach (var processor in args.processorTypes)
+            {
+                DataProcessorsByType.Add(processor.Value, null);
+                DataProcessorIdToType.Add(processor.Key, processor.Value);
+            }
+        }
 
-                //And all the assembly names we have tried to load
-                var listofConsideredAssemblies = new List<string>();
+        private class ProcessArgument : MarshalByRefObject
+        {
+            public string entryDomain;
+            public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
+            public Dictionary<byte, string> processorTypes;// = new Dictionary<byte, string>();
+        }
 
-                foreach (var ass in alreadyLoadedAssemblies)
+        private class AssemblyLoader : MarshalByRefObject
+        {
+            public Dictionary<byte, string> serializerTypes = new Dictionary<byte, string>();
+            public Dictionary<byte, string> processorTypes = new Dictionary<byte,string>();
+
+            public void ProcessApplicationAssemblies(ProcessArgument args)
+            {
+                try
                 {
-#if WINDOWS_PHONE
-#else
-                    foreach (var refAss in ass.GetReferencedAssemblies())
+
+#if !WINDOWS_PHONE
+                    AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
+                    AppDomain.CurrentDomain.Load(args.entryDomain);                    
+#endif
+
+                    //Store the serializer and processor types as we will need then repeatedly
+                    var serializerType = typeof(DPSBase.DataSerializer);
+                    var processorType = typeof(DPSBase.DataProcessor);
+
+                    //We're now going to look through the assemly reference tree to look for more components
+                    //This will be done by first checking whether a relefection only load of each assembly and checking 
+                    //for reference to DPSBase.  We will therefore get a reference to DPSBase
+                    var dpsBaseAssembly = typeof(DPSManager).Assembly;
+
+                    //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
+                    var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                    //We are also going to keep a track of all assemblies with which we have considered types within
+                    var dicOfSearchedAssemblies = new Dictionary<string, Assembly>();
+
+                    //And all the assembly names we have tried to load
+                    var listofConsideredAssemblies = new List<string>();
+
+                    foreach (var ass in alreadyLoadedAssemblies)
                     {
-                        if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss) || ass == dpsBaseAssembly)
-                        {
-#endif
-                            foreach (var type in ass.GetTypes())
-                            {
-                                byte id;
-                                var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
-
-                                if (attributes.Length == 1)
-                                {
-                                    id = (attributes[0] as DataSerializerProcessorAttribute).Identifier;
-                                }
-                                else
-                                    continue;
-
-                                if (serializerType.IsAssignableFrom(type) && !type.IsAbstract &&
-                                    (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
-                                {
-                                    SerializersByType.Add(type, null);
-                                    DataSerializerIdToType.Add(id, type);
-                                }
-
-                                if (processorType.IsAssignableFrom(type) && !type.IsAbstract &&
-                                    (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
-                                {
-                                    DataProcessorsByType.Add(type, null);
-                                    DataProcessorIdToType.Add(id, type);
-                                }
-                            }
 #if WINDOWS_PHONE
 #else
-                            break;
-                        }
-                    }
+                        foreach (var refAss in ass.GetReferencedAssemblies())
+                        {
+                            if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss) || ass == dpsBaseAssembly)
+                            {
 #endif
-                    dicOfSearchedAssemblies.Add(ass.FullName, ass);
-                }
+                                foreach (var type in ass.GetTypes())
+                                {
+                                    byte id;
+                                    var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+
+                                    if (attributes.Length == 1)
+                                    {
+                                        id = (attributes[0] as DataSerializerProcessorAttribute).Identifier;
+                                    }
+                                    else
+                                        continue;
+
+                                    if (serializerType.IsAssignableFrom(type) && !type.IsAbstract &&
+                                        (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
+                                    {
+                                        //SerializersByType.Add(type, null);
+                                        //DataSerializerIdToType.Add(id, type);
+                                        serializerTypes.Add(id, type.AssemblyQualifiedName);
+                                    }
+
+                                    if (processorType.IsAssignableFrom(type) && !type.IsAbstract &&
+                                        (type.GetConstructors(BindingFlags.Instance).Length != 0 || type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Length != 0))
+                                    {
+                                        //DataProcessorsByType.Add(type, null);
+                                        //DataProcessorIdToType.Add(id, type);
+                                        processorTypes.Add(id, type.AssemblyQualifiedName);
+                                    }
+                                }
+#if WINDOWS_PHONE
+#else
+                                break;
+                            }
+                        }
+#endif
+                        dicOfSearchedAssemblies.Add(ass.FullName, ass);
+                    }
 
 #if WINDOWS_PHONE
 #else
                 //Set an identifier to come back to as we load assemblies
-            AssemblySearchStart:
+                AssemblySearchStart:
 
-                //Loop through all assemblies
-                foreach (var pair in dicOfSearchedAssemblies)
-                {
-                    var assembly = pair.Value;
-
-                    //Loop through the assemblies this assemlby references
-                    foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
+                    //Loop through all assemblies
+                    foreach (var pair in dicOfSearchedAssemblies)
                     {
-                        //If we've already tried this assembly name then keep going.  Otherwise record that we will have tried this assembly
-                        if (listofConsideredAssemblies.Contains(referencedAssembly.FullName))
-                            continue;
-                        else
-                            listofConsideredAssemblies.Add(referencedAssembly.FullName);
+                        var assembly = pair.Value;
 
-                        //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
-                        var refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
-
-                        //Note that multiple assembly names/versions could resolve to this assembly so check if we're already considered the actual
-                        //loaded assembly
-                        if (!dicOfSearchedAssemblies.ContainsKey(refAssembly.FullName))
+                        //Loop through the assemblies this assemlby references
+                        foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
                         {
-                            //if not add it to the considered list
-                            dicOfSearchedAssemblies.Add(refAssembly.FullName, refAssembly);
+                            //If we've already tried this assembly name then keep going.  Otherwise record that we will have tried this assembly
+                            if (listofConsideredAssemblies.Contains(referencedAssembly.FullName))
+                                continue;
+                            else
+                                listofConsideredAssemblies.Add(referencedAssembly.FullName);
 
-                            //if it references DPSBase directly it might contain components. Add the assembly to the catalog
-                            foreach (var refAss in refAssembly.GetReferencedAssemblies())
+                            //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
+                            var refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
+
+                            //Note that multiple assembly names/versions could resolve to this assembly so check if we're already considered the actual
+                            //loaded assembly
+                            if (!dicOfSearchedAssemblies.ContainsKey(refAssembly.FullName))
                             {
-                                if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss))
+                                //if not add it to the considered list
+                                dicOfSearchedAssemblies.Add(refAssembly.FullName, refAssembly);
+
+                                //if it references DPSBase directly it might contain components. Add the assembly to the catalog
+                                foreach (var refAss in refAssembly.GetReferencedAssemblies())
                                 {
-                                    foreach (var type in refAssembly.GetTypes())
+                                    if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss))
                                     {
-                                        bool idSet = false;
-                                        byte id = 0;
-                                        //var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
-                                        var attributes = CustomAttributeData.GetCustomAttributes(type);
-
-                                        foreach (var attr in attributes)
+                                        foreach (var type in refAssembly.GetTypes())
                                         {
-                                            if (attr.Constructor.ReflectedType.AssemblyQualifiedName == typeof(DataSerializerProcessorAttribute).AssemblyQualifiedName)
+                                            bool idSet = false;
+                                            byte id = 0;
+                                            //var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+                                            var attributes = CustomAttributeData.GetCustomAttributes(type);
+
+                                            foreach (var attr in attributes)
                                             {
-                                                id = (byte)attr.ConstructorArguments[0].Value;
-                                                idSet = true;
+                                                if (attr.Constructor.ReflectedType.AssemblyQualifiedName == typeof(DataSerializerProcessorAttribute).AssemblyQualifiedName)
+                                                {
+                                                    id = (byte)attr.ConstructorArguments[0].Value;
+                                                    idSet = true;
+                                                }
+                                            }
+
+                                            if (!idSet)
+                                                continue;
+
+                                            Type baseType = type.BaseType;
+
+                                            while (baseType != null)
+                                            {
+                                                if (baseType.AssemblyQualifiedName == serializerType.AssemblyQualifiedName)
+                                                {
+                                                    //SerializersByType.Add(type, null);
+                                                    //DataSerializerIdToType.Add(id, type);
+                                                    serializerTypes.Add(id, type.AssemblyQualifiedName);
+                                                    break;
+                                                }
+
+                                                if (baseType.AssemblyQualifiedName == processorType.AssemblyQualifiedName)
+                                                {
+                                                    //DataProcessorsByType.Add(type, null);
+                                                    //DataProcessorIdToType.Add(id, type);
+                                                    processorTypes.Add(id, type.AssemblyQualifiedName);
+                                                    break;
+                                                }
+
+                                                baseType = baseType.BaseType;
                                             }
                                         }
 
-                                        if (!idSet)
-                                            continue;
-
-                                        Type baseType = type.BaseType;
-
-                                        while (baseType != null)
-                                        {
-                                            if (baseType.AssemblyQualifiedName == serializerType.AssemblyQualifiedName)
-                                            {
-                                                SerializersByType.Add(type, null);
-                                                DataSerializerIdToType.Add(id, type);
-                                                break;
-                                            }
-
-                                            if (baseType.AssemblyQualifiedName == processorType.AssemblyQualifiedName)
-                                            {
-                                                DataProcessorsByType.Add(type, null);
-                                                DataProcessorIdToType.Add(id, type);
-                                                break;
-                                            }
-
-                                            baseType = baseType.BaseType;
-                                        }
+                                        break;
                                     }
-
-                                    break;
                                 }
-                            }
 
-                            //We're changed allAssemblies and loadedAssemblies so restart
-                            goto AssemblySearchStart;
+                                //We're changed allAssemblies and loadedAssemblies so restart
+                                goto AssemblySearchStart;
+                            }
                         }
                     }
-                }
 #endif
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
+                        sw.WriteLine(ex.ToString());
+                }
+                finally
+                {
+                    args.processorTypes = processorTypes;
+                    args.serializerTypes = serializerTypes;
+                }
             }
-            catch (Exception ex)
+
+#if !WINDOWS_PHONE
+            Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
             {
-                using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
-                    sw.WriteLine(ex.ToString());
+                return Assembly.ReflectionOnlyLoad(args.Name); 
             }
+#endif
         }
     }
 }
