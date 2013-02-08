@@ -775,7 +775,7 @@ namespace DistributedFileSystem
                 try
                 {
                     //We can only rely on the network identifier if this is a TCP connection shutting down
-                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
+                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.ConnectionState == ConnectionState.Established)
                     {
                         lock (globalDFSLocker)
                         {
@@ -863,7 +863,8 @@ namespace DistributedFileSystem
                         string peerContactInfo = peerContactInfoOuter;
                         try
                         {
-                            IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
+                            //IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
+                            IPEndPoint peerEndPoint = IPTools.ParseEndPointFromString(peerContactInfo);
 
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
                             if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && currentItem.SwarmChunkAvailability.PeerContactAllowed(peerEndPoint.Address, false))
