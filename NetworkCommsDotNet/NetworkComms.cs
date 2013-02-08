@@ -66,7 +66,13 @@ namespace NetworkCommsDotNet
             
             IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
+
+#if !WINDOWS_PHONE
+
             IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
+            
+#endif
+
             IncomingPacketQueueHighPrioThread.Start();
 
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
@@ -84,7 +90,14 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static string HostName
         {
-            get { return Dns.GetHostName(); }
+            get 
+            {
+#if WINDOWS_PHONE
+                return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
+#else
+                return Dns.GetHostName(); 
+#endif
+            }
         }
 
         /// <summary>
@@ -106,6 +119,32 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static List<IPAddress> AllAllowedIPs()
         {
+
+#if WINDOWS_PHONE
+            //On windows phone we simply ignore ip addresses from the autoassigned range as well as those without a valid prefix
+            List<IPAddress> allowedIPs = new List<IPAddress>();
+
+            foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
+            {
+                if (!hName.DisplayName.StartsWith("169.254"))
+                {
+                    if (AllowedIPPrefixes != null)
+                    {
+                        bool valid = false;
+
+                        for (int i = 0; i < AllowedIPPrefixes.Length; i++)
+                            valid |= hName.DisplayName.StartsWith(AllowedIPPrefixes[i]);
+                                
+                        if(valid)
+                            allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
+                    }
+                    else
+                        allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
+                }
+            }
+
+            return allowedIPs;
+#else
             //We want to ignore IP's that have been autoassigned
             IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
             IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
@@ -215,6 +254,7 @@ namespace NetworkCommsDotNet
             }
 
             return validIPAddresses;
+#endif
         }
 
         /// <summary>
@@ -314,6 +354,8 @@ namespace NetworkCommsDotNet
         {
             get
             {
+#if WINDOWS_PHONE
+#else
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -331,7 +373,7 @@ namespace NetworkCommsDotNet
                         }
                     }
                 }
-
+#endif
                 return currentNetworkLoadIncoming;
             }
             private set { currentNetworkLoadIncoming = value; }
@@ -344,6 +386,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
+#if !WINDOWS_PHONE
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -361,7 +404,7 @@ namespace NetworkCommsDotNet
                         }
                     }
                 }
-
+#endif
                 return currentNetworkLoadOutgoing;
             }
             private set { currentNetworkLoadOutgoing = value; }
@@ -374,6 +417,8 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadIncoming(byte secondsToAverage)
         {
+#if !WINDOWS_PHONE
+
             if (!commsShutdown && NetworkLoadThread == null)
             {
                 lock (globalDictAndDelegateLocker)
@@ -391,6 +436,9 @@ namespace NetworkCommsDotNet
             }
 
             return currentNetworkLoadValuesIncoming.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+#else
+            return 0;
+#endif
         }
 
         /// <summary>
@@ -400,6 +448,7 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
         {
+#if !WINDOWS_PHONE
             if (!commsShutdown && NetworkLoadThread == null)
             {
                 lock (globalDictAndDelegateLocker)
@@ -417,15 +466,19 @@ namespace NetworkCommsDotNet
             }
 
             return currentNetworkLoadValuesOutgoing.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+#else
+            return 0;
+#endif
         }
 
+#if !WINDOWS_PHONE
         /// <summary>
         /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
         /// </summary>
         private static void NetworkLoadWorker()
         {
             NetworkLoadThreadWait = new ManualResetEvent(false);
-
+            
             //Get all interfaces
             NetworkInterface[] interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
 
@@ -513,6 +566,7 @@ namespace NetworkCommsDotNet
                 }
             }
         }
+#endif
         #endregion
 
         #region Established Connections
@@ -561,7 +615,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Custom queue for handling incoming packets using a simple priority scheduling model
         /// </summary>
-        internal static PriorityQueue<PriorityQueueItem> IncomingPacketQueue = new PriorityQueue<PriorityQueueItem>(5);
+        internal static PriorityQueue<PriorityQueueItem> IncomingPacketQueue = new PriorityQueue<PriorityQueueItem>();
 
         /// <summary>
         /// A thread which can be used to handle only higher than normal priority incoming packets incase the rest of the thread pool is busy
@@ -587,9 +641,16 @@ namespace NetworkCommsDotNet
                     if (commsShutdown) return;
 
                     //Keep looping over high priority items until they run out
-                    KeyValuePair<int, PriorityQueueItem> packetQueueItem;
-                    while(NetworkComms.IncomingPacketQueue.TryTake((int)ThreadPriority.AboveNormal, out packetQueueItem))
+                    KeyValuePair<QueueItemPriority, PriorityQueueItem> packetQueueItem;
+
+#if WINDOWS_PHONE
+                    while (NetworkComms.IncomingPacketQueue.TryTake(QueueItemPriority.High, out packetQueueItem))
                         CompleteIncomingItemTask(packetQueueItem.Value);
+#else
+                    while(NetworkComms.IncomingPacketQueue.TryTake(QueueItemPriority.AboveNormal, out packetQueueItem))
+                        CompleteIncomingItemTask(packetQueueItem.Value);
+#endif
+
                 }
                 catch (Exception ex)
                 {
@@ -613,7 +674,7 @@ namespace NetworkCommsDotNet
                 item = itemAsObj as PriorityQueueItem;
                 if (item == null)
                 {
-                    KeyValuePair<int, PriorityQueueItem> packetQueueItem;
+                    KeyValuePair<QueueItemPriority, PriorityQueueItem> packetQueueItem;
                     if (!NetworkComms.IncomingPacketQueue.TryTake(out packetQueueItem))
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unable to get packet item from IncomingPacketQueue in CompleteIncomingPacketWorker.");
@@ -627,7 +688,9 @@ namespace NetworkCommsDotNet
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Pulled packet item with packetType='"+item.PacketHeader.PacketType+"' from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
 
-                    if (Thread.CurrentThread.Priority != item.Priority) Thread.CurrentThread.Priority = item.Priority;
+#if !WINDOWS_PHONE
+                    if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
+#endif
                 }
 
                 //Check for a shutdown connection
@@ -729,11 +792,17 @@ namespace NetworkCommsDotNet
                 //We need to dispose the data stream correctly
                 if (item!=null) item.DataStream.Close();
 
+#if !WINDOWS_PHONE
+
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
+
+#endif
             }
         }
         #endregion
+
+#if !WINDOWS_PHONE
 
         #region High CPU Usage Tuning
         /// <summary>
@@ -742,6 +811,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static ThreadPriority timeCriticalThreadPriority = ThreadPriority.AboveNormal;
         #endregion
+
+#endif
 
         #region Checksum Config
         /// <summary>
@@ -1347,6 +1418,8 @@ namespace NetworkCommsDotNet
 
 #if iOS
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
+#elif WINDOWS_PHONE
+                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]");
 #else
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
 #endif

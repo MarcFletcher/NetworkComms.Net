@@ -134,6 +134,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueueItem.cs">
       <Link>Tools\PriorityQueueItem.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\QueueItemPriority.cs">
+      <Link>Tools\QueueItemPriority.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
       <Link>Tools\ShortGUID.cs</Link>
     </Compile>

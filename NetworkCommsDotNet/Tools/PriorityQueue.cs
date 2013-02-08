@@ -32,7 +32,9 @@ namespace NetworkCommsDotNet
     {
         //Each internal queue in the array represents a priority level.  
         //We keep the priority associated with each item so that when eventually returned the priority can be easily included
-        private Queue<KeyValuePair<int, TValue>>[] internalQueues = null;
+        private Dictionary<QueueItemPriority,Queue<KeyValuePair<QueueItemPriority, TValue>>> internalQueues = null;
+
+        private QueueItemPriority[] QueueItemPriorityVals;
 
         //The number of queues we store internally. 
         private int numDistinctPriorities = 0;
@@ -44,12 +46,21 @@ namespace NetworkCommsDotNet
         /// Create a new instance of the priority queue.
         /// </summary>
         /// <param name="numDistinctPriorities">The total number of priority levels to allow.</param>
-        public PriorityQueue(int numDistinctPriorities)
+        public PriorityQueue()
         {
-            this.numDistinctPriorities = numDistinctPriorities;
-            internalQueues = new Queue<KeyValuePair<int, TValue>>[numDistinctPriorities];
+            var vals = Enum.GetValues(typeof(QueueItemPriority)) as int[];
+            Array.Sort(vals);
+
+            this.numDistinctPriorities = vals.Length;
+
+            QueueItemPriorityVals = new QueueItemPriority[numDistinctPriorities];
+            
+            internalQueues = new Dictionary<QueueItemPriority,Queue<KeyValuePair<QueueItemPriority,TValue>>>(numDistinctPriorities);
             for (int i = 0; i < numDistinctPriorities; i++)
-                internalQueues[i] = new Queue<KeyValuePair<int, TValue>>();
+            {
+                internalQueues[(QueueItemPriority)vals[i]] = new Queue<KeyValuePair<QueueItemPriority, TValue>>();
+                QueueItemPriorityVals[i] = (QueueItemPriority)vals[i];
+            }
         }
 
         /// <summary>
@@ -57,11 +68,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
         /// <returns>True if an item was succesfully added to the queue</returns>
-        public bool TryAdd(KeyValuePair<int, TValue> item)
-        {
-            if (item.Key < 0 || item.Key > numDistinctPriorities - 1)
-                throw new ArgumentOutOfRangeException("The provided item contains a priority value which is outside the allowed range.");
-
+        public bool TryAdd(KeyValuePair<QueueItemPriority, TValue> item)
+        {            
             lock (internalQueues)
             {
                 internalQueues[item.Key].Enqueue(item);
@@ -76,7 +84,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
         /// <returns>True if an item was succesfully removed from the queue</returns>
-        public bool TryTake(out KeyValuePair<int, TValue> item)
+        public bool TryTake(out KeyValuePair<QueueItemPriority, TValue> item)
         {
             // Loop through the queues in priority order. Higher priority first
             for (int i = numDistinctPriorities - 1; i >= 0; i--)
@@ -85,9 +93,9 @@ namespace NetworkCommsDotNet
                 // operation and the updating of m_count are atomic. 
                 lock (internalQueues)
                 {
-                    if (internalQueues[i].Count > 0)
+                    if (internalQueues[QueueItemPriorityVals[i]].Count > 0)
                     {
-                        item = internalQueues[i].Dequeue();
+                        item = internalQueues[QueueItemPriorityVals[i]].Dequeue();
                         Interlocked.Decrement(ref totalNumberQueuedItems);
                         return true;
                     }
@@ -97,7 +105,7 @@ namespace NetworkCommsDotNet
             }
 
             // If we get here, we found nothing, return defaults
-            item = new KeyValuePair<int, TValue>(0, default(TValue));
+            item = new KeyValuePair<QueueItemPriority, TValue>((QueueItemPriority)0, default(TValue));
             return false;
         }
 
@@ -107,18 +115,18 @@ namespace NetworkCommsDotNet
         /// <param name="minimumPriority">The miniumum priority to consider</param>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
         /// <returns>True if an item was succesfully removed from the queue</returns>
-        public bool TryTake(int minimumPriority, out KeyValuePair<int, TValue> item)
+        public bool TryTake(QueueItemPriority minimumPriority, out KeyValuePair<QueueItemPriority, TValue> item)
         {
             // Loop through the queues in priority order. Higher priority first
-            for (int i = numDistinctPriorities - 1; i >= minimumPriority; i--)
+            for (int i = numDistinctPriorities - 1; i >= (int)minimumPriority; i--)
             {
                 // Lock the internal data so that the Dequeue 
                 // operation and the updating of m_count are atomic.                 
                 lock (internalQueues)
                 {
-                    if (internalQueues[i].Count > 0)
+                    if (internalQueues[QueueItemPriorityVals[i]].Count > 0)
                     {
-                        item = internalQueues[i].Dequeue();
+                        item = internalQueues[QueueItemPriorityVals[i]].Dequeue();
                         Interlocked.Decrement(ref totalNumberQueuedItems);
                         return true;
                     }
@@ -128,7 +136,7 @@ namespace NetworkCommsDotNet
             }
 
             // If we get here, we found nothing, return defaults
-            item = new KeyValuePair<int, TValue>(0, default(TValue));
+            item = new KeyValuePair<QueueItemPriority, TValue>((QueueItemPriority)0, default(TValue));
             return false;
         }
 
@@ -145,13 +153,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="destination">The destination array</param>
         /// <param name="destStartingIndex">The position within destination to start copying to</param>
-        public void CopyTo(KeyValuePair<int, TValue>[] destination, int destStartingIndex)
+        public void CopyTo(KeyValuePair<QueueItemPriority, TValue>[] destination, int destStartingIndex)
         {
             if (destination == null) throw new ArgumentNullException();
             if (destStartingIndex < 0) throw new ArgumentOutOfRangeException();
 
             int remaining = destination.Length;
-            KeyValuePair<int, TValue>[] temp = this.ToArray();
+            KeyValuePair<QueueItemPriority, TValue>[] temp = this.ToArray();
             for (int i = destStartingIndex; i < destination.Length && i < temp.Length; i++)
                 destination[i] = temp[i];
         }
@@ -160,20 +168,20 @@ namespace NetworkCommsDotNet
         /// Returns all queued items as a 1D array. Highest priority items first descending.
         /// </summary>
         /// <returns></returns>
-        public KeyValuePair<int, TValue>[] ToArray()
+        public KeyValuePair<QueueItemPriority, TValue>[] ToArray()
         {
-            KeyValuePair<int, TValue>[] result;
+            KeyValuePair<QueueItemPriority, TValue>[] result;
 
             lock (internalQueues)
             {
-                result = new KeyValuePair<int, TValue>[this.Count];
+                result = new KeyValuePair<QueueItemPriority, TValue>[this.Count];
                 int index = 0;
                 for (int i = numDistinctPriorities - 1; i >= 0; i--)
                 {
-                    if (internalQueues[i].Count > 0)
+                    if (internalQueues[QueueItemPriorityVals[i]].Count > 0)
                     {
-                        internalQueues[i].CopyTo(result, index);
-                        index += internalQueues[i].Count;
+                        internalQueues[QueueItemPriorityVals[i]].CopyTo(result, index);
+                        index += internalQueues[QueueItemPriorityVals[i]].Count;
                     }
                 }
                 return result;
@@ -184,13 +192,13 @@ namespace NetworkCommsDotNet
         /// Returns an Enumerator for all items, highest priority first descending
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<KeyValuePair<int, TValue>> GetEnumerator()
+        public IEnumerator<KeyValuePair<QueueItemPriority, TValue>> GetEnumerator()
         {
             lock (internalQueues)
             {
                 for (int i = numDistinctPriorities - 1; i >= 0; i--)
                 {
-                    foreach (var item in internalQueues[i])
+                    foreach (var item in internalQueues[QueueItemPriorityVals[i]])
                         yield return item;
                 }
             }

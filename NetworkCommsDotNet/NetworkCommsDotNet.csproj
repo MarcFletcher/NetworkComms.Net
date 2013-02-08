@@ -92,6 +92,7 @@
     <Compile Include="Tools\PacketUnwrappers.cs" />
     <Compile Include="Tools\PriorityQueue.cs" />
     <Compile Include="Tools\PriorityQueueItem.cs" />
+    <Compile Include="Tools\QueueItemPriority.cs" />
     <Compile Include="Tools\ShortGUID.cs" />
     <Compile Include="Connection\UDP\UDPConnection.cs" />
   </ItemGroup>

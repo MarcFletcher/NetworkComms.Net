@@ -150,7 +150,7 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
                                 var priority = QueueItemPriority.Normal;
 #else
-                                var priority = Thread.CurrentThread.Priority;
+                                var priority = (QueueItemPriority)Thread.CurrentThread.Priority;
 #endif
 
                                 PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
@@ -164,7 +164,7 @@ namespace NetworkCommsDotNet
 
                                 //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
                                 //The tasks that we start here may not run the item we are addeding to the queue. i.e. it may end up running some higher priority item first
-                                if (!NetworkComms.IncomingPacketQueue.TryAdd(new KeyValuePair<int, PriorityQueueItem>((int)item.Priority, item)))
+                                if (!NetworkComms.IncomingPacketQueue.TryAdd(new KeyValuePair<QueueItemPriority, PriorityQueueItem>(item.Priority, item)))
                                     throw new PacketHandlerException("Failed to add packet to incoming packet queue.");
 
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);

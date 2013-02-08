@@ -41,8 +41,16 @@ namespace NetworkCommsDotNet
         /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
         public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
+#if WINDOWS_PHONE
+            foreach (var name in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
+                if (name.IPInformation.NetworkAdapter == Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().NetworkAdapter)
+                    return IPAddress.Parse(name.DisplayName);
+
+            return null;
+#else
+
             try
-            {
+            {                
                 //We work out the best interface for connecting with the outside world using the provided target IP
                 UInt32 ipaddr = BitConverter.ToUInt32(targetIPAddress.GetAddressBytes(), 0);
 
@@ -82,6 +90,7 @@ namespace NetworkCommsDotNet
             }
 
             return null;
+#endif
         }
     }
 }
