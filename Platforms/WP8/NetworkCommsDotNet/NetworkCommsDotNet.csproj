@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{C9872F18-12FB-4933-B2AF-F86710D4E1D8}</ProjectGuid>
+    <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NetworkCommsDotNet</RootNamespace>
+    <AssemblyName>NetworkCommsDotNet</AssemblyName>
+    <TargetFrameworkIdentifier>WindowsPhone</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v8.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\x86\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\x86\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\ARM\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|ARM' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\ARM\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\NetworkCommsDotNet\ConnectionInfo.cs">
+      <Link>ConnectionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionCreate.cs">
+      <Link>Connection\ConnectionCreate.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionDelegatesHandlers.cs">
+      <Link>Connection\ConnectionDelegatesHandlers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionIncomingData.cs">
+      <Link>Connection\ConnectionIncomingData.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionSendClose.cs">
+      <Link>Connection\ConnectionSendClose.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionStatic.cs">
+      <Link>Connection\ConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionType.cs">
+      <Link>Connection\ConnectionType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
+      <Link>Connection\SentPacket.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionCreate.cs">
+      <Link>Connection\TCP\TCPConnectionCreate.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionInstance.cs">
+      <Link>Connection\TCP\TCPConnectionInstance.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
+      <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientThreadSafe.cs">
+      <Link>Connection\UDP\UDPClientThreadSafe.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnection.cs">
+      <Link>Connection\UDP\UDPConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionStatic.cs">
+      <Link>Connection\UDP\UDPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPOptions.cs">
+      <Link>Connection\UDP\UDPOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Exception.cs">
+      <Link>Exception.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\NetworkComms.cs">
+      <Link>NetworkComms.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Packet.cs">
+      <Link>Packet.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\PacketHeader.cs">
+      <Link>PacketHeader.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\ReservedPacketType.cs">
+      <Link>ReservedPacketType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\SendReceiveOptions.cs">
+      <Link>SendReceiveOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\Adler32.cs">
+      <Link>Tools\Adler32.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsMath.cs">
+      <Link>Tools\CommsMath.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPExtAccess.cs">
+      <Link>Tools\IPExtAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\LimitedParallelismTaskScheduler.cs">
+      <Link>Tools\LimitedParallelismTaskScheduler.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
+      <Link>Tools\PacketBuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketUnwrappers.cs">
+      <Link>Tools\PacketUnwrappers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueue.cs">
+      <Link>Tools\PriorityQueue.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueueItem.cs">
+      <Link>Tools\PriorityQueueItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
+      <Link>Tools\ShortGUID.cs</Link>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{E00BA640-8886-4FEE-8484-19CE7FB3D9BF}</Project>
+      <Name>DPSBase %28WP8\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{69544DA2-22F5-417B-80E4-0FFB3851662C}</Project>
+      <Name>SevenZipLZMACompressor %28WP8\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="NLog">
+      <HintPath>..\..\..\DLL\WP8\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\DLL\WP8\protobuf-net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).$(TargetFrameworkVersion).Overrides.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).CSharp.targets" />
+  <ProjectExtensions />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

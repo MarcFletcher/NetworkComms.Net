@@ -28,7 +28,7 @@ using System.IO;
 #if WINDOWS_PHONE
 using QueueItemPriority = Windows.System.Threading.WorkItemPriority;
 #else
-using QueueItemPriority = ThreadPriority;
+using QueueItemPriority = System.Threading.ThreadPriority;
 #endif
 
 
