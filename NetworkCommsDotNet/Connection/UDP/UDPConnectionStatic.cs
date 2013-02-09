@@ -115,17 +115,18 @@ namespace NetworkCommsDotNet
                         {
                             Socket testSocket = new Socket(connectionInfo.RemoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
                             
+                            //Replaces socket.Connect method as unavailable in WP8 framework
                             System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
-
                             var args = new SocketAsyncEventArgs();
                             args.RemoteEndPoint = connectionInfo.RemoteEndPoint;
                             args.Completed += (o, a) =>
                             {
-                                ev.Set();
+                                try { ev.Set(); }
+                                catch (Exception) { }
                             };
-
                             testSocket.ConnectAsync(args);
-                            ev.WaitOne();
+
+                            if (!ev.WaitOne(2000)) throw new ConnectionSetupException("Unable to determine correct local socket.");
 
                             lock (udpClientListenerLocker)
                             {

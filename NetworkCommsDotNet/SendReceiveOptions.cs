@@ -135,9 +135,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// 
+        /// Create a deep clone of this <see cref="SendReceiveOptions"/> object. 
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The cloned object</returns>
         public object Clone()
         {
             return new SendReceiveOptions(DataSerializer, new List<DataProcessor>(DataProcessors), new Dictionary<string,string>(Options));
