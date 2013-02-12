@@ -68,9 +68,7 @@ namespace NetworkCommsDotNet
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
 
 #if !WINDOWS_PHONE
-
             IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
-            
 #endif
 
             IncomingPacketQueueHighPrioThread.Start();
