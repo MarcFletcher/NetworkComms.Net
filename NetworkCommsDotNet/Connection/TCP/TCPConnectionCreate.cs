@@ -143,20 +143,14 @@ namespace NetworkCommsDotNet
             if (socket == null) ConnectTCPSocket();
 
             //For the local endpoint
-            var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.ToString()), int.Parse(socket.Information.LocalPort));
+            var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.CanonicalName.ToString()), int.Parse(socket.Information.LocalPort));
 
             //We should now be able to set the connectionInfo localEndPoint
             ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
 
             //Set the outgoing buffer size
             socket.Control.OutboundBufferSizeInBytes = (uint)NetworkComms.SendBufferSizeBytes;
-
-            //This disables the 'nagle alogrithm'
-            //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
-            //Basically we may want to send lots of small packets (<200 bytes) and sometimes those are time critical (e.g. when establishing a connection)
-            //If we leave this enabled small packets may never be sent until a suitable send buffer length threshold is passed. i.e. BAD
-            socket.Control.NoDelay = true;
-
+                        
             //Start listening for incoming data
             StartIncomingDataListen();
 
@@ -207,11 +201,6 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                 }
             }
-
-            //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
-            //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
-            if (EnableNagleAlgorithmForNewConnections)
-                socket.Control.NoDelay = false;
         }
 
         /// <summary>
@@ -225,17 +214,27 @@ namespace NetworkCommsDotNet
 
                 //We now connect to our target
                 socket = new StreamSocket();
+                socket.Control.NoDelay = EnableNagleAlgorithmForNewConnections;
                 
                 bool connectSuccess = true;
-
-                var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
-                    new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
-
+                
                 CancellationTokenSource cancelAfterTimeoutToken = new CancellationTokenSource(NetworkComms.ConnectionEstablishTimeoutMS);
 
                 try
                 {
-                    socket.ConnectAsync(endpointPairForConnection).AsTask(cancelAfterTimeoutToken.Token).RunSynchronously();
+                    if (ConnectionInfo.LocalEndPoint != null)
+                    {
+                        var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
+                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
+
+                        var task = socket.ConnectAsync(endpointPairForConnection).AsTask(cancelAfterTimeoutToken.Token);
+                        task.Wait();
+                    }
+                    else
+                    {
+                        var task = socket.ConnectAsync(new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask(cancelAfterTimeoutToken.Token);
+                        task.Wait();
+                    }
                 }
                 catch (Exception)
                 {
@@ -263,26 +262,8 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");
             }
 
-            await IncomingTCPPacketHandler(socket);
-
-            ////Windows.Storage.Streams.Buffer b = new Windows.Storage.Streams.Buffer(1);
-
-            ////var res = await socket.InputStream.ReadAsync(b, 1, InputStreamOptions.Partial);
-
-            //var b = WindowsRuntimeBufferExtensions.AsBuffer(dataBuffer, 10 , dataBuffer.Length - 10);
-            //var res = await socket.InputStream.ReadAsync(b, (uint)(dataBuffer.Length - 10), InputStreamOptions.Partial);
-
-            //res.Length;
-
-            //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Listening for incoming data from " + ConnectionInfo);
-            
-            //while (true)
-            //{
-            //    //act on data here
-                
-
-            //    //res = await dr.LoadAsync((uint)NetworkComms.ReceiveBufferSizeBytes);                
-            //}
+            var stream = socket.InputStream.AsStreamForRead();
+            stream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), stream);            
         }
     }
 

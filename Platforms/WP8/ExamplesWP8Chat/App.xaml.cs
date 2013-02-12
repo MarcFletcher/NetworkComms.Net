@@ -18,6 +18,11 @@ namespace ExamplesWP8Chat
         /// <returns>The root frame of the Phone Application.</returns>
         public static PhoneApplicationFrame RootFrame { get; private set; }
 
+        public string MasterIPAddress { get; set; }
+        public int MasterPort { get; set; }
+        public string LocalName { get; set; }
+        public bool UseEncryption { get; set; }
+
         /// <summary>
         /// Constructor for the Application object.
         /// </summary>
@@ -34,6 +39,11 @@ namespace ExamplesWP8Chat
 
             // Language display initialization
             InitializeLanguage();
+
+            MasterIPAddress = "192.168.0.1";
+            MasterPort = 10000;
+            LocalName = "WindowsPhone";
+            UseEncryption = false;
 
             // Show graphics profiling information while debugging.
             if (Debugger.IsAttached)

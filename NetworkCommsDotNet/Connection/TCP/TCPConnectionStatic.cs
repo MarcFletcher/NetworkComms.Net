@@ -97,14 +97,14 @@ namespace NetworkCommsDotNet
 
                 try
                 {                    
-                    newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), newLocalEndPoint.Port.ToString()).AsTask().RunSynchronously();
+                    newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), newLocalEndPoint.Port.ToString()).AsTask().Wait();
                 }
                 catch (SocketException)
                 {
                     //If the port we wanted is not available
                     if (useRandomPortFailOver)
                     {
-                        newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), "").AsTask().RunSynchronously();    
+                        newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), "").AsTask().Wait();    
                     }
                     else
                     {
@@ -148,7 +148,7 @@ namespace NetworkCommsDotNet
 
         private static void newListenerInstance_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
-            var newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.ToString()), int.Parse(args.Socket.Information.RemotePort)));
+            var newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)));
             TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
         }
 

@@ -45,7 +45,7 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
-            if (false)
+            if (true)
             {
                 //Configure the logger here
                 LoggingConfiguration logConfig = new LoggingConfiguration();
@@ -58,18 +58,18 @@ namespace DebugTests
                 LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
                 logConfig.LoggingRules.Add(rule);
 
-                //NetworkComms.EnableLogging(logConfig);                
+                NetworkComms.EnableLogging(logConfig);                
                 //DFS.EnableLogging(logConfig);
             }
 
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
-            //BasicSend.RunExample();
+            BasicSend.RunExample();
             //AliveTest.RunExample();
-            DebugTest.GoTCP();
+            //DebugTest.GoTCP();
             //DFSTest.RunExample();
-            LoadTest.RunExample();
+            //LoadTest.RunExample();
             //DebugTest.GoDFSLogParse();
         }
     }

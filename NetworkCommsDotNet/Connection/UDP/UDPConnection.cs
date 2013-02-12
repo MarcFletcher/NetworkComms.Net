@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
                     if (listenForIncomingPackets)
                         socket.MessageReceived += socket_MessageReceived;
 
-                    socket.BindEndpointAsync(new HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString()).AsTask().RunSynchronously();
+                    socket.BindEndpointAsync(new HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString()).AsTask().Wait();
                 }
                 else
                 {
@@ -90,7 +90,7 @@ namespace NetworkCommsDotNet
                         if (listenForIncomingPackets)
                             socket.MessageReceived += socket_MessageReceived;
 
-                        socket.ConnectAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask().RunSynchronously();
+                        socket.ConnectAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask().Wait();
                     }
                     else
                     {
@@ -102,7 +102,7 @@ namespace NetworkCommsDotNet
                         EndpointPair pair = new EndpointPair(new HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
                             new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
 
-                        socket.ConnectAsync(pair).AsTask().RunSynchronously();
+                        socket.ConnectAsync(pair).AsTask().Wait();
                     }
                 }
             }
@@ -244,12 +244,12 @@ namespace NetworkCommsDotNet
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
 
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask();
-            getStreamTask.RunSynchronously();
+            getStreamTask.Wait();
 
             var outputStream = getStreamTask.Result;
 
-            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().RunSynchronously();
-            outputStream.FlushAsync().AsTask().RunSynchronously();
+            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
+            outputStream.FlushAsync().AsTask().Wait();
 
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
@@ -279,12 +279,12 @@ namespace NetworkCommsDotNet
             Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
 
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ipEndPoint.Address.ToString()), ipEndPoint.Port.ToString()).AsTask();
-            getStreamTask.RunSynchronously();
+            getStreamTask.Wait();
 
             var outputStream = getStreamTask.Result;
 
-            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().RunSynchronously();
-            outputStream.FlushAsync().AsTask().RunSynchronously();
+            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
+            outputStream.FlushAsync().AsTask().Wait();
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
         }
@@ -303,12 +303,12 @@ namespace NetworkCommsDotNet
 
                     //Send a single 0 byte
                     var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask();
-                    getStreamTask.RunSynchronously();
+                    getStreamTask.Wait();
 
                     var outputStream = getStreamTask.Result;
 
-                    outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(new byte[] { 0 })).AsTask().RunSynchronously();
-                    outputStream.FlushAsync().AsTask().RunSynchronously();
+                    outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(new byte[] { 0 })).AsTask().Wait();
+                    outputStream.FlushAsync().AsTask().Wait();
 
                     //Update the traffic time after we have written to netStream
                     ConnectionInfo.UpdateLastTrafficTime();

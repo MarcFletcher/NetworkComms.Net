@@ -1,0 +1,59 @@
+﻿<phone:PhoneApplicationPage
+    x:Class="ExamplesWP8Chat.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:phone="clr-namespace:Microsoft.Phone.Controls;assembly=Microsoft.Phone"
+    xmlns:shell="clr-namespace:Microsoft.Phone.Shell;assembly=Microsoft.Phone"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    FontFamily="{StaticResource PhoneFontFamilyNormal}"
+    FontSize="{StaticResource PhoneFontSizeNormal}"
+    Foreground="{StaticResource PhoneForegroundBrush}"
+    SupportedOrientations="Portrait" Orientation="Portrait"
+    mc:Ignorable="d"
+    shell:SystemTray.IsVisible="True"
+    BackKeyPress="BackKeyPressHandler">
+
+    <!--LayoutRoot is the root grid where all page content is placed-->
+    <Grid x:Name="LayoutRoot" Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!--TitlePanel contains the name of the application and page title-->
+        <StackPanel Grid.Row="0" Margin="12,17,0,28">
+            <TextBlock Text="Windows Phone Chat" Style="{StaticResource PhoneTextNormalStyle}"/>
+            <TextBlock Text="Settings" Margin="9,-7,0,0" Style="{StaticResource PhoneTextTitle1Style}"/>
+        </StackPanel>
+
+        <!--ContentPanel - place additional content here-->
+        <Grid x:Name="ContentPanel" Grid.Row="1" Margin="12,0,12,0">
+            <Grid x:Name="ContentColums" Background="Transparent" Margin="12,12,12,12" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="Master IP Address" Grid.Column="0" Grid.Row="0"  VerticalAlignment="Center"/>
+                <TextBlock Text="Master Port Number" Grid.Column="0" Grid.Row="1"  VerticalAlignment="Center"/>
+                <TextBlock Text="Local Name" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center"/>
+                <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center"/>
+
+                <TextBox x:Name="MasterIPInputBox" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits" TextChanged="MasterIPInputBox_TextChanged_1"/>
+                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="10000" TextAlignment="Center" InputScope="Digits"/>
+                <TextBox x:Name="LocalNameInputBox" Grid.Column="1" Grid.Row="2" VerticalAlignment="Center" Text="WinPhone8" TextAlignment="Center"/>
+                <RadioButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="3" HorizontalAlignment="Center" IsChecked="false" Checked="UseEncryptionBox_Checked" Unchecked="UseEncryptionBox_Unchecked"/>
+
+            </Grid>
+        </Grid>
+    </Grid>
+
+</phone:PhoneApplicationPage>

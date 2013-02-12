@@ -155,9 +155,6 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPExtAccess.cs">
       <Link>Tools\IPExtAccess.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\LimitedParallelismTaskScheduler.cs">
-      <Link>Tools\LimitedParallelismTaskScheduler.cs</Link>
-    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
       <Link>Tools\PacketBuilder.cs</Link>
     </Compile>

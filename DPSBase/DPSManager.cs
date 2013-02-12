@@ -557,8 +557,8 @@ namespace DPSBase
                 }
                 catch (Exception ex)
                 {
-                    using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
-                        sw.WriteLine(ex.ToString());
+                    //using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
+                    //    sw.WriteLine(ex.ToString());
                 }
                 finally
                 {

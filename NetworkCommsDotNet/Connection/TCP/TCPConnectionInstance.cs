@@ -41,60 +41,61 @@ namespace NetworkCommsDotNet
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar">The call back state object</param>
-        async Task IncomingTCPPacketHandler(StreamSocket socket)
-        {               
+        void IncomingTCPPacketHandler(IAsyncResult res)
+        {
             try
             {
-                while (true)
+                var stream = res.AsyncState as Stream;
+                var count = stream.EndRead(res);
+                totalBytesRead = count + totalBytesRead;
+
+                if (totalBytesRead > 0)
                 {
-                    int count = (int)(await socket.InputStream.ReadAsync(WindowsRuntimeBufferExtensions.AsBuffer(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead), (uint)(dataBuffer.Length - totalBytesRead), Windows.Storage.Streams.InputStreamOptions.Partial)).Length;
-                    totalBytesRead = count + totalBytesRead;
+                    ConnectionInfo.UpdateLastTrafficTime();
 
-                    if (totalBytesRead > 0)
+                    //If we have read a single byte which is 0 and we are not expecting other data
+                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                     {
-                        ConnectionInfo.UpdateLastTrafficTime();
-
-                        //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 1");
-                        }
-                        else
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-
-                            //If there is more data to get then add it to the packets lists;
-                            packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
-                        }
-                    }
-
-                    if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
-                    {
-                        //Once we think we might have enough data we call the incoming packet handle handoff
-                        //Should we have a complete packet this method will start the appriate task
-                        //This method will now clear byes from the incoming packets if we have received something complete.
-                        IncomingPacketHandleHandOff(packetBuilder);
-                    }
-
-                    if (totalBytesRead == 0 && ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
-                    {
-                        CloseConnection(false, -2);
-                        break;
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 1");
                     }
                     else
                     {
-                        //We need a buffer for our incoming data
-                        //First we try to reuse a previous buffer
-                        if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
-                            dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref totalBytesRead);
-                        else
-                        {
-                            //If we have nothing to reuse we allocate a new buffer
-                            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
-                            totalBytesRead = 0;
-                        }                        
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
+
+                        //If there is more data to get then add it to the packets lists;
+                        packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                     }
-                }     
+                }
+
+                if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
+                {
+                    //Once we think we might have enough data we call the incoming packet handle handoff
+                    //Should we have a complete packet this method will start the appriate task
+                    //This method will now clear byes from the incoming packets if we have received something complete.
+                    IncomingPacketHandleHandOff(packetBuilder);
+                }
+
+                if (totalBytesRead == 0 && ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                {
+                    CloseConnection(false, -2);
+                    return;
+                }
+                else
+                {
+                    //We need a buffer for our incoming data
+                    //First we try to reuse a previous buffer
+                    if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                        dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref totalBytesRead);
+                    else
+                    {
+                        //If we have nothing to reuse we allocate a new buffer
+                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                        totalBytesRead = 0;
+                    }
+
+                    //stream = socket.InputStream.AsStreamForRead();
+                    stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
+                }
             }
             catch (IOException)
             {
