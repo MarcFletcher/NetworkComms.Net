@@ -7,6 +7,7 @@ using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using ExamplesWP8Chat.Resources;
+using NetworkCommsDotNet;
 
 namespace ExamplesWP8Chat
 {
@@ -89,6 +90,7 @@ namespace ExamplesWP8Chat
         // This code will not execute when the application is deactivated
         private void Application_Closing(object sender, ClosingEventArgs e)
         {
+            NetworkComms.Shutdown();
         }
 
         // Code to execute if a navigation fails

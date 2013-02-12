@@ -59,21 +59,6 @@ namespace ExamplesWP8Chat
             NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
         }
 
-        private void ApplicationBarMenuItem_Click_1(object sender, EventArgs e)
-        {
-            NavigationService.Navigate(new Uri("//SettingsPage.xaml", UriKind.Relative));
-        }
-
-        private void CurrentMessageInputBox_KeyDown_1(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            var textBox = sender as TextBox;
-
-            if (e.Key == System.Windows.Input.Key.Enter)
-            {
-                SendMessage(textBox.Text);                
-            }
-        }
-
         private void SendMessage(string toSend)
         {
             //If we have tried to send a zero length string we just return
@@ -224,15 +209,19 @@ namespace ExamplesWP8Chat
 
         }
 
-        /// <summary>
-        /// Correctly shutdown NetworkCommsDotNet when closing the WPF application
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void ApplicationBarMenuItem_Click_1(object sender, EventArgs e)
         {
-            //Ensure we shutdown comms when we are finished
-            NetworkComms.Shutdown();
+            NavigationService.Navigate(new Uri("//SettingsPage.xaml", UriKind.Relative));
         }
+
+        private void CurrentMessageInputBox_KeyDown_1(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            var textBox = sender as TextBox;
+
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                SendMessage(textBox.Text);
+            }
+        }        
     }
 }
