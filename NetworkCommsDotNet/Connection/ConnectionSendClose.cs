@@ -505,7 +505,7 @@ namespace NetworkCommsDotNet
 
                     #region Wait For Confirmation If Required
                     //If we required receive confirmation we now wait for that confirmation
-                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) && bool.Parse(packet.PacketHeader.GetOption(PacketHeaderStringItems.ReceiveConfirmationRequired)))
+                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... waiting for receive confirmation packet.");
 
@@ -538,8 +538,7 @@ namespace NetworkCommsDotNet
                 }
                 finally
                 {
-                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) &&
-                        bool.Parse(packet.PacketHeader.GetOption(PacketHeaderStringItems.ReceiveConfirmationRequired)))
+                    if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                     {
                         //Cleanup our delegates
                         RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate);

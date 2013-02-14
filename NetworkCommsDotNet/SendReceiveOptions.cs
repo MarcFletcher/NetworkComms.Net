@@ -30,6 +30,31 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class SendReceiveOptions
     {
+        /// <summary>
+        /// If true any packets sent with this <see cref="SendReceiveOptions"/> will be forced to trigger a receive confirmation.
+        /// </summary>
+        public bool ReceiveConfirmationRequired
+        {
+            get { return Options.ContainsKey("ReceiveConfirmationRequired"); }
+            set {
+                if (value) Options["ReceiveConfirmationRequired"] = "";
+                else Options.Remove("ReceiveConfirmationRequired");
+            }
+        }
+
+        /// <summary>
+        /// If true any packets sent with this <see cref="SendReceiveOptions"/> will include the packet creation time in the header.
+        /// </summary>
+        public bool IncludePacketConstructionTime
+        {
+            get { return Options.ContainsKey("IncludePacketConstructionTime"); }
+            set
+            {
+                if (value) Options["IncludePacketConstructionTime"] = "";
+                else Options.Remove("IncludePacketConstructionTime");
+            }
+        }
+
         private DataSerializer _dataSerializer;
         private List<DataProcessor> _dataProcessors;
 
@@ -142,7 +167,6 @@ namespace NetworkCommsDotNet
         {
             return new SendReceiveOptions(DataSerializer, new List<DataProcessor>(DataProcessors), new Dictionary<string,string>(Options));
         }
-        
     }
 
     /// <inheritdoc />

@@ -80,6 +80,9 @@ namespace NetworkCommsDotNet
             DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>() { DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
                 new Dictionary<string, string>());
+
+            //Initialise the core extensions
+            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
         }
 
         #region Local Host Information

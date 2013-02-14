@@ -72,8 +72,9 @@ namespace NetworkCommsDotNet
                 hashStr = NetworkComms.MD5Bytes(packetData.ThreadSafeStream.ToArray(packetData.Start, packetData.Length));
 
             this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, requestReturnPacketTypeStr,  
-                options.Options.ContainsKey("ReceiveConfirmationRequired") ? bool.Parse(options.Options["ReceiveConfirmationRequired"]) : false,
-                hashStr);
+                options.Options.ContainsKey("ReceiveConfirmationRequired"),
+                hashStr,
+                options.Options.ContainsKey("IncludePacketConstructionTime"));
 
             //Add an identifier specifying the serializers and processors we have used
             this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
