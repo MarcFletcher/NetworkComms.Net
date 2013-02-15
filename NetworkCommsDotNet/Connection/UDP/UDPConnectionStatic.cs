@@ -113,7 +113,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            IPEndPoint localEndPoint = DetermineLocalEndPoint(connectionInfo.RemoteEndPoint);
+                            IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(connectionInfo.RemoteEndPoint);
 
                             lock (udpClientListenerLocker)
                             {
@@ -395,7 +395,7 @@ namespace NetworkCommsDotNet
             //Some very quick testing gave an average runtime of this method to be 0.12ms (averageover 1000 iterations) (perhaps not so bad after all)
             try
             {
-                IPEndPoint localEndPoint = DetermineLocalEndPoint(ipEndPoint);
+                IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(ipEndPoint);
 
                 lock (udpClientListenerLocker)
                 {
@@ -411,25 +411,6 @@ namespace NetworkCommsDotNet
 
             Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
             connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
-        }
-
-        private static IPEndPoint DetermineLocalEndPoint(IPEndPoint remoteIPEndPoint)
-        {
-            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
-
-            testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) => 
-            {
-                try { ev.Set(); }
-                catch (Exception)
-                {
-                    Console.WriteLine("argg!");
-                }
-            }), null);
-
-            if (!ev.WaitOne(2000)) throw new ConnectionSetupException("Unable to determine correct local socket.");
-
-            return (IPEndPoint)testSocket.LocalEndPoint;
         }
     }
 }

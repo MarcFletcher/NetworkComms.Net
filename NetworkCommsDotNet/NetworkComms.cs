@@ -244,10 +244,10 @@ namespace NetworkCommsDotNet
                             if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
                                 return 0;
                             else
-                                return 1;
+                                return -1;
                         }
                         else if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
-                            return -1;
+                            return 1;
                     }
 
                     return 0;
@@ -470,6 +470,29 @@ namespace NetworkCommsDotNet
 #else
             return 0;
 #endif
+        }
+
+        /// <summary>
+        /// Determines the most appropriate local end point to contact the provided remote end point. 
+        /// Testing shows this method takes on average 1.6ms to return.
+        /// </summary>
+        /// <param name="remoteIPEndPoint">The remote end point</param>
+        /// <returns>The selected local end point</returns>
+        public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
+        {
+            //We use UDP as its connectionless hence faster
+            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
+
+            testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) =>
+            {
+                try { ev.Set(); }
+                catch (Exception) { }
+            }), null);
+
+            if (!ev.WaitOne(20)) throw new ConnectionSetupException("Unable to determine correct local end point.");
+
+            return (IPEndPoint)testSocket.LocalEndPoint;
         }
 
 #if !WINDOWS_PHONE
@@ -804,7 +827,6 @@ namespace NetworkCommsDotNet
         #endregion
 
 #if !WINDOWS_PHONE
-
         #region High CPU Usage Tuning
         /// <summary>
         /// In times of high CPU usage we need to ensure that certain time critical functions, like connection handshaking do not timeout.
@@ -812,7 +834,6 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static ThreadPriority timeCriticalThreadPriority = ThreadPriority.AboveNormal;
         #endregion
-
 #endif
 
         #region Checksum Config

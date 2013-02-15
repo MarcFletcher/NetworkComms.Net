@@ -28,6 +28,8 @@ using System.IO;
 //using DistributedFileSystem;
 using NLog.Config;
 using NLog.Targets;
+using System.Net;
+using System.Diagnostics;
 //using DistributedFileSystem;
 
 namespace DebugTests
@@ -44,9 +46,6 @@ namespace DebugTests
             catch (Exception) { }
 
             Thread.CurrentThread.Name = "MainThread";
-            UDPConnection.StartListening(true);
-
-            UDPConnection.SendObject("clientLog", "test", "192.168.0.67", 9999);
 
             if (true)
             {
