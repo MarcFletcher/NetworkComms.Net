@@ -44,6 +44,9 @@ namespace DebugTests
             catch (Exception) { }
 
             Thread.CurrentThread.Name = "MainThread";
+            UDPConnection.StartListening(true);
+
+            UDPConnection.SendObject("clientLog", "test", "192.168.0.67", 9999);
 
             if (true)
             {

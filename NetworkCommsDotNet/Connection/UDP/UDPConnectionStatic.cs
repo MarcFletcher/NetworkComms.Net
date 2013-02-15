@@ -113,24 +113,11 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            Socket testSocket = new Socket(connectionInfo.RemoteEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                            
-                            //Replaces socket.Connect method as unavailable in WP8 framework
-                            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
-                            var args = new SocketAsyncEventArgs();
-                            args.RemoteEndPoint = connectionInfo.RemoteEndPoint;
-                            args.Completed += (o, a) =>
-                            {
-                                try { ev.Set(); }
-                                catch (Exception) { }
-                            };
-                            testSocket.ConnectAsync(args);
-
-                            if (!ev.WaitOne(2000)) throw new ConnectionSetupException("Unable to determine correct local socket.");
+                            IPEndPoint localEndPoint = DetermineLocalEndPoint(connectionInfo.RemoteEndPoint);
 
                             lock (udpClientListenerLocker)
                             {
-                                IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                                IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(localEndPoint.Address);
                                 if (existingLocalEndPoint != null)
                                 {
                                     existingConnection = udpConnectionListeners[existingLocalEndPoint];
@@ -408,34 +395,41 @@ namespace NetworkCommsDotNet
             //Some very quick testing gave an average runtime of this method to be 0.12ms (averageover 1000 iterations) (perhaps not so bad after all)
             try
             {
-                Socket testSocket = new Socket(ipEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-
-                System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
-
-                var args = new SocketAsyncEventArgs();
-                args.RemoteEndPoint = ipEndPoint;
-                args.Completed += (o, a) =>
-                    {
-                        ev.Set();
-                    };
-
-                testSocket.ConnectAsync(args);
-                ev.WaitOne();
+                IPEndPoint localEndPoint = DetermineLocalEndPoint(ipEndPoint);
 
                 lock (udpClientListenerLocker)
                 {
-                    IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(((IPEndPoint)testSocket.LocalEndPoint).Address);
+                    IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(localEndPoint.Address);
                     if (existingLocalEndPoint != null)
                         connectionToUse = udpConnectionListeners[existingLocalEndPoint];
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
             }
 
             Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
             connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
+        }
+
+        private static IPEndPoint DetermineLocalEndPoint(IPEndPoint remoteIPEndPoint)
+        {
+            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
+
+            testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) => 
+            {
+                try { ev.Set(); }
+                catch (Exception)
+                {
+                    Console.WriteLine("argg!");
+                }
+            }), null);
+
+            if (!ev.WaitOne(2000)) throw new ConnectionSetupException("Unable to determine correct local socket.");
+
+            return (IPEndPoint)testSocket.LocalEndPoint;
         }
     }
 }
