@@ -35,15 +35,13 @@ namespace ExamplesWP8Chat
         public MainPage()
         {
             InitializeComponent();
-
-            DPSBase.DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
             
             //Start listening for new incoming TCP connections
             //Parameters is true so that we listen on a random port if the default is not available
             TCPConnection.StartListening(true);
 
             //Write the IP addresses and ports that we are listening on to the chatBox
-            chatBox.Text += "Initialising WPF chat example\n Accepting connections on:\n";
+            chatBox.Text += "Initialising WPF chat example\nAccepting connections on:\n";
             foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                 chatBox.Text += listenEndPoint.Address + ":" + listenEndPoint.Port + "\n";
 

@@ -41,8 +41,8 @@ namespace ExamplesWP8Chat
             // Language display initialization
             InitializeLanguage();
 
-            MasterIPAddress = "192.168.0.1";
-            MasterPort = 10000;
+            MasterIPAddress = "";
+            MasterPort = 0;
             LocalName = "WindowsPhone";
             UseEncryption = false;
 

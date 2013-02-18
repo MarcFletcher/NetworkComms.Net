@@ -479,7 +479,22 @@ namespace NetworkCommsDotNet
         /// <param name="remoteIPEndPoint">The remote end point</param>
         /// <returns>The selected local end point</returns>
         public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
-        {
+        {           
+
+#if WINDOWS_PHONE
+            var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
+            if (t.Wait(20) && t.Result.Count > 0)
+            {
+                var enumerator = t.Result.GetEnumerator();
+                enumerator.MoveNext();
+
+                var endpointPair = enumerator.Current;                
+                return new IPEndPoint(IPAddress.Parse(endpointPair.LocalHostName.DisplayName.ToString()), int.Parse(endpointPair.LocalServiceName));
+            }
+            else
+                throw new ConnectionSetupException("Unable to determine correct local end point.");
+#else
+
             //We use UDP as its connectionless hence faster
             Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
@@ -493,6 +508,7 @@ namespace NetworkCommsDotNet
             if (!ev.WaitOne(20)) throw new ConnectionSetupException("Unable to determine correct local end point.");
 
             return (IPEndPoint)testSocket.LocalEndPoint;
+#endif
         }
 
 #if !WINDOWS_PHONE
