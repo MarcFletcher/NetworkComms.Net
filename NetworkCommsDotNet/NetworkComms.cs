@@ -73,6 +73,10 @@ namespace NetworkCommsDotNet
 
             IncomingPacketQueueHighPrioThread.Start();
 
+            //Initialise the core extensions
+            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
+            DPSManager.AddDataSerializer<ProtobufSerializer>();
+
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
@@ -80,9 +84,6 @@ namespace NetworkCommsDotNet
             DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>() { DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
                 new Dictionary<string, string>());
-
-            //Initialise the core extensions
-            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
         }
 
         #region Local Host Information
@@ -497,15 +498,18 @@ namespace NetworkCommsDotNet
 
             //We use UDP as its connectionless hence faster
             Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-            System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
+            
+            //This does not seem to function in mono
+            //System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
 
-            testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) =>
-            {
-                try { ev.Set(); }
-                catch (Exception) { }
-            }), null);
+            //testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) =>
+            //{
+            //    try { ev.Set(); }
+            //    catch (Exception) { }
+            //}), null);
 
-            if (!ev.WaitOne(20)) throw new ConnectionSetupException("Unable to determine correct local end point.");
+            //if (!ev.WaitOne(100)) throw new ConnectionSetupException("Unable to determine correct local end point.");
+            testSocket.Connect(remoteIPEndPoint);
 
             return (IPEndPoint)testSocket.LocalEndPoint;
 #endif
