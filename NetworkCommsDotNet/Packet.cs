@@ -58,13 +58,15 @@ namespace NetworkCommsDotNet
         private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
         {
             if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
-
             if (options == null) throw new ArgumentNullException("The provided SendReceiveOptions cannot be null.");
 
             if (packetObject == null)
                 this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
             else
+            {
+                if (options.DataSerializer == null) throw new ArgumentNullException("The provided SendReceiveOptions should not contain a null DataSerializer.");
                 this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
+            }
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;

@@ -121,7 +121,10 @@ namespace NetworkCommsDotNet
         /// <param name="dataProcessors">The set of <see cref="DPSBase.DataProcessor"/>s to use.  The order in the list determines the order the <see cref="DPSBase.DataProcessor"/>s will be applied</param>
         /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendReceiveOptions(DataSerializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
-        {            
+        {
+            if (serializer == null)
+                throw new ArgumentNullException("The serializer argument when creating a sendReceiveOptions object should never be null.");
+
             this.DataSerializer = serializer;
             this.DataProcessors = dataProcessors;
 
