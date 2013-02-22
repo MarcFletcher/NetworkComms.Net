@@ -345,27 +345,39 @@ namespace DPSBase
             //of serializers and compressors. On windows phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  Any others that are used will
             //have to be added manually.  On windows this will be done from a new app domain so we can unload it afterwards
 
+            AssemblyLoader loader;
+            ProcessArgument args;
 #if !WINDOWS_PHONE
+            try
+            {
+                AppDomain tempDomain = AppDomain.CreateDomain("Temp");
 
-            AppDomain tempDomain = AppDomain.CreateDomain("Temp");
-            var loader = (AssemblyLoader)tempDomain.CreateInstanceAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
+                loader = (AssemblyLoader)tempDomain.CreateInstanceAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
 
-            var args = new ProcessArgument();
-            args.entryDomain = Assembly.GetEntryAssembly().FullName;
+                args = new ProcessArgument();
+                args.entryDomain = Assembly.GetEntryAssembly().FullName;
 
-            loader.ProcessApplicationAssemblies(args);
+                loader.ProcessApplicationAssemblies(args);
 
-            //app.DoCallBack(new CrossAppDomainDelegate(loader.ProcessApplicationAssemblies));
-            AppDomain.Unload(tempDomain);
-            tempDomain = null;
-            GC.Collect();
+                //app.DoCallBack(new CrossAppDomainDelegate(loader.ProcessApplicationAssemblies));
+                AppDomain.Unload(tempDomain);
+                tempDomain = null;
+                GC.Collect();
+            }
+            catch (FileNotFoundException)
+            {
+                //In mono the above load method may not work so we will fall back to our older way of doing the same
+                //The disadvantage of this approach is that all assemblies are loaded and then stay in memory increasing the footprint slightly 
+                loader = new AssemblyLoader();
+                args = new ProcessArgument();
 
+                loader.ProcessApplicationAssemblies(args);
+            }
 #else
             var loader = new AssemblyLoader();
             var args = new ProcessArgument();
 
             loader.ProcessApplicationAssemblies(args);
-
 #endif
 
             foreach (var serializer in args.serializerTypes)
