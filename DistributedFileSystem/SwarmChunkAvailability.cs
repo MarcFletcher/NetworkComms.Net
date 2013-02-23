@@ -309,7 +309,7 @@ namespace DistributedFileSystem
                     //This is the only place we clear a peers busy status
                     if (peer.Value.PeerBusy && (DateTime.Now - peer.Value.PeerBusyAnnounce).TotalMilliseconds > DFS.PeerBusyTimeoutMS) peer.Value.ClearBusy();
 
-                    if (PeerContactAllowed(NetworkIdentifierToConnectionInfo(peer.Key).LocalEndPoint.Address, peer.Value.SuperPeer))
+                    if (PeerContactAllowed(peer.Key, NetworkIdentifierToConnectionInfo(peer.Key).LocalEndPoint, peer.Value.SuperPeer))
                     {
                         //For this peer for every chunk we are looking for
                         for (byte i = 0; i < totalChunksInItem; i++)
@@ -592,7 +592,7 @@ namespace DistributedFileSystem
 
                             //string[] result = null;
                             //We don't want to contact ourselves plus we check the possible exception lists
-                            if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                            if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
                             {
                                 if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_KnownPeersRequest.");
                                 //result = TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<string[]>("DFS_KnownPeersRequest", "DFS_KnownPeersUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
@@ -657,7 +657,7 @@ namespace DistributedFileSystem
                         }
 
                         //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                        if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                        if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
                         {
                             if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
                             //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
@@ -768,7 +768,7 @@ namespace DistributedFileSystem
                     }
 
                     //We don't want to contact ourselves
-                    if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                    if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
                         //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, localChunkFlags));
                         UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), peerEndPoint, DFS.nullCompressionSRO);
                 }
@@ -808,17 +808,24 @@ namespace DistributedFileSystem
             });
         }
 
-        public bool PeerContactAllowed(IPAddress peerIP, bool superPeer)
+        public bool PeerContactAllowed(ShortGuid peerIdentifier, IPEndPoint peerEndPoint, bool superPeer)
         {
+            if (peerIdentifier == NetworkComms.NetworkIdentifier)
+                return false;
+
+            List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+            if (currentLocaListenEndPoints.Contains(peerEndPoint))
+                return false;
+
             //We always allow super peers
             //If this is not a super peer and we have set the allowedPeerIPs then we check in there
-            bool peerAllowed;
+            bool peerAllowed = false;
             if (!superPeer && (DFS.allowedPeerIPs.Count > 0 || DFS.disallowedPeerIPs.Count > 0))
             {
                 if (DFS.allowedPeerIPs.Count > 0)
-                    peerAllowed = DFS.allowedPeerIPs.Contains(peerIP.ToString());
+                    peerAllowed = DFS.allowedPeerIPs.Contains(peerEndPoint.Address.ToString());
                 else
-                    peerAllowed = !DFS.disallowedPeerIPs.Contains(peerIP.ToString());
+                    peerAllowed = !DFS.disallowedPeerIPs.Contains(peerEndPoint.Address.ToString());
             }
             else
                 peerAllowed = true;
@@ -878,7 +885,7 @@ namespace DistributedFileSystem
                         }
 
                         //We don't want to contact ourselves
-                        if (peerIdentifier != NetworkComms.NetworkIdentifier && PeerContactAllowed(peerEndPoint.Address, superPeer))
+                        if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
                             //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
                             UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), peerEndPoint, DFS.nullCompressionSRO);
                     }

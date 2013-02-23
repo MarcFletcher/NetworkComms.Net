@@ -22,6 +22,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using NetworkCommsDotNet;
+
 namespace ExamplesConsole
 {
     class Program
@@ -38,6 +43,9 @@ namespace ExamplesConsole
             Thread.CurrentThread.Name = "MainThread";
 
             Console.WriteLine("Initiating NetworkCommsDotNet examples.\n");
+
+            //Ask user if they want to enable comms logging
+            SelectLogging();
 
             //All we do here is let the user choice a specific example
             Console.WriteLine("Please enter an example number:");
@@ -96,6 +104,49 @@ namespace ExamplesConsole
             //When we are done we give the user a chance to see all output
             Console.WriteLine("\n\nExample has completed. Please press any key to close.");
             Console.ReadKey(true);
+        }
+
+        private static void SelectLogging()
+        {
+            //If the user wants to enable logging 
+            Console.WriteLine("To enable comms logging press 'y'. To leave logging disabled and continue press any other key.\n");
+
+            if (Console.ReadKey(true).Key == ConsoleKey.Y)
+            {
+                //////////////////////////////////////////////////////////////////////
+                //// SIMPLE CONSOLE ONLY LOGGING
+                //// See http://nlog-project.org/ for more information
+                //// Requires that the file NLog.dll is present 
+                //////////////////////////////////////////////////////////////////////
+                //LoggingConfiguration logConfig = new LoggingConfiguration();
+                //ConsoleTarget consoleTarget = new ConsoleTarget();
+                //consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
+                //logConfig.AddTarget("console", consoleTarget);
+                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                //NetworkComms.EnableLogging(logConfig);
+
+                //////////////////////////////////////////////////////////////////////
+                //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
+                //// See http://nlog-project.org/ for more information
+                //// Requires that the file NLog.dll is present 
+                //////////////////////////////////////////////////////////////////////
+                LoggingConfiguration logConfig = new LoggingConfiguration();
+                FileTarget fileTarget = new FileTarget();
+                fileTarget.FileName = "${basedir}/log.txt";
+                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} [${threadid} - ${level}] - ${message}";
+                ConsoleTarget consoleTarget = new ConsoleTarget();
+                consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} - ${message}";
+
+                logConfig.AddTarget("file", fileTarget);
+                logConfig.AddTarget("console", consoleTarget);
+
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                NetworkComms.EnableLogging(logConfig);
+
+                //We can write to our logger from an external program as well
+                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt." + Environment.NewLine);
+            }
         }
     }
 }

@@ -379,7 +379,10 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.commsShutdown)
                     throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
                 else if (udpRogueSender == null || (udpRogueSender != null && udpRogueSender.ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
                     udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
+                }
 
                 //Get the rouge sender here
                 connectionToUse = udpRogueSender;

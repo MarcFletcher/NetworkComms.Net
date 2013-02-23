@@ -1,4 +1,7 @@
 ﻿Imports NetworkCommsDotNet
+Imports NLog
+Imports NLog.Config
+Imports NLog.Targets
 
 Module Program
 
@@ -12,6 +15,9 @@ Module Program
         Thread.CurrentThread.Name = "MainThread"
 
         Console.WriteLine("Initiating NetworkCommsDotNet examples." + Environment.NewLine)
+
+        'Ask user if they want to enable comms logging
+        SelectLogging()
 
         'All we do here is let the user choice a specific example
         Console.WriteLine("Please enter an example number:")
@@ -49,6 +55,50 @@ Module Program
         'When we are done we give the user a chance to see all output
         Console.WriteLine(Environment.NewLine + Environment.NewLine + "Example has completed. Please press any key to close.")
         Console.ReadKey(True)
+    End Sub
+
+    Sub SelectLogging()
+        ''If the user wants to enable logging 
+        Console.WriteLine("To enable comms logging press 'y'. To leave logging disabled and continue press any other key." + Environment.NewLine)
+
+        If (Console.ReadKey(True).key = ConsoleKey.Y) Then
+            ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            '''' SIMPLE CONSOLE ONLY LOGGING
+            '''' See http:''nlog-project.org' for more information
+            '''' Requires that the file NLog.dll is present 
+            ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            'Dim logConfig = New LoggingConfiguration()
+            '
+            'Dim consoleTarget = New ConsoleTarget()
+            'consoleTarget.Layout = "${date:format=HH\:MM\:ss} - ${message}"
+            '
+            'logConfig.AddTarget("console", consoleTarget)
+            '
+            'logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Debug, consoleTarget))
+            'NetworkComms.EnableLogging(logConfig)
+
+            ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            '''' THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
+            '''' See http:''nlog-project.org' for more information
+            '''' Requires that the file NLog.dll is present 
+            ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            Dim logConfig = New LoggingConfiguration()
+            Dim fileTarget = New FileTarget()
+            fileTarget.FileName = "${basedir}/log.txt"
+            fileTarget.Layout = "${date:format=HH\:MM\:ss} [${threadid} - ${level}] - ${message}"
+            Dim consoleTarget = New ConsoleTarget()
+            consoleTarget.Layout = "${date:format=HH\:MM\:ss} - ${message}"
+
+            logConfig.AddTarget("file", fileTarget)
+            logConfig.AddTarget("console", consoleTarget)
+
+            logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Trace, fileTarget))
+            logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Debug, consoleTarget))
+            NetworkComms.EnableLogging(logConfig)
+
+            ''We can write to our logger from an external program as well
+            NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt." + Environment.NewLine)
+        End If
     End Sub
 
 End Module

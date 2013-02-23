@@ -176,8 +176,10 @@ namespace DistributedFileSystem
                 #region OpenIncomingPorts
                 List<IPAddress> availableIPAddresses = NetworkComms.AllAllowedIPs();
                 List<IPEndPoint> localEndPointAttempts;
+
                 try
                 {
+                    NetworkComms.DefaultListenPort = initialPort;
                     localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
                     TCPConnection.StartListening(localEndPointAttempts, false);
                     UDPConnection.StartListening(localEndPointAttempts, false);
@@ -192,6 +194,7 @@ namespace DistributedFileSystem
                         {
                             try
                             {
+                                NetworkComms.DefaultListenPort = tryPort;
                                 localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
                                 TCPConnection.StartListening(localEndPointAttempts, false);
                                 UDPConnection.StartListening(localEndPointAttempts, false);
@@ -855,8 +858,6 @@ namespace DistributedFileSystem
 
                 if (currentItem != null)
                 {
-                    List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
-
                     //If we have some unknown peers we can request an update from them as well
                     foreach (string peerContactInfoOuter in peerList.PeerEndPoints)
                     {
@@ -867,7 +868,7 @@ namespace DistributedFileSystem
                             IPEndPoint peerEndPoint = IPTools.ParseEndPointFromString(peerContactInfo);
 
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (!(currentLocaListenEndPoints.Contains(peerEndPoint)) && currentItem.SwarmChunkAvailability.PeerContactAllowed(peerEndPoint.Address, false))
+                            if (currentItem.SwarmChunkAvailability.PeerContactAllowed(ShortGuid.Empty, peerEndPoint, false))
                             {
                                 currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest from within KnownPeersUpdate.");
                                 //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);

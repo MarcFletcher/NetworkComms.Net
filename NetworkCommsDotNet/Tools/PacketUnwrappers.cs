@@ -67,7 +67,12 @@ namespace NetworkCommsDotNet
         {
             if (incomingBytes == null || incomingBytes.Length == 0) return null;
             else
+            {
+                if (options.DataSerializer == null)
+                    throw new NullReferenceException("The provided options.DataSerializer was null. Cannot continue with deserialise.");
+
                 return options.DataSerializer.DeserialiseDataObject<T>(incomingBytes, options.DataProcessors, options.Options);
+            }
         }
 
         public void Process(PacketHeader packetHeader, Connection connection, object obj)

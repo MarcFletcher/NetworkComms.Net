@@ -185,6 +185,9 @@ namespace NetworkCommsDotNet
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
             DataProcessors = null; //Note that this will cause data processors to be set to an empty list
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
 
         /// <summary>
@@ -197,6 +200,9 @@ namespace NetworkCommsDotNet
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
             DataProcessors = null; //Note that this will cause data processors to be set to an empty list
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -215,6 +221,9 @@ namespace NetworkCommsDotNet
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
             DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<DP1>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
 
         /// <summary>
@@ -227,6 +236,9 @@ namespace NetworkCommsDotNet
         {
             DataSerializer = DPSManager.GetDataSerializer<DS>();
             DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<DP1>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -251,6 +263,9 @@ namespace NetworkCommsDotNet
             DataProcessors = new List<DataProcessor>() {
                 DPSManager.GetDataProcessor<DP1>(),
                 DPSManager.GetDataProcessor<DP2>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -278,6 +293,9 @@ namespace NetworkCommsDotNet
                 DPSManager.GetDataProcessor<DP1>(), 
                 DPSManager.GetDataProcessor<DP2>(), 
                 DPSManager.GetDataProcessor<DP3>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -308,6 +326,9 @@ namespace NetworkCommsDotNet
                 DPSManager.GetDataProcessor<DP2>(),
                 DPSManager.GetDataProcessor<DP3>(),
                 DPSManager.GetDataProcessor<DP4>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -341,6 +362,9 @@ namespace NetworkCommsDotNet
                 DPSManager.GetDataProcessor<DP3>(),
                 DPSManager.GetDataProcessor<DP4>(),
                 DPSManager.GetDataProcessor<DP5>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -377,6 +401,9 @@ namespace NetworkCommsDotNet
                 DPSManager.GetDataProcessor<DP4>(),
                 DPSManager.GetDataProcessor<DP5>(),
                 DPSManager.GetDataProcessor<DP6>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
@@ -416,6 +443,9 @@ namespace NetworkCommsDotNet
                 DPSManager.GetDataProcessor<DP5>(),
                 DPSManager.GetDataProcessor<DP6>(),
                 DPSManager.GetDataProcessor<DP7>() };
+
+            if (DataSerializer == null)
+                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 }

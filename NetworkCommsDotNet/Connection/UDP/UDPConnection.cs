@@ -357,8 +357,10 @@ namespace NetworkCommsDotNet
         private UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
-            if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
+            //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo + 
+            //    ". LocalEndPoint IPAddressFamily=" + (connectionInfo.LocalEndPoint == null ? "NA" : connectionInfo.LocalEndPoint.AddressFamily.ToString()) +
+            //    ", RemoteEndPoint IPAddressFamily=" + (connectionInfo.RemoteEndPoint == null ? "NA" : connectionInfo.RemoteEndPoint.AddressFamily.ToString()));
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
             udpLevel = level;
 
@@ -544,7 +546,7 @@ namespace NetworkCommsDotNet
             try
             {
                 UdpClientThreadSafe client = (UdpClientThreadSafe)ar.AsyncState;
-                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                 byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
@@ -621,7 +623,7 @@ namespace NetworkCommsDotNet
                     if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                         break;
 
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                    IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                     byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");

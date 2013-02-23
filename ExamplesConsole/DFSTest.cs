@@ -69,9 +69,12 @@ namespace ExamplesConsole
                 object listLocker = new object();
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
+                //Initialise the DFS before creating the test object to ensure the correct port and IP are used as the seed
+                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
+
                 //Create the item to be distributed
                 ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
-                seedConnectionInfo.ResetNetworkIdentifer(NetworkComms.NetworkIdentifier);
+                //seedConnectionInfo.ResetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
                 DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfo, ItemBuildTarget.Disk);
 
@@ -107,7 +110,6 @@ namespace ExamplesConsole
                     Console.WriteLine(" ... " + connectionId + " - " + incomingString);
                 };
 
-                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 NetworkComms.AppendGlobalConnectionEstablishHandler(clientEstablishDelegate);

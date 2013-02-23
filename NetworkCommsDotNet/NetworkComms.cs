@@ -1307,6 +1307,7 @@ namespace NetworkCommsDotNet
         /// <param name="threadShutdownTimeoutMS">The time to wait for worker threads to close before attempting a thread abort.</param>
         public static void Shutdown(int threadShutdownTimeoutMS = 1000)
         {
+            if (LoggingEnabled) logger.Trace("NetworkCommsDotNet shutdown initiated.");
             commsShutdown = true;
 
             IncomingPacketQueueHighPrioThreadWait.Set();
@@ -1354,7 +1355,17 @@ namespace NetworkCommsDotNet
             }
 
             commsShutdown = false;
-            if (LoggingEnabled) logger.Info("Network comms has shutdown");
+            if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");
+
+            //Mono bug fix
+            //Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
+            if (Logger != null)
+            {
+                Logger.Factory.Flush();
+
+                if (Type.GetType("Mono.Runtime") != null)
+                    Logger.Factory.Configuration = null;
+            }
         }
         #endregion
 

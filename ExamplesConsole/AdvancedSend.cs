@@ -24,10 +24,7 @@ using DPSBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
-using NLog;
 using System.Net;
-using NLog.Config;
-using NLog.Targets;
 
 namespace ExamplesConsole
 {
@@ -54,9 +51,6 @@ namespace ExamplesConsole
             //***************************************************************//
             //              Start of interesting stuff                       //
             //***************************************************************//
-
-            //Ask user if they want to enable comms logging
-            SelectLogging();
 
             Console.WriteLine("\nNOTE: From this point on make sure both clients are configured in the same way if you want the example to work.");
 
@@ -132,12 +126,13 @@ namespace ExamplesConsole
             foreach(IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-            Console.WriteLine("\nPress any key if you want to send something from this client.");
+            Console.WriteLine("\nPress any key if you want to send something from this client. Press q to quit.");
 
             while (true)
             {
                 //Wait for user to press something before sending anything from this end
-                Console.ReadKey(true);
+                var keyContinue = Console.ReadKey(true);
+                if (keyContinue.Key == ConsoleKey.Q) break;
 
                 //Create the send object based on user input
                 CreateSendObject();
@@ -174,8 +169,6 @@ namespace ExamplesConsole
                 //***************************************************************//
 
                 Console.WriteLine("\nSend complete. Press 'q' to quit or any other key to send something else.");
-                var keyContinue = Console.ReadKey(true);
-                if (keyContinue.Key == ConsoleKey.Q) break;
             }
 
             //***************************************************************//
@@ -191,50 +184,6 @@ namespace ExamplesConsole
         }
 
         #region Customisation Methods
-
-        private static void SelectLogging()
-        {
-            //If the user wants to enable logging 
-            Console.WriteLine("\nTo enable comms logging press 'y'. To leave logging disabled and continue press any other key.");
-            var loggingEnableKey = Console.ReadKey(true);
-
-            if (loggingEnableKey.Key == ConsoleKey.Y)
-            {
-                //////////////////////////////////////////////////////////////////////
-                //// SIMPLE CONSOLE ONLY LOGGING
-                //// See http://nlog-project.org/ for more information
-                //// Requires that the file NLog.dll is present 
-                //////////////////////////////////////////////////////////////////////
-                //LoggingConfiguration logConfig = new LoggingConfiguration();
-                //ConsoleTarget consoleTarget = new ConsoleTarget();
-                //consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
-                //logConfig.AddTarget("console", consoleTarget);
-                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
-                //NetworkComms.EnableLogging(logConfig);
-
-                //////////////////////////////////////////////////////////////////////
-                //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
-                //// See http://nlog-project.org/ for more information
-                //// Requires that the file NLog.dll is present 
-                //////////////////////////////////////////////////////////////////////
-                LoggingConfiguration logConfig = new LoggingConfiguration();
-                FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/log.txt";
-                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
-                ConsoleTarget consoleTarget = new ConsoleTarget();
-                consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} ${message}";
-
-                logConfig.AddTarget("file", fileTarget);
-                logConfig.AddTarget("console", consoleTarget);
-
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
-                NetworkComms.EnableLogging(logConfig);
-
-                //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt.");
-            }
-        }
 
         private static void SelectConnectionType()
         {

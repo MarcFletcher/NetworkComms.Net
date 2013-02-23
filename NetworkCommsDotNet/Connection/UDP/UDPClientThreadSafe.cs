@@ -126,6 +126,15 @@ namespace NetworkCommsDotNet
                 return udpClient.EndReceive(asyncResult, ref remoteEP);
         }
 
+        public AddressFamily ClientAddressFamily
+        {
+            get
+            {
+                lock (locker)
+                    return udpClient.Client.AddressFamily;
+            }
+        }
+
         public IPEndPoint RemoteEndPoint
         {
             get
