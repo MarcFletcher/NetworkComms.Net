@@ -74,8 +74,11 @@ namespace NetworkCommsDotNet
             IncomingPacketQueueHighPrioThread.Start();
 
             //Initialise the core extensions
-            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
             DPSManager.AddDataSerializer<ProtobufSerializer>();
+            DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
+            DPSManager.AddDataSerializer<NullSerializer>();
+            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
+            DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
 
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
