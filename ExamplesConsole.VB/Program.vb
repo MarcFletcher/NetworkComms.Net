@@ -70,7 +70,7 @@ Module Program
             'Dim logConfig = New LoggingConfiguration()
             '
             'Dim consoleTarget = New ConsoleTarget()
-            'consoleTarget.Layout = "${date:format=HH\:MM\:ss} - ${message}"
+            'consoleTarget.Layout = "${date:format=HH\:mm\:ss} - ${message}"
             '
             'logConfig.AddTarget("console", consoleTarget)
             '
@@ -85,9 +85,9 @@ Module Program
             Dim logConfig = New LoggingConfiguration()
             Dim fileTarget = New FileTarget()
             fileTarget.FileName = "${basedir}/log.txt"
-            fileTarget.Layout = "${date:format=HH\:MM\:ss} [${threadid} - ${level}] - ${message}"
+            fileTarget.Layout = "${date:format=HH\:mm\:ss} [${threadid} - ${level}] - ${message}"
             Dim consoleTarget = New ConsoleTarget()
-            consoleTarget.Layout = "${date:format=HH\:MM\:ss} - ${message}"
+            consoleTarget.Layout = "${date:format=HH\:mm\:ss} - ${message}"
 
             logConfig.AddTarget("file", fileTarget)
             logConfig.AddTarget("console", consoleTarget)

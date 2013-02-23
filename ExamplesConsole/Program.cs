@@ -120,7 +120,7 @@ namespace ExamplesConsole
                 //////////////////////////////////////////////////////////////////////
                 //LoggingConfiguration logConfig = new LoggingConfiguration();
                 //ConsoleTarget consoleTarget = new ConsoleTarget();
-                //consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
+                //consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} [${level}] - ${message}";
                 //logConfig.AddTarget("console", consoleTarget);
                 //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
                 //NetworkComms.EnableLogging(logConfig);
@@ -133,9 +133,9 @@ namespace ExamplesConsole
                 LoggingConfiguration logConfig = new LoggingConfiguration();
                 FileTarget fileTarget = new FileTarget();
                 fileTarget.FileName = "${basedir}/log.txt";
-                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} [${threadid} - ${level}] - ${message}";
+                fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
                 ConsoleTarget consoleTarget = new ConsoleTarget();
-                consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} - ${message}";
+                consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
 
                 logConfig.AddTarget("file", fileTarget);
                 logConfig.AddTarget("console", consoleTarget);

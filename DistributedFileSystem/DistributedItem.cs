@@ -188,6 +188,8 @@ namespace DistributedFileSystem
                 }
                 else
                     this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+
+                if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
             }
             else if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Memory || assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                 this.ItemDataStream = new ThreadSafeStream(new MemoryStream(ItemBytesLength));
@@ -945,7 +947,13 @@ namespace DistributedFileSystem
         public void Dispose()
         {
             if (ItemDataStream != null)
+            {
                 ItemDataStream.Close();
+
+                //Delete the disk file if it exists
+                if (File.Exists(ItemIdentifier + ".DFSItemData"))
+                    File.Delete(ItemIdentifier + ".DFSItemData");
+            }
         }
 
         /// <summary>

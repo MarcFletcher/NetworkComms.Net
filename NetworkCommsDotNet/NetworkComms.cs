@@ -1124,7 +1124,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
 
                     //Pass the data onto the handler and move on.
-                    if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '"+packetHeader.PacketType+"' to selected global handlers.");
+                    if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count + " selected global handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -1140,6 +1140,8 @@ namespace NetworkCommsDotNet
                             NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                         }
                     }
+
+                    if (LoggingEnabled) logger.Trace(" ... all handlers for packet of type '" + packetHeader.PacketType + "' completed.");
                 }
             }
             catch (Exception ex)

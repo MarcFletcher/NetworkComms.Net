@@ -906,7 +906,8 @@ namespace DistributedFileSystem
         private static void IncomingLocalItemBuild(PacketHeader packetHeader, Connection connection, ItemAssemblyConfig assemblyConfig)
         {
             //We start the build in the DFS task factory as it will be a long lived task
-            BuildTaskFactory.StartNew(() =>
+            //BuildTaskFactory.StartNew(() =>
+            Action buildAction = new Action(() =>
                 {
                     DistributedItem newItem = null;
                     byte[] itemBytes = null;
@@ -940,7 +941,7 @@ namespace DistributedFileSystem
                         //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
                         if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
                         {
-                            if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ".");
+                            if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildTarget + ".");
 
                             //Copy the result to the disk if required by the build target
                             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
@@ -977,22 +978,32 @@ namespace DistributedFileSystem
                         else
                             NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
                     }
-                    finally
-                    {
-                        try
-                        {
-                            PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
-                            //We set the item checksum so that the entire distributed item can be easily retrieved later
-                            itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+                    //finally
+                    //{
+                        //Putting any code here appears to cause a sigsegv fault on leaving the finally in mono
+                        //Just moved the code out to below as it makes no diference
+                    //}
 
-                            NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
-                        }
-                        catch (Exception ex)
-                        {
-                            NetworkComms.LogError(ex, "Error_IncomingLocalItemBuildFinal");
-                        }
+                    //Regardless of if the item completed we call the necessary packet handlers
+                    //If there was a build error we just pass null data to the handlers so that the errors can get called up the relevevant stack traces.
+                    try
+                    {
+                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                        //We set the item checksum so that the entire distributed item can be easily retrieved later
+                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+
+                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
+                    }
+                    catch (Exception ex)
+                    {
+                        NetworkComms.LogError(ex, "Error_IncomingLocalItemBuildFinal");
                     }
                 });
+
+            //Thread buildThread = new Thread(buildAction);
+            //buildThread.Name = "DFS_" + assemblyConfig.ItemIdentifier + "_Build";
+            //buildThread.Start();
+            BuildTaskFactory.StartNew(buildAction);
         }
 
         /// <summary>
