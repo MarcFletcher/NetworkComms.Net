@@ -40,8 +40,8 @@ namespace NetworkCommsDotNet
     public partial class TCPConnection : Connection
     {
         StreamSocket socket;
-        Stream readStream;
-        Stream writeStream;
+        //Stream readStream;
+        //Stream writeStream;
 
         /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 

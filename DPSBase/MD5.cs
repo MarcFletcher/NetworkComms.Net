@@ -22,11 +22,20 @@ namespace DPSBase.MD5
         public uint D;
     }
 
+    /// <summary>
+    /// Part of the managed MD5 calculator
+    /// </summary>
     public sealed class MD5Core
     {
         //Prevent CSC from adding a default public constructor
         private MD5Core() { }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
         public static byte[] GetHash(string input, Encoding encoding)
         {
             if (null == input)
@@ -39,11 +48,21 @@ namespace DPSBase.MD5
             return GetHash(target);
         }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public static byte[] GetHash(string input)
         {
             return GetHash(input, new UTF8Encoding());
         }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public static string GetHashString(byte[] input)
         {
             if (null == input)
@@ -55,6 +74,12 @@ namespace DPSBase.MD5
             return retval;
         }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
         public static string GetHashString(string input, Encoding encoding)
         {
             if (null == input)
@@ -67,11 +92,21 @@ namespace DPSBase.MD5
             return GetHashString(target);
         }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public static string GetHashString(string input)
         {
             return GetHashString(input, new UTF8Encoding());
         }
 
+        /// <summary>
+        /// Return an MD5 hash for the provided parameters
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public static byte[] GetHash(byte[] input)
         {
             if (null == input)
@@ -276,8 +311,14 @@ namespace DPSBase.MD5
     }
 
 #if SILVERLIGHT
-public class MD5Managed : HashAlgorithm
+    /// <summary>
+    /// Create a managed MD5 hash calculator
+    /// </summary>
+    public class MD5Managed : HashAlgorithm
 #else
+    /// <summary>
+    /// Create a managed MD5 hash calculator
+    /// </summary>
     public class MD5Managed : System.Security.Cryptography.MD5
 #endif
     {
@@ -286,12 +327,18 @@ public class MD5Managed : HashAlgorithm
         private Int64 _totalLength;
         private int _dataSize;
 
+        /// <summary>
+        /// Create a new instance of the MD5 hash calculator
+        /// </summary>
         public MD5Managed()
         {
             base.HashSizeValue = 0x80;
             this.Initialize();
         }
 
+        /// <summary>
+        /// Initialise the MD5 hash calculator
+        /// </summary>
         public override void Initialize()
         {
             _data = new byte[64];
@@ -305,6 +352,12 @@ public class MD5Managed : HashAlgorithm
             _abcd.D = 0x10325476;
         }
 
+        /// <summary>
+        /// Calcualate the core hash
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="ibStart"></param>
+        /// <param name="cbSize"></param>
         protected override void HashCore(byte[] array, int ibStart, int cbSize)
         {
             int startIndex = ibStart;
@@ -334,6 +387,10 @@ public class MD5Managed : HashAlgorithm
             _totalLength += cbSize;
         }
 
+        /// <summary>
+        /// Get the final hash
+        /// </summary>
+        /// <returns></returns>
         protected override byte[] HashFinal()
         {
             base.HashValue = MD5Core.GetHashFinalBlock(_data, 0, _dataSize, _abcd, _totalLength * 8);

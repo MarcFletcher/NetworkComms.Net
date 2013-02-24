@@ -11,6 +11,9 @@ namespace DPSBase
     /// </summary>
     public class AsyncStreamCopier
     {
+        /// <summary>
+        /// Event raised when copy has completed
+        /// </summary>
         public event EventHandler Completed;
 
         private readonly Stream input;
@@ -18,12 +21,20 @@ namespace DPSBase
 
         private byte[] buffer = new byte[4096];
 
+        /// <summary>
+        /// Initialise a new instance of the asyncStreamCopier
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="output"></param>
         public AsyncStreamCopier(Stream input, Stream output)
         {
             this.input = input;
             this.output = output;
         }
 
+        /// <summary>
+        /// Starts the async copy
+        /// </summary>
         public void Start()
         {
             GetNextChunk();
@@ -60,6 +71,11 @@ namespace DPSBase
             }
         }
 
+        /// <summary>
+        /// Copy contents of source into destination
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="destination"></param>
         public static void CopyStreamTo(Stream source, Stream destination)
         {
             var completedEvent = new ManualResetEvent(false);

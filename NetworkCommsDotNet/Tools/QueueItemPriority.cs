@@ -5,6 +5,9 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
 #if WINDOWS_PHONE
+    /// <summary>
+    /// A list of priorities used to handle incoming packets
+    /// </summary>
     public enum QueueItemPriority
     {
         // Summary:
@@ -20,6 +23,9 @@ namespace NetworkCommsDotNet
         High = 1,
     }
 #else
+    /// <summary>
+    /// A list of priorities used to handle incoming packets
+    /// </summary>
     public enum QueueItemPriority
     {
         /// <summary>

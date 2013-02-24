@@ -75,10 +75,14 @@ namespace NetworkCommsDotNet
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
-            DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
+            
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
             DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
+
+#if !WINDOWS_PHONE
+            DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
+#endif
 
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                 new List<DataProcessor>(),
@@ -500,7 +504,7 @@ namespace NetworkCommsDotNet
 #else
 
             //We use UDP as its connectionless hence faster
-            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+            Socket testSocket = new Socket(AddressFamily.Unspecified, SocketType.Dgram, ProtocolType.Udp);
             
             //This does not seem to function in mono
             //System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
@@ -1362,6 +1366,7 @@ namespace NetworkCommsDotNet
             commsShutdown = false;
             if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");
 
+#if !WINDOWS_PHONE
             //Mono bug fix
             //Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
             if (Logger != null)
@@ -1371,6 +1376,7 @@ namespace NetworkCommsDotNet
                 if (Type.GetType("Mono.Runtime") != null)
                     Logger.Factory.Configuration = null;
             }
+#endif
         }
         #endregion
 

@@ -45,7 +45,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new instance of the priority queue.
         /// </summary>
-        /// <param name="numDistinctPriorities">The total number of priority levels to allow.</param>
         public PriorityQueue()
         {
             var vals = Enum.GetValues(typeof(QueueItemPriority)) as int[];

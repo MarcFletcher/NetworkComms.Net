@@ -31,6 +31,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     public abstract partial class Connection
     {
+        static ManualResetEvent workedThreadSignal = new ManualResetEvent(false);
         static volatile bool shutdownWorkerThreads = false;
         static object staticConnectionLocker = new object();
         static Thread connectionKeepAliveWorker;
@@ -78,9 +79,12 @@ namespace NetworkCommsDotNet
                 {
                     //We have a short sleep here so that we can exit the thread fairly quickly if we need too
                     if (ConnectionKeepAlivePollIntervalSecs == int.MaxValue)
-                        Thread.Sleep(5000);
+                        workedThreadSignal.WaitOne(5000);
                     else
-                        Thread.Sleep(100);
+                        workedThreadSignal.WaitOne(100);
+
+                    //Check for shutdown here
+                    if (shutdownWorkerThreads) break;
 
                     //Any connections which we have not seen in the last poll interval get tested using a null packet
                     if (ConnectionKeepAlivePollIntervalSecs < int.MaxValue && (DateTime.Now - lastPollCheck).TotalSeconds > (double)ConnectionKeepAlivePollIntervalSecs)
@@ -104,15 +108,15 @@ namespace NetworkCommsDotNet
         {
             //Loop through all connections and test the alive state
             List<Connection> allConnections = NetworkComms.GetExistingConnection();
+            int reamainingConnectionCount = allConnections.Count;
 
-            List<WaitHandle> connectionCheckHandles = new List<WaitHandle>();
+            AutoResetEvent allConnectionsComplete = new AutoResetEvent(false);
 
             for (int i = 0; i < allConnections.Count; i++)
             {
                 int innerIndex = i;
                 ManualResetEvent handle = new ManualResetEvent(false);
-                               
-                connectionCheckHandles.Add(handle);
+
                 ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {
                     try
@@ -137,11 +141,15 @@ namespace NetworkCommsDotNet
                         }
                     }
                     catch (Exception) { }
-                    finally { handle.Set(); }
+                    finally
+                    {
+                        if (Interlocked.Decrement(ref reamainingConnectionCount) == 0)
+                            allConnectionsComplete.Set();
+                    }
                 }));
             }
 
-            if (!returnImmediately && connectionCheckHandles.Count > 0) WaitHandle.WaitAll(connectionCheckHandles.ToArray());
+            if (!returnImmediately && allConnections.Count > 0) allConnectionsComplete.WaitOne();
         }
 
         /// <summary>
@@ -164,6 +172,7 @@ namespace NetworkCommsDotNet
             finally
             {
                 shutdownWorkerThreads = false;
+                workedThreadSignal.Reset();
             }
         }
     }

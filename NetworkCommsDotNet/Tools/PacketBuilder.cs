@@ -35,6 +35,9 @@ namespace NetworkCommsDotNet
         List<byte[]> packets = new List<byte[]>();
         List<int> packetActualBytes = new List<int>();
 
+        /// <summary>
+        /// Locker object used for performing thread safe operations over this packet builder
+        /// </summary>
         public object Locker { get; private set; }
 
         int totalBytesCached = 0;

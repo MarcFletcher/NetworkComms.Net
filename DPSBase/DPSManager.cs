@@ -374,8 +374,8 @@ namespace DPSBase
                 loader.ProcessApplicationAssemblies(args);
             }
 #else
-            var loader = new AssemblyLoader();
-            var args = new ProcessArgument();
+            loader = new AssemblyLoader();
+            args = new ProcessArgument();
 
             loader.ProcessApplicationAssemblies(args);
 #endif
@@ -567,7 +567,7 @@ namespace DPSBase
                     }
 #endif
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     //using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
                     //    sw.WriteLine(ex.ToString());
