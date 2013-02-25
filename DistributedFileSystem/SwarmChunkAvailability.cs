@@ -483,6 +483,7 @@ namespace DistributedFileSystem
                             if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
                             {
                                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " with connectionInfo from item.");
+
                                 peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
                             }
                             else
@@ -491,6 +492,7 @@ namespace DistributedFileSystem
                         else
                             if (DFS.loggingEnabled) DFS.logger.Trace(" ... remove failed as forceRemove= " + forceRemove + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
                     }
+                    else if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer not removed as does not exist in local SwarmChunkAvailability.");
                 }
             }
             catch (Exception ex)
@@ -521,22 +523,7 @@ namespace DistributedFileSystem
                 //We can only add a peer if it is listening
                 if (endPointToUse.Port <= DFS.MaxTargetLocalPort && endPointToUse.Port >= DFS.MinTargetLocalPort)
                 {
-                    #region Remove Any Duplicate EndPoint Matches
-                    //Look for endPoint matches, if there are duplicates we delete any old ones
-                    List<ShortGuid> deadIdentifiers = new List<ShortGuid>();
-                    foreach (var connectionInfoEntry in peerNetworkIdentifierToConnectionInfo)
-                    {
-                        if (connectionInfoEntry.Value.LocalEndPoint == endPointToUse && connectionInfoEntry.Key != connectionInfo.NetworkIdentifier)
-                            deadIdentifiers.Add(connectionInfoEntry.Key);
-                    }
-                    if (deadIdentifiers.Count > 0)
-                    {
-                        if (DFS.loggingEnabled) DFS.Logger.Trace("Removed " + deadIdentifiers.Count + " dead peers from the local swarmChunkAvailability using endPoint " + endPointToUse);
-
-                        peerNetworkIdentifierToConnectionInfo = (from current in peerNetworkIdentifierToConnectionInfo where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry=> entry.Key, entry=> entry.Value);
-                        peerAvailabilityByNetworkIdentifierDict = (from current in peerAvailabilityByNetworkIdentifierDict where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
-                    }
-                    #endregion
+                    RemoveOldPeersAtEndPoint(connectionInfo.NetworkIdentifier, endPointToUse);
 
                     if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(connectionInfo.NetworkIdentifier))
                     {
@@ -560,6 +547,34 @@ namespace DistributedFileSystem
                 }
                 else
                     NetworkComms.LogError(new Exception("Attemped to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
+            }
+        }
+
+        /// <summary>
+        /// Removes any peers which have the same endPoint as the provided currentActivePeerEndPoint except one with matching currentActivePeerIdentifier
+        /// </summary>
+        /// <param name="currentActivePeerIdentifier">The NetworkIdenfier of the known active peer</param>
+        /// <param name="currentActivePeerEndPoint">The endPoint of the known active peer</param>
+        public void RemoveOldPeersAtEndPoint(ShortGuid currentActivePeerIdentifier, IPEndPoint currentActivePeerEndPoint)
+        {
+            lock (peerLocker)
+            {
+                #region Remove Any Duplicate EndPoint Matches
+                //Look for endPoint matches, if there are duplicates we delete any old ones
+                List<ShortGuid> deadIdentifiers = new List<ShortGuid>();
+                foreach (var connectionInfoEntry in peerNetworkIdentifierToConnectionInfo)
+                {
+                    if (connectionInfoEntry.Value.LocalEndPoint.Equals(currentActivePeerEndPoint) && !connectionInfoEntry.Key.Equals(currentActivePeerIdentifier))
+                        deadIdentifiers.Add(connectionInfoEntry.Key);
+                }
+                if (deadIdentifiers.Count > 0)
+                {
+                    if (DFS.loggingEnabled) DFS.Logger.Trace("Removed " + deadIdentifiers.Count + " dead peers from the local swarmChunkAvailability using endPoint " + currentActivePeerEndPoint);
+
+                    peerNetworkIdentifierToConnectionInfo = (from current in peerNetworkIdentifierToConnectionInfo where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
+                    peerAvailabilityByNetworkIdentifierDict = (from current in peerAvailabilityByNetworkIdentifierDict where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
+                }
+                #endregion
             }
         }
 

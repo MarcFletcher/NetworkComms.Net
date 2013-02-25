@@ -1367,6 +1367,8 @@ namespace DistributedFileSystem
         {
             try
             {
+                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingItemRemovalUpdate from " + connection + " for " + itemRemovalUpdate.ItemCheckSum + ". " + (itemRemovalUpdate.RemoveSwarmWide ? "SwamWide" : "Local Only") + ".");
+
                 lock (globalDFSLocker)
                 {
                     if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
@@ -1379,12 +1381,17 @@ namespace DistributedFileSystem
                             //If this is a swarmwide removal then we get rid of our local copy as well
                             RemoveItem(itemRemovalUpdate.ItemCheckSum, false);
                         else
+                        {
+                            //Delete any old references at the same time
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeersAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
+
                             //If this is not a swarm wide removal we just remove this peer from our local swarm copy
                             swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, true);
+                        }
                     }
+                    else
+                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... nothing removed as item not present locally.");
                 }
-
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingItemRemovalUpdate from " + connection + " for " + itemRemovalUpdate.ItemCheckSum + ". " + (itemRemovalUpdate.RemoveSwarmWide ? "SwamWide" : "Local Only") + ".");
             }
             catch (CommsException e)
             {

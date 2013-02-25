@@ -735,6 +735,9 @@ namespace DistributedFileSystem
                         {
                             if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
                             {
+                                //Delete any old references at the same time
+                                SwarmChunkAvailability.RemoveOldPeersAtEndPoint(connectionInfo.NetworkIdentifier, connectionInfo.RemoteEndPoint);
+
                                 //If no data was included it probably means our availability for this peer is wrong
                                 //If we remove the peer here it prevents us from nailing it
                                 //if the peer still has the file an availability update should be on it's way to us
