@@ -159,6 +159,7 @@ namespace DPSBase
             {
                 stream.Seek(startPosition, SeekOrigin.Begin);
                 stream.Write(data, 0, data.Length);
+                stream.Flush();
             }
         }
 

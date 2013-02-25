@@ -488,7 +488,6 @@ namespace NetworkCommsDotNet
         /// <returns>The selected local end point</returns>
         public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
         {           
-
 #if WINDOWS_PHONE
             var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
             if (t.Wait(20) && t.Result.Count > 0)
@@ -502,22 +501,9 @@ namespace NetworkCommsDotNet
             else
                 throw new ConnectionSetupException("Unable to determine correct local end point.");
 #else
-
             //We use UDP as its connectionless hence faster
-            Socket testSocket = new Socket(AddressFamily.Unspecified, SocketType.Dgram, ProtocolType.Udp);
-            
-            //This does not seem to function in mono
-            //System.Threading.AutoResetEvent ev = new System.Threading.AutoResetEvent(false);
-
-            //testSocket.BeginConnect(remoteIPEndPoint, new AsyncCallback((s) =>
-            //{
-            //    try { ev.Set(); }
-            //    catch (Exception) { }
-            //}), null);
-
-            //if (!ev.WaitOne(100)) throw new ConnectionSetupException("Unable to determine correct local end point.");
+            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             testSocket.Connect(remoteIPEndPoint);
-
             return (IPEndPoint)testSocket.LocalEndPoint;
 #endif
         }
@@ -2079,8 +2065,8 @@ namespace NetworkCommsDotNet
                     existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
-                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
-                            ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime) + " - " + " details - " + existingConnection.ConnectionInfo);
+                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). This can occasionaly occur if two peers try to connect to each other simultaneously. New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
+                            ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " - " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime) + " - " + " details - " + existingConnection.ConnectionInfo);
                     }
                     else
                     {

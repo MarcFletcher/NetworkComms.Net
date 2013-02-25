@@ -25,11 +25,11 @@ using System.Collections.Specialized;
 using NLog;
 using System.Threading;
 using System.IO;
-//using DistributedFileSystem;
 using NLog.Config;
 using NLog.Targets;
 using System.Net;
 using System.Diagnostics;
+using DPSBase;
 //using DistributedFileSystem;
 
 namespace DebugTests
@@ -47,7 +47,7 @@ namespace DebugTests
 
             Thread.CurrentThread.Name = "MainThread";
 
-            if (true)
+            if (false)
             {
                 //Configure the logger here
                 LoggingConfiguration logConfig = new LoggingConfiguration();
@@ -63,6 +63,9 @@ namespace DebugTests
                 NetworkComms.EnableLogging(logConfig);                
                 //DFS.EnableLogging(logConfig);
             }
+
+            //List<DistributedFileSystem.ItemAssemblyConfig> files = (from current in Directory.EnumerateFiles(Directory.GetCurrentDirectory(), "*.iac") select DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedFileSystem.ItemAssemblyConfig>(File.ReadAllBytes(current))).ToList();
+            //List<DistributedFileSystem.SwarmChunkAvailability> sca = (from current in files select DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedFileSystem.SwarmChunkAvailability>(current.SwarmChunkAvailabilityBytes)).ToList();
 
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };

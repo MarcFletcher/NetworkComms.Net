@@ -38,9 +38,9 @@ namespace NetworkCommsDotNet
         DatagramSocket socket;
 
         /// <summary>
-        /// The level at which this connection operates
+        /// Options associated with this UDPConnection
         /// </summary>
-        UDPOptions udpLevel;
+        public UDPOptions UDPOptions { get; private set; }
 
         /// <summary>
         /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
@@ -61,7 +61,7 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled)
                 NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
-            udpLevel = level;
+            UDPOptions = level;
 
             if (listenForIncomingPackets && existingConnection != null)
                 throw new Exception("Unable to listen for incoming packets if an existing client has been provided. This is to prevent possible multiple accidently listens on the same client.");
@@ -152,7 +152,7 @@ namespace NetworkCommsDotNet
 
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -202,7 +202,7 @@ namespace NetworkCommsDotNet
         protected override void EstablishConnectionSpecific()
         {
             //There is generally no establish for a UDP connection
-            if (udpLevel > 0)
+            if (UDPOptions > 0)
                 throw new NotImplementedException("A future version of networkComms will support additional udp levels.");
         }
 
@@ -337,9 +337,9 @@ namespace NetworkCommsDotNet
         UdpClientThreadSafe udpClientThreadSafe;
 
         /// <summary>
-        /// The level at which this connection operates
+        /// Options associated with this UDPConnection
         /// </summary>
-        UDPOptions udpLevel;
+        public UDPOptions UDPOptions { get; private set; }
 
         /// <summary>
         /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
@@ -362,7 +362,7 @@ namespace NetworkCommsDotNet
             //    ", RemoteEndPoint IPAddressFamily=" + (connectionInfo.RemoteEndPoint == null ? "NA" : connectionInfo.RemoteEndPoint.AddressFamily.ToString()));
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
-            udpLevel = level;
+            UDPOptions = level;
 
             if (listenForIncomingPackets && existingConnection != null)
                 throw new Exception("Unable to listen for incoming packets if an existing client has been provided. This is to prevent possible multiple accidently listens on the same client.");
@@ -415,7 +415,7 @@ namespace NetworkCommsDotNet
         protected override void EstablishConnectionSpecific()
         {
             //There is generally no establish for a UDP connection
-            if (udpLevel > 0)
+            if (UDPOptions > 0)
                 throw new NotImplementedException("A future version of networkComms will support additional udp levels.");
         }
 
@@ -477,7 +477,7 @@ namespace NetworkCommsDotNet
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
                 throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from "+ConnectionInfo.LocalEndPoint.Address +":"+ ConnectionInfo.LocalEndPoint.Port +" to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
@@ -487,7 +487,7 @@ namespace NetworkCommsDotNet
 
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ".");
         }
 
         /// <summary>
@@ -565,7 +565,7 @@ namespace NetworkCommsDotNet
                 {
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -642,7 +642,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, udpLevel, false, this);
+                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                         //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                         lock (connection.packetBuilder.Locker)

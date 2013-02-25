@@ -168,10 +168,14 @@ namespace DistributedFileSystem
         /// <param name="latestChunkFlags"></param>
         public void UpdateFlags(ChunkFlags latestChunkFlags)
         {
-            flags0 |= latestChunkFlags.flags0;
-            flags1 |= latestChunkFlags.flags1;
-            flags2 |= latestChunkFlags.flags2;
-            flags3 |= latestChunkFlags.flags3;
+            //flags0 |= latestChunkFlags.flags0;
+            //flags1 |= latestChunkFlags.flags1;
+            //flags2 |= latestChunkFlags.flags2;
+            //flags3 |= latestChunkFlags.flags3;
+            flags0 = latestChunkFlags.flags0;
+            flags1 = latestChunkFlags.flags1;
+            flags2 = latestChunkFlags.flags2;
+            flags3 = latestChunkFlags.flags3;
         }
 
         /// <summary>
@@ -471,19 +475,21 @@ namespace DistributedFileSystem
                         //We can remove this peer if
                         //1. We have set force remove
                         //or
-                        //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other one in order to remove
+                        //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other super peer in order to remove
                         if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer || (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
                         {
                             peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
 
                             if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
                             {
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " from item.");
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " with connectionInfo from item.");
                                 peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
                             }
                             else
                                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
                         }
+                        else
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... remove failed as forceRemove= " + forceRemove + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
                     }
                 }
             }
@@ -504,8 +510,7 @@ namespace DistributedFileSystem
 
             lock (peerLocker)
             {
-                if (connectionInfo.ConnectionType != ConnectionType.TCP)
-                    throw new Exception("Only the TCP side of a DFS peer should be tracked.");
+                if (connectionInfo.ConnectionType != ConnectionType.TCP) throw new Exception("Only the TCP side of a DFS peer should be tracked.");
 
                 IPEndPoint endPointToUse = null;
                 if (connectionInfo.RemoteEndPoint == null)
@@ -516,12 +521,31 @@ namespace DistributedFileSystem
                 //We can only add a peer if it is listening
                 if (endPointToUse.Port <= DFS.MaxTargetLocalPort && endPointToUse.Port >= DFS.MinTargetLocalPort)
                 {
+                    #region Remove Any Duplicate EndPoint Matches
+                    //Look for endPoint matches, if there are duplicates we delete any old ones
+                    List<ShortGuid> deadIdentifiers = new List<ShortGuid>();
+                    foreach (var connectionInfoEntry in peerNetworkIdentifierToConnectionInfo)
+                    {
+                        if (connectionInfoEntry.Value.LocalEndPoint == endPointToUse && connectionInfoEntry.Key != connectionInfo.NetworkIdentifier)
+                            deadIdentifiers.Add(connectionInfoEntry.Key);
+                    }
+                    if (deadIdentifiers.Count > 0)
+                    {
+                        if (DFS.loggingEnabled) DFS.Logger.Trace("Removed " + deadIdentifiers.Count + " dead peers from the local swarmChunkAvailability using endPoint " + endPointToUse);
+
+                        peerNetworkIdentifierToConnectionInfo = (from current in peerNetworkIdentifierToConnectionInfo where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry=> entry.Key, entry=> entry.Value);
+                        peerAvailabilityByNetworkIdentifierDict = (from current in peerAvailabilityByNetworkIdentifierDict where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
+                    }
+                    #endregion
+
                     if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(connectionInfo.NetworkIdentifier))
                     {
                         if (peerNetworkIdentifierToConnectionInfo[connectionInfo.NetworkIdentifier].LocalEndPoint.Port != endPointToUse.Port)
                             peerNetworkIdentifierToConnectionInfo[connectionInfo.NetworkIdentifier] = connectionInfo;
 
                         peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].PeerChunkFlags.UpdateFlags(latestChunkFlags);
+
+                        if (DFS.loggingEnabled) DFS.Logger.Trace("Updated existing chunk flags for "+ connectionInfo);
                     }
                     else
                     {
@@ -530,6 +554,8 @@ namespace DistributedFileSystem
                             peerNetworkIdentifierToConnectionInfo.Add(connectionInfo.NetworkIdentifier, new ConnectionInfo(connectionInfo.ConnectionType, connectionInfo.NetworkIdentifier, endPointToUse, connectionInfo.IsConnectable));
 
                         peerAvailabilityByNetworkIdentifierDict.Add(connectionInfo.NetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
+
+                        if (DFS.loggingEnabled) DFS.Logger.Trace("Added new chunk flags for " + connectionInfo);
                     }
                 }
                 else
@@ -808,13 +834,22 @@ namespace DistributedFileSystem
             });
         }
 
+        /// <summary>
+        /// Single method for determing if contact can be made with the request peer.
+        /// Prevents loopback contact via matching identifier and currentLocalListenEndPoints.
+        /// Finally uses the DFS.AllowedPeerIPS and DFS.DisallowedPeerIPS if set.
+        /// </summary>
+        /// <param name="peerIdentifier"></param>
+        /// <param name="peerEndPoint"></param>
+        /// <param name="superPeer"></param>
+        /// <returns></returns>
         public bool PeerContactAllowed(ShortGuid peerIdentifier, IPEndPoint peerEndPoint, bool superPeer)
         {
             if (peerIdentifier == NetworkComms.NetworkIdentifier)
                 return false;
 
-            List<IPEndPoint> currentLocaListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
-            if (currentLocaListenEndPoints.Contains(peerEndPoint))
+            List<IPEndPoint> currentLocalListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+            if (currentLocalListenEndPoints.Contains(peerEndPoint))
                 return false;
 
             //We always allow super peers

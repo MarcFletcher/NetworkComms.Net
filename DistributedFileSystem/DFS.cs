@@ -42,7 +42,7 @@ namespace DistributedFileSystem
         public const int NumConcurrentRequests = 2;
         public const int NumTotalGlobalRequests = 8;
         public const int MaxConcurrentLocalItemBuild = 3;
-        public const int MaxPeerTimeoutCount = 3;
+        public const int MaxPeerTimeoutCount = 2;
 
         public const int PeerBusyTimeoutMS = 500;
 
@@ -601,6 +601,9 @@ namespace DistributedFileSystem
         {
             try
             {
+                if (peerConnection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
+                    throw new Exception("Only able to push DFS item when the request is made via TCP.");
+
                 lock (globalDFSLocker)
                 {
                     //First double check to see if it's already in the swarm
@@ -773,8 +776,8 @@ namespace DistributedFileSystem
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
-            GeneralTaskFactory.StartNew(new Action(() =>
-            {
+            //GeneralTaskFactory.StartNew(new Action(() =>
+            //{
                 try
                 {
                     //We can only rely on the network identifier if this is a TCP connection shutting down
@@ -798,7 +801,7 @@ namespace DistributedFileSystem
                 {
                     NetworkComms.LogError(e, "Error_DFSConnectionShutdown");
                 }
-            }));
+            //}));
         }
 
         /// <summary>
@@ -914,6 +917,9 @@ namespace DistributedFileSystem
 
                     try
                     {
+                        if (assemblyConfig == null)
+                            throw new NullReferenceException("AssemblyConfig should not be null.");
+
                         if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
 
                         //We check to see if we already have the necessary file locally
@@ -980,8 +986,8 @@ namespace DistributedFileSystem
                     }
                     //finally
                     //{
-                        //Putting any code here appears to cause a sigsegv fault on leaving the finally in mono
-                        //Just moved the code out to below as it makes no diference
+                    //Putting any code here appears to cause a sigsegv fault on leaving the finally in mono
+                    //Just moved the code out to below as it makes no diference
                     //}
 
                     //Regardless of if the item completed we call the necessary packet handlers
@@ -1000,10 +1006,13 @@ namespace DistributedFileSystem
                     }
                 });
 
-            //Thread buildThread = new Thread(buildAction);
-            //buildThread.Name = "DFS_" + assemblyConfig.ItemIdentifier + "_Build";
-            //buildThread.Start();
-            BuildTaskFactory.StartNew(buildAction);
+            if (BuildTaskFactory == null)
+                NetworkComms.LogError(new NullReferenceException("BuildTaskFactory is null in IncomingLocalItemBuild"), "IncomingLocalBuildError");
+            else
+                //Thread buildThread = new Thread(buildAction);
+                //buildThread.Name = "DFS_" + assemblyConfig.ItemIdentifier + "_Build";
+                //buildThread.Start();
+                BuildTaskFactory.StartNew(buildAction);
         }
 
         /// <summary>
@@ -1093,7 +1102,7 @@ namespace DistributedFileSystem
                             StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
 
                             if (chunkData.Start + chunkData.Length > chunkData.ThreadSafeStream.Length)
-                                throw new ArgumentOutOfRangeException("The total stream length was " + chunkData.ThreadSafeStream.Length + " and the provided start was " + chunkData.Start + ", with a length of " + chunkData.Length + ". ChunkIndex=" + incomingRequest.ChunkIndex);
+                                throw new ArgumentOutOfRangeException("The total stream length was " + chunkData.ThreadSafeStream.Length + " and the provided start was " + chunkData.Start + ", with a length of " + chunkData.Length + ". ChunkIndex=" + incomingRequest.ChunkIndex + ", ItemBytesLength="+selectedItem.ItemBytesLength);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 

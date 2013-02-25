@@ -145,6 +145,8 @@ namespace DistributedFileSystem
 
         public DistributedItem(ItemAssemblyConfig assemblyConfig)
         {
+            //File.WriteAllBytes(assemblyConfig.ItemIdentifier + ".iac", DPSManager.GetDataSerializer<ProtobufSerializer>().SerialiseDataObject<ItemAssemblyConfig>(assemblyConfig).ThreadSafeStream.ToArray());
+
             this.TotalChunkSupplyCount = 0;
             this.PushCount = 0;
 
@@ -187,7 +189,12 @@ namespace DistributedFileSystem
                     this.ItemDataStream = new ThreadSafeStream(file);
                 }
                 else
-                    this.ItemDataStream = new ThreadSafeStream(new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+                {
+                    FileStream newStream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                    newStream.SetLength(ItemBytesLength);
+                    newStream.Flush();
+                    this.ItemDataStream = new ThreadSafeStream(newStream);
+                }
 
                 if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
             }
@@ -208,19 +215,18 @@ namespace DistributedFileSystem
 
             //Bug fix incase we have just gotten the same file twice and the super node did not know that we dropped it
             //If the SwarmChunkAvailability thinks we have everything but our local version is not correct then clear our flags which will force rebuild
-            if (SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkIdentifier, TotalNumChunks) && !LocalItemValid())
+            if (SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier).NumCompletedChunks() > 0 && !LocalItemValid())
             {
                 SwarmChunkAvailability.ClearAllLocalAvailabilityFlags();
                 SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
+                AddBuildLogLine("Created DFS item (reset local availability) - " + ItemIdentifier);
+
+                if (DFS.loggingEnabled) DFS.Logger.Trace("Reset local chunk availability for " + ItemIdentifier + " ("+ItemCheckSum+")");
             }
+            else
+                AddBuildLogLine("Created DFS item - " + ItemIdentifier);
 
             if (DFS.loggingEnabled) DFS.logger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
-        }
-
-        [ProtoAfterDeserialization]
-        private void AfterDeserialisation()
-        {
-            InitialiseChunkPositionLengthDict();
         }
 
         private void InitialiseChunkPositionLengthDict()
@@ -233,6 +239,11 @@ namespace DistributedFileSystem
                 ChunkPositionLengthDict.Add(i, new PositionLength(currentPosition, chunkSize));
                 currentPosition += chunkSize;
             }
+
+            //Validate what we have just creating
+            int expectedStreamLength = ChunkPositionLengthDict[TotalNumChunks - 1].Position + ChunkPositionLengthDict[TotalNumChunks - 1].Length;
+            if (expectedStreamLength != ItemDataStream.Length)
+                throw new Exception("Error initalising ChunkPositionLengthDict. Last entry puts expected stream length at " + expectedStreamLength + ", but stream length is actually " + ItemDataStream.Length +". ItemBytesLength=" + ItemBytesLength);
         }
 
         public override string ToString()
@@ -276,9 +287,9 @@ namespace DistributedFileSystem
 
         public void AssembleItem(int assembleTimeoutSecs)
         {
-            if (DFS.loggingEnabled) DFS.logger.Debug("Started DFS item assemble (" + this.ItemCheckSum + ").");
+            if (DFS.loggingEnabled) DFS.logger.Debug("Started DFS item assemble - "+ItemIdentifier+" (" + this.ItemCheckSum + ").");
 
-            AddBuildLogLine("Started DFS item assemble (" + this.ItemCheckSum + ").");
+            AddBuildLogLine("Started DFS item assemble - " + ItemIdentifier + " (" + this.ItemCheckSum + ").");
 
             //Used to load balance
             Random randGen = new Random();
@@ -453,7 +464,7 @@ namespace DistributedFileSystem
 
                                         newRequestCount++;
 
-                                        AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                        AddBuildLogLine("NewChunkRequest S1 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                         itemBuildTrackerDict.Add(chunkRarity[i], newChunkRequest);
 
@@ -477,34 +488,34 @@ namespace DistributedFileSystem
                             maxPeers = currentRequestConnectionInfo.Count;
 
                             int loopSafety = 0;
-                            while (nonIncomingOutstandingRequests.Count + newRequestCount < maxPeers * DFS.NumConcurrentRequests && //If the total number of requests is less than the total number of peers * our concurrency factor
-                                nonIncomingOutstandingRequests.Count + newRequestCount < numChunksLeft && //If the total number of requests is less than the number of chunks left
-                                nonIncomingOutstandingRequests.Count + newRequestCount < DFS.NumTotalGlobalRequests //If the total number of requests is less than the total requests limit
+                            while (nonIncomingOutstandingRequests.Count + newRequestCount < maxPeers * DFS.NumConcurrentRequests && //While the total number of requests is less than the total number of peers * our concurrency factor
+                                nonIncomingOutstandingRequests.Count + newRequestCount < numChunksLeft && //While the total number of requests is less than the number of chunks left
+                                nonIncomingOutstandingRequests.Count + newRequestCount < DFS.NumTotalGlobalRequests //While the total number of requests is less than the total requests limit
                                 )
                             {
                                 if (loopSafety > 1000)
-                                    throw new Exception("Loop safety triggered. outstandingRequests=" + nonIncomingOutstandingRequests.Count +
-                                ". newRequestCount=" + newRequestCount +
-                                ". maxPeers=" + maxPeers +
-                                ". numChunksLeft=" + numChunksLeft +
-                                ".");
+                                    throw new Exception("Loop safety triggered. outstandingRequests=" + nonIncomingOutstandingRequests.Count + ". newRequestCount=" + newRequestCount + ". maxPeers=" + maxPeers + ". numChunksLeft=" + numChunksLeft + ".");
 
                                 //We shuffle the peer list so that we never go in the same order on successive loops
                                 currentRequestConnectionInfo = ShuffleList.Shuffle(currentRequestConnectionInfo).ToList();
+
                                 for (int i = 0; i < currentRequestConnectionInfo.Count; i++)
                                 {
                                     //We want to check here and skip this peer if we already have enough requests
                                     //Or if the peer is marked as busy
-                                    int outstandingRequestsFromCurrentPeer = nonIncomingOutstandingRequests.Count(entry => entry.PeerConnectionInfo == currentRequestConnectionInfo[i]);
+                                    int numOutstandingRequestsFromCurrentPeer = nonIncomingOutstandingRequests.Count(entry => entry.PeerConnectionInfo == currentRequestConnectionInfo[i]);
+                                    
                                     int newRequestsFromCurrentPeer = 0;
                                     if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                         newRequestsFromCurrentPeer = newRequests[currentRequestConnectionInfo[i]].Count;
 
-                                    if (outstandingRequestsFromCurrentPeer + newRequestsFromCurrentPeer >= DFS.NumConcurrentRequests)
+                                    if (numOutstandingRequestsFromCurrentPeer + newRequestsFromCurrentPeer >= DFS.NumConcurrentRequests)
                                         continue;
 
                                     //Its possible we have pulled out a peer for whom we no longer have availability info for
-                                    if (nonLocalPeerAvailability.ContainsKey(currentRequestConnectionInfo[i]) && !SwarmChunkAvailability.PeerBusy(currentRequestConnectionInfo[i].NetworkIdentifier))
+                                    if (SwarmChunkAvailability.PeerExistsInSwarm(currentRequestConnectionInfo[i].NetworkIdentifier) && 
+                                        nonLocalPeerAvailability.ContainsKey(currentRequestConnectionInfo[i]) && 
+                                        !SwarmChunkAvailability.PeerBusy(currentRequestConnectionInfo[i].NetworkIdentifier))
                                     {
                                         //which chunks does this peer have that we could use?
                                         ChunkFlags peerAvailability = nonLocalPeerAvailability[currentRequestConnectionInfo[i]].PeerChunkFlags;
@@ -518,7 +529,7 @@ namespace DistributedFileSystem
                                                 //We can now add the new request to the build dictionaries
                                                 ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i]);
 
-                                                AddBuildLogLine("NewChunkRequest Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                                AddBuildLogLine("NewChunkRequest S2 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                                 if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                                     newRequests[currentRequestConnectionInfo[i]].Add(newChunkRequest);
@@ -723,10 +734,12 @@ namespace DistributedFileSystem
                         else
                         {
                             if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
+                            {
                                 //If no data was included it probably means our availability for this peer is wrong
                                 //If we remove the peer here it prevents us from nailing it
                                 //if the peer still has the file an availability update should be on it's way to us
-                                SwarmChunkAvailability.RemovePeerFromSwarm(connectionInfo.NetworkIdentifier);
+                                SwarmChunkAvailability.RemovePeerFromSwarm(connectionInfo.NetworkIdentifier, true);
+                            }
                             else if (incomingReply.ReplyState == ChunkReplyState.PeerBusy)
                                 SwarmChunkAvailability.SetPeerBusy(connectionInfo.NetworkIdentifier);
 
@@ -957,7 +970,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Load the specified distributed item. Does not add the .DFSItem extension
+        /// Load the specified distributed item. Does not add the .DFSItem extension to the fileName
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
@@ -965,9 +978,16 @@ namespace DistributedFileSystem
         {
             DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
             loadedItem.ItemDataStream = new ThreadSafeStream(dataStream);
+            loadedItem.InitialiseChunkPositionLengthDict();
             loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, loadedItem.TotalNumChunks);
             return loadedItem;
         }
+
+        //[ProtoAfterDeserialization]
+        //private void AfterDeserialisation()
+        //{
+        //    InitialiseChunkPositionLengthDict();
+        //}
 
         /// <summary>
         /// Save this distributed item, adds .DFSItem extension.

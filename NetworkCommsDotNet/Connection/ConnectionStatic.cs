@@ -114,9 +114,17 @@ namespace NetworkCommsDotNet
 
             for (int i = 0; i < allConnections.Count; i++)
             {
-                int innerIndex = i;
-                ManualResetEvent handle = new ManualResetEvent(false);
+                //We don't send null packets to unconnected udp connections
+                UDPConnection asUDP = allConnections[i] as UDPConnection;
+                if (asUDP != null && asUDP.UDPOptions == UDPOptions.None)
+                {
+                    if (Interlocked.Decrement(ref reamainingConnectionCount) == 0)
+                        allConnectionsComplete.Set();
 
+                    continue;
+                }
+
+                int innerIndex = i;
                 ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {
                     try
