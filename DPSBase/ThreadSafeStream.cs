@@ -174,7 +174,7 @@ namespace DPSBase
             lock (streamLocker)
             {
                 //Initialise the buffer at either the total length or 8KB, which ever is smallest
-                byte[] buffer = new byte[length > 4096 ? 4096 : length];
+                byte[] buffer = new byte[Math.Min(80000, length)];
 
                 //Make sure we start in the write place
                 stream.Seek(startPosition, SeekOrigin.Begin);
