@@ -156,9 +156,9 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
 
                 //UDP
-                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest);//, highPrioReceiveSRO);
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest, highPrioReceiveSRO);
                 //UDP
-                NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate);//, highPrioReceiveSRO);
+                NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate, highPrioReceiveSRO);
 
                 //UDP
                 NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate);//, highPrioReceiveSRO);
@@ -574,25 +574,6 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Pings all clients for a tracked item to make sure they are still alive. 
-        /// Any clients which fail to respond within a sensible time are removed for the item swarm.
-        /// </summary>
-        /// <param name="itemCheckSum"></param>
-        public static void UpdateItemSwarmStatus(string itemCheckSum, int responseTimeMS)
-        {
-            DistributedItem itemToUpdate = null;
-
-            lock (globalDFSLocker)
-            {
-                if (swarmedItemsDict.ContainsKey(itemCheckSum))
-                    itemToUpdate = swarmedItemsDict[itemCheckSum];
-            }
-
-            if (itemToUpdate != null)
-                itemToUpdate.UpdateItemSwarmStatus(responseTimeMS);
-        }
-
-        /// <summary>
         /// Introduces a new item into the swarm and sends a distribution command to the originating requester
         /// </summary>
         /// <param name="requestOriginNetworkIdentifier"></param>
@@ -781,7 +762,7 @@ namespace DistributedFileSystem
                 try
                 {
                     //We can only rely on the network identifier if this is a TCP connection shutting down
-                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.ConnectionState == ConnectionState.Established)
+                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
                     {
                         lock (globalDFSLocker)
                         {
@@ -790,8 +771,10 @@ namespace DistributedFileSystem
                                 item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
                         }
 
-                        if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown triggered for peer " + connection + ".");
+                        if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
                     }
+                    else
+                        if (loggingEnabled) DFS.logger.Trace("DFSConnectionShutdown Global - Disconnection ignored - " + connection + ".");
                 }
                 catch (CommsException e)
                 {
@@ -874,9 +857,7 @@ namespace DistributedFileSystem
                             if (currentItem.SwarmChunkAvailability.PeerContactAllowed(ShortGuid.Empty, peerEndPoint, false))
                             {
                                 currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest from within KnownPeersUpdate.");
-                                //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendReceiveObject<PeerChunkAvailabilityUpdate>("DFS_ChunkAvailabilityRequest", "DFS_PeerChunkAvailabilityUpdate", (int)(responseTimeoutMS * 0.9), itemCheckSum);
                                 UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", peerList.ItemChecksm, peerEndPoint, nullCompressionSRO);
-                                //currentItem.AddBuildLogLine(" ... completed DFS_ChunkAvailabilityRequest with " + peerContactInfo);
                             }
                         }
                         catch (CommsException)
@@ -960,6 +941,16 @@ namespace DistributedFileSystem
                         }
                         else if (assemblyConfig.CompletedPacketType != "")
                             RemoveItem(assemblyConfig.ItemCheckSum);
+
+                        if (DFS.loggingEnabled)
+                        {
+                            Exception exceptionToLogWith = new Exception("Build completed succesfully. Logging was enabled so saving build log.");
+                            string fileName = "DFSItemBuildLog_" + newItem.ItemIdentifier + "_" + NetworkComms.NetworkIdentifier;
+                            if (newItem != null)
+                                NetworkComms.LogError(exceptionToLogWith, fileName, newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                            else
+                                NetworkComms.LogError(exceptionToLogWith, fileName, "newItem==null so no build log was available.");
+                        }
                     }
                     catch (CommsException e)
                     {

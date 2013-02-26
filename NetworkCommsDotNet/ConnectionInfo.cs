@@ -73,6 +73,9 @@ namespace NetworkCommsDotNet
         [ProtoMember(4)]
         int localEndPointPort; //Only set on serialise
 
+        bool hashCodeCacheSet = false;
+        int hashCodeCache;
+
         /// <summary>
         /// True if the <see cref="RemoteEndPoint"/> is connectable.
         /// </summary>
@@ -119,7 +122,14 @@ namespace NetworkCommsDotNet
                 if (NetworkIdentifierStr == null || NetworkIdentifierStr == "") return ShortGuid.Empty;
                 else return new ShortGuid(NetworkIdentifierStr);
             }
-            private set { NetworkIdentifierStr = value; }
+            private set 
+            {
+                lock (internalLocker)
+                {
+                    NetworkIdentifierStr = value;
+                    hashCodeCacheSet = false;
+                }
+            }
         }
 
         DateTime lastTrafficTime;
@@ -280,7 +290,10 @@ namespace NetworkCommsDotNet
         internal void UpdateLocalEndPointInfo(IPEndPoint localEndPoint)
         {
             lock (internalLocker)
+            {
+                hashCodeCacheSet = false;
                 this.LocalEndPoint = localEndPoint;
+            }
         }
 
         /// <summary>
@@ -387,10 +400,20 @@ namespace NetworkCommsDotNet
         /// <returns>The hashcode for this connection info</returns>
         public override int GetHashCode()
         {
-            if (RemoteEndPoint != null)
-                return NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode();
-            else
-                return NetworkIdentifier.GetHashCode();
+            lock (internalLocker)
+            {
+                if (!hashCodeCacheSet)
+                {
+                    if (RemoteEndPoint != null)
+                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode();
+                    else
+                        hashCodeCache = NetworkIdentifier.GetHashCode();
+
+                    hashCodeCacheSet = true;
+                }
+
+                return hashCodeCache;
+            }
         }
 
         /// <summary>
@@ -402,7 +425,7 @@ namespace NetworkCommsDotNet
             string returnString = "[" + ConnectionType + "] ";
 
             if (ConnectionState == ConnectionState.Established)
-                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifierStr + ")";
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifier + ")";
             else
             {
                 if (RemoteEndPoint != null && LocalEndPoint != null)

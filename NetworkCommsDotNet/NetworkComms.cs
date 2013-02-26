@@ -63,7 +63,9 @@ namespace NetworkCommsDotNet
             ConnectionEstablishTimeoutMS = 30000;
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
-            
+
+            ThreadPool.SetMaxThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 2);
+
             IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
             IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
 

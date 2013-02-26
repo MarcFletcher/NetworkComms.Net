@@ -506,8 +506,30 @@ namespace NetworkCommsDotNet
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
+                        bool exceptionOccured = false;
+                        ManualResetEvent writeCompleted = new ManualResetEvent(false);
+
                         //Send a single 0 byte
-                        tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+                        //tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+
+                        tcpClientNetworkStream.BeginWrite(new byte[] { 0 }, 0, 1, new AsyncCallback((result) =>
+                            {
+                                try
+                                {
+                                    tcpClientNetworkStream.EndWrite(result);
+                                }
+                                catch (Exception)
+                                {
+                                    exceptionOccured = true;
+                                }
+                                finally
+                                {
+                                    writeCompleted.Set();
+                                }
+                            }), null);
+
+                        if (!writeCompleted.WaitOne(1000) || exceptionOccured)
+                            throw new Exception("Null packet send timeout.");
 
                         //Update the traffic time after we have written to netStream
                         ConnectionInfo.UpdateLastTrafficTime();

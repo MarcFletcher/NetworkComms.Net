@@ -199,7 +199,11 @@ namespace DistributedFileSystem
                 if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
             }
             else if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Memory || assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
-                this.ItemDataStream = new ThreadSafeStream(new MemoryStream(ItemBytesLength));
+            {
+                MemoryStream itemStream = new MemoryStream(ItemBytesLength);
+                itemStream.SetLength(ItemBytesLength);
+                this.ItemDataStream = new ThreadSafeStream(itemStream);
+            }
 
             InitialiseChunkPositionLengthDict();
 
@@ -295,27 +299,35 @@ namespace DistributedFileSystem
             Random randGen = new Random();
             DateTime assembleStartTime = DateTime.Now;
 
+            //Start by broadcasting our start of build
+            SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
+
             //Contact all known peers and request an update
-            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, ItemBuildCascadeDepth, 2000, AddBuildLogLine);
+            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, ItemBuildCascadeDepth, 5000, AddBuildLogLine);
 
             NetworkComms.ConnectionEstablishShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionEstablishShutdownDelegate((Connection connection) =>
             {
                 //On a closed conneciton we make sure we have no outstanding requests with that client
-                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.ConnectionState == ConnectionState.Established)
+                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
                 {
                     lock (itemLocker)
                     {
-                        //Console.WriteLine("Disconnected - Removing requests to peer "+ connectionId);
                         SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
                         itemBuildTrackerDict = (from current in itemBuildTrackerDict where current.Value.PeerConnectionInfo.NetworkIdentifier != connection.ConnectionInfo.NetworkIdentifier select current).ToDictionary(dict => dict.Key, dict => dict.Value);
                         itemBuildWait.Set();
                     }
+
+                    if (DFS.loggingEnabled) DFS.Logger.Debug("DFSConnectionShutdown Item - Removed peer from all items - " + connection + ".");
                 }
+                else
+                    if (DFS.loggingEnabled) DFS.Logger.Trace("DFSConnectionShutdown Item - Disconnection ignored - " + connection + ".");
             });
 
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionShutdownDuringBuild);
             
             AbortBuild = false;
+
+            bool buildTimeHalfWayPoint = false;
 
             //Loop until the local file is complete
             while (!LocalItemComplete() && !AbortBuild)
@@ -335,14 +347,17 @@ namespace DistributedFileSystem
                     Dictionary<ConnectionInfo, PeerAvailabilityInfo> nonLocalPeerAvailability;
                     Dictionary<byte, Dictionary<ConnectionInfo, PeerAvailabilityInfo>> nonLocalChunkExistence = SwarmChunkAvailability.CachedNonLocalChunkExistences(TotalNumChunks, out nonLocalPeerAvailability);
 
+                    //If over half the number of swarm peers are completed we will use them rather than uncompleted peers
+                    bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
+
                     //We only go any further if we were given some data
                     //if were werent chances are we are actually done
                     if (nonLocalChunkExistence.Count > 0)
                     {
-                        AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerAvailabilityInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count() + " unique peers.");
+                        AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerAvailabilityInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count(entry=> entry.PeerOnline) + " unique online peers.");
 
                         //We will want to know how many unique peers we can potentially contact
-                        int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.PeerBusy)).Max();
+                        int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.PeerBusy && entry.Value.PeerOnline)).Max();
 
                         //We will want to know how many chunks we have left to get
                         int numChunksLeft = TotalNumChunks - itemBuildTrackerDict.Count;
@@ -415,15 +430,12 @@ namespace DistributedFileSystem
 
                                     //Determine if this chunk contains non super peers, if it does we will never contact the super peers (keeps load on super peers low)
                                     //We have non super peers if the number of peers who are not us and are not super peers is greater than 0
-                                    bool containsNonSuperPeers = (nonLocalChunkExistence[chunkRarity[i]].Count(entry => entry.Key.NetworkIdentifier != NetworkComms.NetworkIdentifier && !entry.Value.SuperPeer) > 0);
-
-                                    //If over half the number of swarm peers are completed we will use them rather than uncompleted peers
-                                    bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
+                                    bool containsNonSuperPeers = (nonLocalChunkExistence[chunkRarity[i]].Count(entry => entry.Key.NetworkIdentifier != NetworkComms.NetworkIdentifier && !entry.Value.SuperPeer && entry.Value.PeerOnline) > 0);
 
                                     //We can now determine which peers we could contact for this chunk
                                     ConnectionInfo[] possibleChunkPeers = (from current in nonLocalChunkExistence[chunkRarity[i]]
                                                                            //We don't want to to contact busy peers
-                                                                           where !current.Value.PeerBusy
+                                                                           where !current.Value.PeerBusy && current.Value.PeerOnline
                                                                            //If we have nonSuperPeers then we only include the non super peers
                                                                            where (containsNonSuperPeers ? !current.Value.SuperPeer : true)
                                                                            //We don't want a peer from whom we currently await a response
@@ -515,7 +527,8 @@ namespace DistributedFileSystem
                                     //Its possible we have pulled out a peer for whom we no longer have availability info for
                                     if (SwarmChunkAvailability.PeerExistsInSwarm(currentRequestConnectionInfo[i].NetworkIdentifier) && 
                                         nonLocalPeerAvailability.ContainsKey(currentRequestConnectionInfo[i]) && 
-                                        !SwarmChunkAvailability.PeerBusy(currentRequestConnectionInfo[i].NetworkIdentifier))
+                                        !SwarmChunkAvailability.PeerBusy(currentRequestConnectionInfo[i].NetworkIdentifier) &&
+                                        SwarmChunkAvailability.PeerOnline(currentRequestConnectionInfo[i].NetworkIdentifier))
                                     {
                                         //which chunks does this peer have that we could use?
                                         ChunkFlags peerAvailability = nonLocalPeerAvailability[currentRequestConnectionInfo[i]].PeerChunkFlags;
@@ -667,8 +680,17 @@ namespace DistributedFileSystem
                     //If we made no requests, then we have enough outstanding or all peers are busy
                     WaitHandle.WaitAny(new WaitHandle[] { itemBuildWait, itemBuildComplete }, DFS.PeerBusyTimeoutMS);
 
-                if ((DateTime.Now - assembleStartTime).TotalSeconds > assembleTimeoutSecs)
+
+                double currentElapsedBuildTime = (DateTime.Now - assembleStartTime).TotalSeconds;
+                if (currentElapsedBuildTime > assembleTimeoutSecs)
                     throw new TimeoutException("AssembleItem() has taken longer than " + assembleTimeoutSecs + " secs so has been timed out.");
+
+                if (!buildTimeHalfWayPoint && currentElapsedBuildTime > assembleTimeoutSecs / 2.0)
+                {
+                    //If we get to the half way point we trigger another round of peer updates to see if we are missing anyone
+                    SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, 1, 5000, AddBuildLogLine);
+                    buildTimeHalfWayPoint = true;
+                }
 
                 if (DFS.DFSShutdownRequested)
                     return;
@@ -950,14 +972,6 @@ namespace DistributedFileSystem
         {
             lock (itemLocker)
                 return SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkIdentifier, TotalNumChunks);
-        }
-
-        /// <summary>
-        /// Triggers a client update of all clients in swarm. Returns within 50ms regardless of whether responses have yet been received.
-        /// </summary>
-        public void UpdateItemSwarmStatus(int responseTimeoutMS)
-        {
-            SwarmChunkAvailability.UpdatePeerAvailability(ItemCheckSum, 0, responseTimeoutMS);
         }
 
         public void Dispose()

@@ -76,7 +76,7 @@ namespace ExamplesConsole
                 ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
                 //seedConnectionInfo.ResetNetworkIdentifer(NetworkComms.NetworkIdentifier);
 
-                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfo, ItemBuildTarget.Disk);
+                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfo, ItemBuildTarget.Memory);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {

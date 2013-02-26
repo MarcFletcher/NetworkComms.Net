@@ -108,9 +108,9 @@ namespace NetworkCommsDotNet
         {
             //Loop through all connections and test the alive state
             List<Connection> allConnections = NetworkComms.GetExistingConnection();
-            int reamainingConnectionCount = allConnections.Count;
+            int remainingConnectionCount = allConnections.Count;
 
-            AutoResetEvent allConnectionsComplete = new AutoResetEvent(false);
+            ManualResetEvent allConnectionsComplete = new ManualResetEvent(false);
 
             for (int i = 0; i < allConnections.Count; i++)
             {
@@ -118,46 +118,54 @@ namespace NetworkCommsDotNet
                 UDPConnection asUDP = allConnections[i] as UDPConnection;
                 if (asUDP != null && asUDP.UDPOptions == UDPOptions.None)
                 {
-                    if (Interlocked.Decrement(ref reamainingConnectionCount) == 0)
+                    if (Interlocked.Decrement(ref remainingConnectionCount) == 0)
                         allConnectionsComplete.Set();
 
                     continue;
                 }
-
-                int innerIndex = i;
-                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
+                else
                 {
-                    try
+                    int innerIndex = i;
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                     {
-                        //If the connection is server side we poll preferentially
-                        if (allConnections[innerIndex] != null)
+                        try
                         {
-                            if (allConnections[innerIndex].ConnectionInfo.ServerSide)
+                            //If the connection is server side we poll preferentially
+                            if (allConnections[innerIndex] != null)
                             {
-                                //We check the last incoming traffic time
-                                //In scenarios where the client is sending us lots of data there is no need to poll
-                                if ((DateTime.Now - allConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
-                                    allConnections[innerIndex].SendNullPacket();
-                            }
-                            else
-                            {
-                                //If we are client side we wait upto an additional 3 seconds to do the poll
-                                //This means the server will probably beat us
-                                if ((DateTime.Now - allConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
-                                    allConnections[innerIndex].SendNullPacket();
+                                if (allConnections[innerIndex].ConnectionInfo.ServerSide)
+                                {
+                                    //We check the last incoming traffic time
+                                    //In scenarios where the client is sending us lots of data there is no need to poll
+                                    if ((DateTime.Now - allConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs)
+                                        allConnections[innerIndex].SendNullPacket();
+                                }
+                                else
+                                {
+                                    //If we are client side we wait upto an additional 3 seconds to do the poll
+                                    //This means the server will probably beat us
+                                    if ((DateTime.Now - allConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
+                                        allConnections[innerIndex].SendNullPacket();
+                                }
                             }
                         }
-                    }
-                    catch (Exception) { }
-                    finally
-                    {
-                        if (Interlocked.Decrement(ref reamainingConnectionCount) == 0)
-                            allConnectionsComplete.Set();
-                    }
-                }));
+                        catch (Exception) { }
+                        finally
+                        {
+                            if (Interlocked.Decrement(ref remainingConnectionCount) == 0)
+                                allConnectionsComplete.Set();
+                        }
+                    }));
+                }
             }
 
-            if (!returnImmediately && allConnections.Count > 0) allConnectionsComplete.WaitOne();
+            //Max wait is 1 seconds per connection
+            if (!returnImmediately && allConnections.Count > 0)
+            {
+                if (!allConnectionsComplete.WaitOne(allConnections.Count * 1000))
+                    //This timeout should not really happen so we are going to log an error if it does
+                    NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count + " seconds waiting for null packet sends to finish. " + remainingConnectionCount + " connection waits remain."), "NullPacketKeepAliveTimeoutError");
+            }
         }
 
         /// <summary>
