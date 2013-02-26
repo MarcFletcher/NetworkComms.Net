@@ -1092,8 +1092,8 @@ namespace DistributedFileSystem
                             //We get the data here
                             StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
 
-                            if (chunkData.Start + chunkData.Length > chunkData.ThreadSafeStream.Length)
-                                throw new ArgumentOutOfRangeException("The total stream length was " + chunkData.ThreadSafeStream.Length + " and the provided start was " + chunkData.Start + ", with a length of " + chunkData.Length + ". ChunkIndex=" + incomingRequest.ChunkIndex + ", ItemBytesLength="+selectedItem.ItemBytesLength);
+                            //if (chunkData.Start + chunkData.Length > chunkData.ThreadSafeStream.Length)
+                            //    throw new ArgumentOutOfRangeException("The total stream length was " + chunkData.ThreadSafeStream.Length + " and the provided start was " + chunkData.Start + ", with a length of " + chunkData.Length + ". ChunkIndex=" + incomingRequest.ChunkIndex + ", ItemBytesLength="+selectedItem.ItemBytesLength);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 

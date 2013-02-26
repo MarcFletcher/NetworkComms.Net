@@ -106,6 +106,8 @@ namespace NetworkCommsDotNet
         /// <param name="returnImmediately"></param>
         private static void AllConnectionsSendNullPacketKeepAlive(bool returnImmediately = false)
         {
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Starting AllConnectionsSendNullPacketKeepAlive");
+
             //Loop through all connections and test the alive state
             List<Connection> allConnections = NetworkComms.GetExistingConnection();
             int remainingConnectionCount = allConnections.Count;

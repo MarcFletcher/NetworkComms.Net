@@ -78,6 +78,7 @@
   <ItemGroup>
     <Compile Include="AdvancedSend.cs" />
     <Compile Include="BasicSend.cs" />
+    <Compile Include="SpeedTest.cs" />
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="Program.cs" />
