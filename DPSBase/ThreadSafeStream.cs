@@ -29,8 +29,6 @@ namespace DPSBase
     /// </summary>
     public class ThreadSafeStream : IDisposable
     {
-        static object writeLocker = new object();
-   
         private Stream stream;
         private object streamLocker = new object();
 
@@ -165,34 +163,42 @@ namespace DPSBase
         /// <param name="length"></param>
         public void CopyTo(Stream destinationStream, int startPosition, int length)
         {
+            //Initialise the buffer at either the total length or 8KB, which ever is smallest
+            //This is the largest copy buffer we can use without mono putting the buffer on the LOH
+            //According to this http://www.mono-project.com/Working_With_SGen
+            //Performance is improved if buffer is increased to 80KB
+            //byte[] buffer = new byte[Math.Min(8000, length)];
+            byte[] buffer = new byte[length];
+            System.Threading.AutoResetEvent writeAgainSignal = new System.Threading.AutoResetEvent(false); 
+
             lock (streamLocker)
             {
-                //Initialise the buffer at either the total length or 8KB, which ever is smallest
-                //This is the largest copy buffer we can use without mono putting the buffer on the LOH
-                //According to this http://www.mono-project.com/Working_With_SGen
-                //Performance is improved if buffer is increased to 80KB
-                byte[] buffer = new byte[Math.Min(80000, length)];
-
                 //Make sure we start in the write place
                 stream.Seek(startPosition, SeekOrigin.Begin);
                 int totalBytesCopied = 0;
                 while (true)
                 {
                     int bytesRemaining = length - totalBytesCopied;
-                    
+
                     if (bytesRemaining == 0)
                         break;
 
                     int read = stream.Read(buffer, 0, (buffer.Length > bytesRemaining ? bytesRemaining : buffer.Length));
-                    
-                    if (read <= 0) 
+
+                    if (read <= 0)
                         break;
 
                     if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
 
-                    lock(writeLocker)
-                        destinationStream.Write(buffer, 0, read);
+                    //destinationStream.Write(buffer, 0, read);
+                    destinationStream.BeginWrite(buffer, 0, read,
+                    new AsyncCallback((result) =>
+                        {
+                            destinationStream.EndWrite(result);
+                            writeAgainSignal.Set();
+                        }), null);
 
+                    writeAgainSignal.WaitOne();
                     totalBytesCopied += read;
                 }
             }
