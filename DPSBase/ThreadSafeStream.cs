@@ -177,8 +177,15 @@ namespace DPSBase
                 while (true)
                 {
                     int bytesRemaining = length - totalBytesCopied;
+                    
+                    if (bytesRemaining == 0) 
+                        break;
+
                     int read = stream.Read(buffer, 0, (buffer.Length > bytesRemaining ? bytesRemaining : buffer.Length));
-                    if (read <= 0) return;
+                    
+                    if (read <= 0) 
+                        break;
+
                     destinationStream.Write(buffer, 0, read);
                     totalBytesCopied += read;
                 }
