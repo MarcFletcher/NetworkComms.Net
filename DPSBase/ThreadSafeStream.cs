@@ -150,7 +150,21 @@ namespace DPSBase
             lock (streamLocker)
             {
                 stream.Seek(startPosition, SeekOrigin.Begin);
-                stream.Write(data, 0, data.Length);
+
+                System.Threading.AutoResetEvent wait = new System.Threading.AutoResetEvent(false); 
+
+                //stream.Write(data, 0, data.Length);
+                stream.BeginWrite(data, 0, data.Length, new AsyncCallback(result =>
+                    {
+                        stream.EndWrite(result);
+                        wait.Set();
+                    }), null);
+
+                //Choose a timeout that allows upto 5.2 seconds per MB. Corresponds to minimum write speed of 0.2MB/s
+                int waitTimeMS = (int)(data.Length * 5E-3);
+                if (!wait.WaitOne(waitTimeMS))
+                    throw new TimeoutException("Timeout waiting to write " + (data.Length/1024.0).ToString("0.0") + "KB after " + (waitTimeMS / 1000.0).ToString("0.0") + " seconds.");
+                
                 stream.Flush();
             }
         }
@@ -166,10 +180,8 @@ namespace DPSBase
             //Initialise the buffer at either the total length or 8KB, which ever is smallest
             //This is the largest copy buffer we can use without mono putting the buffer on the LOH
             //According to this http://www.mono-project.com/Working_With_SGen
-            //Performance is improved if buffer is increased to 80KB
-            //byte[] buffer = new byte[Math.Min(8000, length)];
-            byte[] buffer = new byte[length];
-            System.Threading.AutoResetEvent writeAgainSignal = new System.Threading.AutoResetEvent(false); 
+            //Performance can be improved if buffer is increased to 80KB
+            byte[] buffer = new byte[Math.Min(8000, length)];
 
             lock (streamLocker)
             {
@@ -190,15 +202,7 @@ namespace DPSBase
 
                     if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
 
-                    //destinationStream.Write(buffer, 0, read);
-                    destinationStream.BeginWrite(buffer, 0, read,
-                    new AsyncCallback((result) =>
-                        {
-                            destinationStream.EndWrite(result);
-                            writeAgainSignal.Set();
-                        }), null);
-
-                    writeAgainSignal.WaitOne();
+                    destinationStream.Write(buffer, 0, read);
                     totalBytesCopied += read;
                 }
             }

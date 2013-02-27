@@ -65,6 +65,7 @@
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="LoadTest.cs" />
+    <Compile Include="MonoFileStreamTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

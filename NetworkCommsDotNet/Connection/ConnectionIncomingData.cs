@@ -177,7 +177,7 @@ namespace NetworkCommsDotNet
                             }
 
                             //We clear the bytes we have just handed off
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer from connection with " + ConnectionInfo +".");
                             packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
 
                             //Reset the expected bytes to 0 so that the next check starts from scratch

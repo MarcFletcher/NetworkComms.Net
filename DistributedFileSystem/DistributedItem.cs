@@ -87,6 +87,11 @@ namespace DistributedFileSystem
         /// </summary>
         Dictionary<byte, ChunkAvailabilityRequest> itemBuildTrackerDict;
 
+        /// <summary>
+        /// Contains chunk data that is ready to integrate
+        /// </summary>
+        //Queue<ChunkAvailabilityReply> chunkDataToIntegrateQueue;
+
         AutoResetEvent itemBuildWait = new AutoResetEvent(false);
         ManualResetEvent itemBuildComplete = new ManualResetEvent(false);
 
@@ -720,17 +725,20 @@ namespace DistributedFileSystem
             //catch (Exception) { }
         }
 
-        public void HandleIncomingChunkReply(ChunkAvailabilityReply incomingReply, ConnectionInfo connectionInfo)
+        public void HandleIncomingChunkReply(ChunkAvailabilityReply incomingReply)
         {
             try
             {
+                if (incomingReply.SourceConnectionInfo == null)
+                    throw new NullReferenceException("The sourceConnection info should have been set by this point.");
+
                 string logString = "";
                 if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
-                    logString = "Incoming SUCCESS reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming SUCCESS reply from " + incomingReply.SourceConnectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
-                    logString = "Incoming FAILURE reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming FAILURE reply from " + incomingReply.SourceConnectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
                 else
-                    logString = "Incoming BUSY reply from " + connectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
+                    logString = "Incoming BUSY reply from " + incomingReply.SourceConnectionInfo + " chunk:" + incomingReply.ChunkIndex + " (" + incomingReply.ItemCheckSum + ")";
 
                 AddBuildLogLine(logString);
 
@@ -740,6 +748,7 @@ namespace DistributedFileSystem
                 bool integrateChunk = false;
                 lock (itemLocker)
                 {
+                    #region Decide Action
                     //If we still have an outstanding request for this chunk
                     if (itemBuildTrackerDict.ContainsKey(incomingReply.ChunkIndex))
                     {
@@ -751,22 +760,26 @@ namespace DistributedFileSystem
                             {
                                 itemBuildTrackerDict[incomingReply.ChunkIndex].RequestIncoming = true;
                                 integrateChunk = true;
+
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming data matches existing request.");
                             }
+                            else
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming data matches existing request but request already incoming.");
                         }
                         else
                         {
                             if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
                             {
                                 //Delete any old references at the same time
-                                SwarmChunkAvailability.RemoveOldPeersAtEndPoint(connectionInfo.NetworkIdentifier, connectionInfo.RemoteEndPoint);
+                                SwarmChunkAvailability.RemoveOldPeersAtEndPoint(incomingReply.SourceConnectionInfo.NetworkIdentifier, incomingReply.SourceConnectionInfo.RemoteEndPoint);
 
                                 //If no data was included it probably means our availability for this peer is wrong
                                 //If we remove the peer here it prevents us from nailing it
                                 //if the peer still has the file an availability update should be on it's way to us
-                                SwarmChunkAvailability.RemovePeerFromSwarm(connectionInfo.NetworkIdentifier, true);
+                                SwarmChunkAvailability.RemovePeerFromSwarm(incomingReply.SourceConnectionInfo.NetworkIdentifier, true);
                             }
                             else if (incomingReply.ReplyState == ChunkReplyState.PeerBusy)
-                                SwarmChunkAvailability.SetPeerBusy(connectionInfo.NetworkIdentifier);
+                                SwarmChunkAvailability.SetPeerBusy(incomingReply.SourceConnectionInfo.NetworkIdentifier);
 
                             //If no data was included, regardless of state, we need to remove the request and allow it to be recreated
                             if (!itemBuildTrackerDict[incomingReply.ChunkIndex].RequestIncoming)
@@ -775,18 +788,23 @@ namespace DistributedFileSystem
                     }
                     else
                     {
+                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming reply does not exist in request list.");
+
                         //We no longer have the requst for this reply, no worries we can still use it
                         //If the checksums match, it includes data and we don't already have it
                         if (ItemCheckSum == incomingReply.ItemCheckSum && incomingReply.ReplyState == ChunkReplyState.DataIncluded && !SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, incomingReply.ChunkIndex))
                         {
                             //We pretend we made the request already
-                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connectionInfo);
+                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo);
                             request.RequestIncoming = true;
                             itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);
 
                             integrateChunk = true;
+
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... required chunk so integrating regardless.");
                         }
                     }
+                    #endregion
                 }
 
                 //As soon as we have done the above we should be making another request
@@ -794,6 +812,8 @@ namespace DistributedFileSystem
 
                 if (integrateChunk)
                 {
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... starting integration for chunk " + incomingReply.ChunkIndex + " to item " + ItemCheckSum + ".");
+
                     #region StoreChunk
                     //We expect the final chunk to have a smaller length
                     if (incomingReply.ChunkData.Length != ChunkSizeInBytes && incomingReply.ChunkIndex < TotalNumChunks - 1)
@@ -803,11 +823,13 @@ namespace DistributedFileSystem
                         throw new Exception("Provided chunkindex (" + incomingReply.ChunkIndex + ") is greater than the total num of the chunks for this item (" + TotalNumChunks + ").");
 
                     //Copy the received bytes into the results array
-                    //Buffer.BlockCopy(incomingReply.ChunkData, 0, ItemBytes, incomingReply.ChunkIndex * ChunkSizeInBytes, incomingReply.ChunkData.Length);
+                    //This is where all the bad shit happens. We should enque the data for the assemble thread to put together
                     this.ItemDataStream.Write(incomingReply.ChunkData, ChunkPositionLengthDict[incomingReply.ChunkIndex].Position);
 
                     //Record the chunk locally as available
                     SwarmChunkAvailability.RecordLocalChunkCompletion(incomingReply.ChunkIndex);
+
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... recorded local chunk availability.");
 
                     lock (itemLocker)
                     {
@@ -820,29 +842,30 @@ namespace DistributedFileSystem
                         else
                         {
                             //We pretend we made the request already
-                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, connectionInfo);
+                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo);
                             request.RequestComplete = true;
                             request.RequestIncoming = true;
                             itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);
                         }
                     }
 
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... testing for item complete.");
+
                     //If we have just completed the build we can set the build complete signal
                     if (LocalItemComplete())
                         itemBuildComplete.Set();
+
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... checking chunk health.");
 
                     //We only broadcast our availability if the health metric of this chunk is less than
                     if (SwarmChunkAvailability.ChunkHealthMetric(incomingReply.ChunkIndex, TotalNumChunks) < 1)
                         SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
 
-                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... added data for chunk " + incomingReply.ChunkIndex + " to item " + ItemCheckSum + ".");
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... completed integration for chunk " + incomingReply.ChunkIndex + " to item " + ItemCheckSum + ".");
                     #endregion
-
-                    //For the same reason we garbage collect at the server end when creating this data we want to 
-                    //garbage collect after handling incoming data
-                    //try { GC.Collect(); }
-                    //catch (Exception) { }
                 }
+                else
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... nothing to integrate for item " + ItemCheckSum + ".");
             }
             catch (Exception)
             {

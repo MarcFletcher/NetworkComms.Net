@@ -81,6 +81,8 @@ namespace DistributedFileSystem
         [ProtoMember(5)]
         public string SourceNetworkIdentifier { get; private set; }
 
+        public ConnectionInfo SourceConnectionInfo { get; private set; }
+
         public byte[] ChunkData { get; private set; }
         public bool ChunkDataSet { get; private set; }
 
@@ -122,6 +124,11 @@ namespace DistributedFileSystem
         {
             this.ChunkData = chunkData;
             ChunkDataSet = true;
+        }
+
+        public void SetSourceConnectionInfo(ConnectionInfo info)
+        {
+            this.SourceConnectionInfo = info;
         }
     }
 
