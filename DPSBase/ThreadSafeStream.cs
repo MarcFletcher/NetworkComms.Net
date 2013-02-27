@@ -29,6 +29,8 @@ namespace DPSBase
     /// </summary>
     public class ThreadSafeStream : IDisposable
     {
+        static object writeLocker = new object();
+   
         private Stream stream;
         private object streamLocker = new object();
 
@@ -169,7 +171,7 @@ namespace DPSBase
                 //This is the largest copy buffer we can use without mono putting the buffer on the LOH
                 //According to this http://www.mono-project.com/Working_With_SGen
                 //Performance is improved if buffer is increased to 80KB
-                byte[] buffer = new byte[Math.Min(8000, length)];
+                byte[] buffer = new byte[Math.Min(80000, length)];
 
                 //Make sure we start in the write place
                 stream.Seek(startPosition, SeekOrigin.Begin);
@@ -178,7 +180,7 @@ namespace DPSBase
                 {
                     int bytesRemaining = length - totalBytesCopied;
                     
-                    if (bytesRemaining == 0) 
+                    if (bytesRemaining == 0)
                         break;
 
                     int read = stream.Read(buffer, 0, (buffer.Length > bytesRemaining ? bytesRemaining : buffer.Length));
@@ -186,7 +188,11 @@ namespace DPSBase
                     if (read <= 0) 
                         break;
 
-                    destinationStream.Write(buffer, 0, read);
+                    if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
+
+                    lock(writeLocker)
+                        destinationStream.Write(buffer, 0, read);
+
                     totalBytesCopied += read;
                 }
             }
