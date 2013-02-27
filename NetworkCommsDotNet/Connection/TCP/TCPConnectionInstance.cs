@@ -473,16 +473,16 @@ namespace NetworkCommsDotNet
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
-
+            
+            DateTime startTime = DateTime.Now;
             tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
-            //tcpClientNetworkStream.Write(packet.PacketData.ToArray(), 0, packet.PacketData.Length);
             packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length);
 
             //Correctly dispose the stream if we are finished with it
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length)/1024.0)/(DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s.");
 
             if (!tcpClient.Connected)
             {
@@ -516,7 +516,7 @@ namespace NetworkCommsDotNet
                             {
                                 try
                                 {
-                                    tcpClientNetworkStream.EndWrite(result);
+                                    ((NetworkStream)result.AsyncState).EndWrite(result);
                                 }
                                 catch (Exception)
                                 {
@@ -526,7 +526,7 @@ namespace NetworkCommsDotNet
                                 {
                                     writeCompleted.Set();
                                 }
-                            }), null);
+                            }), tcpClientNetworkStream);
 
                         if (!writeCompleted.WaitOne(1000) || exceptionOccured)
                             throw new Exception("Null packet send timeout.");

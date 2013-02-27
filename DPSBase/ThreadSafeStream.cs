@@ -48,11 +48,7 @@ namespace DPSBase
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
 
-#if WINDOWS_PHONE
             this.stream = stream;
-#else
-            this.stream = Stream.Synchronized(stream);
-#endif
         }
 
         /// <summary>
@@ -67,11 +63,7 @@ namespace DPSBase
             if (stream.Length > int.MaxValue)
                 throw new NotImplementedException("Streams larger than 2GB not yet supported.");
 
-#if WINDOWS_PHONE
             this.stream = stream;
-#else
-            this.stream = Stream.Synchronized(stream);
-#endif
         }
 
         /// <summary>
@@ -174,7 +166,10 @@ namespace DPSBase
             lock (streamLocker)
             {
                 //Initialise the buffer at either the total length or 8KB, which ever is smallest
-                byte[] buffer = new byte[Math.Min(80000, length)];
+                //This is the largest copy buffer we can use without mono putting the buffer on the LOH
+                //According to this http://www.mono-project.com/Working_With_SGen
+                //Performance is improved if buffer is increased to 80KB
+                byte[] buffer = new byte[Math.Min(8000, length)];
 
                 //Make sure we start in the write place
                 stream.Seek(startPosition, SeekOrigin.Begin);

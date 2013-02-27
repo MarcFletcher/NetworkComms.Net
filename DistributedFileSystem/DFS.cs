@@ -1045,7 +1045,8 @@ namespace DistributedFileSystem
             try
             {
                 //A peer has requested a specific chunk of data, we will only provide it if we are not already providing it to someone else
-
+                DateTime startTime = DateTime.Now;
+                
                 //Console.WriteLine("... ({0}) received request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestRequest from " + connection + " for " + incomingRequest.ItemCheckSum + ", chunkIndex " + incomingRequest.ChunkIndex + ".");
 
@@ -1062,6 +1063,8 @@ namespace DistributedFileSystem
                     //Inform peer that we don't actually have the requested item
                     //connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
                     UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+
+                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... item not available locally, sent DFS_ItemRemovalUpdate.");
                 }
                 else
                 {
@@ -1075,6 +1078,8 @@ namespace DistributedFileSystem
                         //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
                         //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
                         UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+
+                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... requested chunk not available, sent DFS_PeerChunkAvailabilityUpdate.");
                     }
                     else
                     {
@@ -1084,6 +1089,8 @@ namespace DistributedFileSystem
                             //We can return a busy reply if we are currently experiencing high demand
                             //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
                             connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
+
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer busy, sent busy response.");
                         }
                         else
                         {
@@ -1108,7 +1115,9 @@ namespace DistributedFileSystem
                             clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetSequenceNumber), nullCompressionSRO);
 
                             lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
-                            
+
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... request completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
+
                             //If we have sent data there is a good chance we have used up alot of memory
                             //This seems to be an efficient place for a garbage collection
                             //try { GC.Collect(); }
