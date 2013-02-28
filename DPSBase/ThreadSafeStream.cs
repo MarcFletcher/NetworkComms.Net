@@ -151,19 +151,19 @@ namespace DPSBase
             {
                 stream.Seek(startPosition, SeekOrigin.Begin);
 
-                System.Threading.AutoResetEvent wait = new System.Threading.AutoResetEvent(false); 
+                //System.Threading.AutoResetEvent wait = new System.Threading.AutoResetEvent(false); 
 
-                //stream.Write(data, 0, data.Length);
-                stream.BeginWrite(data, 0, data.Length, new AsyncCallback(result =>
-                    {
-                        stream.EndWrite(result);
-                        wait.Set();
-                    }), null);
+                stream.Write(data, 0, data.Length);
+                //stream.BeginWrite(data, 0, data.Length, new AsyncCallback(result =>
+                //    {
+                //        stream.EndWrite(result);
+                //        wait.Set();
+                //    }), null);
 
                 //Choose a timeout that allows upto 5.2 seconds per MB. Corresponds to minimum write speed of 0.2MB/s
-                int waitTimeMS = (int)(data.Length * 5E-3);
-                if (!wait.WaitOne(waitTimeMS))
-                    throw new TimeoutException("Timeout waiting to write " + (data.Length/1024.0).ToString("0.0") + "KB after " + (waitTimeMS / 1000.0).ToString("0.0") + " seconds.");
+                //int waitTimeMS = (int)(data.Length * 5E-3);
+                //if (!wait.WaitOne(waitTimeMS))
+                //    throw new TimeoutException("Timeout waiting to write " + (data.Length/1024.0).ToString("0.0") + "KB after " + (waitTimeMS / 1000.0).ToString("0.0") + " seconds.");
                 
                 stream.Flush();
             }

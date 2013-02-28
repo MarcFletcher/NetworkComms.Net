@@ -103,8 +103,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// A privte task factory for assembling new local DFS items. If we use the NetworkComms.TaskFactory we can end up deadlocking and prevent incoming packets from being handled.
         /// </summary>
-        static TaskFactory BuildTaskFactory;
-        internal static TaskFactory GeneralTaskFactory;
+        internal static TaskFactory BuildTaskFactory;
 
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
@@ -114,8 +113,8 @@ namespace DistributedFileSystem
             MinTargetLocalPort = 10000;
             MaxTargetLocalPort = 10999;
 
-            BuildTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
-            GeneralTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            //BuildTaskFactory = new TaskFactory(new LimitedParallelismTaskScheduler(MaxConcurrentLocalItemBuild));
+            BuildTaskFactory = new TaskFactory();
 
             nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
                             new List<DataProcessor>(),
@@ -891,7 +890,7 @@ namespace DistributedFileSystem
         {
             //We start the build in the DFS task factory as it will be a long lived task
             //BuildTaskFactory.StartNew(() =>
-            Action buildAction = new Action(() =>
+            Action assembleAction = new Action(() =>
                 {
                     DistributedItem newItem = null;
                     byte[] itemBytes = null;
@@ -1003,7 +1002,7 @@ namespace DistributedFileSystem
                 //Thread buildThread = new Thread(buildAction);
                 //buildThread.Name = "DFS_" + assemblyConfig.ItemIdentifier + "_Build";
                 //buildThread.Start();
-                BuildTaskFactory.StartNew(buildAction);
+                BuildTaskFactory.StartNew(assembleAction);
         }
 
         /// <summary>
@@ -1055,7 +1054,7 @@ namespace DistributedFileSystem
                     if (swarmedItemsDict.ContainsKey(incomingRequest.ItemCheckSum))
                         selectedItem = swarmedItemsDict[incomingRequest.ItemCheckSum];
 
-                if (selectedItem == null)
+                if (selectedItem == null || (selectedItem!= null && selectedItem.AbortBuild))
                 {
                     //First reply and say the peer can't have the requested data. This prevents a request timing out
                     connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);

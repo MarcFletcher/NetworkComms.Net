@@ -529,8 +529,8 @@ namespace NetworkCommsDotNet
                                 }
                             }), tcpClientNetworkStream);
 
-                        if (!writeCompleted.WaitOne(1000) || exceptionOccured)
-                            throw new Exception("Null packet send timeout.");
+                        if (!writeCompleted.WaitOne(2000) || exceptionOccured)
+                            throw new TimeoutException("Null packet send timeout.");
 
                         //Update the traffic time after we have written to netStream
                         ConnectionInfo.UpdateLastTrafficTime();

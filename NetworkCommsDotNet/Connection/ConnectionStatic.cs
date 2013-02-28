@@ -166,7 +166,7 @@ namespace NetworkCommsDotNet
             {
                 if (!allConnectionsComplete.WaitOne(allConnections.Count * 1000))
                     //This timeout should not really happen so we are going to log an error if it does
-                    NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count + " seconds waiting for null packet sends to finish. " + remainingConnectionCount + " connection waits remain."), "NullPacketKeepAliveTimeoutError");
+                    NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count + " seconds waiting for null packet sends to finish. " + remainingConnectionCount + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
             }
         }
 

@@ -966,42 +966,36 @@ namespace DistributedFileSystem
                 peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
             }
 
-            foreach (ShortGuid outerPeerIdentifier in peerKeys)
+            foreach (ShortGuid peerIdentifier in peerKeys)
             {
-                ShortGuid peerIdentifier = outerPeerIdentifier;
-
-                //Do this with a task so that it does not block
-                DFS.GeneralTaskFactory.StartNew(new Action(() =>
+                try
                 {
-                    try
-                    {
-                        if (peerIdentifier == null) throw new NullReferenceException("peerIdentifier should not be null at this point.");
-                        if (NetworkComms.NetworkIdentifier == null) throw new NullReferenceException("Local networkIdentifier really should NOT be null at this point.");
+                    if (peerIdentifier == null) throw new NullReferenceException("peerIdentifier should not be null at this point.");
+                    if (NetworkComms.NetworkIdentifier == null) throw new NullReferenceException("Local networkIdentifier really should NOT be null at this point.");
 
-                        IPEndPoint peerEndPoint;
-                        bool superPeer;
-                        lock (peerLocker)
-                        {
-                            peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
-                            superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
-                        }
+                    IPEndPoint peerEndPoint;
+                    bool superPeer;
+                    lock (peerLocker)
+                    {
+                        peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
+                        superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
+                    }
 
-                        //We don't want to contact ourselves
-                        if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
-                            //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
-                            UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), peerEndPoint, DFS.nullCompressionSRO);
-                    }
-                    catch (CommsException)
-                    {
-                        RemovePeerFromSwarm(peerIdentifier);
-                    }
-                    catch (KeyNotFoundException) { /*The peer has probably already disconnected*/ }
-                    catch (Exception e)
-                    {
-                        RemovePeerFromSwarm(peerIdentifier);
-                        NetworkComms.LogError(e, "BroadcastItemRemovalError");
-                    }
-                }));
+                    //We don't want to contact ourselves
+                    if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
+                        //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
+                        UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), peerEndPoint, DFS.nullCompressionSRO);
+                }
+                catch (CommsException)
+                {
+                    RemovePeerFromSwarm(peerIdentifier);
+                }
+                catch (KeyNotFoundException) { /*The peer has probably already disconnected*/ }
+                catch (Exception e)
+                {
+                    RemovePeerFromSwarm(peerIdentifier);
+                    NetworkComms.LogError(e, "BroadcastItemRemovalError");
+                }
             }
         }
 
