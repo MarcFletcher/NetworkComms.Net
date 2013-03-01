@@ -64,16 +64,8 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            ThreadPool.SetMaxThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 2);
-
-            IncomingPacketQueueHighPrioThread = new Thread(IncomingPacketQueueHighPrioWorker);
-            IncomingPacketQueueHighPrioThread.Name = "IncomingPacketQueueHighPrio";
-
-#if !WINDOWS_PHONE
-            IncomingPacketQueueHighPrioThread.Priority = ThreadPriority.AboveNormal;
-#endif
-
-            IncomingPacketQueueHighPrioThread.Start();
+            //We want to instantiate our own thread pool here
+            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, new TimeSpan(0,0,10));
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
@@ -652,53 +644,9 @@ namespace NetworkCommsDotNet
         public static int SendBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// Custom queue for handling incoming packets using a simple priority scheduling model
+        /// The threadpool used by networkComms.Net to execute incoming packet handlers.
         /// </summary>
-        internal static PriorityQueue<PriorityQueueItem> IncomingPacketQueue = new PriorityQueue<PriorityQueueItem>();
-
-        /// <summary>
-        /// A thread which can be used to handle only higher than normal priority incoming packets incase the rest of the thread pool is busy
-        /// </summary>
-        internal static Thread IncomingPacketQueueHighPrioThread;
-
-        /// <summary>
-        /// A thread signal for IncomingPacketQueueHighPrioThread so that it only runs when required
-        /// </summary>
-        internal static AutoResetEvent IncomingPacketQueueHighPrioThreadWait = new AutoResetEvent(false);
-                
-        /// <summary>
-        /// Worker thread which ensures there is always capacity for short lived higher priority incoming packets
-        /// </summary>
-        private static void IncomingPacketQueueHighPrioWorker()
-        {
-            while (!commsShutdown)
-            {
-                try
-                {                    
-                    //Wait here to be triggered of atleast once every 500ms
-                    IncomingPacketQueueHighPrioThreadWait.WaitOne(500);
-                    if (commsShutdown) return;
-
-                    //Keep looping over high priority items until they run out
-                    KeyValuePair<QueueItemPriority, PriorityQueueItem> packetQueueItem;
-
-#if WINDOWS_PHONE
-                    while (NetworkComms.IncomingPacketQueue.TryTake(QueueItemPriority.High, out packetQueueItem))
-                        CompleteIncomingItemTask(packetQueueItem.Value);
-#else
-                    while(NetworkComms.IncomingPacketQueue.TryTake(QueueItemPriority.AboveNormal, out packetQueueItem))
-                        CompleteIncomingItemTask(packetQueueItem.Value);
-#endif
-
-                }
-                catch (Exception ex)
-                {
-                    LogError(ex, "IncomingPacketQueueHighPrioWorkerError");
-                }
-            }
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("IncomingPacketQueueHighPrioWorker thread has ended.");
-        }
+        internal static CommsThreadPool CommsThreadPool { get; set; }
 
         /// <summary>
         /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different priorities.
@@ -711,26 +659,13 @@ namespace NetworkCommsDotNet
             {
                 //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
                 item = itemAsObj as PriorityQueueItem;
+
                 if (item == null)
-                {
-                    KeyValuePair<QueueItemPriority, PriorityQueueItem> packetQueueItem;
-                    if (!NetworkComms.IncomingPacketQueue.TryTake(out packetQueueItem))
-                    {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unable to get packet item from IncomingPacketQueue in CompleteIncomingPacketWorker.");
-                        return;
-                    }
-                    else
-                        item = packetQueueItem.Value;
-
-                    if (item == null)
-                        throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
-
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Pulled packet item with packetType='"+item.PacketHeader.PacketType+"' from IncomingPacketQueue which was added with a priority of " + packetQueueItem.Key);
+                    throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
 
 #if !WINDOWS_PHONE
-                    if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
+                if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
 #endif
-                }
 
                 //Check for a shutdown connection
                 if (item.Connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown) return;
@@ -832,10 +767,8 @@ namespace NetworkCommsDotNet
                 if (item!=null) item.DataStream.Close();
 
 #if !WINDOWS_PHONE
-
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
-
 #endif
             }
         }
@@ -1307,7 +1240,7 @@ namespace NetworkCommsDotNet
             if (LoggingEnabled) logger.Trace("NetworkCommsDotNet shutdown initiated.");
             commsShutdown = true;
 
-            IncomingPacketQueueHighPrioThreadWait.Set();
+            CommsThreadPool.BeginShutdown();
             Connection.ShutdownBase(threadShutdownTimeoutMS);
             TCPConnection.Shutdown(threadShutdownTimeoutMS);
             UDPConnection.Shutdown();
@@ -1350,6 +1283,8 @@ namespace NetworkCommsDotNet
             {
                 LogError(ex, "CommsShutdownError");
             }
+
+            CommsThreadPool.EndShutdown(threadShutdownTimeoutMS);
 
             commsShutdown = false;
             if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");

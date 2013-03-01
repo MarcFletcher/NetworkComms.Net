@@ -145,6 +145,7 @@ namespace NetworkCommsDotNet
                                 }
                             }
 
+                            //Only reserved packet types get completed inline
                             if (isReservedType)
                             {
 #if WINDOWS_PHONE
@@ -162,18 +163,9 @@ namespace NetworkCommsDotNet
                                 QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
                                 PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
 
-                                //If not a reserved packetType we run the completion in a seperate task so that this thread can continue to receive incoming data
-                                //The tasks that we start here may not run the item we are addeding to the queue. i.e. it may end up running some higher priority item first
-                                if (!NetworkComms.IncomingPacketQueue.TryAdd(new KeyValuePair<QueueItemPriority, PriorityQueueItem>(item.Priority, item)))
-                                    throw new PacketHandlerException("Failed to add packet to incoming packet queue.");
+                                NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
 
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to IncomingPacketQueue with priority " + itemPriority + ". Loop index - " + loopCounter);
-
-                                //If we have just added a high priority item we trigger the high priority thread
-                                if (itemPriority > QueueItemPriority.Normal) NetworkComms.IncomingPacketQueueHighPrioThreadWait.Set();
-
-                                //We will also trigger a new task below incase we have many higher priority items as we don't care which thread ends up running the item
-                                ThreadPool.QueueUserWorkItem(NetworkComms.CompleteIncomingItemTask, null);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to CommsThreadPool (Q:"+NetworkComms.CommsThreadPool.QueueCount+", T:"+NetworkComms.CommsThreadPool.CurrentNumThreads+") with priority " + itemPriority + ". Loop index - " + loopCounter);
                             }
 
                             //We clear the bytes we have just handed off

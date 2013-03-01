@@ -95,7 +95,7 @@ namespace DistributedFileSystem
         AutoResetEvent itemBuildWait = new AutoResetEvent(false);
         ManualResetEvent itemBuildComplete = new ManualResetEvent(false);
 
-        public volatile bool AbortBuild;
+        public volatile bool ItemClosed;
 
         /// <summary>
         /// Tracks which chunks are currently being provided to other peers
@@ -331,12 +331,12 @@ namespace DistributedFileSystem
 
             NetworkComms.AppendGlobalConnectionCloseHandler(connectionShutdownDuringBuild);
             
-            AbortBuild = false;
+            ItemClosed = false;
 
             bool buildTimeHalfWayPoint = false;
 
             //Loop until the local file is complete
-            while (!LocalItemComplete() && !AbortBuild)
+            while (!LocalItemComplete() && !ItemClosed)
             {
                 #region BuildItem
                 //The requests we are going to make this loop
@@ -671,7 +671,7 @@ namespace DistributedFileSystem
                 AddBuildLogLine("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
 
                 #region Integrate Chunks
-                while (!AbortBuild)
+                while (!ItemClosed)
                 {
                     ChunkAvailabilityReply incomingReply = null;
                     try
@@ -786,8 +786,9 @@ namespace DistributedFileSystem
 
             //Close connections to other completed clients which are not a super peer
             //SwarmChunkAvailability.CloseConnectionToCompletedPeers(TotalNumChunks);
+            chunkDataToIntegrateQueue = null;
 
-            if (AbortBuild)
+            if (ItemClosed)
             {
                 if (DFS.loggingEnabled) DFS.logger.Debug(" ... aborted DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
                 AddBuildLogLine("Aborted assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
@@ -1047,7 +1048,7 @@ namespace DistributedFileSystem
                         File.Delete(ItemIdentifier + ".DFSItemData");
                 }
 
-                AbortBuild = true;
+                ItemClosed = true;
                 itemBuildComplete.Set();
             }
         }

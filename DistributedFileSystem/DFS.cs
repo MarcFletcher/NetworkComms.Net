@@ -149,7 +149,8 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<string[]>("DFS_RequestLocalItemBuild", RequestLocalItemBuilds);
 
                 //UDP
-                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest, highPrioReceiveSRO);
+                //DO NOT MAKE THIS METHOD USE highPriority. If this method blocks it prevents other data coming in
+                NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("DFS_ChunkAvailabilityInterestReplyData", IncomingChunkInterestReplyData);
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
@@ -504,6 +505,9 @@ namespace DistributedFileSystem
                     {
                         itemToRemove = swarmedItemsDict[itemCheckSum];
                         swarmedItemsDict.Remove(itemCheckSum);
+
+                        //Set the abort build here incase another thread tries to use the item
+                        itemToRemove.ItemClosed = true;
                     }
                 }
 
@@ -513,8 +517,6 @@ namespace DistributedFileSystem
                     if (broadcastRemoval)
                         //Broadcast to the swarm we are removing this file
                         itemToRemove.SwarmChunkAvailability.BroadcastItemRemoval(itemCheckSum, removeSwarmWide);
-
-                    itemToRemove.AbortBuild = true;
 
                     //Dispose of the distributed item incase it has any open file handles
                     itemToRemove.Dispose();
@@ -1054,7 +1056,7 @@ namespace DistributedFileSystem
                     if (swarmedItemsDict.ContainsKey(incomingRequest.ItemCheckSum))
                         selectedItem = swarmedItemsDict[incomingRequest.ItemCheckSum];
 
-                if (selectedItem == null || (selectedItem!= null && selectedItem.AbortBuild))
+                if (selectedItem == null || (selectedItem!= null && selectedItem.ItemClosed))
                 {
                     //First reply and say the peer can't have the requested data. This prevents a request timing out
                     connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);

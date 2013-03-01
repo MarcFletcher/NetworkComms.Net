@@ -113,7 +113,6 @@ namespace NetworkCommsDotNet
             int remainingConnectionCount = allConnections.Count;
 
             ManualResetEvent allConnectionsComplete = new ManualResetEvent(false);
-
             for (int i = 0; i < allConnections.Count; i++)
             {
                 //We don't send null packets to unconnected udp connections
@@ -128,7 +127,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     int innerIndex = i;
-                    ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
+                    NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
                     {
                         try
                         {
@@ -157,7 +156,7 @@ namespace NetworkCommsDotNet
                             if (Interlocked.Decrement(ref remainingConnectionCount) == 0)
                                 allConnectionsComplete.Set();
                         }
-                    }));
+                    }), null);
                 }
             }
 

@@ -29,7 +29,6 @@ namespace NetworkCommsDotNet
     /// </summary>
     class PriorityQueueItem
     {
-
         public QueueItemPriority Priority { get; private set; }
         public Connection Connection { get; private set; }
         public PacketHeader PacketHeader { get; private set; }

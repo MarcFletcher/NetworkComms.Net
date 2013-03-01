@@ -219,5 +219,16 @@ namespace NetworkCommsDotNet
             get { throw new Exception("All access to PriorityQueue is thread safe so calling SyncRoot() is unncessary."); }
         }
 
+        /// <summary>
+        /// Clear the content of all queues
+        /// </summary>
+        public void Clear()
+        {
+            lock (internalQueues)
+            {
+                for (int i = 0; i < numDistinctPriorities; i++)
+                    internalQueues[QueueItemPriorityVals[i]].Clear();
+            }
+        }
     }
 }
