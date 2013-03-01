@@ -112,6 +112,12 @@ namespace NetworkCommsDotNet
             List<Connection> allConnections = NetworkComms.GetExistingConnection();
             int remainingConnectionCount = allConnections.Count;
 
+#if WINDOWS_PHONE
+            QueueItemPriority nullSendPriority = QueueItemPriority.High;
+#else
+            QueueItemPriority nullSendPriority = QueueItemPriority.AboveNormal;
+#endif
+
             ManualResetEvent allConnectionsComplete = new ManualResetEvent(false);
             for (int i = 0; i < allConnections.Count; i++)
             {
@@ -127,7 +133,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     int innerIndex = i;
-                    NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
+                    NetworkComms.CommsThreadPool.EnqueueItem(nullSendPriority, new WaitCallback((obj) =>
                     {
                         try
                         {

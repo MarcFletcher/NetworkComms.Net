@@ -165,7 +165,7 @@ namespace NetworkCommsDotNet
 
                                 NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
 
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to CommsThreadPool (Q:"+NetworkComms.CommsThreadPool.QueueCount+", T:"+NetworkComms.CommsThreadPool.CurrentNumThreads+") with priority " + itemPriority + ". Loop index - " + loopCounter);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to CommsThreadPool (Q:"+NetworkComms.CommsThreadPool.QueueCount+", T:"+NetworkComms.CommsThreadPool.CurrentNumTotalThreads+") with priority " + itemPriority + ". Loop index - " + loopCounter);
                             }
 
                             //We clear the bytes we have just handed off

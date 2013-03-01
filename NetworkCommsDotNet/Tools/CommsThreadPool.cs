@@ -30,19 +30,6 @@ namespace NetworkCommsDotNet
     public class CommsThreadPool
     {
         /// <summary>
-        /// Create a new comms thread pool
-        /// </summary>
-        /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
-        /// <param name="maxThreadsCount">Maximum number of threads to create in the pool</param>
-        /// <param name="threadIdleTimeoutClose">Timespan after which an idle thread will close</param>
-        public CommsThreadPool(int minThreadsCount, int maxThreadsCount, TimeSpan threadIdleTimeoutClose)
-        {
-            MinThreadsCount = minThreadsCount;
-            MaxThreadsCount = maxThreadsCount;
-            ThreadIdleTimeoutClose = threadIdleTimeoutClose;
-        }
-
-        /// <summary>
         /// A sync object to make things thread safe
         /// </summary>
         object SyncRoot = new object();
@@ -53,9 +40,14 @@ namespace NetworkCommsDotNet
         Dictionary<int, Thread> threadDict = new Dictionary<int,Thread>();
 
         /// <summary>
-        /// Dictionary of thread last active times, index is ThreadId
+        /// Dictionary of thread worker info, index is ThreadId
         /// </summary>
-        Dictionary<int, DateTime> threadLastActiveDict = new Dictionary<int, DateTime>();
+        Dictionary<int, WorkerInfo> workerInfoDict = new Dictionary<int, WorkerInfo>();
+
+        /// <summary>
+        /// A quick lookup of the number of current idle threads
+        /// </summary>
+        int idleThreads = 0;
 
         /// <summary>
         /// Priority queue used to order call backs 
@@ -68,19 +60,9 @@ namespace NetworkCommsDotNet
         bool shutdown = false;
 
         /// <summary>
-        /// A quick lookup of the number of current idle threads
-        /// </summary>
-        int idleThreads = 0;
-        
-        /// <summary>
         /// The timespan after which an idle thread will close
         /// </summary>
         TimeSpan ThreadIdleTimeoutClose { get; set; }
-        
-        /// <summary>
-        /// A thread signal used to trigger an idle thread
-        /// </summary>
-        AutoResetEvent queueItemAddedSignal = new AutoResetEvent(false);
 
         /// <summary>
         /// The maximum number of threads to create in the pool
@@ -95,9 +77,17 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The total number of threads currently in the thread pool
         /// </summary>
-        public int CurrentNumThreads
+        public int CurrentNumTotalThreads
         {
             get { lock(SyncRoot) return threadDict.Count; }
+        }
+
+        /// <summary>
+        /// The total number of idle threads currently in the thread pool
+        /// </summary>
+        public int CurrentNumIdleThreads
+        {
+            get { lock (SyncRoot) return idleThreads; }
         }
         
         /// <summary>
@@ -106,6 +96,19 @@ namespace NetworkCommsDotNet
         public int QueueCount
         {
             get { return jobQueue.Count; }
+        }
+
+        /// <summary>
+        /// Create a new comms thread pool
+        /// </summary>
+        /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
+        /// <param name="maxThreadsCount">Maximum number of threads to create in the pool</param>
+        /// <param name="threadIdleTimeoutClose">Timespan after which an idle thread will close</param>
+        public CommsThreadPool(int minThreadsCount, int maxThreadsCount, TimeSpan threadIdleTimeoutClose)
+        {
+            MinThreadsCount = minThreadsCount;
+            MaxThreadsCount = maxThreadsCount;
+            ThreadIdleTimeoutClose = threadIdleTimeoutClose;
         }
 
         /// <summary>
@@ -126,8 +129,11 @@ namespace NetworkCommsDotNet
             List<Thread> allWorkerThreads = new List<Thread>();
             lock(SyncRoot)
             {
-                foreach(Thread thread in threadDict.Values)
-                    allWorkerThreads.Add(thread);
+                foreach (var thread in threadDict)
+                {
+                    workerInfoDict[thread.Key].ThreadSignal.Set();
+                    allWorkerThreads.Add(thread.Value);
+                }
             }
 
             //Wait for all threads to finish
@@ -157,25 +163,52 @@ namespace NetworkCommsDotNet
         /// <param name="priority">The priority with which to enqueue the provided callback</param>
         /// <param name="callback">The callback to execute</param>
         /// <param name="state">The state parameter to pass to the callback when executed</param>
-        public void EnqueueItem(QueueItemPriority priority, WaitCallback callback, object state)
+        /// <returns>Returns the managed threadId running the callback if one was available, otherwise -1</returns>
+        public int EnqueueItem(QueueItemPriority priority, WaitCallback callback, object state)
         {
+            int chosenThreadId = -1;
+
             lock (SyncRoot)
             {
-                jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new  WaitCallBackWrapper(callback,state)));
-
                 if (!shutdown && idleThreads == 0 && threadDict.Count < MaxThreadsCount)
                 {
                     //Launch a new thread
                     Thread newThread = new Thread(ThreadWorker);
                     newThread.Name = "ManagedThreadPool_" + newThread.ManagedThreadId;
 
-                    threadDict.Add(newThread.ManagedThreadId, newThread);
-                    threadLastActiveDict.Add(newThread.ManagedThreadId, DateTime.Now);
-                    newThread.Start(newThread.ManagedThreadId);
-                }
+                    WorkerInfo info = new WorkerInfo(newThread.ManagedThreadId, new WaitCallBackWrapper(callback, state));
 
-                queueItemAddedSignal.Set();
+                    chosenThreadId = newThread.ManagedThreadId;
+                    threadDict.Add(newThread.ManagedThreadId, newThread);
+                    workerInfoDict.Add(newThread.ManagedThreadId, info);
+
+                    newThread.Start(info);
+                }
+                else if (!shutdown && idleThreads > 0)
+                {
+                    jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
+
+                    foreach (var info in workerInfoDict)
+                    {
+                        //Trigger the first idle thread
+                        if (info.Value.ThreadIdle)
+                        {
+                            info.Value.ClearThreadIdle();
+                            idleThreads--;
+
+                            info.Value.ThreadSignal.Set();
+                            chosenThreadId = info.Value.ThreadId;
+
+                            break;
+                        }
+                    }
+                }
+                else if (!shutdown)
+                    //If there are no idle threads and we can't start any new ones we just have to enqueue the item
+                    jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
             }
+
+            return chosenThreadId;
         }
 
         /// <summary>
@@ -184,70 +217,121 @@ namespace NetworkCommsDotNet
         /// <param name="state"></param>
         private void ThreadWorker(object state)
         {
-            int threadId = (int)state;
-            bool treadIdle = false;
+            WorkerInfo threadInfo = (WorkerInfo)state;
 
             do
             {
                 //While there are jobs in the queue process the jobs
                 while (true)
                 {
-                    KeyValuePair<QueueItemPriority, WaitCallBackWrapper> packetQueueItem;
-                    lock (SyncRoot)
+                    if (threadInfo.CurrentCallBackWrapper == null)
                     {
-                        if (shutdown || !jobQueue.TryTake(out packetQueueItem))
+                        KeyValuePair<QueueItemPriority, WaitCallBackWrapper> packetQueueItem;
+                        lock (SyncRoot)
                         {
-                            if (!treadIdle)
+                            if (shutdown || !jobQueue.TryTake(out packetQueueItem))
                             {
-                                treadIdle = true;
-                                idleThreads++;
+                                if (!threadInfo.ThreadIdle)
+                                {
+                                    threadInfo.SetThreadIdle();
+                                    idleThreads++;
+                                }
+
+                                break;
                             }
-                            break;
-                        }
-                        else
-                        {
-                            if (treadIdle && idleThreads > 0)
-                                idleThreads--;
+                            else
+                            {
+                                if (threadInfo.ThreadIdle && idleThreads > 0)
+                                    idleThreads--;
+
+                                threadInfo.UpdateCurrentCallBackWrapper(packetQueueItem.Value);
+                                threadInfo.ClearThreadIdle();
+                            }
                         }
                     }
 
                     //Perform the waitcallBack
                     try
                     {
-                        packetQueueItem.Value.WaitCallBack(packetQueueItem.Value.State);
+                        threadInfo.CurrentCallBackWrapper.WaitCallBack(threadInfo.CurrentCallBackWrapper.State);
                     }
                     catch (Exception ex)
                     {
                         NetworkComms.LogError(ex, "ManagedThreadPoolCallBackError", "An unhandled exception was caught while processing a callback. Make sure to catch errors in callbacks to prevent this error file being produced.");
                     }
 
-                    threadLastActiveDict[threadId] = DateTime.Now;
+                    threadInfo.UpdateLastActiveTime();
+                    threadInfo.ClearCallBackWrapper();
                 }
 
                 if (shutdown)
                     break;
 
                 //As soon as the queue is empty we wait until perhaps close time
-                if (!queueItemAddedSignal.WaitOne(100))
+                if (!threadInfo.ThreadSignal.WaitOne(250))
                 {
                     //While we are waiting we check to see if we need to close
-                    if (DateTime.Now - threadLastActiveDict[threadId] > ThreadIdleTimeoutClose)
+                    if (DateTime.Now - threadInfo.LastActiveTime > ThreadIdleTimeoutClose)
                     {
                         lock (SyncRoot)
                         {
                             if (threadDict.Count > MinThreadsCount)
                             {
-                                if (treadIdle && idleThreads > 0)
+                                if (threadInfo.ThreadIdle && idleThreads > 0)
                                     idleThreads--;
 
-                                threadLastActiveDict.Remove(threadId);
-                                threadDict.Remove(threadId);
+                                threadDict.Remove(threadInfo.ThreadId);
+                                workerInfoDict.Remove(threadInfo.ThreadId);
+
                                 return;
                             }
                         }
                     }
                 }
+
             } while (!shutdown);
+        }
+    }
+
+    class WorkerInfo
+    {
+        public int ThreadId { get; private set; }
+        public AutoResetEvent ThreadSignal { get; private set; }
+        public bool ThreadIdle { get; private set; }
+        public DateTime LastActiveTime {get; private set;}
+        public WaitCallBackWrapper CurrentCallBackWrapper { get; private set; }
+
+        public WorkerInfo(int threadId, WaitCallBackWrapper initialisationCallBackWrapper)
+        {
+            ThreadSignal = new AutoResetEvent(false);
+            ThreadIdle = false;
+            LastActiveTime = DateTime.Now;
+            this.CurrentCallBackWrapper = initialisationCallBackWrapper;
+        }
+
+        public void UpdateCurrentCallBackWrapper(WaitCallBackWrapper waitCallBackWrapper)
+        {
+            CurrentCallBackWrapper = waitCallBackWrapper;
+        }
+
+        public void UpdateLastActiveTime()
+        {
+            LastActiveTime = DateTime.Now;
+        }
+
+        public void ClearCallBackWrapper()
+        {
+            CurrentCallBackWrapper = null;
+        }
+
+        public void SetThreadIdle()
+        {
+            this.ThreadIdle = true;
+        }
+
+        public void ClearThreadIdle()
+        {
+            this.ThreadIdle = false;
         }
     }
 
