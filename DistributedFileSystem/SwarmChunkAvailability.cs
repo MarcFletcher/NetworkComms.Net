@@ -602,7 +602,6 @@ namespace DistributedFileSystem
                     }
 
                     //By updating cached peer chunk flags we set the peer as being online
-                    //We can also trigger the alivePeersReceivedEvent signal incase this is the first time through
                     peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetOnline();
 
                     //We will trigger the alive peers event when we have atleast a third of the existing peers

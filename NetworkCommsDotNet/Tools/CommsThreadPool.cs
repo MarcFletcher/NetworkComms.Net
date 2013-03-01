@@ -188,9 +188,12 @@ namespace NetworkCommsDotNet
                 {
                     jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
 
+                    int checkCount = 0;
+
                     foreach (var info in workerInfoDict)
                     {
                         //Trigger the first idle thread
+                        checkCount++;
                         if (info.Value.ThreadIdle)
                         {
                             info.Value.ClearThreadIdle();
@@ -201,6 +204,9 @@ namespace NetworkCommsDotNet
 
                             break;
                         }
+
+                        if (checkCount == workerInfoDict.Count)
+                            throw new Exception("IdleThreads count is " + idleThreads + " but unable to locate thread marked as idle.");
                     }
                 }
                 else if (!shutdown)
@@ -231,6 +237,7 @@ namespace NetworkCommsDotNet
                         {
                             if (shutdown || !jobQueue.TryTake(out packetQueueItem))
                             {
+                                //If we failed to get a job we switch to idle and wait to be triggered
                                 if (!threadInfo.ThreadIdle)
                                 {
                                     threadInfo.SetThreadIdle();
@@ -264,8 +271,7 @@ namespace NetworkCommsDotNet
                     threadInfo.ClearCallBackWrapper();
                 }
 
-                if (shutdown)
-                    break;
+                if (shutdown) break;
 
                 //As soon as the queue is empty we wait until perhaps close time
                 if (!threadInfo.ThreadSignal.WaitOne(250))
@@ -280,16 +286,23 @@ namespace NetworkCommsDotNet
                                 if (threadInfo.ThreadIdle && idleThreads > 0)
                                     idleThreads--;
 
-                                threadDict.Remove(threadInfo.ThreadId);
-                                workerInfoDict.Remove(threadInfo.ThreadId);
-
-                                return;
+                                threadInfo.ClearThreadIdle();
+                                break;
                             }
                         }
                     }
                 }
-
             } while (!shutdown);
+
+            if (!shutdown && DateTime.Now - threadInfo.LastActiveTime < ThreadIdleTimeoutClose)
+                NetworkComms.LogError(new TimeoutException("Thread closing before correct timeout. This should be impossible."), "ManagedThreadPoolError");
+
+            //Last thing we do is to remove the thread entry
+            lock (SyncRoot)
+            {
+                threadDict.Remove(threadInfo.ThreadId);
+                workerInfoDict.Remove(threadInfo.ThreadId);
+            }
         }
     }
 

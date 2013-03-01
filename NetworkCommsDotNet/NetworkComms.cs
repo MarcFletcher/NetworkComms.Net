@@ -660,6 +660,8 @@ namespace NetworkCommsDotNet
                 //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
                 item = itemAsObj as PriorityQueueItem;
 
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a "+item.PacketHeader.PacketType+" packet from "+item.Connection.ConnectionInfo+" with a priority of "+item.Priority+".");
+
                 if (item == null)
                     throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
 

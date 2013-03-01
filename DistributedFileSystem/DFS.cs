@@ -161,11 +161,11 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate, highPrioReceiveSRO);
 
                 //UDP
-                NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate);//, highPrioReceiveSRO);
+                NetworkComms.AppendGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate, highPrioReceiveSRO);
 
                 //UDP
-                NetworkComms.AppendGlobalIncomingPacketHandler<KnownPeerEndPoints>("DFS_KnownPeersUpdate", KnownPeersUpdate);
-                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest);//, highPrioReceiveSRO);
+                NetworkComms.AppendGlobalIncomingPacketHandler<KnownPeerEndPoints>("DFS_KnownPeersUpdate", KnownPeersUpdate, highPrioReceiveSRO);
+                NetworkComms.AppendGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest, highPrioReceiveSRO);
 
                 //TCP
                 NetworkComms.AppendGlobalIncomingPacketHandler<DFSLinkRequest>("DFS_ItemLinkRequest", IncomingRemoteItemLinkRequest);
@@ -1117,7 +1117,7 @@ namespace DistributedFileSystem
 
                             lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... request completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... IncomingChunkInterestRequest completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
 
                             //If we have sent data there is a good chance we have used up alot of memory
                             //This seems to be an efficient place for a garbage collection
@@ -1308,8 +1308,8 @@ namespace DistributedFileSystem
                 if (selectedItem != null)
                 {
                     ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, updateDetails.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
-                    selectedItem.AddBuildLogLine("Updated chunk flags for " + connectionInfo);
                     selectedItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connectionInfo, updateDetails.ChunkFlags);
+                    selectedItem.AddBuildLogLine("Updated chunk flags for " + connectionInfo);
                 }
                 else
                     //Inform peer that we don't actually have the requested item so that it won't bother us again

@@ -163,9 +163,9 @@ namespace NetworkCommsDotNet
                                 QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
                                 PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
 
-                                NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
+                                int threadId = NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
 
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed packet item to CommsThreadPool (Q:"+NetworkComms.CommsThreadPool.QueueCount+", T:"+NetworkComms.CommsThreadPool.CurrentNumTotalThreads+") with priority " + itemPriority + ". Loop index - " + loopCounter);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads + ") with priority " + itemPriority + (threadId > 0 ? ". Selected threadId=" + threadId : "") +". Loop index=" + loopCounter + ".");
                             }
 
                             //We clear the bytes we have just handed off
