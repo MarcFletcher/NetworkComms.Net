@@ -40,8 +40,8 @@ namespace DebugTests
         {
             try
             {
-                Console.SetBufferSize(180, 500);
-                Console.SetWindowSize(180, 25);
+                Console.SetBufferSize(160, 500);
+                Console.SetWindowSize(160, 25);
             }
             catch (Exception) { }
 
@@ -76,7 +76,7 @@ namespace DebugTests
             //DFSTest.RunExample();
             //LoadTest.RunExample();
             //DebugTest.GoDFSLogParse();
-            MonoFileStreamTest.RunExample();
+            ThreadPoolTest.RunExample();
         }
     }
 }

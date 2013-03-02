@@ -318,6 +318,7 @@ namespace NetworkCommsDotNet
         {
             ThreadSignal = new AutoResetEvent(false);
             ThreadIdle = false;
+            ThreadId = threadId;
             LastActiveTime = DateTime.Now;
             this.CurrentCallBackWrapper = initialisationCallBackWrapper;
         }
