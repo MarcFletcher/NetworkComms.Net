@@ -167,7 +167,8 @@ namespace DistributedFileSystem
             //this.ItemByteArray = new byte[TotalNumChunks][];
             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Disk)
             {
-                string fileName = assemblyConfig.ItemIdentifier + ".DFSItemData";
+                string folderLocation =  "DFS_" + NetworkComms.NetworkIdentifier;
+                string fileName = Path.Combine(folderLocation, assemblyConfig.ItemIdentifier + ".DFSItemData");
                 if (File.Exists(fileName))
                 {
                     //If the file already exists the MD5 had better match otherwise we have a problem
@@ -195,6 +196,12 @@ namespace DistributedFileSystem
                 }
                 else
                 {
+                    lock (DFS.globalDFSLocker)
+                    {
+                        if (!Directory.Exists(folderLocation))
+                            Directory.CreateDirectory(folderLocation);
+                    }
+
                     FileStream newStream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
                     newStream.SetLength(ItemBytesLength);
                     newStream.Flush();
@@ -356,9 +363,9 @@ namespace DistributedFileSystem
                     //If over half the number of swarm peers are completed we will use them rather than uncompleted peers
                     bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
 
-                    //We only go any further if we were given some data
-                    //if were werent chances are we are actually done
-                    if (nonLocalChunkExistence.Count > 0)
+                    //We only make requests if remote chunks are available and our recieve load is below a given threshold
+                    double incomingNetworkLoad = NetworkComms.AverageNetworkLoadIncoming(10);
+                    if (nonLocalChunkExistence.Count > 0 && incomingNetworkLoad <= DFS.PeerBusyNetworkLoadThreshold)
                     {
                         AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerAvailabilityInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count(entry=> entry.PeerOnline) + " unique online peers.");
 
@@ -385,7 +392,7 @@ namespace DistributedFileSystem
                             if (!itemBuildTrackerDict[currentTrackerKeys[i]].RequestComplete && (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > maxChunkTimeoutMS)
                             {
                                 //We are going to consider this request potentially timed out
-                                if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier) > DFS.MaxPeerTimeoutCount)
+                                if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier) > DFS.PeerMaxNumTimeouts)
                                 {
                                     if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
                                     {
@@ -417,7 +424,7 @@ namespace DistributedFileSystem
                                                                                          select current).ToList();
 
                         //We only consider making new requests if we are allowed to
-                        if (nonIncomingOutstandingRequests.Count < DFS.NumTotalGlobalRequests)
+                        if (nonIncomingOutstandingRequests.Count < DFS.MaxTotalItemRequests)
                         {
                             //Step 1 - Go through each chunk we dont have, and have not yet requested,
                             //starting with the rarest, and attempt to make a new request.
@@ -488,9 +495,9 @@ namespace DistributedFileSystem
 
                                         //Once we have added a new request we should check if we have enough
                                         if (newRequestCount >= maxPeers ||  //If we already have a number of new requests equal to the max number of peers
-                                            nonIncomingOutstandingRequests.Count + newRequestCount >= maxPeers * DFS.NumConcurrentRequests || //If the total number of outstanding requests is greater than the total number of peers * our concurrency factor
+                                            nonIncomingOutstandingRequests.Count + newRequestCount >= maxPeers * DFS.MaxConcurrentPeerRequests || //If the total number of outstanding requests is greater than the total number of peers * our concurrency factor
                                             nonIncomingOutstandingRequests.Count + newRequestCount >= numChunksLeft || //If the total number of requests is equal the number of chunks left
-                                            nonIncomingOutstandingRequests.Count + newRequestCount >= DFS.NumTotalGlobalRequests) //If the total number of requests is equal to the total requests
+                                            nonIncomingOutstandingRequests.Count + newRequestCount >= DFS.MaxTotalItemRequests) //If the total number of requests is equal to the total requests
                                             break;
                                     }
                                 }
@@ -506,9 +513,9 @@ namespace DistributedFileSystem
                             maxPeers = currentRequestConnectionInfo.Count;
 
                             int loopSafety = 0;
-                            while (nonIncomingOutstandingRequests.Count + newRequestCount < maxPeers * DFS.NumConcurrentRequests && //While the total number of requests is less than the total number of peers * our concurrency factor
+                            while (nonIncomingOutstandingRequests.Count + newRequestCount < maxPeers * DFS.MaxConcurrentPeerRequests && //While the total number of requests is less than the total number of peers * our concurrency factor
                                 nonIncomingOutstandingRequests.Count + newRequestCount < numChunksLeft && //While the total number of requests is less than the number of chunks left
-                                nonIncomingOutstandingRequests.Count + newRequestCount < DFS.NumTotalGlobalRequests //While the total number of requests is less than the total requests limit
+                                nonIncomingOutstandingRequests.Count + newRequestCount < DFS.MaxTotalItemRequests //While the total number of requests is less than the total requests limit
                                 )
                             {
                                 if (loopSafety > 1000)
@@ -527,7 +534,7 @@ namespace DistributedFileSystem
                                     if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                         newRequestsFromCurrentPeer = newRequests[currentRequestConnectionInfo[i]].Count;
 
-                                    if (numOutstandingRequestsFromCurrentPeer + newRequestsFromCurrentPeer >= DFS.NumConcurrentRequests)
+                                    if (numOutstandingRequestsFromCurrentPeer + newRequestsFromCurrentPeer >= DFS.MaxConcurrentPeerRequests)
                                         continue;
 
                                     //Its possible we have pulled out a peer for whom we no longer have availability info for
@@ -573,9 +580,9 @@ namespace DistributedFileSystem
                                         maxPeers--;
 
                                     //Once we have added a new request we should check if we have enough
-                                    if (nonIncomingOutstandingRequests.Count + newRequestCount >= maxPeers * DFS.NumConcurrentRequests || //If the total number of outstanding requests is greater than the total number of peers * our concurrency factor
+                                    if (nonIncomingOutstandingRequests.Count + newRequestCount >= maxPeers * DFS.MaxConcurrentPeerRequests || //If the total number of outstanding requests is greater than the total number of peers * our concurrency factor
                                         nonIncomingOutstandingRequests.Count + newRequestCount >= numChunksLeft || //If the total number of requests is equal the number of chunks left
-                                        nonIncomingOutstandingRequests.Count + newRequestCount >= DFS.NumTotalGlobalRequests) //If the total number of requests is equal to the total requests
+                                        nonIncomingOutstandingRequests.Count + newRequestCount >= DFS.MaxTotalItemRequests) //If the total number of requests is equal to the total requests
                                         break;
                                 }
 
@@ -584,6 +591,8 @@ namespace DistributedFileSystem
                             #endregion Step2
                         }
                     }
+                    else if (incomingNetworkLoad > DFS.PeerBusyNetworkLoadThreshold)
+                        AddBuildLogLine("Unable to make further chunk requests as incoming network load is " + incomingNetworkLoad + ". Threshold is set at " + DFS.PeerBusyNetworkLoadThreshold);
                 }
                 ///////////////////////////////
                 ///// LEAVE ITEMLOCKER ////////
@@ -603,8 +612,8 @@ namespace DistributedFileSystem
                         //{
                             try
                             {
-                                if (request.Value.Count > DFS.NumConcurrentRequests)
-                                    throw new Exception("Number of requests, " + request.Value.Count + ", for client, " + request.Key.NetworkIdentifier + ", exceeds the maximum, " + DFS.NumConcurrentRequests + ".");
+                                if (request.Value.Count > DFS.MaxConcurrentPeerRequests)
+                                    throw new Exception("Number of requests, " + request.Value.Count + ", for client, " + request.Key.NetworkIdentifier + ", exceeds the maximum, " + DFS.MaxConcurrentPeerRequests + ".");
 
                                 for (int i = 0; i < request.Value.Count; i++)
                                 {

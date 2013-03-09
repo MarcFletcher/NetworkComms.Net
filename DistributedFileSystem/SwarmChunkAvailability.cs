@@ -608,7 +608,7 @@ namespace DistributedFileSystem
                     if (!alivePeersReceivedEvent.WaitOne(0))
                     {
                         int numOnlinePeers = (from current in peerAvailabilityByNetworkIdentifierDict.Values where current.PeerOnline select current).Count();
-                        if (numOnlinePeers >= DFS.NumTotalGlobalRequests || numOnlinePeers > peerAvailabilityByNetworkIdentifierDict.Count / 3.0)
+                        if (numOnlinePeers >= DFS.MaxTotalItemRequests || numOnlinePeers > peerAvailabilityByNetworkIdentifierDict.Count / 3.0)
                             alivePeersReceivedEvent.Set();
                     }
                 }

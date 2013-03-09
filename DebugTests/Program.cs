@@ -64,19 +64,16 @@ namespace DebugTests
                 //DFS.EnableLogging(logConfig);
             }
 
-            //List<DistributedFileSystem.ItemAssemblyConfig> files = (from current in Directory.EnumerateFiles(Directory.GetCurrentDirectory(), "*.iac") select DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedFileSystem.ItemAssemblyConfig>(File.ReadAllBytes(current))).ToList();
-            //List<DistributedFileSystem.SwarmChunkAvailability> sca = (from current in files select DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedFileSystem.SwarmChunkAvailability>(current.SwarmChunkAvailabilityBytes)).ToList();
-            
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
-            //DFSTest.RunExample();
+            DFSTest.RunExample();
             //LoadTest.RunExample();
             //DebugTest.GoDFSLogParse();
-            ThreadPoolTest.RunExample();
+            //ThreadPoolTest.RunExample();
         }
     }
 }

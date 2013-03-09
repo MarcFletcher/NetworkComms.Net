@@ -39,21 +39,21 @@ namespace DistributedFileSystem
         public const int ChunkRequestTimeoutMS = 20000;
         public const int MinChunkSizeInBytes = 2097152;
 
-        public const int NumConcurrentRequests = 2;
-        public const int NumTotalGlobalRequests = 8;
+        public const int MaxConcurrentPeerRequests = 2;
+        public const int MaxTotalItemRequests = 8;
         public const int MaxConcurrentLocalItemBuild = 3;
-        public const int MaxPeerTimeoutCount = 2;
+        public const int PeerMaxNumTimeouts = 2;
 
         public const int PeerBusyTimeoutMS = 500;
 
         /// <summary>
         /// While the peer network load goes above this value it will always reply with a busy response 
         /// </summary>
-        public const double PeerBusyNetworkLoadThreshold = 0.8;
+        public const double PeerBusyNetworkLoadThreshold = 0.85;
 
         public const int ItemBuildTimeoutSecsPerMB = 5;
 
-        static object globalDFSLocker = new object();
+        internal static object globalDFSLocker = new object();
         /// <summary>
         /// Dictionary which contains a cache of the distributed items
         /// </summary>
@@ -355,6 +355,13 @@ namespace DistributedFileSystem
             NetworkComms.Shutdown();
 
             DFSInitialised = false;
+
+            lock (globalDFSLocker)
+            {
+                //Cleanup the disk DFS item directory if necessary.
+                if (Directory.Exists("DFS_" + NetworkComms.NetworkIdentifier))
+                    Directory.Delete("DFS_" + NetworkComms.NetworkIdentifier, true);
+            }
 
             if (loggingEnabled) DFS.logger.Debug("DFS Shutdown.");
         }
@@ -934,7 +941,15 @@ namespace DistributedFileSystem
                             //Copy the result to the disk if required by the build target
                             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
                             {
-                                using (FileStream sw = new FileStream(assemblyConfig.ItemIdentifier, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                                //All disk files go in a local temp directory
+                                string tempFolderLocation = "DFS_" + NetworkComms.NetworkIdentifier;
+                                lock (globalDFSLocker)
+                                {
+                                    if (!Directory.Exists(tempFolderLocation))
+                                        Directory.CreateDirectory(tempFolderLocation);
+                                }
+
+                                using (FileStream sw = new FileStream(Path.Combine(tempFolderLocation, assemblyConfig.ItemIdentifier), FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
                                     newItem.CopyItemDataStream(sw);
                             }
 

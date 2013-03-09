@@ -1327,7 +1327,7 @@ namespace NetworkCommsDotNet
         /// Returns true if comms logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private static Logger logger = null;
 
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.

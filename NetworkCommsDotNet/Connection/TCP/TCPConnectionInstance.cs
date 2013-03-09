@@ -507,30 +507,30 @@ namespace NetworkCommsDotNet
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
-                        bool exceptionOccured = false;
-                        ManualResetEvent writeCompleted = new ManualResetEvent(false);
+                        //bool exceptionOccured = false;
+                        //ManualResetEvent writeCompleted = new ManualResetEvent(false);
 
                         //Send a single 0 byte
-                        //tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+                        tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
 
-                        tcpClientNetworkStream.BeginWrite(new byte[] { 0 }, 0, 1, new AsyncCallback((result) =>
-                            {
-                                try
-                                {
-                                    ((NetworkStream)result.AsyncState).EndWrite(result);
-                                }
-                                catch (Exception)
-                                {
-                                    exceptionOccured = true;
-                                }
-                                finally
-                                {
-                                    writeCompleted.Set();
-                                }
-                            }), tcpClientNetworkStream);
+                        //tcpClientNetworkStream.BeginWrite(new byte[] { 0 }, 0, 1, new AsyncCallback((result) =>
+                        //    {
+                        //        try
+                        //        {
+                        //            ((NetworkStream)result.AsyncState).EndWrite(result);
+                        //        }
+                        //        catch (Exception)
+                        //        {
+                        //            exceptionOccured = true;
+                        //        }
+                        //        finally
+                        //        {
+                        //            writeCompleted.Set();
+                        //        }
+                        //    }), tcpClientNetworkStream);
 
-                        if (!writeCompleted.WaitOne(2000) || exceptionOccured)
-                            throw new TimeoutException("Null packet send timeout.");
+                        //if (!writeCompleted.WaitOne(2000) || exceptionOccured)
+                        //    throw new TimeoutException("Null packet send timeout.");
 
                         //Update the traffic time after we have written to netStream
                         ConnectionInfo.UpdateLastTrafficTime();
