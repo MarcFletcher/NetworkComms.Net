@@ -64,6 +64,25 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
+#if SILVERLIGHT || WINDOWS_PHONE
+            CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
+#elif NET2
+            if (Type.GetType("Mono.Runtime") != null)
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net2;
+            else
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net2;
+#elif NET35
+            if (Type.GetType("Mono.Runtime") != null)
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net35;
+            else
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net35;
+#else
+            if (Type.GetType("Mono.Runtime") != null)
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
+            else
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
+#endif
+
             //We want to instantiate our own thread pool here
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, new TimeSpan(0,0,10));
 
@@ -321,6 +340,11 @@ namespace NetworkCommsDotNet
         /// The local identifier for this instance of NetworkCommsDotNet. This is an application unique identifier.
         /// </summary>
         public static ShortGuid NetworkIdentifier { get; private set; }
+
+        /// <summary>
+        /// The current runtime environment. Detected automatically on startup. Performance may be adversly affected if this is changed.
+        /// </summary>
+        public static RuntimeEnvironment CurrentRuntimeEnvironment { get; set; }
 
         /// <summary>
         /// An internal random object
@@ -1298,13 +1322,15 @@ namespace NetworkCommsDotNet
             {
                 Logger.Factory.Flush();
 
-                if (Type.GetType("Mono.Runtime") != null)
+                if (NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net2 || 
+                    NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net35 ||
+                    NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net4)
                     Logger.Factory.Configuration = null;
             }
 #endif
         }
         #endregion
-
+         
         #region Timeouts
         /// <summary>
         /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established. Default is 30000.

@@ -31,7 +31,26 @@ namespace DebugTests
     static class DebugTest
     {
         static long[] sendArray = new long[] { 43125, 65346345, 23147, 6457, 2345, 7657456, 5342564, 85678576, 3245, 87658, 3456, 589, 35456, 96879 };
-        
+
+        public static void GoStreamTest()
+        {
+            Random randGen = new Random();
+            byte[] someRandomData = new byte[300 * 1024 * 1024];
+            randGen.NextBytes(someRandomData);
+            string md5 = NetworkComms.MD5Bytes(someRandomData);
+
+           // MemoryStream inputStream = new MemoryStream(someRandomData);
+
+            FileStream destinationStream = new FileStream("testStream.crap", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            double result = StreamWriteWithTimeout.Write(someRandomData, 0, someRandomData.Length, destinationStream, 80000, 0);
+            destinationStream.Flush();
+
+            if (NetworkComms.MD5Bytes(destinationStream) != md5)
+                throw new Exception("I think we have a problem captain!");
+
+            destinationStream.Close();
+        }
+
         public static void GoTCP()
         {
             //Dictionary<string, string> optionsDic = new Dictionary<string, string>();

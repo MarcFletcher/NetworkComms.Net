@@ -30,7 +30,7 @@ using NLog.Targets;
 using System.Net;
 using System.Diagnostics;
 using DPSBase;
-//using DistributedFileSystem;
+using DistributedFileSystem;
 
 namespace DebugTests
 {
@@ -70,9 +70,9 @@ namespace DebugTests
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
-            DFSTest.RunExample();
+            //DFSTest.RunExample();
             //LoadTest.RunExample();
-            //DebugTest.GoDFSLogParse();
+            DebugTest.GoStreamTest();
             //ThreadPoolTest.RunExample();
         }
     }

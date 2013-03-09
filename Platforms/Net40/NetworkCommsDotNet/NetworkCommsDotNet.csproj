@@ -106,6 +106,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\ReservedPacketType.cs">
       <Link>ReservedPacketType.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\RuntimeEnvironment.cs">
+      <Link>RuntimeEnvironment.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\SendReceiveOptions.cs">
       <Link>SendReceiveOptions.cs</Link>
     </Compile>

@@ -34,7 +34,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\NetworkCommsDotNet.XML</DocumentationFile>
@@ -72,6 +72,7 @@
     <Compile Include="Connection\UDP\UDPClientThreadSafe.cs" />
     <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />
     <Compile Include="Connection\UDP\UDPOptions.cs" />
+    <Compile Include="RuntimeEnvironment.cs" />
     <Compile Include="Tools\Adler32.cs" />
     <Compile Include="Connection\ConnectionSendClose.cs" />
     <Compile Include="Tools\IPTools.cs" />
