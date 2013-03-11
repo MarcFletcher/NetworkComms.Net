@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace DPSBase
 {
     /// <summary>
     /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
@@ -192,6 +192,38 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="msg">A string containing useful information regarding the error</param>
         public InvalidNetworkIdentifierException(string msg)
+            : base(msg)
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// A possible duplicate connection has been detected.
+    /// </summary>
+    public class DuplicateConnectionException : CommsException
+    {
+        /// <summary>
+        /// Create a new instance of DuplicateConnectionException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
+        public DuplicateConnectionException(string msg)
+            : base(msg)
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// A connection send has timed out.
+    /// </summary>
+    public class ConnectionSendTimeoutException : CommsException
+    {
+        /// <summary>
+        /// Create a new instance of ConnectionSendTimeoutException
+        /// </summary>
+        /// <param name="msg">A string containing useful information regarding the error</param>
+        public ConnectionSendTimeoutException(string msg)
             : base(msg)
         {
 

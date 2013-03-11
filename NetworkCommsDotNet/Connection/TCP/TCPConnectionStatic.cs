@@ -23,6 +23,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Net;
 using System.IO;
+using DPSBase;
 
 #if WINDOWS_PHONE
 using Windows.Networking.Sockets;
@@ -506,6 +507,10 @@ namespace NetworkCommsDotNet
                         //If we are the server end and we did not pick the incoming connection up then tooo bad!
                     }
                     catch (SocketException)
+                    {
+                        //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+                    }
+                    catch (ObjectDisposedException)
                     {
                         //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
                     }

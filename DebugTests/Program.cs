@@ -49,19 +49,22 @@ namespace DebugTests
 
             if (false)
             {
-                //Configure the logger here
                 LoggingConfiguration logConfig = new LoggingConfiguration();
                 FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/file.txt";
-                fileTarget.Layout = "${date:format=HH\\:MM\\:ss} ${logger} ${message}";
+                fileTarget.FileName = "${basedir}/DebugTests_" + NetworkComms.NetworkIdentifier + ".txt";
+                fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
+                ConsoleTarget consoleTarget = new ConsoleTarget();
+                consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
 
                 logConfig.AddTarget("file", fileTarget);
+                logConfig.AddTarget("console", consoleTarget);
 
-                LoggingRule rule = new LoggingRule("*", LogLevel.Debug, fileTarget);
-                logConfig.LoggingRules.Add(rule);
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
+                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                NetworkComms.EnableLogging(logConfig);
 
-                NetworkComms.EnableLogging(logConfig);                
-                //DFS.EnableLogging(logConfig);
+                //Incase we run the DFS test we will also enable logging for that
+                DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
@@ -72,8 +75,8 @@ namespace DebugTests
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
             //LoadTest.RunExample();
-            DebugTest.GoStreamTest();
-            //ThreadPoolTest.RunExample();
+            //DebugTest.GoStreamTest();
+            ThreadPoolTest.RunExample();
         }
     }
 }

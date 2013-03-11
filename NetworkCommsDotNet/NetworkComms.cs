@@ -52,11 +52,6 @@ namespace NetworkCommsDotNet
             DefaultListenPort = 10000;
             ListenOnAllAllowedInterfaces = true;
 
-            //The larger the better performance wise but this size is chosen because any larger and windows
-            //environments will start putting buffers on LOH leading to memory fragmentation
-            ReceiveBufferSizeBytes = 80000;
-            SendBufferSizeBytes = 80000;
-
             CheckSumMismatchSentPacketCacheMaxByteLimit = 75000;
             MinimumSentPacketCacheTimeMinutes = 1;
 
@@ -64,27 +59,51 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
+            ReceiveBufferSizeBytes = 80000;
+
 #if SILVERLIGHT || WINDOWS_PHONE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
+            SendBufferSizeBytes = 80000;
 #elif NET2
             if (Type.GetType("Mono.Runtime") != null)
+            {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net2;
+                //Mono send buffer smaller as different large object heap limit
+                SendBufferSizeBytes = 8000;
+            }
             else
+            {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net2;
+                SendBufferSizeBytes = 80000;
+            }
 #elif NET35
             if (Type.GetType("Mono.Runtime") != null)
+            {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net35;
+                //Mono send buffer smaller as different large object heap limit
+                SendBufferSizeBytes = 8000;
+            }
             else
+            {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net35;
+                SendBufferSizeBytes = 80000;
+            }
 #else
             if (Type.GetType("Mono.Runtime") != null)
+            {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
+                //Mono send buffer smaller as different large object heap limit
+                SendBufferSizeBytes = 8000;
+            }
             else
-                CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
+            {
+                CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net4;
+                SendBufferSizeBytes = 80000;
+            }
 #endif
 
             //We want to instantiate our own thread pool here
-            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, new TimeSpan(0,0,10));
+            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
@@ -355,6 +374,11 @@ namespace NetworkCommsDotNet
         /// A single boolean used to control a NetworkCommsDotNet shutdown
         /// </summary>
         internal static volatile bool commsShutdown;
+
+        /// <summary>
+        /// A running total of the number of packets sent on all connections. Used to initialise packet sequence counters to ensure duplicates can not occur.
+        /// </summary>
+        internal static long totalPacketSendCount;
 
         /// <summary>
         /// The number of millisconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged values (AverageNetworkLoad). 
@@ -658,19 +682,19 @@ namespace NetworkCommsDotNet
         public static bool ListenOnAllAllowedInterfaces { get; set; }
 
         /// <summary>
-        /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to severe performance degredation.
+        /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degredation.
         /// </summary>
         public static int ReceiveBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to severe performance degredation.
+        /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degredation.
         /// </summary>
         public static int SendBufferSizeBytes { get; set; }
 
         /// <summary>
         /// The threadpool used by networkComms.Net to execute incoming packet handlers.
         /// </summary>
-        internal static CommsThreadPool CommsThreadPool { get; set; }
+        public static CommsThreadPool CommsThreadPool { get; set; }
 
         /// <summary>
         /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different priorities.
@@ -684,7 +708,7 @@ namespace NetworkCommsDotNet
                 //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
                 item = itemAsObj as PriorityQueueItem;
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a "+item.PacketHeader.PacketType+" packet from "+item.Connection.ConnectionInfo+" with a priority of "+item.Priority+".");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority + ".");
 
                 if (item == null)
                     throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
@@ -773,6 +797,14 @@ namespace NetworkCommsDotNet
                 if (item != null)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
+                    item.Connection.CloseConnection(true, 2);
+                }
+            }
+            catch (DuplicateConnectionException ex)
+            {
+                if (item != null)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(ex.Message != null ? ex.Message : "A possible duplicate connection was detected with " + item.Connection + ". Closing connection.");
                     item.Connection.CloseConnection(true, 2);
                 }
             }
@@ -1346,6 +1378,11 @@ namespace NetworkCommsDotNet
         /// Time to wait in milliseconds before assuming a remote connection is dead when doing a connection test. Default is 1000.
         /// </summary>
         public static int ConnectionAliveTestTimeoutMS { get; set; }
+
+        /// <summary>
+        /// By deefault NetworkComms.Net closes connections for which sends take a long time. The timeout is calculated based on previous connection send performances. Set this to true to disable this feature.
+        /// </summary>
+        public static bool DisableConnectionSendTimeouts { get; set; }
         #endregion
 
         #region Logging
@@ -2005,7 +2042,8 @@ namespace NetworkCommsDotNet
         internal static void AddConnectionByReferenceEndPoint(Connection connection, IPEndPoint endPointToUse = null)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
+                NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + 
+                    (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
 
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
             if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
@@ -2030,7 +2068,7 @@ namespace NetworkCommsDotNet
                     existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
-                        throw new ConnectionSetupException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). This can occasionaly occur if two peers try to connect to each other simultaneously. New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
+                        throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). This can occasionaly occur if two peers try to connect to each other simultaneously. New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
                             ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " - " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime) + " - " + " details - " + existingConnection.ConnectionInfo);
                     }
                     else

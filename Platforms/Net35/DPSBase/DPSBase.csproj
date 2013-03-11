@@ -63,6 +63,9 @@
     <Compile Include="..\..\..\DPSBase\DPSManager.cs">
       <Link>DPSManager.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\DPSBase\Exception.cs">
+      <Link>Exception.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\DPSBase\NullSerializer.cs">
       <Link>NullSerializer.cs</Link>
     </Compile>
@@ -74,6 +77,9 @@
     </Compile>
     <Compile Include="..\..\..\DPSBase\StreamSendWrapper.cs">
       <Link>StreamSendWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\StreamWriteWithTimeout.cs">
+      <Link>StreamWriteWithTimeout.cs</Link>
     </Compile>
     <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
       <Link>ThreadSafeStream.cs</Link>

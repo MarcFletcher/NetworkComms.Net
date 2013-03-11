@@ -23,6 +23,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Net;
 using System.IO;
+using DPSBase;
 
 #if WINDOWS_PHONE
 using Windows.Networking.Sockets;
@@ -146,19 +147,34 @@ namespace NetworkCommsDotNet
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            double maxSendTimePerKB = double.MaxValue;
+            if (!NetworkComms.DisableConnectionSendTimeouts)
+            {
+                if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                    maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                else
+                    maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+            }
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + 
+                ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes. Allowing " +
+                maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
 
             Stream outputStream = socket.OutputStream.AsStreamForWrite();
-            outputStream.Write(headerBytes, 0, headerBytes.Length);            
-            
-            packet.PacketData.ThreadSafeStream.CopyTo(outputStream, packet.PacketData.Start, packet.PacketData.Length);
+            DateTime startTime = DateTime.Now;
+            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, outputStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(outputStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+
             outputStream.Flush();
+
+            SendTimesMSPerKBCache.AddValue((headerWriteTime + dataWriteTime / 2), headerBytes.Length + packet.PacketData.Length);
+            SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
 
             //Correctly dispose the stream if we are finished with it
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream.");            
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (headerWriteTime + dataWriteTime).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
         }
 
         /// <summary>
@@ -177,7 +193,18 @@ namespace NetworkCommsDotNet
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
                         var stream = socket.OutputStream.AsStreamForWrite();
-                        stream.Write(new byte[] { 0 }, 0, 1);
+                        
+                        //Send a single 0 byte
+                        double maxSendTimePerKB = double.MaxValue;
+                        if (!NetworkComms.DisableConnectionSendTimeouts)
+                        {
+                            if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                                maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                            else
+                                maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+                        }
+
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
                         stream.Flush();
 
                         //Update the traffic time after we have written to netStream
@@ -196,7 +223,6 @@ namespace NetworkCommsDotNet
     }
 
 #else
-
 
     public partial class TCPConnection : Connection
     {
@@ -473,17 +499,32 @@ namespace NetworkCommsDotNet
             //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            double maxSendTimePerKB = double.MaxValue;
+            if (!NetworkComms.DisableConnectionSendTimeouts)
+            {
+                if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                    maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                else
+                    maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+            }
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + 
+                ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes. Allowing " +
+                maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
             
             DateTime startTime = DateTime.Now;
-            tcpClientNetworkStream.Write(headerBytes, 0, headerBytes.Length);
-            packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length);
+
+            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, tcpClientNetworkStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+
+            SendTimesMSPerKBCache.AddValue((headerWriteTime + dataWriteTime) /2, headerBytes.Length + packet.PacketData.Length);
+            SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
 
             //Correctly dispose the stream if we are finished with it
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length)/1024.0)/(DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (headerWriteTime + dataWriteTime).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
 
             if (!tcpClient.Connected)
             {
@@ -507,30 +548,17 @@ namespace NetworkCommsDotNet
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
 
-                        //bool exceptionOccured = false;
-                        //ManualResetEvent writeCompleted = new ManualResetEvent(false);
-
                         //Send a single 0 byte
-                        tcpClientNetworkStream.Write(new byte[] { 0 }, 0, 1);
+                        double maxSendTimePerKB = double.MaxValue;
+                        if (!NetworkComms.DisableConnectionSendTimeouts)
+                        {
+                            if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                                maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                            else
+                                maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+                        }
 
-                        //tcpClientNetworkStream.BeginWrite(new byte[] { 0 }, 0, 1, new AsyncCallback((result) =>
-                        //    {
-                        //        try
-                        //        {
-                        //            ((NetworkStream)result.AsyncState).EndWrite(result);
-                        //        }
-                        //        catch (Exception)
-                        //        {
-                        //            exceptionOccured = true;
-                        //        }
-                        //        finally
-                        //        {
-                        //            writeCompleted.Set();
-                        //        }
-                        //    }), tcpClientNetworkStream);
-
-                        //if (!writeCompleted.WaitOne(2000) || exceptionOccured)
-                        //    throw new TimeoutException("Null packet send timeout.");
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, tcpClientNetworkStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
 
                         //Update the traffic time after we have written to netStream
                         ConnectionInfo.UpdateLastTrafficTime();

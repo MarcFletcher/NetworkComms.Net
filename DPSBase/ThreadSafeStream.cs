@@ -150,21 +150,7 @@ namespace DPSBase
             lock (streamLocker)
             {
                 stream.Seek(startPosition, SeekOrigin.Begin);
-
-                //System.Threading.AutoResetEvent wait = new System.Threading.AutoResetEvent(false); 
-
                 stream.Write(data, 0, data.Length);
-                //stream.BeginWrite(data, 0, data.Length, new AsyncCallback(result =>
-                //    {
-                //        stream.EndWrite(result);
-                //        wait.Set();
-                //    }), null);
-
-                //Choose a timeout that allows upto 5.2 seconds per MB. Corresponds to minimum write speed of 0.2MB/s
-                //int waitTimeMS = (int)(data.Length * 5E-3);
-                //if (!wait.WaitOne(waitTimeMS))
-                //    throw new TimeoutException("Timeout waiting to write " + (data.Length/1024.0).ToString("0.0") + "KB after " + (waitTimeMS / 1000.0).ToString("0.0") + " seconds.");
-                
                 stream.Flush();
             }
         }
@@ -175,37 +161,14 @@ namespace DPSBase
         /// <param name="destinationStream">The destination stream to write to</param>
         /// <param name="startPosition"></param>
         /// <param name="length"></param>
-        public void CopyTo(Stream destinationStream, int startPosition, int length)
+        /// <param name="writeBufferSize">The buffer size to use for copying stream contents</param>
+        /// <param name="minTimeoutMS">The minimum time allowed for any sized copy</param>
+        /// <param name="timeoutMSPerKBWrite">The timouts in milliseconds per KB to write</param>
+        /// <returns>The average time in milliseconds per byte written</returns>
+        public double CopyTo(Stream destinationStream, int startPosition, int length, int writeBufferSize, double timeoutMSPerKBWrite = 1000,  int minTimeoutMS = 500)
         {
-            //Initialise the buffer at either the total length or 8KB, which ever is smallest
-            //This is the largest copy buffer we can use without mono putting the buffer on the LOH
-            //According to this http://www.mono-project.com/Working_With_SGen
-            //Performance can be improved if buffer is increased to 80KB
-            byte[] buffer = new byte[Math.Min(8000, length)];
-
             lock (streamLocker)
-            {
-                //Make sure we start in the write place
-                stream.Seek(startPosition, SeekOrigin.Begin);
-                int totalBytesCopied = 0;
-                while (true)
-                {
-                    int bytesRemaining = length - totalBytesCopied;
-
-                    if (bytesRemaining == 0)
-                        break;
-
-                    int read = stream.Read(buffer, 0, (buffer.Length > bytesRemaining ? bytesRemaining : buffer.Length));
-
-                    if (read <= 0)
-                        break;
-
-                    if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
-
-                    destinationStream.Write(buffer, 0, read);
-                    totalBytesCopied += read;
-                }
-            }
+                return StreamWriteWithTimeout.Write(stream, startPosition, length, destinationStream, writeBufferSize, timeoutMSPerKBWrite, minTimeoutMS);
         }
 
         /// <summary>

@@ -83,7 +83,6 @@
     <Compile Include="SendReceiveOptions.cs" />
     <Compile Include="Connection\TCP\TCPConnectionCreate.cs" />
     <Compile Include="ConnectionInfo.cs" />
-    <Compile Include="Exception.cs" />
     <Compile Include="Tools\IPExtAccess.cs" />
     <Compile Include="Tools\CommsMath.cs" />
     <Compile Include="NetworkComms.cs" />

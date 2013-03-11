@@ -59,8 +59,14 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
+            NumberOfStDeviationsForWriteTimeout = 4;
+            SendTimesMSPerKBCache = new CommsMath();
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
             packetBuilder = new PacketBuilder();
+
+            //Intialise the sequence counter using the global value
+            //Subsequent values on this connection are guaranteed to be sequential
+            packetSequenceCounter = Interlocked.Increment(ref NetworkComms.totalPacketSendCount);
 
             ConnectionInfo = connectionInfo;
 
@@ -246,8 +252,8 @@ namespace NetworkCommsDotNet
         /// <returns>True if connection is successfully setup, otherwise false</returns>
         private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
         {
-            try
-            {
+            //try
+            //{
                 lock (NetworkComms.globalDictAndDelegateLocker)
                 {
                     Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
@@ -283,11 +289,11 @@ namespace NetworkCommsDotNet
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                NetworkComms.LogError(ex, "ConnectionSetupHandlerInnerError");
-            }
+            //}
+            //catch (Exception ex)
+            //{
+                //NetworkComms.LogError(ex, "ConnectionSetupHandlerInnerError");
+            //}
 
             return false;
         }

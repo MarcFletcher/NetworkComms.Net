@@ -23,6 +23,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO;
 using System.Threading;
+using DPSBase;
 
 #if WINDOWS_PHONE
 using Windows.Networking.Sockets;
@@ -162,7 +163,11 @@ namespace NetworkCommsDotNet
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                        {
+                            connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
+                            //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
+                            NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                        }
                     }
                 }                
             }
@@ -575,7 +580,11 @@ namespace NetworkCommsDotNet
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                        {
+                            connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
+                            //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
+                            NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                        }
                     }
                 }
 
@@ -652,7 +661,11 @@ namespace NetworkCommsDotNet
                             if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                             if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                                throw new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error.");
+                            {
+                                connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
+                                //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
+                                NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                            }
                         }
                     }
                 }

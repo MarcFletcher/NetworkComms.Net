@@ -49,7 +49,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// While the peer network load goes above this value it will always reply with a busy response 
         /// </summary>
-        public const double PeerBusyNetworkLoadThreshold = 0.85;
+        public const double PeerBusyNetworkLoadThreshold = 0.9;
 
         public const int ItemBuildTimeoutSecsPerMB = 5;
 
@@ -776,8 +776,13 @@ namespace DistributedFileSystem
                         {
                             //Remove peer from any items
                             foreach (var item in swarmedItemsDict)
+                            {
                                 item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
+                            }
                         }
+
+                        lock (chunkDataCacheLocker)
+                            chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
 
                         if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
                     }
@@ -1062,7 +1067,7 @@ namespace DistributedFileSystem
             {
                 //A peer has requested a specific chunk of data, we will only provide it if we are not already providing it to someone else
                 DateTime startTime = DateTime.Now;
-                
+
                 //Console.WriteLine("... ({0}) received request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestRequest from " + connection + " for " + incomingRequest.ItemCheckSum + ", chunkIndex " + incomingRequest.ChunkIndex + ".");
 
@@ -1071,7 +1076,7 @@ namespace DistributedFileSystem
                     if (swarmedItemsDict.ContainsKey(incomingRequest.ItemCheckSum))
                         selectedItem = swarmedItemsDict[incomingRequest.ItemCheckSum];
 
-                if (selectedItem == null || (selectedItem!= null && selectedItem.ItemClosed))
+                if (selectedItem == null || (selectedItem != null && selectedItem.ItemClosed))
                 {
                     //First reply and say the peer can't have the requested data. This prevents a request timing out
                     connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
@@ -1142,6 +1147,11 @@ namespace DistributedFileSystem
                     }
                 }
             }
+            catch (ObjectDisposedException)
+            {
+                //This happens if we dispose the DFS item during this method execution
+                if (loggingEnabled) Logger.Warn("Prevented ObjectDisposedException in IncomingChunkInterestRequest");
+            }
             catch (CommsException)
             {
                 //Something fucked happened.
@@ -1206,26 +1216,26 @@ namespace DistributedFileSystem
                             if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
                         }
                     }
+
+                    //Only true if we have both the data and info
+                    if (existingChunkAvailabilityReply != null)
+                    {
+                        existingChunkAvailabilityReply.SetSourceConnectionInfo(connection.ConnectionInfo);
+
+                        DistributedItem item = null;
+                        lock (globalDFSLocker)
+                        {
+                            if (swarmedItemsDict.ContainsKey(existingChunkAvailabilityReply.ItemCheckSum))
+                                item = swarmedItemsDict[existingChunkAvailabilityReply.ItemCheckSum];
+                        }
+
+                        if (item != null)
+                            item.HandleIncomingChunkReply(existingChunkAvailabilityReply);
+                    }
                 }
                 catch (Exception ex)
                 {
                     NetworkComms.LogError(ex, "Error_IncomingChunkInterestReplyDataInner");
-                }
-
-                //Only true if we have both the data and info
-                if (existingChunkAvailabilityReply != null)
-                {
-                    existingChunkAvailabilityReply.SetSourceConnectionInfo(connection.ConnectionInfo);
-
-                    DistributedItem item = null;
-                    lock (globalDFSLocker)
-                    {
-                        if (swarmedItemsDict.ContainsKey(existingChunkAvailabilityReply.ItemCheckSum))
-                            item = swarmedItemsDict[existingChunkAvailabilityReply.ItemCheckSum];
-                    }
-
-                    if (item != null)
-                        item.HandleIncomingChunkReply(existingChunkAvailabilityReply);
                 }
 
                 CheckForChunkDataCacheTimeouts();

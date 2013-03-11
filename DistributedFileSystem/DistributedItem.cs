@@ -364,7 +364,7 @@ namespace DistributedFileSystem
                     bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
 
                     //We only make requests if remote chunks are available and our recieve load is below a given threshold
-                    double incomingNetworkLoad = NetworkComms.AverageNetworkLoadIncoming(10);
+                    double incomingNetworkLoad = NetworkComms.AverageNetworkLoadIncoming(7);
                     if (nonLocalChunkExistence.Count > 0 && incomingNetworkLoad <= DFS.PeerBusyNetworkLoadThreshold)
                     {
                         AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerAvailabilityInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count(entry=> entry.PeerOnline) + " unique online peers.");
@@ -901,6 +901,9 @@ namespace DistributedFileSystem
                 {
                     if (DFS.loggingEnabled) DFS.logger.Trace(" ... adding ChunkAvailabilityReply to queue for chunk " + incomingReply.ChunkIndex + " for item " + ItemCheckSum + ".");
 
+                    if (incomingReply.ChunkData == null)
+                        throw new NullReferenceException("Chunk data cannot be null.");
+
                     //We expect the final chunk to have a smaller length
                     if (incomingReply.ChunkData.Length != ChunkSizeInBytes && incomingReply.ChunkIndex < TotalNumChunks - 1)
                         throw new Exception("Provided bytes was " + incomingReply.ChunkData.Length + " bytes in length although " + ChunkSizeInBytes + " bytes were expected.");
@@ -935,7 +938,7 @@ namespace DistributedFileSystem
         /// <param name="destinationStream"></param>
         public void CopyItemDataStream(Stream destinationStream)
         {
-            ItemDataStream.CopyTo(destinationStream, 0, (int)ItemDataStream.Length);
+            ItemDataStream.CopyTo(destinationStream, 0, (int)ItemDataStream.Length, 8000);
         }
 
         /// <summary>

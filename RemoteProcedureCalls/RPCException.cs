@@ -22,10 +22,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
+using DPSBase;
 
 namespace RemoteProcedureCalls
 {
-
     /// <summary>
     /// An error occured during an RPC (Remote Procedure Call) exchange.
     /// </summary>

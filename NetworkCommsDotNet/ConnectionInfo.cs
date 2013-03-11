@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using ProtoBuf;
 using System.Net;
+using DPSBase;
 
 namespace NetworkCommsDotNet
 {

@@ -193,56 +193,59 @@ namespace DebugTests
                 #region PeerMode
                 Console.WriteLine("\n ... peer mode selected.");
 
-                ConnectionInfo serverConnectionInfo = new ConnectionInfo("192.168.0.105", 10000);
-                //ExampleHelper.GetServerDetails(out serverConnectionInfo);
-
-                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
-                Console.WriteLine(" ... DFS has been initialised.");
-
-                bool shutDown = false;
-                bool buildComplete = true;
-                DateTime startTime = DateTime.Now;
-
-                int buildCount = 0;
-
-                NetworkComms.PacketHandlerCallBackDelegate<byte[]> ReplyDelegate = (packetHeader, connection, dataBytes) =>
+                try
                 {
-                    try
-                    {
-                        buildCount++;
-                        DistributedItem item = DFS.MostRecentlyCompletedItem();
-                        Console.WriteLine(" ... full item build " + buildCount + " took {0} secs ({1} MB/s) using {2} total peers. {3} builds completed.", (DateTime.Now - startTime).TotalSeconds.ToString("0.00"), (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.0"), item.SwarmChunkAvailability.NumPeersInSwarm(), buildCount);
+                    ConnectionInfo serverConnectionInfo = new ConnectionInfo("192.168.0.105", 10000);
+                    //ExampleHelper.GetServerDetails(out serverConnectionInfo);
 
-                        double speed = (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds);
-                        connection.SendObject("ClientInfo", " ... build " + buildCount + " took " + (DateTime.Now - startTime).TotalSeconds.ToString("0.00") + " secs (" + speed.ToString("0.0") + " MB/s) using " + item.SwarmChunkAvailability.NumPeersInSwarm() + " peers. " + buildCount + " builds completed.");
-                        buildComplete = true;
-                        dataBytes = null;
-                        GC.Collect();
-                    }
-                    catch (Exception)
+                    DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
+                    Console.WriteLine(" ... DFS has been initialised.");
+
+                    bool shutDown = false;
+                    bool buildComplete = true;
+                    DateTime startTime = DateTime.Now;
+
+                    int buildCount = 0;
+
+                    NetworkComms.PacketHandlerCallBackDelegate<byte[]> ReplyDelegate = (packetHeader, connection, dataBytes) =>
                     {
-                        Console.WriteLine("Shutting down due to exception.");
+                        try
+                        {
+                            buildCount++;
+                            DistributedItem item = DFS.MostRecentlyCompletedItem();
+                            Console.WriteLine(" ... full item build " + buildCount + " took {0} secs ({1} MB/s) using {2} total peers. {3} builds completed.", (DateTime.Now - startTime).TotalSeconds.ToString("0.00"), (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.0"), item.SwarmChunkAvailability.NumPeersInSwarm(), buildCount);
+
+                            double speed = (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds);
+                            connection.SendObject("ClientInfo", " ... build " + buildCount + " took " + (DateTime.Now - startTime).TotalSeconds.ToString("0.00") + " secs (" + speed.ToString("0.0") + " MB/s) using " + item.SwarmChunkAvailability.NumPeersInSwarm() + " peers. " + buildCount + " builds completed.");
+                            buildComplete = true;
+                            dataBytes = null;
+                            GC.Collect();
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "DFSTestCallbackError");
+                            Console.WriteLine("Shutting down due to exception.");
+                            shutDown = true;
+                        }
+                    };
+
+                    NetworkComms.PacketHandlerCallBackDelegate<int> ShutdownDelegate = (packetHeader, connectionId, packetDataBytes) =>
+                    {
                         shutDown = true;
-                    }
-                };
+                    };
 
-                NetworkComms.PacketHandlerCallBackDelegate<int> ShutdownDelegate = (packetHeader, connectionId, packetDataBytes) =>
-                {
-                    shutDown = true;
-                };
+                    NetworkComms.AppendGlobalIncomingPacketHandler("BigDataRequestResponse", ReplyDelegate);
+                    NetworkComms.AppendGlobalIncomingPacketHandler("ClientCommand", ShutdownDelegate);
 
-                NetworkComms.AppendGlobalIncomingPacketHandler("BigDataRequestResponse", ReplyDelegate);
-                NetworkComms.AppendGlobalIncomingPacketHandler("ClientCommand", ShutdownDelegate);
+                    Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
+                    Console.WriteLine("\nListening for incoming objects on:");
+                    foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                        Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-                Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
-                Console.WriteLine("\nListening for incoming objects on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                    startTime = DateTime.Now;
 
-                startTime = DateTime.Now;
-
-                //while (true)
-                //{
+                    //while (true)
+                    //{
                     if (!shutDown && buildComplete)
                     {
                         //Console.WriteLine("\nPress 'r' to rebuild or any other key to shutdown.");
@@ -251,19 +254,19 @@ namespace DebugTests
 
                         //if (!shutDown)
                         //{
-                            DistributedItem item = DFS.MostRecentlyCompletedItem();
-                            if (item != null)
-                            {
-                                DFS.RemoveItem(item.ItemCheckSum);
-                                Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
-                                startTime = DateTime.Now;
-                            }
+                        DistributedItem item = DFS.MostRecentlyCompletedItem();
+                        if (item != null)
+                        {
+                            DFS.RemoveItem(item.ItemCheckSum);
+                            Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
+                            startTime = DateTime.Now;
+                        }
 
-                            buildComplete = false;
+                        buildComplete = false;
 
-                            TCPConnection.GetConnection(serverConnectionInfo).SendObject("BigDataRequest");
+                        TCPConnection.GetConnection(serverConnectionInfo).SendObject("BigDataRequest");
 
-                            Console.WriteLine(" ... initiating item build ...");
+                        Console.WriteLine(" ... initiating item build ...");
                         //}
                     }
                     else if (shutDown)
@@ -274,23 +277,30 @@ namespace DebugTests
                     }
 
                     Thread.Sleep(250);
-                //}
+                    //}
 
                     while (!buildComplete)
                     {
                         Thread.Sleep(250);
                     }
 
-                try
-                {
-                    TCPConnection.GetConnection(serverConnectionInfo).SendObject("ClientInfo", "... shutting down, initiating DFS shutdown.");
+                    try
+                    {
+                        TCPConnection.GetConnection(serverConnectionInfo).SendObject("ClientInfo", "... shutting down, initiating DFS shutdown.");
+                    }
+                    catch (CommsException)
+                    {
+                        Console.WriteLine("... unable to inform local of shutdown. Connection probably already closed.");
+                    }
+
+                    Console.WriteLine("Done. Completed {0} builds.", buildCount);
                 }
-                catch (CommsException)
+                catch (Exception ex)
                 {
-                    Console.WriteLine("... unable to inform local of shutdown. Connection probably already closed.");
+                    Console.WriteLine("Bad Error!");
+                    NetworkComms.LogError(ex, "DFSTestError_" + NetworkComms.NetworkIdentifier);
                 }
 
-                Console.WriteLine("Done. Completed {0} builds.", buildCount);
                 #endregion
             }
 

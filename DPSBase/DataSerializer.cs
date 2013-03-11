@@ -609,7 +609,7 @@ namespace DPSBase
             MemoryStream tempStream2 = new MemoryStream();
 
             //Initialise tempStream 1 with the data from the provided StreamSendWrapper
-            streamSendWrapperToSerialize.ThreadSafeStream.CopyTo(tempStream1, streamSendWrapperToSerialize.Start, streamSendWrapperToSerialize.Length);
+            streamSendWrapperToSerialize.ThreadSafeStream.CopyTo(tempStream1, streamSendWrapperToSerialize.Start, streamSendWrapperToSerialize.Length, 8000);
 
             //variable will store the number of bytes in the output stream at each processing stage
             long writtenBytes;

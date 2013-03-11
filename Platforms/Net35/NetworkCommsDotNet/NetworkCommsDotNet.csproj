@@ -91,9 +91,6 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPOptions.cs">
       <Link>Connection\UDP\UDPOptions.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Exception.cs">
-      <Link>Exception.cs</Link>
-    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\NetworkComms.cs">
       <Link>NetworkComms.cs</Link>
     </Compile>

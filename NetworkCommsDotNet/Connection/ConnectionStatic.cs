@@ -42,7 +42,37 @@ namespace NetworkCommsDotNet
         static Connection()
         {
             ConnectionKeepAlivePollIntervalSecs = 30;
+            MinimumMSPerKBSendTimeout = 5;
+            MaxNumSendTimes = 100;
+            MinNumSendsBeforeConnectionSpecificSendTimeout = 4;
+            MinSendTimeoutMS = 2000;
+            DefaultMSPerKBSendTimeout = 1000;
         }
+
+        /// <summary>
+        /// The minimum number of milliseconds to allow per KB before a write timeout may occur. Default is 10.0.
+        /// </summary>
+        public static double MinimumMSPerKBSendTimeout { get; set; }
+
+        /// <summary>
+        /// The maximum number of writes intervals to maintain. Default is 100.0;
+        /// </summary>
+        public static int MaxNumSendTimes { get; set; }
+
+        /// <summary>
+        /// The minimum number of writes before the connection specific write timeouts will be used. Default is 3.
+        /// </summary>
+        public static int MinNumSendsBeforeConnectionSpecificSendTimeout { get; set; }
+
+        /// <summary>
+        /// The default milliseconds per KB write timeout before connection specific values become available. Default is 2000. See <see cref="MinNumSendsBeforeConnectionSpecificSendTimeout"/>.
+        /// </summary>
+        public static int DefaultMSPerKBSendTimeout { get; set; }
+
+        /// <summary>
+        /// The minimum timeout for any sized send in milliseconds. Prevents timeouts when sending less than 1KB. Default is 500.
+        /// </summary>
+        public static int MinSendTimeoutMS { get; set; }
 
         /// <summary>
         /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive poll
@@ -169,7 +199,7 @@ namespace NetworkCommsDotNet
             //Max wait is 1 seconds per connection
             if (!returnImmediately && allConnections.Count > 0)
             {
-                if (!allConnectionsComplete.WaitOne(allConnections.Count * 1000))
+                if (!allConnectionsComplete.WaitOne(allConnections.Count * 2000))
                     //This timeout should not really happen so we are going to log an error if it does
                     NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count + " seconds waiting for null packet sends to finish. " + remainingConnectionCount + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
             }

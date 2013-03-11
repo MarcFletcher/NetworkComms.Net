@@ -45,9 +45,14 @@ namespace NetworkCommsDotNet
         Dictionary<int, WorkerInfo> workerInfoDict = new Dictionary<int, WorkerInfo>();
 
         /// <summary>
+        /// The minimum timespan between thread wait sleep join updates
+        /// </summary>
+        TimeSpan ThreadWaitSleepJoinCountUpdateInterval = new TimeSpan(0, 0, 0, 0, 250);
+
+        /// <summary>
         /// A quick lookup of the number of current idle threads
         /// </summary>
-        int idleThreads = 0;
+        int waitingThreads = 0;
 
         /// <summary>
         /// Priority queue used to order call backs 
@@ -67,12 +72,27 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The maximum number of threads to create in the pool
         /// </summary>
-        public int MaxThreadsCount {get; private set;}
+        public int MaxTotalThreadsCount {get; private set;}
+
+        /// <summary>
+        /// The maximum number of active threads in the pool. This can be less than MaxTotalThreadsCount, taking account of waiting threads.
+        /// </summary>
+        public int MaxActiveThreadsCount { get; private set; }
 
         /// <summary>
         /// The minimum number of idle threads to maintain in the pool
         /// </summary>
         public int MinThreadsCount {get; private set;}
+
+        /// <summary>
+        /// The most recent count of pool threads which are waiting for IO
+        /// </summary>
+        public int CurrentNumWaitSleepJoinThreadsCache { get; private set; }
+
+        /// <summary>
+        /// The dateTime associated with the most recent count of pool threads which are waiting for IO
+        /// </summary>
+        public DateTime LastThreadWaitSleepJoinCountCacheUpdate { get; private set; }
 
         /// <summary>
         /// The total number of threads currently in the thread pool
@@ -87,7 +107,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public int CurrentNumIdleThreads
         {
-            get { lock (SyncRoot) return idleThreads; }
+            get { lock (SyncRoot) return waitingThreads; }
         }
         
         /// <summary>
@@ -102,12 +122,14 @@ namespace NetworkCommsDotNet
         /// Create a new comms thread pool
         /// </summary>
         /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
-        /// <param name="maxThreadsCount">Maximum number of threads to create in the pool</param>
+        /// <param name="maxActiveThreadsCount">The maximum number of active (i.e. not waiting for IO) threads</param>
+        /// <param name="maxTotalThreadsCount">Maximum number of threads to create in the pool</param>
         /// <param name="threadIdleTimeoutClose">Timespan after which an idle thread will close</param>
-        public CommsThreadPool(int minThreadsCount, int maxThreadsCount, TimeSpan threadIdleTimeoutClose)
+        public CommsThreadPool(int minThreadsCount, int maxActiveThreadsCount, int maxTotalThreadsCount, TimeSpan threadIdleTimeoutClose)
         {
             MinThreadsCount = minThreadsCount;
-            MaxThreadsCount = maxThreadsCount;
+            MaxTotalThreadsCount = maxTotalThreadsCount;
+            MaxActiveThreadsCount = maxActiveThreadsCount;
             ThreadIdleTimeoutClose = threadIdleTimeoutClose;
         }
 
@@ -170,7 +192,10 @@ namespace NetworkCommsDotNet
 
             lock (SyncRoot)
             {
-                if (!shutdown && idleThreads == 0 && threadDict.Count < MaxThreadsCount)
+                UpdateThreadWaitSleepJoinCountCache();
+
+                int numActiveThreads = Math.Max(0,threadDict.Count - CurrentNumWaitSleepJoinThreadsCache);
+                if (!shutdown && waitingThreads == 0 && numActiveThreads < MaxActiveThreadsCount && threadDict.Count < MaxTotalThreadsCount)
                 {
                     //Launch a new thread
                     Thread newThread = new Thread(ThreadWorker);
@@ -184,7 +209,7 @@ namespace NetworkCommsDotNet
 
                     newThread.Start(info);
                 }
-                else if (!shutdown && idleThreads > 0)
+                else if (!shutdown && waitingThreads > 0)
                 {
                     jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
 
@@ -197,7 +222,7 @@ namespace NetworkCommsDotNet
                         if (info.Value.ThreadIdle)
                         {
                             info.Value.ClearThreadIdle();
-                            idleThreads--;
+                            waitingThreads--;
 
                             info.Value.ThreadSignal.Set();
                             chosenThreadId = info.Value.ThreadId;
@@ -206,12 +231,14 @@ namespace NetworkCommsDotNet
                         }
 
                         if (checkCount == workerInfoDict.Count)
-                            throw new Exception("IdleThreads count is " + idleThreads + " but unable to locate thread marked as idle.");
+                            throw new Exception("IdleThreads count is " + waitingThreads + " but unable to locate thread marked as idle.");
                     }
                 }
                 else if (!shutdown)
+                {
                     //If there are no idle threads and we can't start any new ones we just have to enqueue the item
                     jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
+                }
             }
 
             return chosenThreadId;
@@ -235,24 +262,46 @@ namespace NetworkCommsDotNet
                         KeyValuePair<QueueItemPriority, WaitCallBackWrapper> packetQueueItem;
                         lock (SyncRoot)
                         {
-                            if (shutdown || !jobQueue.TryTake(out packetQueueItem))
-                            {
-                                //If we failed to get a job we switch to idle and wait to be triggered
-                                if (!threadInfo.ThreadIdle)
-                                {
-                                    threadInfo.SetThreadIdle();
-                                    idleThreads++;
-                                }
+                            UpdateThreadWaitSleepJoinCountCache();
+                            int numActiveThreads = Math.Max(0, threadDict.Count - CurrentNumWaitSleepJoinThreadsCache);
 
-                                break;
+                            if (shutdown || //This one is obvious
+                                numActiveThreads > MaxActiveThreadsCount ||
+                                waitingThreads > MaxActiveThreadsCount) //If we have too many active threads
+                            {
+                                //If shutdown was true then we may need to set thread to idle
+                                if (threadInfo.ThreadIdle && waitingThreads > 0)
+                                    waitingThreads--;
+
+                                threadInfo.ClearThreadIdle();
+
+                                threadDict.Remove(threadInfo.ThreadId);
+                                workerInfoDict.Remove(threadInfo.ThreadId);
+
+                                UpdateThreadWaitSleepJoinCountCache();
+                                return;
                             }
                             else
                             {
-                                if (threadInfo.ThreadIdle && idleThreads > 0)
-                                    idleThreads--;
+                                if (!jobQueue.TryTake(out packetQueueItem)) //We fail to get a new job
+                                {
+                                    //If we failed to get a job we switch to idle and wait to be triggered
+                                    if (!threadInfo.ThreadIdle)
+                                    {
+                                        threadInfo.SetThreadIdle();
+                                        waitingThreads++;
+                                    }
 
-                                threadInfo.UpdateCurrentCallBackWrapper(packetQueueItem.Value);
-                                threadInfo.ClearThreadIdle();
+                                    break;
+                                }
+                                else
+                                {
+                                    if (threadInfo.ThreadIdle && waitingThreads > 0)
+                                        waitingThreads--;
+
+                                    threadInfo.UpdateCurrentCallBackWrapper(packetQueueItem.Value);
+                                    threadInfo.ClearThreadIdle();
+                                }
                             }
                         }
                     }
@@ -260,18 +309,21 @@ namespace NetworkCommsDotNet
                     //Perform the waitcallBack
                     try
                     {
+                        threadInfo.SetInsideCallBack();
                         threadInfo.CurrentCallBackWrapper.WaitCallBack(threadInfo.CurrentCallBackWrapper.State);
                     }
                     catch (Exception ex)
                     {
                         NetworkComms.LogError(ex, "ManagedThreadPoolCallBackError", "An unhandled exception was caught while processing a callback. Make sure to catch errors in callbacks to prevent this error file being produced.");
                     }
+                    finally
+                    {
+                        threadInfo.ClearInsideCallBack();
+                    }
 
                     threadInfo.UpdateLastActiveTime();
                     threadInfo.ClearCallBackWrapper();
                 }
-
-                if (shutdown) break;
 
                 //As soon as the queue is empty we wait until perhaps close time
                 if (!threadInfo.ThreadSignal.WaitOne(250))
@@ -281,27 +333,61 @@ namespace NetworkCommsDotNet
                     {
                         lock (SyncRoot)
                         {
+                            //We have timed out but we don't go below the minimum
                             if (threadDict.Count > MinThreadsCount)
                             {
-                                if (threadInfo.ThreadIdle && idleThreads > 0)
-                                    idleThreads--;
+                                if (threadInfo.ThreadIdle && waitingThreads > 0)
+                                    waitingThreads--;
 
                                 threadInfo.ClearThreadIdle();
-                                break;
+
+                                threadDict.Remove(threadInfo.ThreadId);
+                                workerInfoDict.Remove(threadInfo.ThreadId);
+
+                                UpdateThreadWaitSleepJoinCountCache();
+                                return;
                             }
                         }
                     }
                 }
-            } while (!shutdown);
 
-            if (!shutdown && DateTime.Now - threadInfo.LastActiveTime < ThreadIdleTimeoutClose)
-                NetworkComms.LogError(new TimeoutException("Thread closing before correct timeout. This should be impossible."), "ManagedThreadPoolError");
+                //We only leave via one of our possible breaks
+            } while (true);
+        }
 
-            //Last thing we do is to remove the thread entry
+        /// <summary>
+        /// Returns the total number of threads in the pool which are waiting for IO
+        /// </summary>
+        private void UpdateThreadWaitSleepJoinCountCache()
+        {
             lock (SyncRoot)
             {
-                threadDict.Remove(threadInfo.ThreadId);
-                workerInfoDict.Remove(threadInfo.ThreadId);
+                if (DateTime.Now - LastThreadWaitSleepJoinCountCacheUpdate > ThreadWaitSleepJoinCountUpdateInterval)
+                {
+                    int returnValue = 0;
+
+                    foreach (var thread in threadDict)
+                    {
+                        if (workerInfoDict[thread.Key].InsideCallBack && thread.Value.ThreadState == ThreadState.WaitSleepJoin)
+                            returnValue++;
+                    }
+
+                    CurrentNumWaitSleepJoinThreadsCache = returnValue;
+                    LastThreadWaitSleepJoinCountCacheUpdate = DateTime.Now;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Provides a brief string summarisation the state of the thread pool
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            lock (SyncRoot)
+            {
+                UpdateThreadWaitSleepJoinCountCache();
+                return "TotalTs:" + CurrentNumTotalThreads + ", IdleTs:" + CurrentNumIdleThreads + ", SleepTs:" + CurrentNumWaitSleepJoinThreadsCache + ", Q:" + QueueCount;
             }
         }
     }
@@ -313,6 +399,7 @@ namespace NetworkCommsDotNet
         public bool ThreadIdle { get; private set; }
         public DateTime LastActiveTime {get; private set;}
         public WaitCallBackWrapper CurrentCallBackWrapper { get; private set; }
+        public bool InsideCallBack { get; private set; }
 
         public WorkerInfo(int threadId, WaitCallBackWrapper initialisationCallBackWrapper)
         {
@@ -338,11 +425,33 @@ namespace NetworkCommsDotNet
             CurrentCallBackWrapper = null;
         }
 
+        /// <summary>
+        /// Set InsideCallBack to true
+        /// </summary>
+        public void SetInsideCallBack()
+        {
+            InsideCallBack = true;
+        }
+
+        /// <summary>
+        /// Set InsideCallBack to false
+        /// </summary>
+        public void ClearInsideCallBack()
+        {
+            InsideCallBack = false;
+        }
+
+        /// <summary>
+        /// Set threadIdle to true
+        /// </summary>
         public void SetThreadIdle()
         {
             this.ThreadIdle = true;
         }
 
+        /// <summary>
+        /// Set threadIdle to false
+        /// </summary>
         public void ClearThreadIdle()
         {
             this.ThreadIdle = false;

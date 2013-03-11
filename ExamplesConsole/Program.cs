@@ -137,7 +137,7 @@ namespace ExamplesConsole
                 //////////////////////////////////////////////////////////////////////
                 LoggingConfiguration logConfig = new LoggingConfiguration();
                 FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/ExampleConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
+                fileTarget.FileName = "${basedir}/ExamplesConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
                 fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
                 ConsoleTarget consoleTarget = new ConsoleTarget();
                 consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
@@ -153,7 +153,7 @@ namespace ExamplesConsole
                 DistributedFileSystem.DFS.EnableLogging(logConfig);
 
                 //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt." + Environment.NewLine);
+                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier + ".txt." + Environment.NewLine);
             }
         }
     }

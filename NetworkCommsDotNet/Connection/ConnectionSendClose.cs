@@ -34,9 +34,20 @@ namespace NetworkCommsDotNet
         protected object sendLocker = new object();
 
         /// <summary>
+        /// A comms math oject for tracking send times. Used to prevent send deadlocks.
+        /// Initialisated at 1000 milliseconds per KB write speed, corresponding with 1KB / second.
+        /// </summary>
+        protected CommsMath SendTimesMSPerKBCache;
+
+        /// <summary>
+        /// The number of standard deviations from the mean to use for write timeouts. Default is 4.0.
+        /// </summary>
+        public double NumberOfStDeviationsForWriteTimeout { get; set; }
+
+        /// <summary>
         /// A counter which is incremented during every a send. The current value is included in the header of all sent packets.
         /// </summary>
-        protected long packetSequenceCounter = 0;
+        protected long packetSequenceCounter;
 
         /// <summary>
         /// Maintains a list of sent packets for the purpose of confirmation and possible resends.
@@ -424,6 +435,8 @@ namespace NetworkCommsDotNet
                 if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new CommunicationException("Attempting to send packet on connection which has been closed or is currently closing.");
 
                 //Set packet sequence number inside sendLocker
+                //Increment the global counter as well to ensure future connections with the same host can not create duplicates
+                Interlocked.Increment(ref NetworkComms.totalPacketSendCount);
                 packetSequenceNumber = packetSequenceCounter++;
                 packet.PacketHeader.SetOption(PacketHeaderLongItems.PacketSequenceNumber, packetSequenceNumber);
 
@@ -526,14 +539,28 @@ namespace NetworkCommsDotNet
                 }
                 catch (ConfirmationTimeoutException)
                 {
+                    //Confirmation timeout there is no need to close the connection as this 
+                    //does not neccessarily mean there is a conneciton problem
                     throw;
                 }
                 catch (CommunicationException)
                 {
+                    //We close the connection due to communication exceptions
+                    CloseConnection(true, 33);
                     throw;
+                }
+                catch (TimeoutException ex)
+                {
+                    //We close the connection due to communication exceptions
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("Timeout exception for connection " + this.ConnectionInfo + (ex.Message != null ? ". " +ex.Message : "."));
+
+                    CloseConnection(true, 34);
+                    throw new ConnectionSendTimeoutException(ex.ToString());
                 }
                 catch (Exception ex)
                 {
+                    //We close the connection due to communication exceptions
+                    CloseConnection(true, 35);
                     throw new CommunicationException(ex.ToString());
                 }
                 finally

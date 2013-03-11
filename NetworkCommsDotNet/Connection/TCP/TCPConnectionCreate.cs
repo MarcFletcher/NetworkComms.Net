@@ -23,6 +23,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Net;
 using System.IO;
+using DPSBase;
 
 #if WINDOWS_PHONE
 using Windows.Networking.Sockets;
