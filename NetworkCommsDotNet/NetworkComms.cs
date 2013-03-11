@@ -386,12 +386,14 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
 
-        private static Thread NetworkLoadThread = null;
-        private static ManualResetEvent NetworkLoadThreadWait;
         private static double currentNetworkLoadIncoming;
         private static double currentNetworkLoadOutgoing;
+#if !WINDOWS_PHONE
+        private static Thread NetworkLoadThread = null;
         private static CommsMath currentNetworkLoadValuesIncoming;
         private static CommsMath currentNetworkLoadValuesOutgoing;
+        private static ManualResetEvent NetworkLoadThreadWait;
+#endif
 
         /// <summary>
         /// The interface link speed in bits/sec used for network load calculations. Default is 100Mb/sec
@@ -1316,6 +1318,7 @@ namespace NetworkCommsDotNet
                 LogError(ex, "CommsShutdownError");
             }
 
+#if !WINDOWS_PHONE
             try
             {
                 if (NetworkLoadThread != null)
@@ -1332,6 +1335,7 @@ namespace NetworkCommsDotNet
             {
                 LogError(ex, "CommsShutdownError");
             }
+#endif
 
             try
             {

@@ -36,19 +36,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         None = 0x0,
 
-        /// <summary>
-        /// Handshake the connection before sending user data. Ensures the remote end is actually listening.
-        /// </summary>
+        //The following UDP options are on the roadmap for implementation.
+
+        //Handshake the connection before sending user data. Ensures the remote end is actually listening.
         //Handshake = 0x1,
 
-        /// <summary>
-        /// Ensures packets can only be received in the order they were sent. e.g. Prevents old messages arriving late from being handled.
-        /// </summary>
+        //Ensures packets can only be received in the order they were sent. e.g. Prevents old messages arriving late from being handled.
         //Sequenced = 0x2,
-
-        /// <summary>
-        /// Guarantees that every packet sent 'eventually' arrives. If used together with 'Sequenced' flag essentially repoduces TCP.
-        /// </summary>
-        //Reliable = 0x3
     }
 }

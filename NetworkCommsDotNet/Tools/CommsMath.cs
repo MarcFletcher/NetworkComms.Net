@@ -75,6 +75,7 @@ namespace NetworkCommsDotNet
         /// Add a new value to the internal list
         /// </summary>
         /// <param name="value">The value to add</param>
+        /// <param name="weight">The weight to apply to the provided value</param>
         public void AddValue(double value, double weight)
         {
             lock (locker)
@@ -238,6 +239,7 @@ namespace NetworkCommsDotNet
         /// Return the mean of the provided list of values
         /// </summary>
         /// <param name="localValues">Values for which a mean should be calculated</param>
+        /// <param name="weights">The weights to apply to the corresponding values</param>
         /// <returns>The mean of provided values</returns>
         public static double CalculateMean(List<double> localValues, List<double> weights)
         {
@@ -303,6 +305,7 @@ namespace NetworkCommsDotNet
         /// Return the standard deviation of the provided list of values
         /// </summary>
         /// <param name="localValues">Values for which a standard deviation should be calculated</param>
+        /// <param name="weights">The weights to apply to the corresponding values</param>
         /// <returns>The standard deviation of provided values</returns>
         public static double CalculateStdDeviation(List<double> localValues, List<double> weights)
         {

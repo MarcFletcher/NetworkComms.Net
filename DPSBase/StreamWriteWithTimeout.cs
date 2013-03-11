@@ -75,6 +75,7 @@ namespace DPSBase
         /// <param name="destinationStream">The destination stream</param>
         /// <param name="writeBufferSize">The size in bytes of each successive write</param>
         /// <param name="timeoutMSPerKBWrite">The maximum time to allow for write to complete per KB</param>
+        /// <param name="minTimeoutMS">The minimum time to wait per write, this takes priority over other values.</param>
         /// <returns>The average time in milliseconds per byte written</returns>
         public static double Write(Stream inputStream, int inputStart, int inputLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {

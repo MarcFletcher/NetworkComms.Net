@@ -395,7 +395,9 @@ namespace DPSBase
 
         private class ProcessArgument : MarshalByRefObject
         {
+#if !WINDOWS_PHONE
             public string entryDomain;
+#endif
             public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
             public Dictionary<byte, string> processorTypes;// = new Dictionary<byte, string>();
         }

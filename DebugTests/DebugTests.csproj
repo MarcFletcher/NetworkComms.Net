@@ -42,6 +42,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DocumentationFile>bin\Release\DebugTests.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>1</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NLog">

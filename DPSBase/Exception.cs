@@ -39,7 +39,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// A checksum error has occured. <see cref="NetworkComms.EnablePacketCheckSumValidation"/> must be set to true for this exception to be thrown.
+    /// A checksum error has occured. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
     /// </summary>
     public class CheckSumException : CommsException
     {
@@ -55,7 +55,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing <see cref="NetworkComms.PacketConfirmationTimeoutMS"/>.
+    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS
     /// </summary>
     public class ConfirmationTimeoutException : CommsException
     {
@@ -103,7 +103,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to establish a <see cref="Connection"/>
+    /// An error occured while trying to establish a Connection
     /// </summary>
     public class ConnectionSetupException : CommsException
     {
@@ -119,7 +119,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to establish a <see cref="Connection"/>
+    /// An error occured while trying to establish a Connection
     /// </summary>
     public class ConnectionShutdownException : CommsException
     {
@@ -167,7 +167,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An unexpected incoming packetType has been received. Consider setting <see cref="NetworkComms.IgnoreUnknownPacketTypes"/> to true to prevent this exception.
+    /// An unexpected incoming packetType has been received. Consider setting NetworkComms.IgnoreUnknownPacketTypes to true to prevent this exception.
     /// </summary>
     public class UnexpectedPacketTypeException : CommsException
     {
