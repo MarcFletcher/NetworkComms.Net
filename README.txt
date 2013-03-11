@@ -16,13 +16,13 @@
 
 Thank you for your interest in NetworkComms.Net. We hope it will be the only network library you ever
 need. We want it to work perfectly but in the unlikely event your find something broken please let us
-so that we can fix it.
+know so that we can fix it.
 
 Please read the following brief, but important sections:
 
 LICENSING: This library is made freely available under the terms of the GPL. If you are unsure what that
 means please find out. We make our living from providing this library so if you intend to use it for 
-proprietary software we kindly ask you purchase a commerical licence. More information can be found here
+proprietary software we kindly ask you purchase a commercial licence. More information can be found here
 http://www.networkcomms.net/licensing/
 
 GETTING STARTED: Everything you need to know about getting started with NetworkComms.Net, including a 
