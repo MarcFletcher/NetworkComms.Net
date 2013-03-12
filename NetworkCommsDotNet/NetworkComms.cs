@@ -1356,12 +1356,13 @@ namespace NetworkCommsDotNet
             //Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
             if (Logger != null)
             {
+                LogManager.Flush();
                 Logger.Factory.Flush();
 
-                if (NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net2 || 
+                if (NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net2 ||
                     NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net35 ||
                     NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net4)
-                    Logger.Factory.Configuration = null;
+                    LogManager.Configuration = null;
             }
 #endif
         }

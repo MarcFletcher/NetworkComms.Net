@@ -77,6 +77,11 @@ namespace DistributedFileSystem
         public static int MinTargetLocalPort { get; set; }
         public static int MaxTargetLocalPort { get; set; }
 
+        /// <summary>
+        /// If true ensures all DFS items include chunk MD5 list. Also on build clients will validate the chunk MD5
+        /// </summary>
+        public static bool ValidateEachChunkMD5 { get; set; }
+
         static Thread linkWorkerThread;
         static string linkTargetIP;
         static int linkTargetPort;

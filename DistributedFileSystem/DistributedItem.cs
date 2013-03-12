@@ -680,6 +680,7 @@ namespace DistributedFileSystem
                 AddBuildLogLine("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
 
                 #region Integrate Chunks
+                bool integratedData = false;
                 while (!ItemClosed)
                 {
                     ChunkAvailabilityReply incomingReply = null;
@@ -697,6 +698,7 @@ namespace DistributedFileSystem
                             break;
                         else
                         {
+                            integratedData = true;
                             if (DFS.loggingEnabled) DFS.logger.Trace("ChunkAvailabilityReply dequeued for chunkIndex=" + incomingReply.ChunkIndex);
                             AddBuildLogLine("ChunkAvailabilityReply dequeued for chunkIndex=" + incomingReply.ChunkIndex);
 
@@ -732,10 +734,6 @@ namespace DistributedFileSystem
                                 }
                             }
 
-                            //If we have just completed the build we can set the build complete signal
-                            if (LocalItemComplete())
-                                itemBuildComplete.Set();
-
                             //We only broadcast our availability if the health metric of this chunk is less than
                             if (SwarmChunkAvailability.ChunkHealthMetric(incomingReply.ChunkIndex, TotalNumChunks) < 1)
                                 SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
@@ -755,6 +753,10 @@ namespace DistributedFileSystem
                         throw;
                     }
                 }
+
+                //If we have just completed the build we can set the build complete signal
+                if (integratedData && LocalItemComplete())
+                    itemBuildComplete.Set();
                 #endregion
                 #endregion
 
