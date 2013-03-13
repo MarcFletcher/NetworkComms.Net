@@ -40,18 +40,27 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 
                 <TextBlock Text="Master IP Address" Grid.Column="0" Grid.Row="0"  VerticalAlignment="Center"/>
                 <TextBlock Text="Master Port Number" Grid.Column="0" Grid.Row="1"  VerticalAlignment="Center"/>
                 <TextBlock Text="Local Name" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center"/>
-                <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center"/>
+                <TextBlock Text="Use TCP" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center"/>
+                <TextBlock Text="Use UDP" Grid.Column="0" Grid.Row="5" VerticalAlignment="Center"/>
+                <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="7" VerticalAlignment="Center"/>
 
                 <TextBox x:Name="MasterIPInputBox" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits" TextChanged="MasterIPInputBox_TextChanged_1"/>
-                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="10000" TextAlignment="Center" InputScope="Digits"/>
+                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits"/>
                 <TextBox x:Name="LocalNameInputBox" Grid.Column="1" Grid.Row="2" VerticalAlignment="Center" Text="WinPhone8" TextAlignment="Center"/>
-                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseEncryptionBox_Checked" Unchecked="UseEncryptionBox_Unchecked"/>
-                
+
+                <ToggleButton x:Name="UseTCP" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseTCP_Checked"/>
+                <ToggleButton x:Name="UseUDP" Grid.Column="1" Grid.Row="5" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseUDP_Checked"/>
+
+                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="7" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseEncryptionBox_Checked" Unchecked="UseEncryptionBox_Unchecked"/>
             </Grid>
         </Grid>
     </Grid>

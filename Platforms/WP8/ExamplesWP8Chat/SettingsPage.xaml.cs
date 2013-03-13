@@ -14,7 +14,6 @@ namespace ExamplesWP8Chat
 {
     public partial class SettingsPage : PhoneApplicationPage
     {
-
         /// <summary>
         /// An optional encryption key to use should one be required.
         /// This can be changed freely but must obviously be the same
@@ -124,6 +123,49 @@ namespace ExamplesWP8Chat
         {
             NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
         }
-        
+
+        /// <summary>
+        /// Use UDP for all communication
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UseUDP_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseTCP != null && this.UseTCP.IsChecked != null && !(bool)this.UseTCP.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseTCP.IsChecked = false;
+                (App.Current as App).ConnectionType = ConnectionType.UDP;
+
+                //Shutdown comms and clear any existing chat messages
+                NetworkComms.Shutdown();
+                (App.Current as App).ChatBox.Text = "";
+
+                //Initialise network comms using the new connection type
+                (App.Current as App).InitialiseNetworkComms();
+            }
+        }
+
+        /// <summary>
+        /// Use TCP for all communication
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UseTCP_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseUDP != null && this.UseUDP.IsChecked != null && !(bool)this.UseUDP.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseUDP.IsChecked = false;
+                (App.Current as App).ConnectionType = ConnectionType.TCP;
+
+                //Shutdown comms and clear any existing chat messages
+                NetworkComms.Shutdown();
+                (App.Current as App).ChatBox.Text = "";
+
+                //Initialise network comms using the new connection type
+                (App.Current as App).InitialiseNetworkComms();
+            }
+        }
     }
 }

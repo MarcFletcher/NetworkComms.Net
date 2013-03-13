@@ -23,6 +23,16 @@ namespace ExamplesWPFChat
     public partial class MainWindow : Window
     {
         /// <summary>
+        /// The type of connection currently used to send and recieve messages. Default is TCP.
+        /// </summary>
+        ConnectionType connectionType = ConnectionType.TCP;
+
+        /// <summary>
+        /// A boolean used to track the very first initialisation
+        /// </summary>
+        bool firstInitialisation = true;
+
+        /// <summary>
         /// Dictionary to keep track of which peer messages have already been written to the chat window
         /// </summary>
         Dictionary<ShortGuid, ChatMessage> lastPeerMessageDict = new Dictionary<ShortGuid, ChatMessage>();
@@ -48,29 +58,58 @@ namespace ExamplesWPFChat
         public MainWindow()
         {
             InitializeComponent();
+            InitialiseNetworkComms();
+        }
 
-            //Start listening for new incoming TCP connections
-            //Parameters is true so that we listen on a random port if the default is not available
-            TCPConnection.StartListening(true);
+        /// <summary>
+        /// Initialise networkComms.Net. We default to using TCP
+        /// </summary>
+        private void InitialiseNetworkComms()
+        {
+            if (connectionType == ConnectionType.TCP)
+            {
+                //Start listening for new incoming TCP connections
+                //Parameter is true so that we listen on a random port if the default is not available
+                TCPConnection.StartListening(true);
 
-            //Write the IP addresses and ports that we are listening on to the chatBox
-            chatBox.AppendText("Initialising WPF chat example. Accepting connections on:\n");
-            foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
-                chatBox.AppendText(listenEndPoint.Address + ":" + listenEndPoint.Port + "\n");
+                //Write the IP addresses and ports that we are listening on to the chatBox
+                chatBox.AppendText("Initialising WPF chat example. Accepting TCP connections on:\n");
+                foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                    chatBox.AppendText(listenEndPoint.Address + ":" + listenEndPoint.Port + "\n");
+            }
+            else if (connectionType == ConnectionType.UDP)
+            {
+                //Start listening for new incoming UDP connections
+                //Parameter is true so that we listen on a random port if the default is not available
+                UDPConnection.StartListening(true);
+
+                //Write the IP addresses and ports that we are listening on to the chatBox
+                chatBox.AppendText("Initialising WPF chat example. Accepting UDP connections on:\n");
+                foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
+                    chatBox.AppendText(listenEndPoint.Address + ":" + listenEndPoint.Port + "\n");
+            }
+            else
+                chatBox.AppendText("Error: Unable to initialise comms as an invalid connectionType was set.");
 
             //Add a blank line after the initialisation output
             chatBox.AppendText("\n");
 
-            //Set the default Local Name box using to the local host name
-            localName.Text = NetworkComms.HostName;
+            //We only need to add the packet handlers once. If we change connection type calling NetworkComms.Shutdown() does not remove these.
+            if (firstInitialisation)
+            {
+                firstInitialisation = false;
 
-            //Configure NetworkCommsDotNet to handle and incoming packet of type 'ChatMessage'
-            //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
-            NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
+                //Set the default Local Name box using to the local host name
+                localName.Text = NetworkComms.HostName;
 
-            //Configure NetworkCommsDotNet to perform an action when a connection is closed
-            //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
-            NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
+                //Configure NetworkCommsDotNet to handle and incoming packet of type 'ChatMessage'
+                //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
+                NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
+
+                //Configure NetworkCommsDotNet to perform an action when a connection is closed
+                //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
+                NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
+            }
         }
 
         /// <summary>
@@ -204,7 +243,7 @@ namespace ExamplesWPFChat
         }
 
         /// <summary>
-        /// Send our message.
+        /// Send a message.
         /// </summary>
         private void SendMessage()
         {
@@ -242,7 +281,15 @@ namespace ExamplesWPFChat
             if (masterConnectionInfo != null)
             {
                 //We perform the send within a try catch to ensure the application continues to run if there is a problem.
-                try { TCPConnection.GetConnection(masterConnectionInfo).SendObject("ChatMessage", messageToSend); }
+                try 
+                { 
+                    if(connectionType == ConnectionType.TCP)
+                        TCPConnection.GetConnection(masterConnectionInfo).SendObject("ChatMessage", messageToSend); 
+                    else if (connectionType == ConnectionType.UDP)
+                        UDPConnection.GetConnection(masterConnectionInfo, UDPOptions.None).SendObject("ChatMessage", messageToSend);
+                    else
+                        throw new Exception("An invalid connectionType is set.");
+                }
                 catch (CommsException) { MessageBox.Show("A CommsException occured while trying to send message to " + masterConnectionInfo, "CommsException", MessageBoxButton.OK); }
             }
 
@@ -252,7 +299,15 @@ namespace ExamplesWPFChat
             foreach (ConnectionInfo info in otherConnectionInfos)
             {
                 //We perform the send within a try catch to ensure the application continues to run if there is a problem.
-                try { TCPConnection.GetConnection(info).SendObject("ChatMessage", messageToSend); }
+                try 
+                {
+                    if (connectionType == ConnectionType.TCP)
+                        TCPConnection.GetConnection(info).SendObject("ChatMessage", messageToSend); 
+                    else if (connectionType == ConnectionType.UDP)
+                        UDPConnection.GetConnection(info, UDPOptions.None).SendObject("ChatMessage", messageToSend);
+                    else
+                        throw new Exception("An invalid connectionType is set.");
+                }
                 catch (CommsException) { MessageBox.Show("A CommsException occured while trying to send message to " + info, "CommsException", MessageBoxButton.OK); }
             }
         }
@@ -308,6 +363,50 @@ namespace ExamplesWPFChat
         {
             //Ensure we shutdown comms when we are finished
             NetworkComms.Shutdown();
+        }
+
+        /// <summary>
+        /// Use UDP for all communication
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UseUDP_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseTCP!=null && this.UseTCP.IsChecked != null && !(bool)this.UseTCP.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseTCP.IsChecked = false;
+                connectionType = ConnectionType.UDP;
+
+                //Shutdown comms and clear any existing chat messages
+                NetworkComms.Shutdown();
+                chatBox.Clear();
+
+                //Initialise network comms using the new connection type
+                InitialiseNetworkComms();
+            }
+        }
+
+        /// <summary>
+        /// Use TCP for all communication
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UseTCP_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseUDP!= null && this.UseUDP.IsChecked != null && !(bool)this.UseUDP.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseUDP.IsChecked = false;
+                connectionType = ConnectionType.TCP;
+
+                //Shutdown comms and clear any existing chat messages
+                NetworkComms.Shutdown();
+                chatBox.Clear();
+
+                //Initialise network comms using the new connection type
+                InitialiseNetworkComms();
+            }
         }
     }
 }
