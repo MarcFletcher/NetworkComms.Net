@@ -28,10 +28,21 @@ namespace ExamplesWP8Chat
             MasterIPInputBox.Text = (App.Current as App).MasterIPAddress;
             MasterIPInputBox.Select(MasterIPInputBox.Text.Length, 0);
             oldText = MasterIPInputBox.Text;
-
             MasterPortInputBox.Text = (App.Current as App).MasterPort.ToString();
             LocalNameInputBox.Text = (App.Current as App).LocalName;
+
             UseEncryptionCheckBox.IsChecked = (App.Current as App).UseEncryption;
+
+            if ((App.Current as App).ConnectionType == ConnectionType.TCP)
+            {
+                this.UseTCP.IsChecked = true;
+                this.UseUDP.IsChecked = false;
+            }
+            else
+            {
+                this.UseUDP.IsChecked = true;
+                this.UseTCP.IsChecked = false;
+            }
         }
 
         private void BackKeyPressHandler(object sender, System.ComponentModel.CancelEventArgs e)
@@ -131,7 +142,7 @@ namespace ExamplesWP8Chat
         /// <param name="e"></param>
         private void UseUDP_Checked(object sender, RoutedEventArgs e)
         {
-            if (this.UseTCP != null && this.UseTCP.IsChecked != null && !(bool)this.UseTCP.IsChecked)
+            if (this.UseTCP != null && this.UseTCP.IsChecked != null && (bool)this.UseTCP.IsChecked)
             {
                 //Update the application and connectionType
                 this.UseTCP.IsChecked = false;
@@ -153,7 +164,7 @@ namespace ExamplesWP8Chat
         /// <param name="e"></param>
         private void UseTCP_Checked(object sender, RoutedEventArgs e)
         {
-            if (this.UseUDP != null && this.UseUDP.IsChecked != null && !(bool)this.UseUDP.IsChecked)
+            if (this.UseUDP != null && this.UseUDP.IsChecked != null && (bool)this.UseUDP.IsChecked)
             {
                 //Update the application and connectionType
                 this.UseUDP.IsChecked = false;

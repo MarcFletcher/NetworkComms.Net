@@ -375,7 +375,6 @@ namespace ExamplesWPFChat
             if (this.UseTCP!=null && this.UseTCP.IsChecked != null && !(bool)this.UseTCP.IsChecked)
             {
                 //Update the application and connectionType
-                this.UseTCP.IsChecked = false;
                 connectionType = ConnectionType.UDP;
 
                 //Shutdown comms and clear any existing chat messages
@@ -397,7 +396,6 @@ namespace ExamplesWPFChat
             if (this.UseUDP!= null && this.UseUDP.IsChecked != null && !(bool)this.UseUDP.IsChecked)
             {
                 //Update the application and connectionType
-                this.UseUDP.IsChecked = false;
                 connectionType = ConnectionType.TCP;
 
                 //Shutdown comms and clear any existing chat messages

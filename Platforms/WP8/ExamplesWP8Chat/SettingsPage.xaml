@@ -54,7 +54,7 @@
                 <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="7" VerticalAlignment="Center"/>
 
                 <TextBox x:Name="MasterIPInputBox" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits" TextChanged="MasterIPInputBox_TextChanged_1"/>
-                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits"/>
+                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="10000" TextAlignment="Center" InputScope="Digits"/>
                 <TextBox x:Name="LocalNameInputBox" Grid.Column="1" Grid.Row="2" VerticalAlignment="Center" Text="WinPhone8" TextAlignment="Center"/>
 
                 <ToggleButton x:Name="UseTCP" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseTCP_Checked"/>

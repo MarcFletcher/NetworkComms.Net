@@ -116,12 +116,11 @@ namespace NetworkCommsDotNet
                 this.socket = existingConnection.socket;
             }
 
-            var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.ToString()), int.Parse(socket.Information.LocalPort));
+            var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(socket.Information.LocalPort));
 
             //We can update the localEndPoint so that it is correct
             if (ConnectionInfo.LocalEndPoint == null || ConnectionInfo.LocalEndPoint.Port == 0)
                 ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
-
         }
 
         void socket_MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)

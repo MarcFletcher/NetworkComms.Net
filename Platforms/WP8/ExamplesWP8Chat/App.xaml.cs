@@ -87,7 +87,7 @@ namespace ExamplesWP8Chat
             InitializeLanguage();
 
             MasterIPAddress = "";
-            MasterPort = 0;
+            MasterPort = 10000;
             LocalName = "WindowsPhone";
             UseEncryption = false;
 
@@ -128,7 +128,7 @@ namespace ExamplesWP8Chat
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                ChatBox.Text += "Initialising WPF chat example. Accepting TCP connections on:\n";
+                ChatBox.Text += "Initialising WPF chat example.\nAccepting TCP connections on:\n";
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     ChatBox.Text += listenEndPoint.Address + ":" + listenEndPoint.Port + "\n";
             }
@@ -139,7 +139,7 @@ namespace ExamplesWP8Chat
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                ChatBox.Text += "Initialising WPF chat example. Accepting UDP connections on:\n";
+                ChatBox.Text += "Initialising WPF chat example.\nAccepting UDP connections on:\n";
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
                     ChatBox.Text += listenEndPoint.Address + ":" + listenEndPoint.Port + "\n";
             }
@@ -328,7 +328,7 @@ namespace ExamplesWP8Chat
             ChatBox.Dispatcher.BeginInvoke(new Action<string>((messageToAdd) =>
             {
                 ChatBox.Text += messageToAdd + "\n";
-                ChatBoxScroller.ScrollToVerticalOffset(ChatBoxScroller.ScrollableHeight);
+                ChatBoxScroller.ScrollToVerticalOffset(ChatBoxScroller.ActualHeight);
             }), new object[] { message });
         }
 

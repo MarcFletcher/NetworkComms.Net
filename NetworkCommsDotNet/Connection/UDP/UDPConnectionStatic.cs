@@ -215,7 +215,7 @@ namespace NetworkCommsDotNet
                 }
 
 #if WINDOWS_PHONE
-                IPEndPoint ipEndPointUsed = new IPEndPoint(IPAddress.Parse(newListeningConnection.socket.Information.LocalAddress.ToString()), int.Parse(newListeningConnection.socket.Information.LocalPort)); 
+                IPEndPoint ipEndPointUsed = new IPEndPoint(IPAddress.Parse(newListeningConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(newListeningConnection.socket.Information.LocalPort)); 
 #else
                 IPEndPoint ipEndPointUsed = (IPEndPoint)newListeningConnection.udpClientThreadSafe.LocalEndPoint;
 #endif
