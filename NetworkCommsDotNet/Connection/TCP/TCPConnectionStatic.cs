@@ -149,8 +149,39 @@ namespace NetworkCommsDotNet
 
         private static void newListenerInstance_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
-            var newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)));
-            TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
+            try
+            {
+                var newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)));
+                TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
+            }
+            catch (ConfirmationTimeoutException)
+            {
+                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+            }
+            catch (CommunicationException)
+            {
+                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+            }
+            catch (ConnectionSetupException)
+            {
+                //If we are the server end and we did not pick the incoming connection up then tooo bad!
+            }
+            catch (SocketException)
+            {
+                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
+            }
+            catch (Exception ex)
+            {
+                //For some odd reason SocketExceptions don't always get caught above, so another check
+                if (ex.GetBaseException().GetType() != typeof(SocketException))
+                {
+                    //Can we catch the socketException by looking at the string error text?
+                    if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
+                        NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                    else
+                        NetworkComms.LogError(ex, "ConnectionSetupError");
+                }
+            }
         }
 
         /// <summary>
