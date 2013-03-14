@@ -121,6 +121,9 @@ namespace ExamplesWP8Chat
         /// </summary>
         public void InitialiseNetworkComms()
         {
+            for (int i = 0; i < 20; i++)
+                AppendLineToChatBox("");
+
             if ((App.Current as App).ConnectionType == ConnectionType.TCP)
             {
                 //Start listening for new incoming TCP connections
@@ -128,9 +131,9 @@ namespace ExamplesWP8Chat
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                ChatBox.Text += "Initialising WPF chat example.\nAccepting TCP connections on:\n";
+                AppendLineToChatBox("Initialising WPF chat example.\nAccepting TCP connections on:");
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
-                    ChatBox.Text += listenEndPoint.Address + ":" + listenEndPoint.Port + "\n";
+                    AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
             else if ((App.Current as App).ConnectionType == ConnectionType.UDP)
             {
@@ -139,15 +142,15 @@ namespace ExamplesWP8Chat
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                ChatBox.Text += "Initialising WPF chat example.\nAccepting UDP connections on:\n";
+                AppendLineToChatBox("Initialising WPF chat example.\nAccepting UDP connections on:");
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
-                    ChatBox.Text += listenEndPoint.Address + ":" + listenEndPoint.Port + "\n";
+                   AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
             else
-                ChatBox.Text += "Error: Unable to initialise comms as an invalid connectionType was set.";
+                AppendLineToChatBox("Error: Unable to initialise comms as an invalid connectionType was set.");
 
             //Add a blank line after the initialisation output
-            ChatBox.Text += "\n";
+            AppendLineToChatBox("");
 
             //We only need to add the packet handlers once. If we change connection type calling NetworkComms.Shutdown() does not remove these.
             if ((App.Current as App).FirstInitialisation)
@@ -328,7 +331,8 @@ namespace ExamplesWP8Chat
             ChatBox.Dispatcher.BeginInvoke(new Action<string>((messageToAdd) =>
             {
                 ChatBox.Text += messageToAdd + "\n";
-                ChatBoxScroller.ScrollToVerticalOffset(ChatBoxScroller.ActualHeight);
+                ChatBoxScroller.ScrollToVerticalOffset(ChatBoxScroller.ScrollableHeight);
+                ChatBoxScroller.UpdateLayout();
             }), new object[] { message });
         }
 
