@@ -37,7 +37,7 @@ namespace DebugTests
                     }
                 }
 
-                for (int i = 0; i < 20; i++)
+                for (int i = 0; i < 40; i++)
                 {
                     Console.Clear();
                     Console.WriteLine(threadPool.ToString());
