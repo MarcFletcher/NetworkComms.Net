@@ -255,7 +255,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Starts listening for incoming data on this TCP connection
         /// </summary>
-        protected override async void StartIncomingDataListen()
+        protected override void StartIncomingDataListen()
         {
             if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP))
             {

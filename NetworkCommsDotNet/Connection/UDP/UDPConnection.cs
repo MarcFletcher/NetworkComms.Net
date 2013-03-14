@@ -126,13 +126,16 @@ namespace NetworkCommsDotNet
         void socket_MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
             try
-            {
+            {                
                 var stream = args.GetDataStream().AsStreamForRead();
+                var dataLength = args.GetDataReader().UnconsumedBufferLength;
                 
-                byte[] receivedBytes = new byte[stream.Length];
+                byte[] receivedBytes = new byte[dataLength];
                 using (MemoryStream mem = new MemoryStream(receivedBytes))
                     stream.CopyTo(mem);
-                                
+
+                stream = null;
+               
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + args.RemoteAddress + ":" + args.RemotePort + ".");
 
                 if (isIsolatedUDPConnection)
@@ -147,8 +150,8 @@ namespace NetworkCommsDotNet
                 }
                 else
                 {
-                    var remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.ToString()), int.Parse(args.RemotePort));
-                    var localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.ToString()), int.Parse(sender.Information.LocalPort));
+                    var remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.DisplayName.ToString()), int.Parse(args.RemotePort));
+                    var localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.DisplayName.ToString()), int.Parse(sender.Information.LocalPort));
 
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
