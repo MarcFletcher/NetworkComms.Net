@@ -1,4 +1,4 @@
-//  Copyright 2011-2012 Marc Fletcher, Matthew Dean
+//  Copyright 2011-2013 Marc Fletcher, Matthew Dean
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //  A commercial license of this software can also be purchased. 
-//  Please see <http://www.networkcommsdotnet.com/licenses> for details.
+//  Please see <http://www.networkcomms.net/licensing/> for details.
 
 // LzInWindow.cs
 
