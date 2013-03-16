@@ -14,6 +14,7 @@ using System.Windows.Shapes;
 using NetworkCommsDotNet;
 using DPSBase;
 using SevenZipLZMACompressor;
+using System.Windows.Threading;
 
 namespace ExamplesWPFChat
 {
@@ -66,6 +67,8 @@ namespace ExamplesWPFChat
         /// </summary>
         private void InitialiseNetworkComms()
         {
+            PrintUsageInstructions();
+
             if (connectionType == ConnectionType.TCP)
             {
                 //Start listening for new incoming TCP connections
@@ -73,9 +76,9 @@ namespace ExamplesWPFChat
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                chatBox.AppendText("Initialising WPF chat example. Accepting TCP connections on:\n");
+                AppendLineToChatBox(System.Drawing.FontStyle.Bold, "Initialising WPF chat example. Accepting TCP connections on:", true);
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
-                    chatBox.AppendText(listenEndPoint.Address + ":" + listenEndPoint.Port + "\n");
+                    AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
             else if (connectionType == ConnectionType.UDP)
             {
@@ -84,15 +87,16 @@ namespace ExamplesWPFChat
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                chatBox.AppendText("Initialising WPF chat example. Accepting UDP connections on:\n");
+                AppendLineToChatBox(System.Drawing.FontStyle.Bold, "Initialising WPF chat example. Accepting UDP connections on:", true);
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
-                    chatBox.AppendText(listenEndPoint.Address + ":" + listenEndPoint.Port + "\n");
+                    AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
             else
-                chatBox.AppendText("Error: Unable to initialise comms as an invalid connectionType was set.");
+                AppendLineToChatBox("Error: Unable to initialise comms as an invalid connectionType was set.");
 
             //Add a blank line after the initialisation output
-            chatBox.AppendText("\n");
+            AppendLineToChatBox("");
+            AppendLineToChatBox(System.Drawing.FontStyle.Italic, "Scroll up for usage instructions.", true);
 
             //We only need to add the packet handlers once. If we change connection type calling NetworkComms.Shutdown() does not remove these.
             if (firstInitialisation)
@@ -110,6 +114,43 @@ namespace ExamplesWPFChat
                 //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
                 NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
             }
+
+            //TextBlock txt = new TextBlock();
+            //txt.Inlines.Add(new Bold(new Run("bold")));
+        }
+
+        /// <summary>
+        /// Outputs the usage instructions to the chat window
+        /// </summary>
+        private void PrintUsageInstructions()
+        {
+            AppendLineToChatBox(System.Drawing.FontStyle.Bold, "WPF chat usage instructions:", true);
+            AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the windows phone 8 chat example.");
+            AppendLineToChatBox("Step 2. Decide which application will be the 'master', aka server.");
+            AppendLineToChatBox("Step 3. Enter the masters IP address and port number into the other applications.");
+            AppendLineToChatBox("Step 4. Start chatting. Don't forget to checkout encryption and the UDP connection method.");
+            AppendLineToChatBox("");
+        }
+
+        private void AppendLineToChatBox(System.Drawing.FontStyle style, string text, bool addNewLine)
+        {
+            //To ensure we can succesfully append to the text box from any thread
+            //we need to wrap the append within an invoke action.
+            chatBox.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (style == System.Drawing.FontStyle.Regular)
+                    chatBox.Inlines.Add(new Run(text));
+                else if(style == System.Drawing.FontStyle.Bold)
+                    chatBox.Inlines.Add(new Bold(new Run(text)));
+                else if (style == System.Drawing.FontStyle.Italic)
+                    chatBox.Inlines.Add(new Italic(new Run(text)));
+                else
+                    chatBox.Inlines.Add(new Run("Error: Attempted to add unknown text with unknown font style."));
+
+                if (addNewLine)
+                    chatBox.Inlines.Add("\n");
+                scroller.ScrollToBottom();
+            }));
         }
 
         /// <summary>
@@ -118,13 +159,7 @@ namespace ExamplesWPFChat
         /// <param name="message"></param>
         private void AppendLineToChatBox(string message)
         {
-            //To ensure we can succesfully append to the text box from any thread
-            //we need to wrap the append within an invoke action.
-            chatBox.Dispatcher.BeginInvoke(new Action<string>((messageToAdd) =>
-            {
-                chatBox.AppendText(messageToAdd + "\n");
-                chatBox.ScrollToEnd();
-            }), new object[] { message });
+            AppendLineToChatBox(System.Drawing.FontStyle.Regular, message, true);
         }
 
         /// <summary>
@@ -379,7 +414,7 @@ namespace ExamplesWPFChat
 
                 //Shutdown comms and clear any existing chat messages
                 NetworkComms.Shutdown();
-                chatBox.Clear();
+                chatBox.Inlines.Clear();
 
                 //Initialise network comms using the new connection type
                 InitialiseNetworkComms();
@@ -400,7 +435,7 @@ namespace ExamplesWPFChat
 
                 //Shutdown comms and clear any existing chat messages
                 NetworkComms.Shutdown();
-                chatBox.Clear();
+                chatBox.Inlines.Clear();
 
                 //Initialise network comms using the new connection type
                 InitialiseNetworkComms();

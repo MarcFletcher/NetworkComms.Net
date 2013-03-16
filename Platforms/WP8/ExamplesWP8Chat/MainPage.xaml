@@ -61,7 +61,7 @@
 
             <ScrollViewer x:Name="ChatBoxScroller" Grid.Row="0">
                 <StackPanel>
-                    <TextBlock x:Name="chatBox" />                    
+                    <TextBlock TextWrapping="Wrap" x:Name="chatBox" />                    
                 </StackPanel>
             </ScrollViewer>
             <TextBox x:Name="CurrentMessageInputBox" Grid.Row="1" TextWrapping="Wrap" KeyDown="CurrentMessageInputBox_KeyDown_1" />

@@ -121,7 +121,9 @@ namespace ExamplesWP8Chat
         /// </summary>
         public void InitialiseNetworkComms()
         {
-            for (int i = 0; i < 20; i++)
+            PrintUsageInstructions();
+
+            for (int i = 0; i < 5; i++)
                 AppendLineToChatBox("");
 
             if ((App.Current as App).ConnectionType == ConnectionType.TCP)
@@ -165,6 +167,20 @@ namespace ExamplesWP8Chat
                 //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
                 NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
             }
+        }
+
+        /// <summary>
+        /// Outputs the usage instructions to the chat window
+        /// </summary>
+        private void PrintUsageInstructions()
+        {
+            AppendLineToChatBox("WPF chat usage instructions:");
+            AppendLineToChatBox("");
+            AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows chat example.");
+            AppendLineToChatBox("Step 2. Decide which application will be the 'master', aka server.");
+            AppendLineToChatBox("Step 3. Enter the masters IP address and port number into the other applications.");
+            AppendLineToChatBox("Step 4. Start chatting. Don't forget to checkout encryption and the UDP connection method.");
+            AppendLineToChatBox("");
         }
 
         /// <summary>

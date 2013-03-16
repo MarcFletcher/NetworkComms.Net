@@ -31,6 +31,7 @@ using System.Net;
 using System.Diagnostics;
 using DPSBase;
 using DistributedFileSystem;
+using ProtoBuf;
 
 namespace DebugTests
 {
