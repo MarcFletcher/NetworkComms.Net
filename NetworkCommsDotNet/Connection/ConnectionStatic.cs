@@ -47,6 +47,7 @@ namespace NetworkCommsDotNet
             MinNumSendsBeforeConnectionSpecificSendTimeout = 4;
             MinSendTimeoutMS = 2000;
             DefaultMSPerKBSendTimeout = 1000;
+            NumberOfStDeviationsForWriteTimeout = 4;
         }
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace NetworkCommsDotNet
         public static double MinimumMSPerKBSendTimeout { get; set; }
 
         /// <summary>
-        /// The maximum number of writes intervals to maintain. Default is 100.0;
+        /// The maximum number of writes intervals to maintain. Default is 100.
         /// </summary>
         public static int MaxNumSendTimes { get; set; }
 
@@ -78,6 +79,11 @@ namespace NetworkCommsDotNet
         /// The interval between keep alive polls of all connections. Set to int.MaxValue to disable keep alive poll
         /// </summary>
         public static int ConnectionKeepAlivePollIntervalSecs { get; set; }
+
+        /// <summary>
+        /// The number of standard deviations from the mean to use for write timeouts. Default is 4.0.
+        /// </summary>
+        public static double NumberOfStDeviationsForWriteTimeout { get; set; }
 
         /// <summary>
         /// Starts the connectionKeepAliveWorker thread if it is not already started

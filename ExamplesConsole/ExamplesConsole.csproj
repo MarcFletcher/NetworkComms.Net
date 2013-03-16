@@ -61,19 +61,14 @@
   <ItemGroup>
     <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net20\NLog.dll</HintPath>
+      <HintPath>..\DLL\Net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.580, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\Net20\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AdvancedSend.cs" />
@@ -96,6 +91,7 @@
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
       <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
+      <Aliases>global</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>

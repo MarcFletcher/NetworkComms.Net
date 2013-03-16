@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using DPSBase;
 using NetworkCommsDotNet;
@@ -315,6 +314,7 @@ namespace ExamplesConsole
             {
                 Console.Write("Please enter an encryption password and press enter: ");
                 string password = Console.ReadLine();
+                Console.WriteLine();
                 RijndaelPSKEncrypter.AddPasswordToOptions(dataProcessorOptions, password);
                 dataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }

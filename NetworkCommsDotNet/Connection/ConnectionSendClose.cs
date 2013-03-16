@@ -40,11 +40,6 @@ namespace NetworkCommsDotNet
         protected CommsMath SendTimesMSPerKBCache;
 
         /// <summary>
-        /// The number of standard deviations from the mean to use for write timeouts. Default is 4.0.
-        /// </summary>
-        public double NumberOfStDeviationsForWriteTimeout { get; set; }
-
-        /// <summary>
         /// A counter which is incremented during every a send. The current value is included in the header of all sent packets.
         /// </summary>
         protected long packetSequenceCounter;

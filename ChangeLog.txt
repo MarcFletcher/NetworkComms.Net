@@ -1,3 +1,13 @@
+Version 2.2 - Released 16/03/13
+
+- Extended platform support, .Net2+, Windows Phone 8 (WP8) and Silverlight.
+- New examples for VB.Net and WP8.
+- UDP demonstration added to WPF chat examples.
+- Fixes for Unity3D.
+- Updated documentation.
+- Obsoleted methods from v1.x removed.
+- Performance improvments to distributed file system.
+
 Version 2.1 - Released 29/01/13
 
 - Switched from log4net to NLog to allow future mobile framework development.

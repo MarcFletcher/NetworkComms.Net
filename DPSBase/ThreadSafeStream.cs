@@ -131,7 +131,7 @@ namespace DPSBase
                 HashAlgorithm md5;
 
 #if WINDOWS_PHONE
-                    md5 = new DPSBase.MD5.MD5Managed();
+                    md5 = new DPSBase.MD5Managed();
 #else
                     md5 = System.Security.Cryptography.MD5.Create();
 #endif

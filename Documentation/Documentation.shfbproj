@@ -29,10 +29,10 @@
     <SyntaxFilters>CSharp</SyntaxFilters>
     <SdkLinkTarget>Blank</SdkLinkTarget>
     <RootNamespaceContainer>True</RootNamespaceContainer>
-    <PresentationStyle>vs2010</PresentationStyle>
-    <Preliminary>True</Preliminary>
+    <PresentationStyle>VS2010</PresentationStyle>
+    <Preliminary>False</Preliminary>
     <NamingMethod>Guid</NamingMethod>
-    <HelpTitle>NetworkCommsDotNet Help</HelpTitle>
+    <HelpTitle>NetworkComms.Net Help</HelpTitle>
     <ContentPlacement>BelowNamespaces</ContentPlacement>
     <DocumentationSources>
       <DocumentationSource sourceFile="..\DPSBase\DPSBase.csproj" />
@@ -44,24 +44,24 @@
       <DocumentationSource sourceFile="..\RemoteProcedureCalls\RemoteProcedureCalls.csproj" />
     </DocumentationSources>
     <ProjectSummary>Networking made easy, out of the box. Creating client-server applications in C# &amp;#39%3bshould&amp;#39%3b be a piece of cake. Without requiring any knowledge of networking, this high performance, lightweight, thread safe, general purpose, open source, communication library makes that possible. Please see our very short console examples to find out how. Please see http://www.networkcomms.net/licensing/ for licensing information.</ProjectSummary>
-    <RootNamespaceTitle>NetworkCommsDotNet</RootNamespaceTitle>
+    <RootNamespaceTitle>NetworkComms.Net</RootNamespaceTitle>
     <ComponentConfigurations>
       <ComponentConfig id="Code Block Component" enabled="True">
         <component id="Code Block Component" type="SandcastleBuilder.Components.CodeBlockComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
-<!-- Base path for relative filenames in source attributes (optional) -->
-<basePath value="{@HtmlEncProjectFolder}" />
-<!-- Base output paths for the files (required).  These should match the parent folder of the output path
+          <!-- Base path for relative filenames in source attributes (optional) -->
+          <basePath value="{@HtmlEncProjectFolder}" />
+          <!-- Base output paths for the files (required).  These should match the parent folder of the output path
 					 of the HTML files (see each of the SaveComponent instances in the configuration files). -->
-<outputPaths>
+          <outputPaths>
 				{@HelpFormatOutputPaths}
 			</outputPaths>
-<!-- Allow missing source files (Optional).  If omitted, it will generate errors if referenced source files
+          <!-- Allow missing source files (Optional).  If omitted, it will generate errors if referenced source files
 				 are missing. -->
-<allowMissingSource value="false" />
-<!-- Remove region markers from imported code blocks.  If omitted, region markers in imported code blocks
+          <allowMissingSource value="false" />
+          <!-- Remove region markers from imported code blocks.  If omitted, region markers in imported code blocks
 					 are left alone. -->
-<removeRegionMarkers value="false" />
-<!-- Code colorizer options (required).
+          <removeRegionMarkers value="false" />
+          <!-- Code colorizer options (required).
 					 Attributes:
 							Language syntax configuration file (required)
 							XSLT stylesheet file (required)
@@ -74,20 +74,19 @@
 							Keep XML comment "see" tags within the code (optional)
 							Tab size override (optional, 0 = Use syntax file setting)
 							Use language name as default title (optional) -->
-<colorizer syntaxFile="{@SHFBFolder}Colorizer\highlight.xml" styleFile="{@SHFBFolder}Colorizer\highlight.xsl" stylesheet="{@SHFBFolder}Colorizer\highlight.css" scriptFile="{@SHFBFolder}Colorizer\highlight.js" disabled="{@DisableCodeBlockComponent}" language="cs" numberLines="false" outlining="false" keepSeeTags="false" tabSize="0" defaultTitle="true" />
-</component>
+          <colorizer syntaxFile="{@SHFBFolder}Colorizer\highlight.xml" styleFile="{@SHFBFolder}Colorizer\highlight.xsl" stylesheet="{@SHFBFolder}Colorizer\highlight.css" scriptFile="{@SHFBFolder}Colorizer\highlight.js" disabled="{@DisableCodeBlockComponent}" language="cs" numberLines="false" outlining="false" keepSeeTags="false" tabSize="0" defaultTitle="true" />
+        </component>
       </ComponentConfig>
     </ComponentConfigurations>
     <NamespaceSummaries>
       <NamespaceSummaryItem name="DPSBase" isDocumented="True">Abstract classes for defining data serialization and processing techniques as well as basic implementations of both.</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating the most common uses of the NetworkCommsDotNet feature set.</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="(global)" isDocumented="False" />
-    </NamespaceSummaries>
+<NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
+<NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
+<NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
+<NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
+<NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
+<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
+<NamespaceSummaryItem name="(global)" isDocumented="False" /></NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcomms.net</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />

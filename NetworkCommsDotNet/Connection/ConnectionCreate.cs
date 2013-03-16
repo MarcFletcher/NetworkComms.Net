@@ -59,7 +59,6 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
-            NumberOfStDeviationsForWriteTimeout = 4;
             SendTimesMSPerKBCache = new CommsMath();
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
             packetBuilder = new PacketBuilder();

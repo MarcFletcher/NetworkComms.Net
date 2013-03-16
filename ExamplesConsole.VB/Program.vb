@@ -84,7 +84,7 @@ Module Program
             ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
             Dim logConfig = New LoggingConfiguration()
             Dim fileTarget = New FileTarget()
-            fileTarget.FileName = "${basedir}/log.txt"
+            fileTarget.FileName = "${basedir}/ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier.ToString() + ".txt"
             fileTarget.Layout = "${date:format=HH\:mm\:ss} [${threadid} - ${level}] - ${message}"
             Dim consoleTarget = New ConsoleTarget()
             consoleTarget.Layout = "${date:format=HH\:mm\:ss} - ${message}"
@@ -97,7 +97,7 @@ Module Program
             NetworkComms.EnableLogging(logConfig)
 
             ''We can write to our logger from an external program as well
-            NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, log.txt." + Environment.NewLine)
+            NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier.ToString() + ".txt." + Environment.NewLine)
         End If
     End Sub
 

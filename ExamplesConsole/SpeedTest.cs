@@ -28,7 +28,7 @@ using NetworkCommsDotNet;
 namespace ExamplesConsole
 {
     /// <summary>
-    /// Used for testing the performance of network
+    /// Used for testing the performance of networks
     /// </summary>
     public static class SpeedTest
     {

@@ -11,7 +11,7 @@ using System.Text;
 // * Copyright (c) Microsoft Corporation.  All rights reserved.
 // **************************************************************
 
-namespace DPSBase.MD5
+namespace DPSBase
 {
     // Simple struct for the (a,b,c,d) which is used to compute the mesage digest.    
     struct ABCDStruct
@@ -25,7 +25,7 @@ namespace DPSBase.MD5
     /// <summary>
     /// Part of the managed MD5 calculator
     /// </summary>
-    public sealed class MD5Core
+    sealed class MD5Core
     {
         //Prevent CSC from adding a default public constructor
         private MD5Core() { }
