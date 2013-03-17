@@ -16,6 +16,7 @@
     <None Include="SingleDll_Net20.bat" />
     <None Include="SingleDll_Net35.bat" />
     <None Include="SingleDll_Net40.bat" />
+    <None Include="SingleDll_WP8.bat" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
@@ -104,6 +105,9 @@
     <PostBuildEvent>
       <Command>"$(ProjectDir)SingleDll.bat" $(Configuration)</Command>
     </PostBuildEvent>
+    <BuildLog>
+      <Path>$(MSBuildProjectName).log</Path>
+    </BuildLog>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

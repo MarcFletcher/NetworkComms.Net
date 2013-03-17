@@ -77,16 +77,6 @@
     <Compile Include="SwarmChunkAvailability.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet %28Net20\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="DFSAllowedPeerIPs.txt" />
     <Content Include="DFSDisallowedPeerIPs.txt" />
   </ItemGroup>
@@ -111,6 +101,16 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Platforms\Net40\DPSBase\DPSBase.csproj">
+      <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
+      <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
+      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

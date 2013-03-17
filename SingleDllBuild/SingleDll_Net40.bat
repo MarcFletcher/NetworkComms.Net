@@ -1,3 +1,5 @@
+md ".\%1"
+
 COPY ..\Platforms\Net40\NetworkCommsDotNet\bin\%1\NetworkCommsDotNet.dll .\%1\NetworkCommsDotNet.dll
 COPY ..\Platforms\Net40\NetworkCommsDotNet\bin\%1\NetworkCommsDotNet.pdb .\%1\NetworkCommsDotNet.pdb
 
