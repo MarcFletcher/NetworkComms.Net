@@ -89,6 +89,9 @@
     <PostBuildEvent>
       <Command>"$(ProjectDir)SingleDll.bat" $(Configuration)</Command>
     </PostBuildEvent>
+    <BuildLog>
+      <Path>$(MSBuildProjectName).log</Path>
+    </BuildLog>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

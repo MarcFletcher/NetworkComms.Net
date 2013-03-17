@@ -34,22 +34,37 @@ using Windows.Storage.Streams;
 
 namespace NetworkCommsDotNet
 {
-#if WINDOWS_PHONE
-
     public partial class TCPConnection : Connection
     {
         /// <summary>
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar">The call back state object</param>
-        void IncomingTCPPacketHandler(IAsyncResult res)
+        void IncomingTCPPacketHandler(IAsyncResult ar)
         {
+            //Initialised with true so that logic still works in WP8
+            bool dataAvailable = true;
+
+#if !WINDOWS_PHONE
+            //Incoming data always gets handled in a timeCritical fashion at this point
+            Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
+            //int bytesRead;
+#endif
+
             try
             {
-                var stream = res.AsyncState as Stream;
-                var count = stream.EndRead(res);
+#if WINDOWS_PHONE
+                var stream = ar.AsyncState as Stream;
+                var count = stream.EndRead(ar);
                 totalBytesRead = count + totalBytesRead;
+#else
+                NetworkStream netStream = (NetworkStream)ar.AsyncState;
+                if (!netStream.CanRead)
+                    throw new ObjectDisposedException("Unable to read from stream.");
 
+                totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
+                dataAvailable = netStream.DataAvailable;
+#endif
                 if (totalBytesRead > 0)
                 {
                     ConnectionInfo.UpdateLastTrafficTime();
@@ -61,10 +76,49 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached "+packetBuilder.TotalBytesCached+"B, expecting " + packetBuilder.TotalBytesExpected + "B.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
 
                         //If there is more data to get then add it to the packets lists;
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
+
+#if !WINDOWS_PHONE
+                        //If we have more data we might as well continue reading syncronously
+                        //In order to deal with data as soon as we think we have sufficient we will leave this loop
+                        while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
+                        {
+                            int bufferOffset = 0;
+
+                            //We need a buffer for our incoming data
+                            //First we try to reuse a previous buffer
+                            if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
+                                dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
+                            else
+                                //If we have nothing to reuse we allocate a new buffer
+                                dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+
+                            totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
+
+                            if (totalBytesRead > 0)
+                            {
+                                ConnectionInfo.UpdateLastTrafficTime();
+
+                                //If we have read a single byte which is 0 and we are not expecting other data
+                                if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
+                                {
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 2");
+                                    //LastTrafficTime = DateTime.Now;
+                                }
+                                else
+                                {
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached + "B, expecting " + packetBuilder.TotalBytesExpected + "B.");
+                                    packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
+                                    dataAvailable = netStream.DataAvailable;
+                                }
+                            }
+                            else
+                                break;
+                        }
+#endif
                     }
                 }
 
@@ -76,11 +130,8 @@ namespace NetworkCommsDotNet
                     IncomingPacketHandleHandOff(packetBuilder);
                 }
 
-                if (totalBytesRead == 0 && ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
-                {
+                if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                     CloseConnection(false, -2);
-                    return;
-                }
                 else
                 {
                     //We need a buffer for our incoming data
@@ -94,242 +145,13 @@ namespace NetworkCommsDotNet
                         totalBytesRead = 0;
                     }
 
-                    //stream = socket.InputStream.AsStreamForRead();
+#if WINDOWS_PHONE
                     stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
-                }
-            }
-            catch (IOException)
-            {
-                CloseConnection(true, 12);
-            }
-            catch (ObjectDisposedException)
-            {
-                CloseConnection(true, 13);
-            }
-            catch (SocketException)
-            {
-                CloseConnection(true, 14);
-            }
-            catch (InvalidOperationException)
-            {
-                CloseConnection(true, 15);
-            }
-            catch (Exception ex)
-            {
-                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
-                CloseConnection(true, 31);
-            }
-        }
-
-        /// <summary>
-        /// Closes the <see cref="TCPConnection"/>
-        /// </summary>
-        /// <param name="closeDueToError">Closing a connection due an error possibly requires a few extra steps.</param>
-        /// <param name="logLocation">Optional debug parameter.</param>
-        protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
-        {            
-            //Try to close the socket
-            try
-            {
-                socket.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        /// <summary>
-        /// Sends the provided packet to the remote end point
-        /// </summary>
-        /// <param name="packet">Packet to send</param>
-        protected override void SendPacketSpecific(Packet packet)
-        {
-            //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
-            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
-
-            double maxSendTimePerKB = double.MaxValue;
-            if (!NetworkComms.DisableConnectionSendTimeouts)
-            {
-                if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
-                    maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
-                else
-                    maxSendTimePerKB = DefaultMSPerKBSendTimeout;
-            }
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + 
-                ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes. Allowing " +
-                maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
-
-            Stream outputStream = socket.OutputStream.AsStreamForWrite();
-            DateTime startTime = DateTime.Now;
-            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, outputStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(outputStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-
-            outputStream.Flush();
-
-            SendTimesMSPerKBCache.AddValue((headerWriteTime + dataWriteTime / 2), headerBytes.Length + packet.PacketData.Length);
-            SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
-
-            //Correctly dispose the stream if we are finished with it
-            if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
-                packet.PacketData.ThreadSafeStream.Close();
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (headerWriteTime + dataWriteTime).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
-        }
-
-        /// <summary>
-        /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
-        /// </summary>
-        protected override void SendNullPacket()
-        {
-            try
-            {
-                //Only once the connection has been established do we send null packets
-                if (ConnectionInfo.ConnectionState == ConnectionState.Established)
-                {
-                    //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
-                    lock (sendLocker)
-                    {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
-
-                        var stream = socket.OutputStream.AsStreamForWrite();
-                        
-                        //Send a single 0 byte
-                        double maxSendTimePerKB = double.MaxValue;
-                        if (!NetworkComms.DisableConnectionSendTimeouts)
-                        {
-                            if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
-                                maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
-                            else
-                                maxSendTimePerKB = DefaultMSPerKBSendTimeout;
-                        }
-
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
-                        stream.Flush();
-
-                        //Update the traffic time after we have written to netStream
-                        ConnectionInfo.UpdateLastTrafficTime();
-                    }
-                }
-
-                //If the connection is shutdown we should call close
-                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -8);
-            }
-            catch (Exception)
-            {
-                CloseConnection(true, 19);
-            }
-        }
-    }
-
 #else
-
-    public partial class TCPConnection : Connection
-    {
-        /// <summary>
-        /// Asynchronous incoming connection data delegate
-        /// </summary>
-        /// <param name="ar">The call back state object</param>
-        void IncomingTCPPacketHandler(IAsyncResult ar)
-        {
-            //Incoming data always gets handled in a timeCritical fashion at this point
-            Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
-
-            //int bytesRead;
-            bool dataAvailable;
-
-            try
-            {
-                NetworkStream netStream = (NetworkStream)ar.AsyncState;
-
-                if (netStream.CanRead)
-                {
-                    totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
-                    dataAvailable = netStream.DataAvailable;
-
-                    if (totalBytesRead > 0)
-                    {
-                        ConnectionInfo.UpdateLastTrafficTime();
-
-                        //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 1");
-                        }
-                        else
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder.");
-
-                            //If there is more data to get then add it to the packets lists;
-                            packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
-
-                            //If we have more data we might as well continue reading syncronously
-                            //In order to deal with data as soon as we think we have sufficient we will leave this loop
-                            while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
-                            {
-                                int bufferOffset = 0;
-
-                                //We need a buffer for our incoming data
-                                //First we try to reuse a previous buffer
-                                if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
-                                    dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
-                                else
-                                    //If we have nothing to reuse we allocate a new buffer
-                                    dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
-
-                                totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
-
-                                if (totalBytesRead > 0)
-                                {
-                                    ConnectionInfo.UpdateLastTrafficTime();
-
-                                    //If we have read a single byte which is 0 and we are not expecting other data
-                                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
-                                    {
-                                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from "+ConnectionInfo+". 2");
-                                        //LastTrafficTime = DateTime.Now;
-                                    }
-                                    else
-                                    {
-                                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached "+packetBuilder.TotalBytesCached+"B, expecting " + packetBuilder.TotalBytesExpected + "B.");
-                                        packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
-                                        dataAvailable = netStream.DataAvailable;
-                                    }
-                                }
-                                else
-                                    break;
-                            }
-                        }
-                    }
-
-                    if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
-                    {
-                        //Once we think we might have enough data we call the incoming packet handle handoff
-                        //Should we have a complete packet this method will start the appriate task
-                        //This method will now clear byes from the incoming packets if we have received something complete.
-                        IncomingPacketHandleHandOff(packetBuilder);
-                    }
-
-                    if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
-                        CloseConnection(false, -2);
-                    else
-                    {
-                        //We need a buffer for our incoming data
-                        //First we try to reuse a previous buffer
-                        if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
-                            dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref totalBytesRead);
-                        else
-                        {
-                            //If we have nothing to reuse we allocate a new buffer
-                            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
-                            totalBytesRead = 0;
-                        }
-
-                        netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
-                    }
+                    netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
+#endif
                 }
-                else
-                    CloseConnection(false, -5);
+
             }
             catch (IOException)
             {
@@ -353,9 +175,12 @@ namespace NetworkCommsDotNet
                 CloseConnection(true, 31);
             }
 
+#if !WINDOWS_PHONE
             Thread.CurrentThread.Priority = ThreadPriority.Normal;
+#endif
         }
 
+#if !WINDOWS_PHONE
         /// <summary>
         /// Synchronous incoming connection data worker
         /// </summary>
@@ -448,6 +273,7 @@ namespace NetworkCommsDotNet
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
+#endif
 
         /// <summary>
         /// Closes the <see cref="TCPConnection"/>
@@ -456,6 +282,16 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation">Optional debug parameter.</param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
+#if WINDOWS_PHONE
+            //Try to close the socket
+            try
+            {
+                socket.Dispose();
+            }
+            catch (Exception)
+            {
+            }
+#else
             //The following attempts to correctly close the connection
             //Try to close the networkStream first
             try
@@ -488,6 +324,7 @@ namespace NetworkCommsDotNet
             catch (Exception)
             {
             }
+#endif
         }
 
         /// <summary>
@@ -514,8 +351,19 @@ namespace NetworkCommsDotNet
             
             DateTime startTime = DateTime.Now;
 
-            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, tcpClientNetworkStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(tcpClientNetworkStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            Stream sendingStream;
+#if WINDOWS_PHONE
+            sendingStream = socket.OutputStream.AsStreamForWrite();
+#else
+            sendingStream = tcpClientNetworkStream;
+#endif
+
+            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+
+#if WINDOWS_PHONE
+            sendingStream.Flush();
+#endif
 
             SendTimesMSPerKBCache.AddValue((headerWriteTime + dataWriteTime) /2, headerBytes.Length + packet.PacketData.Length);
             SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
@@ -526,11 +374,13 @@ namespace NetworkCommsDotNet
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (headerWriteTime + dataWriteTime).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
 
+#if !WINDOWS_PHONE
             if (!tcpClient.Connected)
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
                 throw new CommunicationException("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
             }
+#endif
         }
 
         /// <summary>
@@ -558,7 +408,13 @@ namespace NetworkCommsDotNet
                                 maxSendTimePerKB = DefaultMSPerKBSendTimeout;
                         }
 
+#if WINDOWS_PHONE
+                        var stream = socket.OutputStream.AsStreamForWrite();
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
+                        stream.Flush();
+#else
                         StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, tcpClientNetworkStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
+#endif
 
                         //Update the traffic time after we have written to netStream
                         ConnectionInfo.UpdateLastTrafficTime();
@@ -574,5 +430,4 @@ namespace NetworkCommsDotNet
             }
         }
     }
-#endif
 }

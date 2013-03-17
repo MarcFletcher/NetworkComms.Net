@@ -16,9 +16,6 @@
 //  A commercial license of this software can also be purchased. 
 //  Please see <http://www.networkcomms.net/licensing/> for details.
 
-#if WINDOWS_PHONE
-#else
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -28,8 +25,11 @@ using DPSBase;
 
 namespace NetworkCommsDotNet
 {
+#if WINDOWS_PHONE
+    //UdpClientThreadSafe not yet required for WP8
+#else
     /// <summary>
-    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections at any one time
+    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections at any one time.
     /// </summary>
     class UdpClientThreadSafe
     {
@@ -163,6 +163,5 @@ namespace NetworkCommsDotNet
             }
         }
     }
-
-}
 #endif
+}
