@@ -29,9 +29,9 @@
     <ApplicationIcon>NetworkCommsLogo.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="protobuf-net, Version=2.0.0.580, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+    <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net20\protobuf-net.dll</HintPath>
+      <HintPath>..\DLL\Net40\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -93,21 +93,21 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet %28Net20\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>
-      <Name>SevenZipLZMACompressor %28Net20\Core\SevenZipLZMACompressor%29</Name>
-    </ProjectReference>
+    <Resource Include="NetworkCommsLogo.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="NetworkCommsLogo.ico" />
+    <ProjectReference Include="..\Platforms\Net40\DPSBase\DPSBase.csproj">
+      <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
+      <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
+      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{a95d9802-2e43-41c4-aa68-c78aaafece10}</Project>
+      <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

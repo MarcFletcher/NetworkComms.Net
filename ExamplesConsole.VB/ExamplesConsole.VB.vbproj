@@ -42,6 +42,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\Net40\NLog.dll</HintPath>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\DLL\Net40\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
@@ -102,13 +106,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7DB00305-F5ED-4545-9D83-542132C8177E}</Project>
-      <Name>NetworkCommsDotNet %28Net20\Core\NetworkCommsDotNet%29</Name>
+    <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
+      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
