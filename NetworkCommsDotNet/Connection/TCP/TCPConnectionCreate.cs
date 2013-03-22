@@ -279,13 +279,12 @@ namespace NetworkCommsDotNet
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
 
+                bool connectSuccess = true;
 #if WINDOWS_PHONE
                 //We now connect to our target
                 socket = new StreamSocket();
                 socket.Control.NoDelay = EnableNagleAlgorithmForNewConnections;
-                
-                bool connectSuccess = true;
-                
+
                 CancellationTokenSource cancelAfterTimeoutToken = new CancellationTokenSource(NetworkComms.ConnectionEstablishTimeoutMS);
 
                 try
@@ -312,8 +311,6 @@ namespace NetworkCommsDotNet
 #else
                 //We now connect to our target
                 tcpClient = new TcpClient(ConnectionInfo.RemoteEndPoint.AddressFamily);
-
-                bool connectSuccess = true;
 
                 //Start the connection using the asyn version
                 //This allows us to choose our own connection establish timeout
@@ -356,12 +353,6 @@ namespace NetworkCommsDotNet
             }
 
 #if WINDOWS_PHONE
-            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP))
-            {
-                CloseConnection(true, 18);
-                throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");
-            }
-
             var stream = socket.InputStream.AsStreamForRead();
             stream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), stream);   
 #else
