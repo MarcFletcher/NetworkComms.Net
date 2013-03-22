@@ -65,7 +65,13 @@ namespace NetworkCommsDotNet
 
 #if SILVERLIGHT || WINDOWS_PHONE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
-            SendBufferSizeBytes = 80000;
+            SendBufferSizeBytes = 8000;
+#elif iOS
+            CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_iOS;
+            SendBufferSizeBytes = 8000;
+#elif ANDROID
+            CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_Android;
+            SendBufferSizeBytes = 8000;
 #elif NET2
             if (Type.GetType("Mono.Runtime") != null)
             {

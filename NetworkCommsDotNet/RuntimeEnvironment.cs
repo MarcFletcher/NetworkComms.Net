@@ -43,5 +43,15 @@ namespace NetworkCommsDotNet
         /// Windows Phone 7.1 (8) or Silverlight
         /// </summary>
         WindowsPhone_Silverlight,
+
+        /// <summary>
+        /// Xamarin.Android
+        /// </summary>
+        Xamarin_Android,
+
+        /// <summary>
+        /// Xamarin.iOS
+        /// </summary>
+        Xamarin_iOS,
     }
 }
