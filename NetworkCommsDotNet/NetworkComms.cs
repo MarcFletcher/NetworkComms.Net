@@ -1406,7 +1406,20 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Enable logging using the provided common.logging adaptor. See examples for usage.
+        /// Enable logging using a default config. All log output is written directly to the local console.
+        /// </summary>
+        public static void EnableLogging()
+        {
+            LoggingConfiguration logConfig = new LoggingConfiguration();
+            NLog.Targets.ConsoleTarget consoleTarget = new NLog.Targets.ConsoleTarget();
+            consoleTarget.Layout = "${date:format=HH\\:MM\\:ss} [${level}] - ${message}";
+            logConfig.AddTarget("console", consoleTarget);
+            logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, consoleTarget));
+            EnableLogging(logConfig);
+        }
+
+        /// <summary>
+        /// Enable logging using the provided config. See examples for usage.
         /// </summary>        
         /// <param name="loggingConfiguration"></param>
         public static void EnableLogging(LoggingConfiguration loggingConfiguration)
@@ -2061,7 +2074,8 @@ namespace NetworkCommsDotNet
 
             //We can double check for an existing connection here first so that it occurs outside the lock
             Connection existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
-            if (existingConnection != null && existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Established && connection!=existingConnection) existingConnection.ConnectionAlive();
+            if (existingConnection != null && existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Established && connection!=existingConnection) 
+                existingConnection.ConnectionAlive();
 
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)

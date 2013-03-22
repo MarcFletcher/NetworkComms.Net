@@ -118,7 +118,7 @@ namespace NetworkCommsDotNet
                         //First case is when we have not yet received enough data
                         if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + packetHeaderSize + topPacketHeader.PayloadPacketSize + " total packet bytes.");
 
                             //Set the expected number of bytes and then return
                             packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;

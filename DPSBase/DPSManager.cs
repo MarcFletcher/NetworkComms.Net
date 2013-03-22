@@ -373,6 +373,13 @@ namespace DPSBase
 
                 loader.ProcessApplicationAssemblies(args);
             }
+            catch (MissingMethodException)
+            {
+                loader = new AssemblyLoader();
+                args = new ProcessArgument();
+
+                loader.ProcessApplicationAssemblies(args);
+            }
 #else
             loader = new AssemblyLoader();
             args = new ProcessArgument();
