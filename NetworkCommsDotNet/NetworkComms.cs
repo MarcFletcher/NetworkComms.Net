@@ -25,11 +25,13 @@ using System.Net.Sockets;
 using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
-using NLog;
 using System.Diagnostics;
 using System.IO;
-using NLog.Config;
 
+#if !NO_LOGGING
+using NLog;
+using NLog.Config;
+#endif
 
 namespace NetworkCommsDotNet
 {
@@ -1351,7 +1353,7 @@ namespace NetworkCommsDotNet
             commsShutdown = false;
             if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NO_LOGGING
             //Mono bug fix
             //Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
             if (Logger != null)
@@ -1391,12 +1393,30 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Logging
+
+#if NO_LOGGING
+        /// <summary>
+        /// Returns true if comms logging has been enabled.
+        /// </summary>
+        public static bool LoggingEnabled { get { return false; } }
+#else
         /// <summary>
         /// Returns true if comms logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
+#endif
+   
         private static Logger logger = null;
 
+#if NO_LOGGING
+        /// <summary>
+        /// Access the NetworkCommsDotNet logger externally.
+        /// </summary>
+        internal static Logger Logger
+        {
+            get { return logger; }
+        }
+#else
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.
         /// </summary>
@@ -1404,7 +1424,9 @@ namespace NetworkCommsDotNet
         {
             get { return logger; }
         }
+#endif
 
+#if !NO_LOGGING
         /// <summary>
         /// Enable logging using a default config. All log output is written directly to the local console.
         /// </summary>
@@ -1444,6 +1466,7 @@ namespace NetworkCommsDotNet
                 LogManager.DisableLogging();
             }
         }
+#endif
 
         /// <summary>
         /// Locker for LogError() which ensures thread safe saves.
@@ -2179,4 +2202,18 @@ namespace NetworkCommsDotNet
         }
         #endregion
     }
+
+#if NO_LOGGING
+    internal class Logger
+    {
+        public void Trace(string message) { }
+        public void Debug(string message) { }
+        public void Fatal(string message, Exception e = null) { }
+        public void Info(string message) { }
+        public void Warn(string message) { }
+        public void Error(string message) { }
+
+        private Logger() { }
+    }
+#endif
 }

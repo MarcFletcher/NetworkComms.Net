@@ -90,7 +90,7 @@ namespace DPSBase
 
             StreamSendWrapper baseRes = null;
             
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || iOS
 #else
             baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 #endif
@@ -225,7 +225,7 @@ namespace DPSBase
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
             object baseRes = null;
                 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || iOS
 #else
             baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectStream, typeof(T), dataProcessors, options);
 #endif
@@ -342,7 +342,7 @@ namespace DPSBase
         protected abstract object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options);
     }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || iOS
 #else
 
     /// <summary>

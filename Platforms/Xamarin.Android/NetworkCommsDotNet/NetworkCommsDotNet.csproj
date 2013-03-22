@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{FE18B73A-AD5F-4D95-98EA-3A576100C8B5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NetworkCommsDotNet</RootNamespace>
+    <AssemblyName>NetworkCommsDotNet</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;ANDROID; NO_LOGGING</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;ANDROID; NO_LOGGING</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\DLL\Xamarin.Android\protobuf-net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\NetworkCommsDotNet\ConnectionInfo.cs">
+      <Link>ConnectionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionCreate.cs">
+      <Link>Connection\ConnectionCreate.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionDelegatesHandlers.cs">
+      <Link>Connection\ConnectionDelegatesHandlers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionIncomingData.cs">
+      <Link>Connection\ConnectionIncomingData.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionSendClose.cs">
+      <Link>Connection\ConnectionSendClose.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionStatic.cs">
+      <Link>Connection\ConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionType.cs">
+      <Link>Connection\ConnectionType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
+      <Link>Connection\SentPacket.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionCreate.cs">
+      <Link>Connection\TCP\TCPConnectionCreate.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionInstance.cs">
+      <Link>Connection\TCP\TCPConnectionInstance.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
+      <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientThreadSafe.cs">
+      <Link>Connection\UDP\UDPClientThreadSafe.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnection.cs">
+      <Link>Connection\UDP\UDPConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionStatic.cs">
+      <Link>Connection\UDP\UDPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPOptions.cs">
+      <Link>Connection\UDP\UDPOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\NetworkComms.cs">
+      <Link>NetworkComms.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Packet.cs">
+      <Link>Packet.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\PacketHeader.cs">
+      <Link>PacketHeader.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\ReservedPacketType.cs">
+      <Link>ReservedPacketType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\RuntimeEnvironment.cs">
+      <Link>RuntimeEnvironment.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\SendReceiveOptions.cs">
+      <Link>SendReceiveOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\Adler32.cs">
+      <Link>Tools\Adler32.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsMath.cs">
+      <Link>Tools\CommsMath.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsThreadPool.cs">
+      <Link>Tools\CommsThreadPool.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPExtAccess.cs">
+      <Link>Tools\IPExtAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
+      <Link>Tools\IPTools.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
+      <Link>Tools\PacketBuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketUnwrappers.cs">
+      <Link>Tools\PacketUnwrappers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueue.cs">
+      <Link>Tools\PriorityQueue.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueueItem.cs">
+      <Link>Tools\PriorityQueueItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\QueueItemPriority.cs">
+      <Link>Tools\QueueItemPriority.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
+      <Link>Tools\ShortGUID.cs</Link>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{C09BFDD7-7909-4072-9E83-A9C58B73727A}</Project>
+      <Name>DPSBase %28Xamarin.Android\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{0DED6091-1062-4B97-9257-0FE92B20F756}</Project>
+      <Name>SevenZipLZMACompressor %28Xamarin.Android\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

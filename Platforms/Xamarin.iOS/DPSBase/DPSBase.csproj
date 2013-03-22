@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6F797EEB-BD42-4118-8ED4-3E5BBE1609DE}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DPSBase</RootNamespace>
+    <AssemblyName>DPSBase</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;iOS; NO_LOGGING</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;iOS; NO_LOGGING</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\DLL\Xamarin.iOS\protobuf-net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\DPSBase\AsyncStreamCopier.cs">
+      <Link>AsyncStreamCopier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\BinaryFormaterSerializer.cs">
+      <Link>BinaryFormaterSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataProcessor.cs">
+      <Link>DataProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataSerializer.cs">
+      <Link>DataSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DataSerializerProcessorAttribute.cs">
+      <Link>DataSerializerProcessorAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\DPSManager.cs">
+      <Link>DPSManager.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\Exception.cs">
+      <Link>Exception.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\MD5.cs">
+      <Link>MD5.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\NullSerializer.cs">
+      <Link>NullSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\ProtobufSerializer.cs">
+      <Link>ProtobufSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\RijndaelPSKEncrypter.cs">
+      <Link>RijndaelPSKEncrypter.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\StreamSendWrapper.cs">
+      <Link>StreamSendWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\StreamWriteWithTimeout.cs">
+      <Link>StreamWriteWithTimeout.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
+      <Link>ThreadSafeStream.cs</Link>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
