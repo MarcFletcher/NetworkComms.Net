@@ -118,7 +118,11 @@ namespace NetworkCommsDotNet
             
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
+
+#if !FREETRIAL
+            //Only the full version includes the encrypter
             DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
+#endif
 
 #if !WINDOWS_PHONE
             DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
@@ -2126,6 +2130,12 @@ namespace NetworkCommsDotNet
                 }
                 else
                 {
+#if FREETRIAL
+                    //If this is a free trial we only allow a single connection. We will throw an exception if any connections already exist
+                    if (TotalNumConnections() != 0)
+                        throw new NotSupportedException("Unable to create connection as this version of NetworkComms.Net is limited to only one connection. Please purchase a commerical license from www.networkcomms.net which supports an unlimited number of connections.");
+#endif
+
                     //Add reference to the endPoint dictionary
                     if (allConnectionsByEndPoint.ContainsKey(endPointToUse))
                     {

@@ -24,6 +24,7 @@ using System.IO;
 
 namespace DPSBase
 {
+#if !FREETRIAL
     /// <summary>
     /// <see cref="DataProcessor"/> which encrypts/decrypts data using the Rijndael algorithm and a pre-shared password
     /// </summary>
@@ -84,4 +85,5 @@ namespace DPSBase
             options[PasswordOption] = password;
         }
     }
+#endif
 }

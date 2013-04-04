@@ -195,6 +195,11 @@ namespace NetworkCommsDotNet
         /// <param name="packet">Packet to send</param>
         protected override void SendPacketSpecific(Packet packet)
         {
+#if FREETRIAL
+            if (this.ConnectionInfo.RemoteEndPoint.Address == IPAddress.Broadcast)
+                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
+#endif
+
             if (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
                 throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
 
@@ -237,6 +242,11 @@ namespace NetworkCommsDotNet
         /// <param name="ipEndPoint">The target ipEndPoint</param>
         private void SendPacketSpecific(Packet packet, IPEndPoint ipEndPoint)
         {
+#if FREETRIAL
+            if (ipEndPoint.Address == IPAddress.Broadcast)
+                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
+#endif
+
             byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
 
             //We are limited in size for the isolated send
