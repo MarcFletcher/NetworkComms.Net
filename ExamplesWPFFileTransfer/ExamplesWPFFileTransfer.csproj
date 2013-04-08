@@ -119,6 +119,10 @@
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{a95d9802-2e43-41c4-aa68-c78aaafece10}</Project>
+      <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

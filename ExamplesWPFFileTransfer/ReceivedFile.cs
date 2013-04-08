@@ -23,7 +23,7 @@ namespace ExamplesWPFFileTransfer
 
         public string SourceInfoStr
         {
-            get { return "[" + SourceInfo.RemoteEndPoint.Address + " - " + SourceInfo.RemoteEndPoint.Port + "]"; }
+            get { return "[" + SourceInfo.RemoteEndPoint.Address + ":" + SourceInfo.RemoteEndPoint.Port + "]"; }
         }
 
         public bool IsCompleted

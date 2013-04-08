@@ -38,6 +38,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="45" />
             <RowDefinition Height="27" />
+            <RowDefinition Height="30" />
             <RowDefinition Height="*" />
             <RowDefinition Height="170" />
         </Grid.RowDefinitions>
@@ -45,30 +46,43 @@
         <TextBlock Grid.Row="0" Height="38" Width="478" HorizontalAlignment="Center" Margin="18,6,0,0" x:Name="textBlock1" TextWrapping="Wrap" Text="Important Note: NetworkComms.Net is free to use only in limited circumstances. Please see http://www.networkcomms.net/licensing/ for more information." VerticalAlignment="Top" FontWeight="Bold" />
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="380" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="262" />
+                <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0">
-                <TextBox Height="23" HorizontalAlignment="Left" Margin="71,2,0,0" Name="remoteIP" VerticalAlignment="Top" Width="97" />
+                <TextBox Height="23" HorizontalAlignment="Left" Margin="75,2,0,0" Name="remoteIP" VerticalAlignment="Top" Width="97" />
                 <Label Content="Remote IP:" Height="28" HorizontalAlignment="Left" Margin="8,0,0,0" Name="label1" VerticalAlignment="Top" />
-                <TextBox Height="23" HorizontalAlignment="Left" Margin="201,2,0,0" Name="remotePort" VerticalAlignment="Top" Width="47" />
-                <Label Content="Port:" Height="28" HorizontalAlignment="Left" Margin="168,0,0,0" Name="label2" VerticalAlignment="Top" />
-                <Button Content="Send File To Remote" HorizontalAlignment="right" Margin="0,1,5,0" Name="sendFileButton" VerticalAlignment="Top" Height="25" Width="120" Click="SendFileButton_Click"/>
+                <TextBox Height="23" HorizontalAlignment="Left" Margin="205,2,0,0" Name="remotePort" VerticalAlignment="Top" Width="47" />
+                <Label Content="Port:" Height="28" HorizontalAlignment="Left" Margin="172,0,0,0" Name="label2" VerticalAlignment="Top" />
             </Grid>
             <Grid Grid.Column="1">
-                <ProgressBar Maximum="1" Name="sendProgress" HorizontalAlignment="Stretch" Height="15" Margin="0,7,8,0" VerticalAlignment="Top" Foreground="#FFFFDC00"/>
+                <CheckBox Content="Use Compression (Slower):" Name="UseCompression" HorizontalAlignment="Left" Margin="0,5,0,0" VerticalAlignment="Top" Unchecked="UseCompression_Changed" Checked="UseCompression_Changed"/>
             </Grid>
         </Grid>
 
         <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="138" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Button Content="Send File To Remote" HorizontalAlignment="Left" Margin="8,3,0,0" Name="sendFileButton" VerticalAlignment="Top" Height="25" Width="120" Click="SendFileButton_Click"/>
+            </Grid>
+            <Grid Grid.Column="1">
+                <ProgressBar Maximum="1" Name="sendProgress" HorizontalAlignment="Stretch" Height="15" Margin="0,8,8,0" VerticalAlignment="Top" Foreground="#FFFFDC00"/>
+            </Grid>
+        </Grid>
+        
+        <Grid Grid.Row="3">
             <Label Content="Received Files:" HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Top"/>
             <ScrollViewer Name ="fileScroller" Margin="0,25,0,0" >
                 <ListBox HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsSynchronizedWithCurrentItem="True" Name="lbReceivedFiles" ItemsSource="{Binding}" ItemTemplate="{StaticResource UserTemplate}" VerticalAlignment="Stretch" Background="#FFCFDCFF" />
             </ScrollViewer>
         </Grid>
 
-        <Grid Grid.Row="3" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+        <Grid Grid.Row="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
             <Label Content="Client Log:" HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Top"/>
             <ScrollViewer Name ="scroller" Margin="0,25,0,0" Background="#FFCFDCFF" >
                 <TextBlock Margin="5,0,0,0" ToolTip="Client Log Output" TextWrapping="Wrap" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Name="logBox" />

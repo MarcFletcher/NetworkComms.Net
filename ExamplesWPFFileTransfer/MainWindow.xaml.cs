@@ -14,9 +14,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using DPSBase;
+
 using Microsoft.Win32;
+using DPSBase;
 using NetworkCommsDotNet;
+using SevenZipLZMACompressor;
 
 namespace ExamplesWPFFileTransfer
 {
@@ -47,7 +49,7 @@ namespace ExamplesWPFFileTransfer
         /// </summary>
         Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>> receivedFilesDict = new Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>>();
 
-        SendReceiveOptions nullCompressionSRO = new SendReceiveOptions<ProtobufSerializer>();
+        SendReceiveOptions customOptions = new SendReceiveOptions<ProtobufSerializer>();
 
         static volatile bool windowClosing = false;
 
@@ -71,7 +73,7 @@ namespace ExamplesWPFFileTransfer
             //logConfig.LoggingRules.Add(new NLog.Config.LoggingRule("*", NLog.LogLevel.Trace, fileTarget));
             //NetworkComms.EnableLogging(logConfig);
 
-            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("PartialFileData", IncomingPartialFileData, nullCompressionSRO);
+            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("PartialFileData", IncomingPartialFileData);
             NetworkComms.AppendGlobalIncomingPacketHandler<SendInfo>("PartialFileDataInfo", IncomingPartialFileDataInfo);
 
             NetworkComms.AppendGlobalConnectionCloseHandler(OnConnectionClose);
@@ -121,7 +123,7 @@ namespace ExamplesWPFFileTransfer
                 }
 
                 //Merge the data
-                if (info != null && file != null)
+                if (info != null && file != null && !file.IsCompleted)
                     file.AddData(info.BytesStart, 0, data.Length, data);
                 else if (info == null ^ file == null)
                     throw new Exception("Either both are null or both are set. This is an impossible exception!");
@@ -171,7 +173,7 @@ namespace ExamplesWPFFileTransfer
                 }
 
                 //Merge the data
-                if (data != null && file != null)
+                if (data != null && file != null && !file.IsCompleted)
                     file.AddData(info.BytesStart, 0, data.Length, data);
                 else if (data == null ^ file == null)
                     throw new Exception("Either both are null or both are set. This is an impossible exception!");
@@ -263,6 +265,20 @@ namespace ExamplesWPFFileTransfer
             }
         }
 
+        private void UseCompression_Changed(object sender, RoutedEventArgs e)
+        {
+            if (this.UseCompression.IsChecked == true)
+            {
+                customOptions = new SendReceiveOptions<ProtobufSerializer, LZMACompressor>();
+                AddLineToLog("Enabled compression.");
+            }
+            else if (this.UseCompression.IsChecked == false)
+            {
+                customOptions = new SendReceiveOptions<ProtobufSerializer>();
+                AddLineToLog("Disabled compression.");
+            }
+        }
+
         private void AddLineToLog(string logLine)
         {
             logBox.Dispatcher.BeginInvoke(new Action(() =>
@@ -288,6 +304,8 @@ namespace ExamplesWPFFileTransfer
             if (openDialog.ShowDialog() == true)
             {
                 sendFileButton.IsEnabled = false;
+                UseCompression.IsEnabled = false;
+
                 string filename = openDialog.FileName;
                 string remoteIP = this.remoteIP.Text;
                 string remotePort = this.remotePort.Text;
@@ -327,9 +345,9 @@ namespace ExamplesWPFFileTransfer
                                 
                                 long packetSequenceNumber;
                                 //Send an amount of data
-                                connection.SendObject("PartialFileData", streamWrapper, nullCompressionSRO, out packetSequenceNumber);
+                                connection.SendObject("PartialFileData", streamWrapper, customOptions, out packetSequenceNumber);
                                 //Send the associated info for this send so that the remote can correctly rebuild the data
-                                connection.SendObject("PartialFileDataInfo", new SendInfo(shortFileName, stream.Length, totalBytesSent, packetSequenceNumber));
+                                connection.SendObject("PartialFileDataInfo", new SendInfo(shortFileName, stream.Length, totalBytesSent, packetSequenceNumber), customOptions);
 
                                 totalBytesSent += bytesToSend;
                                 UpdateSendProgress((double)totalBytesSent / stream.Length);
@@ -351,6 +369,7 @@ namespace ExamplesWPFFileTransfer
                         sendFileButton.Dispatcher.BeginInvoke(new Action(() =>
                             {
                                 sendFileButton.IsEnabled = true;
+                                UseCompression.IsEnabled = true;
                             }));
                     });
             }
