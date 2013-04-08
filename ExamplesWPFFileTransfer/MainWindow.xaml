@@ -43,13 +43,13 @@
             <RowDefinition Height="170" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Height="38" Width="478" HorizontalAlignment="Center" Margin="18,6,0,0" x:Name="textBlock1" TextWrapping="Wrap" Text="Important Note: NetworkComms.Net is free to use only in limited circumstances. Please see http://www.networkcomms.net/licensing/ for more information." VerticalAlignment="Top" FontWeight="Bold" />
+        <TextBlock Grid.Row="0" Height="38" Width="430" HorizontalAlignment="Center" Margin="32,6,43,0" x:Name="textBlock1" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" ><Run Text="Note: NetworkComms.Net is "/><Run Language="en-gb" Text="freely available under the terms of the GPLv3"/><Run Text=". Please see http://www.networkcomms.net/licensing/ for more information."/></TextBlock>
+        
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="262" />
-                <ColumnDefinition />
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-
             <Grid Grid.Column="0">
                 <TextBox Height="23" HorizontalAlignment="Left" Margin="75,2,0,0" Name="remoteIP" VerticalAlignment="Top" Width="97" />
                 <Label Content="Remote IP:" Height="28" HorizontalAlignment="Left" Margin="8,0,0,0" Name="label1" VerticalAlignment="Top" />
@@ -57,7 +57,7 @@
                 <Label Content="Port:" Height="28" HorizontalAlignment="Left" Margin="172,0,0,0" Name="label2" VerticalAlignment="Top" />
             </Grid>
             <Grid Grid.Column="1">
-                <CheckBox Content="Use Compression (Slower):" Name="UseCompression" HorizontalAlignment="Left" Margin="0,5,0,0" VerticalAlignment="Top" Unchecked="UseCompression_Changed" Checked="UseCompression_Changed"/>
+                <CheckBox Content="Use Compression" Name="UseCompression" HorizontalAlignment="Left" Margin="0,5,0,0" VerticalAlignment="Top" Unchecked="UseCompression_Changed" Checked="UseCompression_Changed"/>
             </Grid>
         </Grid>
 
@@ -66,7 +66,6 @@
                 <ColumnDefinition Width="138" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-
             <Grid Grid.Column="0">
                 <Button Content="Send File To Remote" HorizontalAlignment="Left" Margin="8,3,0,0" Name="sendFileButton" VerticalAlignment="Top" Height="25" Width="120" Click="SendFileButton_Click"/>
             </Grid>
@@ -82,7 +81,7 @@
             </ScrollViewer>
         </Grid>
 
-        <Grid Grid.Row="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+        <Grid Grid.Row="4">
             <Label Content="Client Log:" HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Top"/>
             <ScrollViewer Name ="scroller" Margin="0,25,0,0" Background="#FFCFDCFF" >
                 <TextBlock Margin="5,0,0,0" ToolTip="Client Log Output" TextWrapping="Wrap" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Name="logBox" />
