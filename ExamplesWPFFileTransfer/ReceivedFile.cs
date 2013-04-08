@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,7 +8,7 @@ using NetworkCommsDotNet;
 
 namespace ExamplesWPFFileTransfer
 {
-    class ReceivedFile
+    class ReceivedFile : INotifyPropertyChanged
     {
         public string Filename { get; private set; }
         public ConnectionInfo SourceInfo { get; private set; }
@@ -22,11 +23,27 @@ namespace ExamplesWPFFileTransfer
 
         public string SourceInfoStr
         {
-            get { return SourceInfo.RemoteEndPoint.Address + " - " + SourceInfo.RemoteEndPoint.Port; }
+            get { return "[" + SourceInfo.RemoteEndPoint.Address + " - " + SourceInfo.RemoteEndPoint.Port + "]"; }
+        }
+
+        public bool IsCompleted
+        {
+            get { return ReceivedBytes == SizeBytes; }
         }
 
         object SyncRoot = new object();
         MemoryStream data;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // This method is called by the Set accessor of each property. 
+        // The CallerMemberName attribute that is applied to the optional propertyName 
+        // parameter causes the property name of the caller to be substituted as an argument. 
+        private void NotifyPropertyChanged(string propertyName = "")
+        {
+            if (PropertyChanged != null)
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         public ReceivedFile(string filename, ConnectionInfo sourceInfo, long sizeBytes)
         {
@@ -55,11 +72,18 @@ namespace ExamplesWPFFileTransfer
 
                 ReceivedBytes += (int)(bufferLength - bufferStart);
             }
+
+            NotifyPropertyChanged("CompletedPercent");
+            NotifyPropertyChanged("IsCompleted");
         }
 
         public void SaveFileToDisk(string saveLocation)
         {
+            if (ReceivedBytes != SizeBytes)
+                throw new Exception("Attempted to save out file before data is complete.");
 
+            lock (SyncRoot)
+                File.WriteAllBytes(saveLocation, data.ToArray());
         }
     }
 }

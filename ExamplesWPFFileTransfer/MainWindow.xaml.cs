@@ -25,7 +25,6 @@ namespace ExamplesWPFFileTransfer
     /// </summary>
     public partial class MainWindow : Window
     {
-        const long sendChunkSizeBytes = 10240;
         ObservableCollection<ReceivedFile> receivedFiles = new ObservableCollection<ReceivedFile>();
 
         /// <summary>
@@ -48,12 +47,13 @@ namespace ExamplesWPFFileTransfer
         /// </summary>
         Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>> receivedFilesDict = new Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>>();
 
+        SendReceiveOptions nullCompressionSRO = new SendReceiveOptions<ProtobufSerializer>();
+
+        static volatile bool windowClosing = false;
+
         public MainWindow()
         {
             InitializeComponent();
-
-            //receivedFiles.Add(new ReceivedFile("Very long file NAME.csv", new NetworkCommsDotNet.ConnectionInfo("192.168.0.1", 10000), 1024));
-            //receivedFiles.Add(new ReceivedFile("Very.csv", new NetworkCommsDotNet.ConnectionInfo("192.168.0.1", 10000), 1024));
 
             lbReceivedFiles.DataContext = receivedFiles;
             StartListening();
@@ -61,7 +61,17 @@ namespace ExamplesWPFFileTransfer
 
         private void StartListening()
         {
-            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("PartialFileData", IncomingPartialFileData);
+            //NLog.Config.LoggingConfiguration logConfig = new NLog.Config.LoggingConfiguration();
+            //NLog.Targets.FileTarget fileTarget = new NLog.Targets.FileTarget();
+            //fileTarget.FileName = "${basedir}/ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier + ".txt";
+            //fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
+
+            //logConfig.AddTarget("file", fileTarget);
+
+            //logConfig.LoggingRules.Add(new NLog.Config.LoggingRule("*", NLog.LogLevel.Trace, fileTarget));
+            //NetworkComms.EnableLogging(logConfig);
+
+            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("PartialFileData", IncomingPartialFileData, nullCompressionSRO);
             NetworkComms.AppendGlobalIncomingPacketHandler<SendInfo>("PartialFileDataInfo", IncomingPartialFileDataInfo);
 
             NetworkComms.AppendGlobalConnectionCloseHandler(OnConnectionClose);
@@ -112,10 +122,7 @@ namespace ExamplesWPFFileTransfer
 
                 //Merge the data
                 if (info != null && file != null)
-                {
                     file.AddData(info.BytesStart, 0, data.Length, data);
-                    UpdateReceiveProgress();
-                }
                 else if (info == null ^ file == null)
                     throw new Exception("Either both are null or both are set. This is an impossible exception!");
             }
@@ -165,10 +172,7 @@ namespace ExamplesWPFFileTransfer
 
                 //Merge the data
                 if (data != null && file != null)
-                {
                     file.AddData(info.BytesStart, 0, data.Length, data);
-                    UpdateReceiveProgress();
-                }
                 else if (data == null ^ file == null)
                     throw new Exception("Either both are null or both are set. This is an impossible exception!");
             }
@@ -185,12 +189,33 @@ namespace ExamplesWPFFileTransfer
         /// <param name="conn"></param>
         private void OnConnectionClose(Connection conn)
         {
+            ReceivedFile[] filesToRemove = null;
+
             lock (syncRoot)
             {
+                //Remove all data from the caches
                 incomingDataCache.Remove(conn.ConnectionInfo);
+                incomingDataInfoCache.Remove(conn.ConnectionInfo);
 
                 //Remove any non completed files
+                if (receivedFilesDict.ContainsKey(conn.ConnectionInfo))
+                {
+                    filesToRemove = (from current in receivedFilesDict[conn.ConnectionInfo] where !current.Value.IsCompleted select current.Value).ToArray();
+                    receivedFilesDict[conn.ConnectionInfo] = (from current in receivedFilesDict[conn.ConnectionInfo] where current.Value.IsCompleted select current).ToDictionary(entry => entry.Key, entry => entry.Value);
+                }
             }
+
+            lbReceivedFiles.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                lock (syncRoot)
+                {
+                    if (filesToRemove != null)
+                    {
+                        foreach (ReceivedFile file in filesToRemove)
+                            receivedFiles.Remove(file);
+                    }
+                }
+            }));
 
             AddLineToLog("Connection closed with " + conn.ConnectionInfo.ToString());
         }
@@ -209,7 +234,14 @@ namespace ExamplesWPFFileTransfer
             if (cmd.DataContext is ReceivedFile)
             {
                 ReceivedFile fileToDelete = (ReceivedFile)cmd.DataContext;
-                receivedFiles.Remove(fileToDelete);
+                lock (syncRoot)
+                {
+                    receivedFiles.Remove(fileToDelete);
+
+                    if (receivedFilesDict.ContainsKey(fileToDelete.SourceInfo))
+                        receivedFilesDict[fileToDelete.SourceInfo].Remove(fileToDelete.Filename);
+                }
+
                 AddLineToLog("Deleted file '" + fileToDelete.Filename + "' from '" + fileToDelete.SourceInfoStr + "'");
             }
         }
@@ -248,14 +280,6 @@ namespace ExamplesWPFFileTransfer
                 }));
         }
 
-        private void UpdateReceiveProgress()
-        {
-            lbReceivedFiles.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                lbReceivedFiles.UpdateLayout();
-            }));
-        }
-
         private void SendFileButton_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openDialog = new OpenFileDialog();
@@ -263,6 +287,7 @@ namespace ExamplesWPFFileTransfer
 
             if (openDialog.ShowDialog() == true)
             {
+                sendFileButton.IsEnabled = false;
                 string filename = openDialog.FileName;
                 string remoteIP = this.remoteIP.Text;
                 string remotePort = this.remotePort.Text;
@@ -279,9 +304,20 @@ namespace ExamplesWPFFileTransfer
 
                             string shortFileName = System.IO.Path.GetFileName(filename);
 
-                            //Get a connection to the remote side
-                            Connection connection = TCPConnection.GetConnection(new ConnectionInfo(remoteIP, int.Parse(remotePort)));
+                            ConnectionInfo remoteInfo;
+                            try
+                            {
+                                remoteInfo = new ConnectionInfo(remoteIP, int.Parse(remotePort));
+                            }
+                            catch (Exception)
+                            {
+                                throw new InvalidDataException("Failed to parse remote IP and port. Check and try again.");
+                            }
 
+                            //Get a connection to the remote side
+                            Connection connection = TCPConnection.GetConnection(remoteInfo);
+
+                            long sendChunkSizeBytes = (int)(stream.Length / 20.0) + 1;
                             long totalBytesSent = 0;
                             do
                             {
@@ -291,26 +327,38 @@ namespace ExamplesWPFFileTransfer
                                 
                                 long packetSequenceNumber;
                                 //Send an amount of data
-                                connection.SendObject("PartialFileData", streamWrapper, out packetSequenceNumber);
+                                connection.SendObject("PartialFileData", streamWrapper, nullCompressionSRO, out packetSequenceNumber);
                                 //Send the associated info for this send so that the remote can correctly rebuild the data
                                 connection.SendObject("PartialFileDataInfo", new SendInfo(shortFileName, stream.Length, totalBytesSent, packetSequenceNumber));
 
                                 totalBytesSent += bytesToSend;
                                 UpdateSendProgress((double)totalBytesSent / stream.Length);
                             } while (totalBytesSent < stream.Length);
+
+                            AddLineToLog("Completed file send to '" + connection.ConnectionInfo.ToString() + "'.");
                         }
                         catch(Exception ex)
                         {
-                            UpdateSendProgress(0);
-                            AddLineToLog(ex.ToString());
-                            NetworkComms.LogError(ex, "SendFileError");
+                            if (!windowClosing)
+                            {
+                                UpdateSendProgress(0);
+                                AddLineToLog(ex.Message.ToString());
+                                NetworkComms.LogError(ex, "SendFileError");
+                            }
                         }
+
+                        //Once complete enable the send button again
+                        sendFileButton.Dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                sendFileButton.IsEnabled = true;
+                            }));
                     });
             }
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            windowClosing = true;
             NetworkComms.Shutdown();
         }
     }
