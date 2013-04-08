@@ -507,8 +507,16 @@ namespace DPSBase
                             else
                                 listofConsideredAssemblies.Add(referencedAssembly.FullName);
 
-                            //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
-                            var refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
+                            Assembly refAssembly = null;
+
+                            //Occationally assemblies will not resolve (f**k knows why).  They will then throw a FileNotFoundException that we can catch and ignore
+                            try
+                            {
+                                //Do a reflection only load of the assembly so that we can see if it references DPSBase and also what it does reference
+                                refAssembly = System.Reflection.Assembly.ReflectionOnlyLoad(referencedAssembly.FullName);
+                            }
+                            catch (FileNotFoundException)
+                            { continue; }
 
                             //Note that multiple assembly names/versions could resolve to this assembly so check if we're already considered the actual
                             //loaded assembly
@@ -576,10 +584,10 @@ namespace DPSBase
                     }
 #endif
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     //using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
-                    //    sw.WriteLine(ex.ToString());
+                        Console.WriteLine(ex.ToString());
                 }
                 finally
                 {
