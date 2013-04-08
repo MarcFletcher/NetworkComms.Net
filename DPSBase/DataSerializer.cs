@@ -479,10 +479,10 @@ namespace DPSBase
                         return (object)inputStream.ToArray();
                     }
                 }
+
                 if (elementType.IsPrimitive)
                 {
                     int numElements;
-
 
                     if (dataProcessors == null || dataProcessors.Count == 0)
                         numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
@@ -615,6 +615,7 @@ namespace DPSBase
             long writtenBytes;
             //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
             //the most common usage case
+            tempStream1.Seek(0, 0);
             dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
 
             //If we have more than one processor we need to loop through them
