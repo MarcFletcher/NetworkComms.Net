@@ -89,11 +89,8 @@ namespace DPSBase
                 return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamSendWrapper, dataProcessors, options);
 
             StreamSendWrapper baseRes = null;
-            
-#if WINDOWS_PHONE || iOS
-#else
+     
             baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
-#endif
 
             //if the object was an array baseres will != null
             if (baseRes != null) 
@@ -225,10 +222,7 @@ namespace DPSBase
             //Try to deserialise using the array helper.  If the result is a primitive array this call will return an object
             object baseRes = null;
                 
-#if WINDOWS_PHONE || iOS
-#else
             baseRes = ArraySerializer.DeserialiseArrayObject(receivedObjectStream, typeof(T), dataProcessors, options);
-#endif
 
             if (baseRes != null)
                 return (T)baseRes;
@@ -341,15 +335,138 @@ namespace DPSBase
         /// <returns>The deserialised object</returns>
         protected abstract object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options);
     }
-
-#if WINDOWS_PHONE || iOS
-#else
-
+    
     /// <summary>
     /// Class that provides optimised method for serializing arrays of primitive data types.
     /// </summary>
     static class ArraySerializer
     {
+#if WINDOWS_PHONE || iOS
+        
+        /// <summary>
+        /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
+        /// to serialize other types
+        /// </summary>        
+        /// <param name="objectToSerialise">Object to serialize</param>
+        /// <param name="dataProcessors">The compression provider to use</param>
+        /// <param name="options">Options to be used during serialization and processing of data</param>
+        /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
+        public static StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
+            Type objType = objectToSerialise.GetType();
+
+            if (objType.IsArray)
+            {
+                var elementType = objType.GetElementType();
+
+                //No need to do anything for a byte array
+                if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
+                {
+                    byte[] bytesToSerialise = objectToSerialise as byte[];
+                    //return objectToSerialise as byte[];
+                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
+                }
+                else if (elementType.IsPrimitive)
+                {
+                    var asArray = objectToSerialise as Array;
+
+#if WINDOWS_PHONE || iOS
+#else
+                    GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
+#endif
+               
+                    try
+                    {
+
+#if WINDOWS_PHONE || iOS
+#else
+                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
+#endif
+
+                        long writtenBytes = 0;
+
+
+#if WINDOWS_PHONE || iOS
+                        var byteArray = new byte[asArray.Length * Marshal.SizeOf(elementType)];
+                        Buffer.BlockCopy(asArray, 0, byteArray, 0, byteArray.Length);
+                        MemoryStream tempStream1 = new MemoryStream();
+                        tempStream1.Write(byteArray, 0, byteArray.Length);
+#else
+                        MemoryStream tempStream1 = new System.IO.MemoryStream();
+
+                        using (UnmanagedMemoryStream inputDataStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
+                        {
+                            if (dataProcessors == null || dataProcessors.Count == 0)
+                            {
+                                AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
+                                //return tempStream1.ToArray();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                            }
+
+                            dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
+                        }
+#endif
+
+                        if (dataProcessors.Count > 1)
+                        {
+                            MemoryStream tempStream2 = new MemoryStream();
+
+                            for (int i = 1; i < dataProcessors.Count; i += 2)
+                            {
+                                tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                tempStream2.Seek(0, 0);
+                                dataProcessors[i].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+                                if (i + 1 < dataProcessors.Count)
+                                {
+                                    tempStream1.Seek(0, 0);
+                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                    dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
+                                }
+                            }
+
+                            if (dataProcessors.Count % 2 == 0)
+                            {
+                                tempStream2.SetLength(writtenBytes + 4);
+                                tempStream2.Seek(writtenBytes, 0);
+                                tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
+                                //return tempStream2.ToArray();
+                                tempStream1.Dispose();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
+                            }
+                            else
+                            {
+                                tempStream1.SetLength(writtenBytes + 4);
+                                tempStream1.Seek(writtenBytes, 0);
+                                tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
+                                //return tempStream1.ToArray();
+                                tempStream2.Dispose();
+                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                            }
+                        }
+                        else
+                        {
+                            tempStream1.SetLength(writtenBytes + 4);
+                            tempStream1.Seek(writtenBytes, 0);
+                            tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
+                            //return tempStream1.ToArray();
+                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                        }
+                    }
+                    finally
+                    {
+#if WINDOWS_PHONE || iOS
+#else
+                        arrayHandle.Free();
+#endif
+                    }
+                }
+            }
+
+            return null;
+        }
+
+#else
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
         /// to serialize other types
@@ -452,6 +569,159 @@ namespace DPSBase
 
             return null;
         }
+#endif
+
+#if WINDOWS_PHONE || iOS
+        /// <summary>
+        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
+        /// </summary>        
+        /// <param name="inputStream">Byte array containing serialized and compressed object</param>
+        /// <param name="dataProcessors">Compression provider to use</param>
+        /// <param name="objType">The <see cref="System.Type"/> of the <see cref="object"/> to be returned</param>
+        /// <param name="options">Options to be used during deserialization and processing of data</param>
+        /// <returns>The deserialized object if it is an array, otherwise null</returns>
+        public static object DeserialiseArrayObject(MemoryStream inputStream, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        {
+            if (objType.IsArray)
+            {
+                var elementType = objType.GetElementType();
+
+                //No need to do anything for a byte array
+                if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
+                {
+                    try
+                    {
+                        return (object)inputStream.GetBuffer();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return (object)inputStream.ToArray();
+                    }
+                }
+
+                if (elementType.IsPrimitive)
+                {
+                    int numElements;
+
+                    if (dataProcessors == null || dataProcessors.Count == 0)
+                        numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
+                    else
+                    {
+                        byte[] temp = new byte[sizeof(int)];                        
+                        inputStream.Seek(inputStream.Length - sizeof(int), SeekOrigin.Begin);
+                        inputStream.Read(temp, 0, sizeof(int));
+                        numElements = (int)(BitConverter.ToUInt32(temp, 0));
+                    }
+
+                    Array resultArray = Array.CreateInstance(elementType, numElements);
+
+#if WINDOWS_PHONE || iOS
+                    byte[] resultBytes = null;
+#else
+                    GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
+#endif
+
+                    try
+                    {
+#if WINDOWS_PHONE || iOS
+#else
+                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(resultArray, 0);
+#endif
+
+                        long writtenBytes = 0;
+
+#if WINDOWS_PHONE || iOS
+                        resultBytes = new byte[numElements * Marshal.SizeOf(elementType)];
+                        using (System.IO.MemoryStream finalOutputStream = new MemoryStream(resultBytes))
+                        {
+
+#else
+                        using (System.IO.UnmanagedMemoryStream finalOutputStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
+                        {
+#endif
+                            MemoryStream inputBytesStream = null;
+                            try
+                            {
+                                //We hope that the buffer is publicly accessible as otherwise it defeats the point of having a special serializer for arrays
+                                inputBytesStream = new MemoryStream(inputStream.GetBuffer(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                inputBytesStream = new MemoryStream(inputStream.ToArray(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+                            }
+
+                            using (inputBytesStream)
+                            {
+                                if (dataProcessors != null && dataProcessors.Count > 1)
+                                {
+                                    using (MemoryStream tempStream1 = new MemoryStream())
+                                    {
+                                        dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputBytesStream, tempStream1, options, out writtenBytes);
+
+                                        if (dataProcessors.Count > 2)
+                                        {
+                                            using (MemoryStream tempStream2 = new MemoryStream())
+                                            {
+                                                for (int i = dataProcessors.Count - 2; i > 0; i -= 2)
+                                                {
+                                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                                    tempStream2.Seek(0, 0);
+                                                    dataProcessors[i].ReverseProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
+
+                                                    if (i - 1 > 0)
+                                                    {
+                                                        tempStream1.Seek(0, 0);
+                                                        tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                                        dataProcessors[i - 1].ReverseProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
+                                                    }
+                                                }
+
+                                                if (dataProcessors.Count % 2 == 0)
+                                                {
+                                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                                    dataProcessors[0].ReverseProcessDataStream(tempStream1, finalOutputStream, options, out writtenBytes);
+                                                }
+                                                else
+                                                {
+                                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
+                                                    dataProcessors[0].ReverseProcessDataStream(tempStream2, finalOutputStream, options, out writtenBytes);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
+                                            dataProcessors[0].ReverseProcessDataStream(tempStream1, finalOutputStream, options, out writtenBytes);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (dataProcessors != null && dataProcessors.Count == 1)
+                                        dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
+                                    else
+                                        AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+#if WINDOWS_PHONE || iOS
+                        Buffer.BlockCopy(resultBytes, 0, resultArray, 0, resultBytes.Length);
+#else
+                        arrayHandle.Free();
+#endif
+                    }
+
+                    return (object)resultArray;
+                }
+            }
+
+            return null;
+        }
+
+#else
 
         /// <summary>
         /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
@@ -581,10 +851,10 @@ namespace DPSBase
 
             return null;
         }
-    }
-
 #endif
 
+    }
+    
     /// <summary>
     /// Class that provides optimised method for serializing arrays of primitive data types.
     /// </summary>
@@ -603,66 +873,11 @@ namespace DPSBase
             if (dataProcessors == null || dataProcessors.Count == 0)
                 return streamSendWrapperToSerialize;
 
-            //If we have data processors we will have to read everything into memory first
-            //Create the memory streams for passing back and forth between data processors 
-            MemoryStream tempStream1 = new MemoryStream();
-            MemoryStream tempStream2 = new MemoryStream();
+            var array = new byte[streamSendWrapperToSerialize.Length];
+            using (MemoryStream tempStream = new MemoryStream(array))
+                streamSendWrapperToSerialize.ThreadSafeStream.CopyTo(tempStream, streamSendWrapperToSerialize.Start, streamSendWrapperToSerialize.Length, 8000);
 
-            //Initialise tempStream 1 with the data from the provided StreamSendWrapper
-            streamSendWrapperToSerialize.ThreadSafeStream.CopyTo(tempStream1, streamSendWrapperToSerialize.Start, streamSendWrapperToSerialize.Length, 8000);
-
-            //variable will store the number of bytes in the output stream at each processing stage
-            long writtenBytes;
-            //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
-            //the most common usage case
-            tempStream1.Seek(0, 0);
-            dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-
-            //If we have more than one processor we need to loop through them
-            if (dataProcessors.Count > 1)
-            {
-                //Loop through the remaining processors two at a time.  Each loop processes data temp2 -> temp1 -> temp2
-                for (int i = 1; i < dataProcessors.Count; i += 2)
-                {
-                    //Seek streams to zero and truncate the last output stream to the data size
-                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                    tempStream1.Seek(0, 0);
-                    //Process the data
-                    dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
-
-                    //if the second of the pair exists
-                    if (i + 1 < dataProcessors.Count)
-                    {
-                        //Seek streams to zero and truncate the last output stream to the data size
-                        tempStream2.Seek(0, 0);
-                        tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                        //Process the data
-                        dataProcessors[i + 1].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-                    }
-                }
-            }
-
-            //Depending on whether the number of processors is even or odd a different stream will hold the final data
-            if (dataProcessors.Count % 2 == 0)
-            {
-                //Seek to the begining and truncate the output stream
-                tempStream1.Seek(0, 0);
-                tempStream1.SetLength(writtenBytes);
-                //Return the resultant bytes
-                //return tempStream1.ToArray();
-                tempStream2.Dispose();
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
-            }
-            else
-            {
-                //Seek to the begining and truncate the output stream
-                tempStream2.Seek(0, 0);
-                tempStream2.SetLength(writtenBytes);
-                //Return the resultant bytes
-                //return tempStream2.ToArray();
-                tempStream1.Dispose();
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
-            }
+            return ArraySerializer.SerialiseArrayObject(array, dataProcessors, options);            
         }
 
         /// <summary>
