@@ -43,7 +43,7 @@
             <RowDefinition Height="170" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Height="38" Width="430" HorizontalAlignment="Center" Margin="32,6,43,0" x:Name="textBlock1" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" ><Run Text="Note: NetworkComms.Net is "/><Run Language="en-gb" Text="freely available under the terms of the GPLv3"/><Run Text=". Please see http://www.networkcomms.net/licensing/ for more information."/></TextBlock>
+        <TextBlock Grid.Row="0" Height="38" Width="430" HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" >Note: NetworkComms.Net is freely available under the terms of the GPLv3. Please see http://www.networkcomms.net/licensing/ for more information.</TextBlock>
         
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
