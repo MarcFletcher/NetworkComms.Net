@@ -16,14 +16,13 @@ namespace DPSBase
         /// Allows a minimum of 20 milliseconds for any write.
         /// </summary>
         /// <param name="sendBuffer">Buffer containing data to write</param>
-        /// <param name="bufferStart">The start position in sendBuffer</param>
         /// <param name="bufferLength">The number of bytes to write</param>
         /// <param name="destinationStream">The destination stream</param>
         /// <param name="writeBufferSize">The size in bytes of each successive write</param>
         /// <param name="timeoutMSPerKBWrite">The maximum time to allow for write to complete per KB</param>
         /// <param name="minTimeoutMS">The minimum time to allow for any sized write</param>
         /// <returns>The average time in milliseconds per KB written</returns>
-        public static double Write(byte[] sendBuffer, int bufferStart, int bufferLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
+        public static double Write(byte[] sendBuffer, int bufferLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
             int totalBytesCompleted = 0;
             Exception innerException = null;
@@ -77,11 +76,11 @@ namespace DPSBase
         /// <param name="timeoutMSPerKBWrite">The maximum time to allow for write to complete per KB</param>
         /// <param name="minTimeoutMS">The minimum time to wait per write, this takes priority over other values.</param>
         /// <returns>The average time in milliseconds per byte written</returns>
-        public static double Write(Stream inputStream, int inputStart, int inputLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
+        public static double Write(Stream inputStream, long inputStart, long inputLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
             //Make sure we start in the right place
             inputStream.Seek(inputStart, SeekOrigin.Begin);
-            int totalBytesCompleted = 0;
+            long totalBytesCompleted = 0;
             Exception innerException = null;
             AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
 
@@ -91,8 +90,12 @@ namespace DPSBase
             DateTime startTime = DateTime.Now;
             do
             {
-                int bytesRemaining = inputLength - totalBytesCompleted;
-                int writeCountBytes = inputStream.Read(sendBuffer, 0, (sendBuffer.Length > bytesRemaining ? bytesRemaining : sendBuffer.Length));
+                long bytesRemaining = inputLength - totalBytesCompleted;
+
+                //writeCountBytes is the total number of bytes that need to be written to the destinationStream
+                //The sendBuffer.Length can never be larger than int.maxValue
+                //If the sendBuffer.Length is greater than bytesRemaining we use the bytesRemaining value as an int
+                int writeCountBytes = inputStream.Read(sendBuffer, 0, (sendBuffer.Length > bytesRemaining ? (int)bytesRemaining : sendBuffer.Length));
 
                 if (writeCountBytes <= 0)
                     break;

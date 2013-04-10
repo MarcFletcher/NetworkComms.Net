@@ -44,10 +44,6 @@ namespace DPSBase
         public ThreadSafeStream(Stream stream)
         {
             this.CloseStreamAfterSend = false;
-
-            if (stream.Length > int.MaxValue)
-                throw new NotImplementedException("Streams larger than 2GB not yet supported.");
-
             this.stream = stream;
         }
 
@@ -59,10 +55,6 @@ namespace DPSBase
         public ThreadSafeStream(Stream stream, bool closeStreamAfterSend)
         {
             this.CloseStreamAfterSend = closeStreamAfterSend;
-
-            if (stream.Length > int.MaxValue)
-                throw new NotImplementedException("Streams larger than 2GB not yet supported.");
-
             this.stream = stream;
         }
 
@@ -105,8 +97,11 @@ namespace DPSBase
         /// <param name="length">The total number of desired bytes</param>
         /// <param name="numberZeroBytesPrefex">If non zero will append N 0 value bytes to the start of the returned array</param>
         /// <returns></returns>
-        public byte[] ToArray(int start, int length, int numberZeroBytesPrefex = 0)
+        public byte[] ToArray(long start, long length, int numberZeroBytesPrefex = 0)
         {
+            if (length>int.MaxValue)
+                throw new ArgumentOutOfRangeException("Unable to return array whose size is larger than int.MaxValue. Consider requesting multiple smaller arrays.");
+
             lock (streamLocker)
             {
                 if (start + length > stream.Length)
@@ -145,7 +140,7 @@ namespace DPSBase
         /// </summary>
         /// <param name="data"></param>
         /// <param name="startPosition"></param>
-        public void Write(byte[] data, int startPosition)
+        public void Write(byte[] data, long startPosition)
         {
             lock (streamLocker)
             {
@@ -165,7 +160,7 @@ namespace DPSBase
         /// <param name="minTimeoutMS">The minimum time allowed for any sized copy</param>
         /// <param name="timeoutMSPerKBWrite">The timouts in milliseconds per KB to write</param>
         /// <returns>The average time in milliseconds per byte written</returns>
-        public double CopyTo(Stream destinationStream, int startPosition, int length, int writeBufferSize, double timeoutMSPerKBWrite = 1000,  int minTimeoutMS = 500)
+        public double CopyTo(Stream destinationStream, long startPosition, long length, int writeBufferSize, double timeoutMSPerKBWrite = 1000,  int minTimeoutMS = 500)
         {
             lock (streamLocker)
                 return StreamWriteWithTimeout.Write(stream, startPosition, length, destinationStream, writeBufferSize, timeoutMSPerKBWrite, minTimeoutMS);

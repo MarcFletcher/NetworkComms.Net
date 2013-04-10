@@ -32,7 +32,7 @@ namespace ExamplesWPFFileTransfer
         /// <summary>
         /// The total number of bytes received so far
         /// </summary>
-        public int ReceivedBytes { get; private set; }
+        public long ReceivedBytes { get; private set; }
 
         /// <summary>
         /// Getter which returns the completion of this file, between 0 and 1
@@ -67,7 +67,7 @@ namespace ExamplesWPFFileTransfer
         /// <summary>
         /// A memorystream used to build the file
         /// </summary>
-        MemoryStream data;
+        Stream data;
 
         /// <summary>
         ///Event subscribed to by GUI for updates
@@ -86,10 +86,8 @@ namespace ExamplesWPFFileTransfer
             this.SourceInfo = sourceInfo;
             this.SizeBytes = sizeBytes;
 
-            if (this.SizeBytes > int.MaxValue)
-                throw new NotSupportedException("The provided sizeBytes is not supported for this example.");
-
-            data = new MemoryStream((int)sizeBytes);;
+            //We create a file on disk so that we can receive large files
+            data = new FileStream(filename, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 8 * 1024, FileOptions.DeleteOnClose);
         }
 
         /// <summary>
@@ -99,14 +97,8 @@ namespace ExamplesWPFFileTransfer
         /// <param name="bufferStart">Where to start copying data from buffer</param>
         /// <param name="bufferLength">The number of bytes to copy from buffer</param>
         /// <param name="buffer">Buffer containing data to add</param>
-        public void AddData(long dataStart, long bufferStart, long bufferLength, byte[] buffer)
+        public void AddData(long dataStart, int bufferStart, int bufferLength, byte[] buffer)
         {
-            if (bufferStart > int.MaxValue)
-                throw new NotSupportedException("The provided bufferStart is not supported for this example.");
-
-            if (bufferLength > int.MaxValue)
-                throw new NotSupportedException("The provided bufferLength is not supported for this example.");
-
             lock (SyncRoot)
             {
                 data.Seek(dataStart, SeekOrigin.Begin);
@@ -128,8 +120,29 @@ namespace ExamplesWPFFileTransfer
             if (ReceivedBytes != SizeBytes)
                 throw new Exception("Attempted to save out file before data is complete.");
 
-            lock (SyncRoot)
-                File.WriteAllBytes(saveLocation, data.ToArray());
+            if (!File.Exists(Filename))
+                throw new Exception("The transfered file should have been created within the local application directory. Where has it gone?");
+
+            File.Delete(saveLocation);
+            File.Copy(Filename, saveLocation);
+        }
+
+        /// <summary>
+        /// Closes and releases any resources maintained by this file
+        /// </summary>
+        public void Close()
+        {
+            try
+            {
+                data.Dispose();
+            }
+            catch (Exception) { }
+
+            try
+            {
+                data.Close();
+            }
+            catch (Exception) { }
         }
 
         /// <summary>

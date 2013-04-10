@@ -37,11 +37,11 @@ namespace DPSBase
         /// <summary>
         /// The start position to read from Stream
         /// </summary>
-        public int Start { get; private set; }
+        public long Start { get; private set; }
         /// <summary>
         /// The number of bytes to read from Stream
         /// </summary>
-        public int Length { get; private set; }
+        public long Length { get; private set; }
 
         /// <summary>
         /// Create a new stream wrapper and set Start and Length to encompass the entire Stream
@@ -49,11 +49,9 @@ namespace DPSBase
         /// <param name="stream">The underlying stream</param>
         public StreamSendWrapper(ThreadSafeStream stream)
         {
-            if (Length > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
-
             this.ThreadSafeStream = stream;
             this.Start = 0;
-            this.Length = (int)stream.Length;
+            this.Length = stream.Length;
         }
 
         /// <summary>
@@ -64,12 +62,15 @@ namespace DPSBase
         /// <param name="length">The length to read</param>
         public StreamSendWrapper(ThreadSafeStream stream, long start, long length)
         {
-            if (Start > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
-            if (Length > int.MaxValue) throw new NotImplementedException("Streams larger than 2GB are not yet supported.");
+            if (start < 0)
+                throw new InvalidDataException("Provided start value cannot be less than 0.");
+
+            if (length < 0)
+                throw new InvalidDataException("Provided length value cannot be less than 0.");
 
             this.ThreadSafeStream = stream;
-            this.Start = (int)start;
-            this.Length = (int)length;
+            this.Start = start;
+            this.Length = length;
         }
 
         /// <summary>

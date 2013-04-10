@@ -122,7 +122,10 @@ namespace NetworkCommsDotNet
 
             stringItems.Add(PacketHeaderStringItems.PacketType, packetTypeStr);
             longItems.Add(PacketHeaderLongItems.PayloadPacketSize, payloadPacketSize);
-            
+
+            if (payloadPacketSize < 0)
+                throw new InvalidDataException("payloadPacketSize can not be less than 0.");
+
             if (requestedReturnPacketTypeStr != null)
                 stringItems.Add(PacketHeaderStringItems.RequestedReturnPacketType, requestedReturnPacketTypeStr);
 

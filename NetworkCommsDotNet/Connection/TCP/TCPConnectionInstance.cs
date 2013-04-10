@@ -358,7 +358,7 @@ namespace NetworkCommsDotNet
             sendingStream = tcpClientNetworkStream;
 #endif
 
-            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, 0, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
             double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
 
 #if WINDOWS_PHONE
@@ -410,10 +410,10 @@ namespace NetworkCommsDotNet
 
 #if WINDOWS_PHONE
                         var stream = socket.OutputStream.AsStreamForWrite();
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
                         stream.Flush();
 #else
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 0, 1, tcpClientNetworkStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, tcpClientNetworkStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
 #endif
 
                         //Update the traffic time after we have written to netStream

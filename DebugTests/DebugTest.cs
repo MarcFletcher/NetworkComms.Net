@@ -42,7 +42,7 @@ namespace DebugTests
            // MemoryStream inputStream = new MemoryStream(someRandomData);
 
             FileStream destinationStream = new FileStream("testStream.crap", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            double result = StreamWriteWithTimeout.Write(someRandomData, 0, someRandomData.Length, destinationStream, 80000, 0, 500);
+            double result = StreamWriteWithTimeout.Write(someRandomData, someRandomData.Length, destinationStream, 80000, 0, 500);
             destinationStream.Flush();
 
             if (NetworkComms.MD5Bytes(destinationStream) != md5)

@@ -139,6 +139,8 @@ namespace ExamplesWPFFileTransfer
                     //Delete the ReceivedFile from the internal cache
                     if (receivedFilesDict.ContainsKey(fileToDelete.SourceInfo))
                         receivedFilesDict[fileToDelete.SourceInfo].Remove(fileToDelete.Filename);
+
+                    fileToDelete.Close();
                 }
 
                 AddLineToLog("Deleted file '" + fileToDelete.Filename + "' from '" + fileToDelete.SourceInfoStr + "'");
@@ -197,6 +199,13 @@ namespace ExamplesWPFFileTransfer
         /// <param name="e"></param>
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            //Close all files
+            lock (syncRoot)
+            {
+                foreach (ReceivedFile file in receivedFiles)
+                    file.Close();
+            }
+
             windowClosing = true;
             NetworkComms.Shutdown();
         }
@@ -276,9 +285,16 @@ namespace ExamplesWPFFileTransfer
 
                 //If we have everything we need we can add data to the ReceivedFile
                 if (info != null && file != null && !file.IsCompleted)
+                {
                     file.AddData(info.BytesStart, 0, data.Length, data);
+
+                    //Perform a little cleanup
+                    file = null;
+                    data = null;
+                    GC.Collect();
+                }
                 else if (info == null ^ file == null)
-                    throw new Exception("Either both are null or both are set. This is an impossible exception!");
+                    throw new Exception("Either both are null or both are set. Info is " + (info == null ? "null." : "set.") + " File is " + (file == null ? "null." : "set.") + " File is " + (file.IsCompleted ? "completed." : "not completed."));
             }
             catch (Exception ex)
             {
@@ -340,9 +356,16 @@ namespace ExamplesWPFFileTransfer
 
                 //If we have everything we need we can add data to the ReceivedFile
                 if (data != null && file != null && !file.IsCompleted)
+                {
                     file.AddData(info.BytesStart, 0, data.Length, data);
+
+                    //Perform a little cleanup
+                    file = null;
+                    data = null;
+                    GC.Collect();
+                }
                 else if (data == null ^ file == null)
-                    throw new Exception("Either both are null or both are set. This is an impossible exception!");
+                    throw new Exception("Either both are null or both are set. Data is " + (data == null ? "null." : "set.") + " File is " + (file == null ? "null." : "set.") + " File is " + (file.IsCompleted ? "completed." : "not completed."));
             }
             catch (Exception ex)
             {
@@ -382,7 +405,10 @@ namespace ExamplesWPFFileTransfer
                     if (filesToRemove != null)
                     {
                         foreach (ReceivedFile file in filesToRemove)
+                        {
                             receivedFiles.Remove(file);
+                            file.Close();
+                        }
                     }
                 }
             }));
@@ -449,12 +475,17 @@ namespace ExamplesWPFFileTransfer
 
                         //Break the send into 20 segments. The less segments the less overhead 
                         //but we still want the progress bar to update in sensible steps
-                        long sendChunkSizeBytes = (int)(stream.Length / 20.0) + 1;
+                        long sendChunkSizeBytes = (long)(stream.Length / 20.0) + 1;
+
+                        //Limit send chunk size to 500MB
+                        long maxChunkSizeBytes = 500L*1024L*1024L;
+                        if (sendChunkSizeBytes > maxChunkSizeBytes) sendChunkSizeBytes = maxChunkSizeBytes;
+
                         long totalBytesSent = 0;
                         do
                         {
                             //Check the number of bytes to send as the last one may be smaller
-                            long bytesToSend = (totalBytesSent + sendChunkSizeBytes < (int)stream.Length ? sendChunkSizeBytes : (int)stream.Length - totalBytesSent);
+                            long bytesToSend = (totalBytesSent + sendChunkSizeBytes < stream.Length ? sendChunkSizeBytes : stream.Length - totalBytesSent);
 
                             //Wrap the threadSafeStream in a StreamSendWrapper so that we can get NetworkComms.Net
                             //to only send part of the stream.
@@ -472,6 +503,9 @@ namespace ExamplesWPFFileTransfer
                             //Update the GUI with our send progress
                             UpdateSendProgress((double)totalBytesSent / stream.Length);
                         } while (totalBytesSent < stream.Length);
+
+                        //Clean up any unused memory
+                        GC.Collect();
 
                         AddLineToLog("Completed file send to '" + connection.ConnectionInfo.ToString() + "'.");
                     }

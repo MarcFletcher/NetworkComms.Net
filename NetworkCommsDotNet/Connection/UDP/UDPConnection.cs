@@ -259,7 +259,7 @@ namespace NetworkCommsDotNet
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
 
             Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, packet.PacketData.Length);
+            Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, (int)packet.PacketData.Length);
 
 #if WINDOWS_PHONE
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ipEndPoint.Address.ToString()), ipEndPoint.Port.ToString()).AsTask();
