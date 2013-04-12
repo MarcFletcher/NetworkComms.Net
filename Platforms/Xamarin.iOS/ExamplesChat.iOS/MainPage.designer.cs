@@ -12,6 +12,9 @@ namespace ExamplesChat.iOS
 	partial class MainPage
 	{
 		[Outlet]
+		MonoTouch.UIKit.UITextView ChatHistory { get; set; }
+
+		[Outlet]
 		MonoTouch.UIKit.UITextField MessageBox { get; set; }
 
 		[Action ("SendBtnClick:")]
@@ -19,6 +22,11 @@ namespace ExamplesChat.iOS
 		
 		void ReleaseDesignerOutlets ()
 		{
+			if (ChatHistory != null) {
+				ChatHistory.Dispose ();
+				ChatHistory = null;
+			}
+
 			if (MessageBox != null) {
 				MessageBox.Dispose ();
 				MessageBox = null;

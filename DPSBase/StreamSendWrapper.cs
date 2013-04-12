@@ -63,10 +63,10 @@ namespace DPSBase
         public StreamSendWrapper(ThreadSafeStream stream, long start, long length)
         {
             if (start < 0)
-                throw new InvalidDataException("Provided start value cannot be less than 0.");
+                throw new Exception("Provided start value cannot be less than 0.");
 
             if (length < 0)
-                throw new InvalidDataException("Provided length value cannot be less than 0.");
+                throw new Exception("Provided length value cannot be less than 0.");
 
             this.ThreadSafeStream = stream;
             this.Start = start;
