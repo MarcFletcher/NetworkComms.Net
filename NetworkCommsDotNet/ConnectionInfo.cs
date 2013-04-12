@@ -156,7 +156,11 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Private constructor required for deserialisation.
         /// </summary>
+#if iOS
+        public ConnectionInfo() { }
+#else
         private ConnectionInfo() { }
+#endif
 
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>

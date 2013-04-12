@@ -104,7 +104,11 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Blank constructor required for deserialisation
         /// </summary>
+#if iOS
+        public PacketHeader() { }
+#else
         private PacketHeader() { }
+#endif
         
         /// <summary>
         /// Creates a new packetHeader

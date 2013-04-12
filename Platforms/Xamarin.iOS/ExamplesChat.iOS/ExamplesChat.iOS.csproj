@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">iPhoneSimulator</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{77143D0D-34A2-4A0A-A2F4-8FA42B7F8BA8}</ProjectGuid>
+    <ProjectGuid>{7F574D7B-E090-469C-A787-813B8B74D331}</ProjectGuid>
     <ProjectTypeGuids>{6BC8ED88-2882-458C-8E55-DFD12B67127B};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Exe</OutputType>
     <RootNamespace>ExamplesChat.iOS</RootNamespace>
@@ -32,7 +32,7 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <MtouchLink>None</MtouchLink>
-    <AssemblyName>ExamplesChatiOS</AssemblyName>
+    <AssemblyName>ExamplesChat</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhone' ">
     <DebugSymbols>true</DebugSymbols>
@@ -81,22 +81,24 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
-    <Compile Include="TabController.cs" />
     <None Include="Info.plist" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MainPage.cs" />
-    <Compile Include="MainPage.designer.cs">
-      <DependentUpon>MainPage.cs</DependentUpon>
+    <Compile Include="ChatWindow.cs" />
+    <Compile Include="ChatWindow.designer.cs">
+      <DependentUpon>ChatWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="SettingsPage.cs" />
-    <Compile Include="SettingsPage.designer.cs">
-      <DependentUpon>SettingsPage.cs</DependentUpon>
+    <Compile Include="Settings.cs" />
+    <Compile Include="Settings.designer.cs">
+      <DependentUpon>Settings.cs</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="protobuf-net">
-      <HintPath>..\..\..\DLL\Xamarin.iOS\protobuf-net.dll</HintPath>
-    </Reference>
+    <BundleResource Include="Resources\Icon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <BundleResource Include="Resources\Icon%402x.png" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
@@ -104,21 +106,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.MonoTouch.CSharp.targets" />
   <ItemGroup>
-    <InterfaceDefinition Include="MainPage.xib" />
-    <InterfaceDefinition Include="SettingsPage.xib" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{e39fe066-05e0-49b6-b626-e465c93625f1}</Project>
-      <Name>DPSBase %28Xamarin.iOS\Core\DPSBase%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{ffea5e37-ad37-49d6-bcd6-944c95d45282}</Project>
-      <Name>NetworkCommsDotNet %28Xamarin.iOS\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{2ac29a31-2574-420e-8247-50e5749f172a}</Project>
-      <Name>SevenZipLZMACompressor %28Xamarin.iOS\Core\SevenZipLZMACompressor%29</Name>
-    </ProjectReference>
+    <InterfaceDefinition Include="MainStoryboard.storyboard" />
   </ItemGroup>
 </Project>
