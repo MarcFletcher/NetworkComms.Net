@@ -17,6 +17,9 @@ namespace ExamplesChat.iOS
 		[Outlet]
 		MonoTouch.UIKit.UIBarButtonItem MessageBox { get; set; }
 
+		[Outlet]
+		MonoTouch.UIKit.UIView ChatView { get; set; }
+
 		[Action ("SendClick:")]
 		partial void SendClick (MonoTouch.Foundation.NSObject sender);
 		
@@ -30,6 +33,11 @@ namespace ExamplesChat.iOS
 			if (MessageBox != null) {
 				MessageBox.Dispose ();
 				MessageBox = null;
+			}
+
+			if (ChatView != null) {
+				ChatView.Dispose ();
+				ChatView = null;
 			}
 		}
 	}

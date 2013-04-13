@@ -12,10 +12,14 @@
                         <rect key="frame" x="0.0" y="64" width="320" height="416"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" text="Message text here" id="5m6-Rj-MfC">
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Message text here" id="5m6-Rj-MfC">
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="372"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                <accessibility key="accessibilityConfiguration">
+                                    <accessibilityTraits key="traits" none="YES" notEnabled="YES"/>
+                                    <bool key="isElement" value="YES"/>
+                                </accessibility>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
@@ -51,6 +55,7 @@
                     </navigationItem>
                     <connections>
                         <outlet property="ChatHistory" destination="5m6-Rj-MfC" id="FoY-CV-9tM"/>
+                        <outlet property="ChatView" destination="7w2-bC-5Ve" id="FY6-oB-gjw"/>
                         <outlet property="MessageBox" destination="Gez-hQ-2Vu" id="RyD-Zs-rgh"/>
                     </connections>
                 </viewController>
@@ -174,6 +179,7 @@
             <relationships>
                 <relationship kind="action" name="SendClick:"/>
                 <relationship kind="outlet" name="ChatHistory" candidateClass="UITextView"/>
+                <relationship kind="outlet" name="ChatView" candidateClass="UIView"/>
                 <relationship kind="outlet" name="MessageBox" candidateClass="UIBarButtonItem"/>
             </relationships>
         </class>

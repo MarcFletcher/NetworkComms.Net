@@ -12,5 +12,18 @@ namespace ExamplesChat.iOS
 		public Settings (IntPtr handle) : base (handle)
 		{
 		}
+
+        public override void ViewDidLoad()
+        {
+            base.ViewDidLoad();
+
+            //Remove the keyboard on a tap
+            var tap = new UITapGestureRecognizer();
+            tap.AddTarget(() =>
+            {
+                this.View.EndEditing(true);
+            });
+            this.View.AddGestureRecognizer(tap);
+        }
 	}
 }
