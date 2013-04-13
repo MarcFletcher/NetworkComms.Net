@@ -79,6 +79,7 @@
     <AssemblyName>ExamplesChat.iOS</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ChatMessage.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
     <None Include="Info.plist" />
@@ -99,6 +100,10 @@
     <BundleResource Include="Resources\Icon%402x.png" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\DLL\Xamarin.iOS\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
@@ -107,5 +112,19 @@
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.MonoTouch.CSharp.targets" />
   <ItemGroup>
     <InterfaceDefinition Include="MainStoryboard.storyboard" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{e39fe066-05e0-49b6-b626-e465c93625f1}</Project>
+      <Name>DPSBase %28Xamarin.iOS\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{ffea5e37-ad37-49d6-bcd6-944c95d45282}</Project>
+      <Name>NetworkCommsDotNet %28Xamarin.iOS\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{2ac29a31-2574-420e-8247-50e5749f172a}</Project>
+      <Name>SevenZipLZMACompressor %28Xamarin.iOS\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

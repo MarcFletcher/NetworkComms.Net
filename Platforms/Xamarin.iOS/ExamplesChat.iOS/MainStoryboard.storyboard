@@ -12,7 +12,7 @@
                         <rect key="frame" x="0.0" y="64" width="320" height="416"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Message text here" id="5m6-Rj-MfC">
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" id="5m6-Rj-MfC">
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="372"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
@@ -29,17 +29,30 @@
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                                 <items>
                                     <barButtonItem style="plain" id="Gez-hQ-2Vu">
-                                        <textField key="customView" opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="Message ..." borderStyle="roundedRect" minimumFontSize="17" id="Xej-HZ-5uN">
-                                            <rect key="frame" x="12" y="7" width="241" height="30"/>
+                                        <textField key="customView" opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="Enter message here" borderStyle="roundedRect" minimumFontSize="17" id="Xej-HZ-5uN">
+                                            <rect key="frame" x="12" y="7" width="240" height="30"/>
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                             <textInputTraits key="textInputTraits"/>
                                         </textField>
                                     </barButtonItem>
-                                    <barButtonItem title="Send" style="done" id="qLT-km-Dei">
-                                        <connections>
-                                            <action selector="SendClick:" destination="fa8-pg-CH7" id="CLa-O3-qbg"/>
-                                        </connections>
+                                    <barButtonItem style="done" id="c2K-JE-GTd">
+                                        <button key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" id="2Wr-eX-H32">
+                                            <rect key="frame" x="262" y="7" width="50" height="31"/>
+                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                            <accessibility key="accessibilityConfiguration" label="Send"/>
+                                            <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                                            <state key="normal" title="Send">
+                                                <color key="titleColor" red="0.19607843137254902" green="0.30980392156862746" blue="0.52156862745098043" alpha="1" colorSpace="calibratedRGB"/>
+                                                <color key="titleShadowColor" red="1" green="0.80000001190000003" blue="0.40000000600000002" alpha="1" colorSpace="calibratedRGB"/>
+                                            </state>
+                                            <state key="highlighted">
+                                                <color key="titleColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                            </state>
+                                            <connections>
+                                                <action selector="SendButtonClick:" destination="fa8-pg-CH7" eventType="touchUpInside" id="RPF-lG-Yzm"/>
+                                            </connections>
+                                        </button>
                                     </barButtonItem>
                                 </items>
                             </toolbar>
@@ -56,7 +69,8 @@
                     <connections>
                         <outlet property="ChatHistory" destination="5m6-Rj-MfC" id="FoY-CV-9tM"/>
                         <outlet property="ChatView" destination="7w2-bC-5Ve" id="FY6-oB-gjw"/>
-                        <outlet property="MessageBox" destination="Gez-hQ-2Vu" id="RyD-Zs-rgh"/>
+                        <outlet property="MessageBox" destination="Xej-HZ-5uN" id="TI4-EV-IFT"/>
+                        <outlet property="SendButton" destination="2Wr-eX-H32" id="juN-BA-qIw"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="h6e-ou-RKS" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -128,14 +142,14 @@
                                 <rect key="frame" x="196" y="216" width="79" height="27"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <connections>
-                                    <action selector="ToggleConnType:" destination="mGm-jQ-27o" eventType="valueChanged" id="Ky5-fK-TgN"/>
+                                    <action selector="ToggleConnectionType:" destination="mGm-jQ-27o" eventType="valueChanged" id="vUD-0y-rAQ"/>
                                 </connections>
                             </switch>
-                            <switch opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" id="9Lg-rW-hZx">
+                            <switch opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" id="9Lg-rW-hZx">
                                 <rect key="frame" x="196" y="173" width="79" height="27"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <connections>
-                                    <action selector="ToggleConnType:" destination="mGm-jQ-27o" eventType="valueChanged" id="e5u-3f-RQ8"/>
+                                    <action selector="ToggleConnectionType:" destination="mGm-jQ-27o" eventType="touchUpInside" id="Gsc-Bu-03G"/>
                                 </connections>
                             </switch>
                         </subviews>
@@ -148,6 +162,8 @@
                         <outlet property="LocalName" destination="C1r-cD-zAt" id="rbe-ub-4FA"/>
                         <outlet property="MasterIP" destination="adk-lI-CyJ" id="79q-yq-Zq1"/>
                         <outlet property="MasterPort" destination="bvb-8g-EED" id="RmZ-KE-c91"/>
+                        <outlet property="TCPSwitch" destination="9Lg-rW-hZx" id="1Wa-hr-7CE"/>
+                        <outlet property="UDPSwitch" destination="fdW-H0-Tmd" id="thx-EV-eJx"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="TEa-sc-YQx" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -177,19 +193,26 @@
         <class className="ChatWindow" superclassName="UIViewController">
             <source key="sourceIdentifier" type="project" relativePath="./Classes/ChatWindow.h"/>
             <relationships>
+                <relationship kind="action" name="SendButtonClick:"/>
                 <relationship kind="action" name="SendClick:"/>
                 <relationship kind="outlet" name="ChatHistory" candidateClass="UITextView"/>
                 <relationship kind="outlet" name="ChatView" candidateClass="UIView"/>
-                <relationship kind="outlet" name="MessageBox" candidateClass="UIBarButtonItem"/>
+                <relationship kind="outlet" name="MessageBox" candidateClass="UITextField"/>
+                <relationship kind="outlet" name="SendButton" candidateClass="UIButton"/>
             </relationships>
         </class>
         <class className="Settings" superclassName="UIViewController">
             <source key="sourceIdentifier" type="project" relativePath="./Classes/Settings.h"/>
             <relationships>
                 <relationship kind="action" name="ToggleConnType:"/>
+                <relationship kind="action" name="ToggleConnectionType:"/>
+                <relationship kind="action" name="ToggleTCP:"/>
+                <relationship kind="action" name="ToggleUDP:"/>
                 <relationship kind="outlet" name="LocalName" candidateClass="UITextField"/>
                 <relationship kind="outlet" name="MasterIP" candidateClass="UITextField"/>
                 <relationship kind="outlet" name="MasterPort" candidateClass="UITextField"/>
+                <relationship kind="outlet" name="TCPSwitch" candidateClass="UISwitch"/>
+                <relationship kind="outlet" name="UDPSwitch" candidateClass="UISwitch"/>
             </relationships>
         </class>
     </classes>

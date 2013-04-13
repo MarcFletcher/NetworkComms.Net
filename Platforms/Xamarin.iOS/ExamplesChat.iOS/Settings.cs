@@ -5,11 +5,52 @@ using System;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
 
+using NetworkCommsDotNet;
+
 namespace ExamplesChat.iOS
 {
 	public partial class Settings : UIViewController
-	{
-		public Settings (IntPtr handle) : base (handle)
+    {
+        #region Private Fields
+        /// <summary>
+        /// The IP address of the master (server)
+        /// </summary>
+        static string _masterIPValue = "";
+
+        /// <summary>
+        /// The port of the master (server)
+        /// </summary>
+        static int _masterPortValue = 10000;
+
+        /// <summary>
+        /// The local name used when sending messages
+        /// </summary>
+        static string _localNameValue = "iphone";
+
+        /// <summary>
+        /// The type of connection currently being used for sending and receiving
+        /// </summary>
+        static ConnectionType _connectionTypeValue = ConnectionType.TCP;
+
+        /// <summary>
+        /// Boolean for tracking if the connection type has been changed
+        /// </summary>
+        static bool _connectionTypeChanged = false;
+
+        /// <summary>
+        /// Locker for safely udating _connectionTypeValue
+        /// </summary>
+        static object locker = new object();
+        #endregion
+
+        #region Get & Set
+        public static string MasterIPValue { get { return _masterIPValue; } private set { _masterIPValue = value; } }
+        public static int MasterPortValue { get { return _masterPortValue; } private set { _masterPortValue = value; } }
+        public static string LocalNameValue { get { return _localNameValue; } private set { _localNameValue = value; } }
+        public static ConnectionType ConnectionTypeValue { get { return _connectionTypeValue; } private set { _connectionTypeValue = value; } }
+        #endregion
+
+        public Settings (IntPtr handle) : base (handle)
 		{
 		}
 
@@ -24,6 +65,83 @@ namespace ExamplesChat.iOS
                 this.View.EndEditing(true);
             });
             this.View.AddGestureRecognizer(tap);
+
+            MasterIP.Text = MasterIPValue;
+            MasterPort.Text = MasterPortValue.ToString();
+            LocalName.Text = LocalNameValue;
+
+            UpdateConnectionTypeSwitches();
         }
-	}
+
+        #region Event Handlers
+        /// <summary>
+        /// Update the TCP and UDP GUI switches to their correct positions
+        /// </summary>
+        private void UpdateConnectionTypeSwitches()
+        {
+            if (ConnectionTypeValue == ConnectionType.UDP)
+            {
+                UDPSwitch.Enabled = false;
+                UDPSwitch.SetState(true, true);
+
+                TCPSwitch.Enabled = true;
+                TCPSwitch.SetState(false, true);
+            }
+            else
+            {
+                TCPSwitch.Enabled = false;
+                TCPSwitch.SetState(true, true);
+
+                UDPSwitch.Enabled = true;
+                UDPSwitch.SetState(false, true);
+            }
+        }
+
+        /// <summary>
+        /// Toggle the connection type if one of the switches are updated
+        /// </summary>
+        /// <param name="sender"></param>
+        partial void ToggleConnectionType(NSObject sender)
+        {
+            lock (locker)
+            {
+                if (ConnectionTypeValue == ConnectionType.TCP)
+                    ConnectionTypeValue = ConnectionType.UDP;
+                else
+                    ConnectionTypeValue = ConnectionType.TCP;
+
+                UpdateConnectionTypeSwitches();
+
+                _connectionTypeChanged = true;
+            }
+        }
+
+        /// <summary>
+        /// Update the settings when the user goes back to the main interface
+        /// </summary>
+        /// <returns></returns>
+        public override bool ResignFirstResponder()
+        {
+            //Parse the name, ip and port information
+            LocalNameValue = LocalName.Text.Trim();
+            MasterIPValue = MasterIP.Text.Trim();
+
+            int port;
+            int.TryParse(MasterPort.Text, out port);
+            MasterPortValue = port;
+
+            if (_connectionTypeChanged)
+            {
+                //Shutdown any existing connections
+                NetworkComms.Shutdown();
+
+                //Initialise comms again using the latest connection type
+                ChatWindow.InitialiseComms(ConnectionTypeValue);
+                _connectionTypeChanged = false;
+            }
+
+            return base.ResignFirstResponder();
+        }
+        #endregion
+    }
 }

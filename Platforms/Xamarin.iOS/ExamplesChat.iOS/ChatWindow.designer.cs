@@ -15,13 +15,16 @@ namespace ExamplesChat.iOS
 		MonoTouch.UIKit.UITextView ChatHistory { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UIBarButtonItem MessageBox { get; set; }
+		MonoTouch.UIKit.UITextField MessageBox { get; set; }
 
 		[Outlet]
 		MonoTouch.UIKit.UIView ChatView { get; set; }
 
-		[Action ("SendClick:")]
-		partial void SendClick (MonoTouch.Foundation.NSObject sender);
+		[Outlet]
+		MonoTouch.UIKit.UIButton SendButton { get; set; }
+
+		[Action ("SendButtonClick:")]
+		partial void SendButtonClick (MonoTouch.Foundation.NSObject sender);
 		
 		void ReleaseDesignerOutlets ()
 		{
@@ -38,6 +41,11 @@ namespace ExamplesChat.iOS
 			if (ChatView != null) {
 				ChatView.Dispose ();
 				ChatView = null;
+			}
+
+			if (SendButton != null) {
+				SendButton.Dispose ();
+				SendButton = null;
 			}
 		}
 	}
