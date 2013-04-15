@@ -40,15 +40,11 @@ namespace NetworkCommsDotNet
     /// </summary>
     public static class NetworkComms
     {
-        public static string ErrorString = "";
-
         /// <summary>
         /// Static constructor which sets comm default values
         /// </summary>
         static NetworkComms()
         {
-            ErrorString += "Comms constructor start\n";
-
             //Generally comms defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 2000;
@@ -113,18 +109,12 @@ namespace NetworkCommsDotNet
                 SendBufferSizeBytes = 80000;
             }
 #endif
-
-            ErrorString += "Creating thread pool";
-
+            
             //We want to instantiate our own thread pool here
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
 
-            ErrorString += "Adding serializer";
-
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
-
-            ErrorString += "Adding compressors";
 
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
@@ -529,7 +519,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || ANDROID
 #else
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
@@ -561,7 +551,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -592,7 +582,7 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadIncoming(byte secondsToAverage)
         {
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
 
             if (!commsShutdown && NetworkLoadThread == null)
             {
@@ -623,7 +613,7 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
         {
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
             if (!commsShutdown && NetworkLoadThread == null)
             {
                 lock (globalDictAndDelegateLocker)
@@ -674,7 +664,7 @@ namespace NetworkCommsDotNet
 #endif
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
         /// <summary>
         /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
         /// </summary>
@@ -684,7 +674,7 @@ namespace NetworkCommsDotNet
             
             //Get all interfaces
             NetworkInterface[] interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
-
+            
             long[] startSent, startReceived, endSent, endReceived;
 
             while (!commsShutdown)

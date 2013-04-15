@@ -156,7 +156,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Private constructor required for deserialisation.
         /// </summary>
-#if iOS
+#if iOS || ANDROID
         public ConnectionInfo() { }
 #else
         private ConnectionInfo() { }

@@ -402,7 +402,7 @@ namespace DPSBase
 
         private class ProcessArgument : MarshalByRefObject
         {
-#if !WINDOWS_PHONE  && !iOS
+#if !WINDOWS_PHONE  && !iOS && !ANDROID
             public string entryDomain;
 #endif
             public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
@@ -419,7 +419,7 @@ namespace DPSBase
                 try
                 {
 
-#if !WINDOWS_PHONE && !iOS
+#if !WINDOWS_PHONE && !iOS && !ANDROID
                     AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
                     AppDomain.CurrentDomain.Load(args.entryDomain);                    
 #endif
@@ -444,7 +444,7 @@ namespace DPSBase
 
                     foreach (var ass in alreadyLoadedAssemblies)
                     {
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || ANDROID
 #else
                         foreach (var refAss in ass.GetReferencedAssemblies())
                         {
@@ -479,7 +479,7 @@ namespace DPSBase
                                         processorTypes.Add(id, type.AssemblyQualifiedName);
                                     }
                                 }
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || ANDROID
 #else
                                 break;
                             }
@@ -488,7 +488,7 @@ namespace DPSBase
                         dicOfSearchedAssemblies.Add(ass.FullName, ass);
                     }
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || ANDROID
 #else
                 //Set an identifier to come back to as we load assemblies
                 AssemblySearchStart:
@@ -596,7 +596,7 @@ namespace DPSBase
                 }
             }
 
-#if !WINDOWS_PHONE && !iOS
+#if !WINDOWS_PHONE && !iOS && !ANDROID
             Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
             {
                 return Assembly.ReflectionOnlyLoad(args.Name); 
