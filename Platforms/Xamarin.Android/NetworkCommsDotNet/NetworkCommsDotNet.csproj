@@ -5,41 +5,44 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{FE18B73A-AD5F-4D95-98EA-3A576100C8B5}</ProjectGuid>
+    <ProjectGuid>{5F1B4E95-F8DC-4363-8B83-D5FA4B38AA9E}</ProjectGuid>
+    <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>NetworkCommsDotNet</RootNamespace>
     <AssemblyName>NetworkCommsDotNet</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AndroidResgenFile>Resources\Resource.Designer.cs</AndroidResgenFile>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ANDROID; NO_LOGGING</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ANDROID; NO_LOGGING; NET2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;ANDROID; NO_LOGGING</DefineConstants>
+    <DefineConstants>TRACE;ANDROID; NO_LOGGING; NET2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Mono.Android" />
+    <Reference Include="mscorlib" />
     <Reference Include="protobuf-net">
       <HintPath>..\..\..\DLL\Xamarin.Android\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -139,19 +142,27 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
       <Link>Tools\ShortGUID.cs</Link>
     </Compile>
+    <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\AboutResources.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\Values\Strings.xml" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{C09BFDD7-7909-4072-9E83-A9C58B73727A}</Project>
+      <Project>{628a23b2-8018-460f-b6c0-a3ecb4a51a7d}</Project>
       <Name>DPSBase %28Xamarin.Android\Core\DPSBase%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{0DED6091-1062-4B97-9257-0FE92B20F756}</Project>
+      <Project>{62cfa036-85d5-468b-988c-56bef967a6fb}</Project>
       <Name>SevenZipLZMACompressor %28Xamarin.Android\Core\SevenZipLZMACompressor%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -40,11 +40,15 @@ namespace NetworkCommsDotNet
     /// </summary>
     public static class NetworkComms
     {
+        public static string ErrorString = "";
+
         /// <summary>
         /// Static constructor which sets comm default values
         /// </summary>
         static NetworkComms()
         {
+            ErrorString += "Comms constructor start\n";
+
             //Generally comms defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 2000;
@@ -110,12 +114,18 @@ namespace NetworkCommsDotNet
             }
 #endif
 
+            ErrorString += "Creating thread pool";
+
             //We want to instantiate our own thread pool here
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
 
+            ErrorString += "Adding serializer";
+
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
-            
+
+            ErrorString += "Adding compressors";
+
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
 
@@ -198,12 +208,111 @@ namespace NetworkCommsDotNet
 
             return allowedIPs;
 #else
+
             //We want to ignore IP's that have been autoassigned
             IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
             IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
 
             List<IPAddress> validIPAddresses = new List<IPAddress>();
             IPComparer comparer = new IPComparer();
+
+#if ANDROID
+
+            var iFaces = Java.Net.NetworkInterface.NetworkInterfaces;
+            while (iFaces.HasMoreElements)
+            {
+                bool interfaceValid = false;
+                var iFace = iFaces.NextElement() as Java.Net.NetworkInterface;
+                var javaAddresses = iFace.InetAddresses;
+
+                while (javaAddresses.HasMoreElements)
+                {
+                    var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
+                    IPAddress address = default(IPAddress);
+                    if (IPAddress.TryParse(javaAddress.HostAddress, out address))
+                    {
+                        if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
+                        {
+                            if (AllowedAdaptorNames != null)
+                            {
+                                foreach (var id in AllowedAdaptorNames)
+                                    if (id == iFace.Name)
+                                    {
+                                        interfaceValid = true;
+                                        break;
+                                    }
+                            }
+                            else
+                                interfaceValid = true;
+
+                            if (interfaceValid)
+                                break;
+                        }
+                    }
+                }
+
+                if (!interfaceValid)
+                    continue;
+
+                while (javaAddresses.HasMoreElements)
+                {
+                    var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
+                    IPAddress address = default(IPAddress);
+
+                    if (IPAddress.TryParse(javaAddress.HostAddress, out address))
+                    {
+                        if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
+                        {
+                            if (!IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                            {
+                                bool allowed = false;
+
+                                if (AllowedAdaptorNames != null)
+                                {
+                                    foreach (var id in AllowedAdaptorNames)
+                                    {
+                                        if (id == iFace.Name)
+                                        {
+                                            allowed = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                    allowed = true;
+
+                                if (!allowed)
+                                    continue;
+
+                                allowed = false;
+
+                                if (AllowedIPPrefixes != null)
+                                {
+                                    foreach (var ip in AllowedIPPrefixes)
+                                    {
+                                        if (comparer.Equals(address.ToString(), ip))
+                                        {
+                                            allowed = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                    allowed = true;
+
+                                if (!allowed)
+                                    continue;
+
+                                if (address != IPAddress.None)
+                                    validIPAddresses.Add(address);
+                            }
+                        }
+                    }
+                }    
+            }
+
+#else
+            
             
             foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -284,6 +393,7 @@ namespace NetworkCommsDotNet
                     }
                 }               
             }
+#endif
 
             if (AllowedIPPrefixes != null)
             {

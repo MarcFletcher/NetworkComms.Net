@@ -5,13 +5,14 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{E7A86806-B683-4E97-9B41-47BAC90EB0CE}</ProjectGuid>
+    <ProjectGuid>{0C545E72-5189-4E25-85E2-EB6B32B13B50}</ProjectGuid>
     <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SharpZipLibCompressor</RootNamespace>
-    <AssemblyName>SharpZipLibCompressor</AssemblyName>
+    <RootNamespace>ExamplesChat.Android</RootNamespace>
+    <AssemblyName>ExamplesChat.Android</AssemblyName>
     <FileAlignment>512</FileAlignment>
+    <AndroidApplication>true</AndroidApplication>
     <AndroidResgenFile>Resources\Resource.Designer.cs</AndroidResgenFile>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
@@ -20,23 +21,23 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ANDROID; NO_LOGGING; NET2</DefineConstants>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AndroidUseSharedRuntime>True</AndroidUseSharedRuntime>
+    <AndroidLinkMode>None</AndroidLinkMode>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;ANDROID; NO_LOGGING; NET2</DefineConstants>
+    <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AndroidUseSharedRuntime>False</AndroidUseSharedRuntime>
+    <AndroidLinkMode>SdkOnly</AndroidLinkMode>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\SharpZipLibCompressor\Dlls\ICSharpCode.SharpZipLib.dll</HintPath>
-    </Reference>
     <Reference Include="Mono.Android" />
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -45,32 +46,40 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\SharpZipLibCompressor\SharpZipLibGzipCompressor.cs">
-      <Link>SharpZipLibGzipCompressor.cs</Link>
-    </Compile>
+    <Compile Include="Activity1.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />
+    <None Include="Assets\AboutAssets.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\Layout\Main.axml" />
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\Values\Strings.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\..\SharpZipLibCompressor\Dlls\ICSharpCode.SharpZipLib.dll">
-      <Link>Dlls\ICSharpCode.SharpZipLib.dll</Link>
-    </Content>
+    <AndroidResource Include="Resources\Drawable\Icon.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{628a23b2-8018-460f-b6c0-a3ecb4a51a7d}</Project>
       <Name>DPSBase %28Xamarin.Android\Core\DPSBase%29</Name>
     </ProjectReference>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{5f1b4e95-f8dc-4363-8b83-d5fa4b38aa9e}</Project>
+      <Name>NetworkCommsDotNet %28Xamarin.Android\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{62cfa036-85d5-468b-988c-56bef967a6fb}</Project>
+      <Name>SevenZipLZMACompressor %28Xamarin.Android\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
+     Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
   <Target Name="AfterBuild">

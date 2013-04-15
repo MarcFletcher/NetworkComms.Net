@@ -347,7 +347,7 @@ namespace DPSBase
 
             AssemblyLoader loader;
             ProcessArgument args;
-#if !WINDOWS_PHONE && !iOS
+#if !WINDOWS_PHONE && !iOS && !ANDROID
             try
             {
                 AppDomain tempDomain = AppDomain.CreateDomain("Temp");
