@@ -29,22 +29,25 @@ namespace ExamplesChat.Android
 			DPSBase.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			DPSBase.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			DPSBase.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
+			DPSBase.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			DPSBase.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 			NetworkCommsDotNet.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			NetworkCommsDotNet.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			NetworkCommsDotNet.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
+			NetworkCommsDotNet.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			NetworkCommsDotNet.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 			SevenZipLZMACompressor.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			SevenZipLZMACompressor.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			SevenZipLZMACompressor.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
+			SevenZipLZMACompressor.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			SevenZipLZMACompressor.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 		}
 		
 		public partial class Array
 		{
 			
-			// aapt resource value: 0x7f050000
-			public const int ConnectionTypes = 2131034112;
+			// aapt resource value: 0x7f060000
+			public const int ConnectionTypes = 2131099648;
 			
 			private Array()
 			{
@@ -128,8 +131,11 @@ namespace ExamplesChat.Android
 		public partial class String
 		{
 			
+			// aapt resource value: 0x7f040001
+			public const int ApplicationName = 2130968577;
+			
 			// aapt resource value: 0x7f040000
-			public const int ApplicationName = 2130968576;
+			public const int Hello = 2130968576;
 			
 			private String()
 			{
@@ -139,8 +145,8 @@ namespace ExamplesChat.Android
 		public partial class Style
 		{
 			
-			// aapt resource value: 0x7f060000
-			public const int Mono_Android_Theme_Splash = 2131099648;
+			// aapt resource value: 0x7f050000
+			public const int Mono_Android_Theme_Splash = 2131034112;
 			
 			private Style()
 			{
