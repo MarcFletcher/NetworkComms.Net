@@ -9,7 +9,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: global::Android.Runtime.ResourceDesignerAttribute("NetworkCommsDotNet.Resource", IsApplication=false)]
+[assembly: Android.Runtime.ResourceDesignerAttribute("NetworkCommsDotNet.Resource", IsApplication=false)]
 
 namespace NetworkCommsDotNet
 {
@@ -19,18 +19,13 @@ namespace NetworkCommsDotNet
 	public partial class Resource
 	{
 		
-		static Resource()
+		Resource()
 		{
-			global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			global::Android.Runtime.ResourceIdManager.UpdateIdValues ();
 		}
 		
 		public partial class Attribute
 		{
-			
-			static Attribute()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Attribute()
 			{
@@ -43,11 +38,6 @@ namespace NetworkCommsDotNet
 			// aapt resource value: 0x7f020000
 			public static int monoandroidsplash = 2130837504;
 			
-			static Drawable()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
-			
 			private Drawable()
 			{
 			}
@@ -58,11 +48,6 @@ namespace NetworkCommsDotNet
 			
 			// aapt resource value: 0x7f030000
 			public static int monoandroidsplash = 2130903040;
-			
-			static Layout()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Layout()
 			{
@@ -78,11 +63,6 @@ namespace NetworkCommsDotNet
 			// aapt resource value: 0x7f040000
 			public static int Hello = 2130968576;
 			
-			static String()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
-			
 			private String()
 			{
 			}
@@ -93,11 +73,6 @@ namespace NetworkCommsDotNet
 			
 			// aapt resource value: 0x7f050000
 			public static int Mono_Android_Theme_Splash = 2131034112;
-			
-			static Style()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Style()
 			{

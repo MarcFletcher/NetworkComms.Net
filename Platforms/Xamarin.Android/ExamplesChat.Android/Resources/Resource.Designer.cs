@@ -9,7 +9,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: global::Android.Runtime.ResourceDesignerAttribute("ExamplesChat.Android.Resource", IsApplication=true)]
+[assembly: Android.Runtime.ResourceDesignerAttribute("ExamplesChat.Android.Resource", IsApplication=true)]
 
 namespace ExamplesChat.Android
 {
@@ -19,9 +19,9 @@ namespace ExamplesChat.Android
 	public partial class Resource
 	{
 		
-		static Resource()
+		Resource()
 		{
-			global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			global::Android.Runtime.ResourceIdManager.UpdateIdValues ();
 		}
 		
 		public static void UpdateIdValues()
@@ -29,17 +29,14 @@ namespace ExamplesChat.Android
 			DPSBase.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			DPSBase.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			DPSBase.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
-			DPSBase.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			DPSBase.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 			NetworkCommsDotNet.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			NetworkCommsDotNet.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			NetworkCommsDotNet.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
-			NetworkCommsDotNet.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			NetworkCommsDotNet.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 			SevenZipLZMACompressor.Resource.Drawable.monoandroidsplash = ExamplesChat.Android.Resource.Drawable.monoandroidsplash;
 			SevenZipLZMACompressor.Resource.Layout.monoandroidsplash = ExamplesChat.Android.Resource.Layout.monoandroidsplash;
 			SevenZipLZMACompressor.Resource.String.ApplicationName = ExamplesChat.Android.Resource.String.ApplicationName;
-			SevenZipLZMACompressor.Resource.String.Hello = ExamplesChat.Android.Resource.String.Hello;
 			SevenZipLZMACompressor.Resource.Style.Mono_Android_Theme_Splash = ExamplesChat.Android.Resource.Style.Mono_Android_Theme_Splash;
 		}
 		
@@ -49,11 +46,6 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f050000
 			public const int ConnectionTypes = 2131034112;
 			
-			static Array()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
-			
 			private Array()
 			{
 			}
@@ -61,11 +53,6 @@ namespace ExamplesChat.Android
 		
 		public partial class Attribute
 		{
-			
-			static Attribute()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Attribute()
 			{
@@ -80,11 +67,6 @@ namespace ExamplesChat.Android
 			
 			// aapt resource value: 0x7f020001
 			public const int monoandroidsplash = 2130837505;
-			
-			static Drawable()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Drawable()
 			{
@@ -124,11 +106,6 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f070009
 			public const int sendButton = 2131165193;
 			
-			static Id()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
-			
 			private Id()
 			{
 			}
@@ -143,11 +120,6 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f030001
 			public const int monoandroidsplash = 2130903041;
 			
-			static Layout()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
-			
 			private Layout()
 			{
 			}
@@ -156,16 +128,8 @@ namespace ExamplesChat.Android
 		public partial class String
 		{
 			
-			// aapt resource value: 0x7f040001
-			public const int ApplicationName = 2130968577;
-			
 			// aapt resource value: 0x7f040000
-			public const int Hello = 2130968576;
-			
-			static String()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
+			public const int ApplicationName = 2130968576;
 			
 			private String()
 			{
@@ -177,11 +141,6 @@ namespace ExamplesChat.Android
 			
 			// aapt resource value: 0x7f060000
 			public const int Mono_Android_Theme_Splash = 2131099648;
-			
-			static Style()
-			{
-				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
-			}
 			
 			private Style()
 			{

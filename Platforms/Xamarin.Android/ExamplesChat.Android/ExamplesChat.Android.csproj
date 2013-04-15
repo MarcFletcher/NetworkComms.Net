@@ -53,10 +53,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Activity1.cs" />
+    <Compile Include="MainActivity.cs" />
     <Compile Include="ChatMessage.cs" />
-    <Compile Include="ChatWindowApp.cs" />
-    <Compile Include="ChatWindowAppAndroid.cs" />
+    <Compile Include="ChatAppBase.cs" />
+    <Compile Include="ChatAppAndroid.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
