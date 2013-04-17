@@ -206,7 +206,18 @@ namespace NetworkCommsDotNet
                 catch (SocketException)
                 {
                     if (useRandomPortFailOver)
-                        newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
+                    {
+                        try
+                        {
+                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
+                        }
+                        catch (SocketException)
+                        {
+                            //If we get another socket exception this appears to be a bad IP. We will just ignore this IP
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open a random port on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                            throw new CommsSetupShutdownException("It was not possible to open a random port on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        }
+                    }
                     else
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");

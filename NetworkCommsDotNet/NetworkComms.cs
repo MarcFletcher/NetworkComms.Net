@@ -1505,30 +1505,13 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Logging
-
-//#if NO_LOGGING
-//        /// <summary>
-//        /// Returns true if comms logging has been enabled.
-//        /// </summary>
-//        public static bool LoggingEnabled { get { return false; } }
-//#else
         /// <summary>
         /// Returns true if comms logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
-//#endif
-   
+
         private static Logger logger = null;
 
-//#if NO_LOGGING
-//        /// <summary>
-//        /// Access the NetworkCommsDotNet logger externally.
-//        /// </summary>
-//        internal static Logger Logger
-//        {
-//            get { return logger; }
-//        }
-//#else
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.
         /// </summary>
@@ -1536,11 +1519,10 @@ namespace NetworkCommsDotNet
         {
             get { return logger; }
         }
-//#endif
 
 #if NO_LOGGING
         /// <summary>
-        /// Enable logging using the provided config. See examples for usage.
+        /// Enable basic logging using the provided logFileLocation
         /// </summary>        
         /// <param name="loggingConfiguration"></param>
         public static void EnableLogging(string logFileLocation)
@@ -1564,7 +1546,6 @@ namespace NetworkCommsDotNet
                 logger = null;
             }
         }
-
 #else
         /// <summary>
         /// Enable logging using a default config. All log output is written directly to the local console.
@@ -2349,14 +2330,17 @@ namespace NetworkCommsDotNet
     }
 
 #if NO_LOGGING
-
+    /// <summary>
+    /// On some platforms NLog has issues so this class provides the most basic logging featyres.
+    /// </summary>
     public class Logger
     {
+        internal object locker = new object();
         internal string LogFileLocation { get; set; }
 
         public void Trace(string message) { log("Trace", message); }
         public void Debug(string message) { log("Debug", message); }
-        public void Fatal(string message, Exception e = null) { log("Fatal", message);  }
+        public void Fatal(string message, Exception e = null) { log("Fatal", message); }
         public void Info(string message) { log("Info", message); }
         public void Warn(string message) { log("Warn", message); }
         public void Error(string message) { log("Error", message); }
@@ -2365,9 +2349,23 @@ namespace NetworkCommsDotNet
         {
             if (LogFileLocation != null)
             {
-                using (var sw = new StreamWriter(File.Open(LogFileLocation, FileMode.Append)))
+                //Try to get the threadId which is very usefull when debugging
+                string threadId = null;
+                try
                 {
-                    sw.WriteLine(DateTime.Now.ToShortTimeString() + "[" + level + "] - " + message);
+                    threadId = Thread.CurrentThread.ManagedThreadId.ToString();
+                }
+                catch (Exception) { }
+
+                lock (locker)
+                {
+                    using (var sw = new StreamWriter(File.Open(LogFileLocation, FileMode.Append)))
+                    {
+                        if (threadId != null)
+                            sw.WriteLine(DateTime.Now.ToShortTimeString() + " [" + threadId + " - " + level + "] - " + message);
+                        else
+                            sw.WriteLine(DateTime.Now.ToShortTimeString() + " [" + level + "] - " + message);
+                    }
                 }
             }
         }

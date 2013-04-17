@@ -119,12 +119,21 @@ namespace NetworkCommsDotNet
                     //If the port we wanted is not available
                     if (useRandomPortFailOver)
                     {
+                        try
+                        {
 #if WINDOWS_PHONE
                         newListenerInstance.BindEndpointAsync(new Windows.Networking.HostName(newLocalEndPoint.Address.ToString()), "").AsTask().Wait(); 
 #else
-                        newListenerInstance = new TcpListener(newLocalEndPoint.Address, 0);
-                        newListenerInstance.Start();
+                            newListenerInstance = new TcpListener(newLocalEndPoint.Address, 0);
+                            newListenerInstance.Start();
 #endif
+                        }
+                        catch (SocketException)
+                        {
+                            //If we get another socket exception this appears to be a bad IP. We will just ignore this IP
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open a random port on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                            throw new CommsSetupShutdownException("It was not possible to open a random port on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        }
                     }
                     else
                     {

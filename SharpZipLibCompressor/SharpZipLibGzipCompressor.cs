@@ -53,6 +53,7 @@ namespace SharpZipLibCompressor
                 return instance;
             }
         }
+
 #if ANDROID || iOS
         [Preserve]
 #endif
