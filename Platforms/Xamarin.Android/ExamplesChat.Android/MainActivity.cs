@@ -9,6 +9,7 @@ using Android.OS;
 using System.Net;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
+using System.IO;
 
 namespace ExamplesChat.Android
 {
@@ -80,6 +81,8 @@ namespace ExamplesChat.Android
 
             //Append the method 'connectionType_Selected' to the connection type selected event
             connectionTypeSelector.ItemSelected += connectionType_Selected;
+
+            //EnableLogging();
 
             //Initialise the chat application
             chatApplication = new ChatAppAndroid(this, chatHistory, input);
@@ -156,23 +159,23 @@ namespace ExamplesChat.Android
             }
         }
 
-        public override bool OnCreateOptionsMenu(IMenu menu)
+        void EnableLogging()
         {
-            menu.Add(0, 0, 0, "Settings");
-            return base.OnCreateOptionsMenu(menu);
+            var sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+            var commsDir = Path.Combine(sdCardDir, "NetworkComms");
+
+            chatHistory.Text += "\n" + "Logging enabled to directory " + commsDir;
+
+            if(!Directory.Exists(commsDir))
+                Directory.CreateDirectory(commsDir);
+            
+            var logFileName = Path.Combine(commsDir, "log.txt");
+
+            chatHistory.Text += "\n" + "Directory created, logging to file " + logFileName;
+                
+            NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
         }
 
-        public override bool OnOptionsItemSelected(IMenuItem item)
-        {
-            switch (item.ItemId)
-            {
-                case 0:
-                    //do something useful to get at settings
-                    return true;
-                default:
-                    return base.OnOptionsItemSelected(item);
-            }
-        }
     }
 }
 

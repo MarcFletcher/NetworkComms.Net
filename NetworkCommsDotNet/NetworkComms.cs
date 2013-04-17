@@ -1506,29 +1506,29 @@ namespace NetworkCommsDotNet
 
         #region Logging
 
-#if NO_LOGGING
-        /// <summary>
-        /// Returns true if comms logging has been enabled.
-        /// </summary>
-        public static bool LoggingEnabled { get { return false; } }
-#else
+//#if NO_LOGGING
+//        /// <summary>
+//        /// Returns true if comms logging has been enabled.
+//        /// </summary>
+//        public static bool LoggingEnabled { get { return false; } }
+//#else
         /// <summary>
         /// Returns true if comms logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
-#endif
+//#endif
    
         private static Logger logger = null;
 
-#if NO_LOGGING
-        /// <summary>
-        /// Access the NetworkCommsDotNet logger externally.
-        /// </summary>
-        internal static Logger Logger
-        {
-            get { return logger; }
-        }
-#else
+//#if NO_LOGGING
+//        /// <summary>
+//        /// Access the NetworkCommsDotNet logger externally.
+//        /// </summary>
+//        internal static Logger Logger
+//        {
+//            get { return logger; }
+//        }
+//#else
         /// <summary>
         /// Access the NetworkCommsDotNet logger externally.
         /// </summary>
@@ -1536,9 +1536,36 @@ namespace NetworkCommsDotNet
         {
             get { return logger; }
         }
-#endif
+//#endif
 
-#if !NO_LOGGING
+#if NO_LOGGING
+        /// <summary>
+        /// Enable logging using the provided config. See examples for usage.
+        /// </summary>        
+        /// <param name="loggingConfiguration"></param>
+        public static void EnableLogging(string logFileLocation)
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                LoggingEnabled = true;
+                logger = new Logger();
+                logger.LogFileLocation = logFileLocation;
+            }
+        }
+        
+        /// <summary>
+        /// Disable all logging in NetworkCommsDotNet
+        /// </summary>
+        public static void DisableLogging()
+        {
+            lock (globalDictAndDelegateLocker)
+            {
+                LoggingEnabled = false;
+                logger = null;
+            }
+        }
+
+#else
         /// <summary>
         /// Enable logging using a default config. All log output is written directly to the local console.
         /// </summary>
@@ -2322,16 +2349,30 @@ namespace NetworkCommsDotNet
     }
 
 #if NO_LOGGING
-    internal class Logger
-    {
-        public void Trace(string message) { }
-        public void Debug(string message) { }
-        public void Fatal(string message, Exception e = null) { }
-        public void Info(string message) { }
-        public void Warn(string message) { }
-        public void Error(string message) { }
 
-        private Logger() { }
+    public class Logger
+    {
+        internal string LogFileLocation { get; set; }
+
+        public void Trace(string message) { log("Trace", message); }
+        public void Debug(string message) { log("Debug", message); }
+        public void Fatal(string message, Exception e = null) { log("Fatal", message);  }
+        public void Info(string message) { log("Info", message); }
+        public void Warn(string message) { log("Warn", message); }
+        public void Error(string message) { log("Error", message); }
+
+        private void log(string level, string message)
+        {
+            if (LogFileLocation != null)
+            {
+                using (var sw = new StreamWriter(File.Open(LogFileLocation, FileMode.Append)))
+                {
+                    sw.WriteLine(DateTime.Now.ToShortTimeString() + "[" + level + "] - " + message);
+                }
+            }
+        }
+
+        public Logger() { }
     }
 #endif
 }
