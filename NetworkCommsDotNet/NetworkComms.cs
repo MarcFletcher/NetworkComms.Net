@@ -244,6 +244,8 @@ namespace NetworkCommsDotNet
                 if (!interfaceValid)
                     continue;
 
+                javaAddresses = iFace.InetAddresses;
+
                 while (javaAddresses.HasMoreElements)
                 {
                     var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
@@ -302,8 +304,8 @@ namespace NetworkCommsDotNet
             }
 
 #else
-            
-            
+
+
             foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
             {
                 bool interfaceValid = false;
