@@ -25,6 +25,12 @@ using System.Text;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace DPSBase
 {
     /// <summary>
@@ -50,6 +56,9 @@ namespace DPSBase
             }
         }
 
+#if ANDROID || iOS
+        [Preserve]
+#endif
         private BinaryFormaterSerializer() { }
 
         #region ISerialize Members

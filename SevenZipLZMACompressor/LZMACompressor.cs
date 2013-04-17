@@ -23,6 +23,12 @@ using DPSBase;
 using System.IO;
 using LZMA;
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace SevenZipLZMACompressor
 {
     /// <summary>
@@ -48,6 +54,9 @@ namespace SevenZipLZMACompressor
             }
         }
 
+#if ANDROID || iOS
+        [Preserve]
+#endif
         private LZMACompressor() { }
         
         /// <inheritdoc />

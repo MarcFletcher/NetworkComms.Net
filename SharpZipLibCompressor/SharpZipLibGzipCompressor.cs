@@ -23,6 +23,12 @@ using ICSharpCode.SharpZipLib.GZip;
 using DPSBase;
 using System.IO;
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace SharpZipLibCompressor
 {
     /// <summary>
@@ -47,7 +53,9 @@ namespace SharpZipLibCompressor
                 return instance;
             }
         }
-
+#if ANDROID || iOS
+        [Preserve]
+#endif
         private SharpZipLibGzipCompressor() { }
         
         /// <inheritdoc />

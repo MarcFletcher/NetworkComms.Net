@@ -22,6 +22,12 @@ using System.Text;
 using System.Security.Cryptography;
 using System.IO;
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace DPSBase
 {
 #if !FREETRIAL
@@ -40,6 +46,9 @@ namespace DPSBase
         SymmetricAlgorithm encrypter = new RijndaelManaged();
 #endif
 
+#if ANDROID || iOS
+        [Preserve]
+#endif
         private RijndaelPSKEncrypter() 
         {
             encrypter.BlockSize = 128; 
