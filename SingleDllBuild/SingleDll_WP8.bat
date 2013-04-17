@@ -16,7 +16,7 @@ COPY ..\DLL\WP8\NLog.dll .\%1\NLog.dll
 md ".\WP8"
 md ".\WP8\%1\Core"
 
-REM REM .\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\WindowsPhone\v8.0" /targetplatform:v4,"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\Silverlight\v4.0\Profile\WindowsPhone71" /out:.\WP8\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\SevenZipLZMACompressor.dll .\%1\DPSBase.dll .\%1\protobuf-net.dll .\%1\NLog.dll
+REM .\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\WindowsPhone\v8.0" /out:.\WP8\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\SevenZipLZMACompressor.dll .\%1\DPSBase.dll .\%1\protobuf-net.dll .\%1\NLog.dll
 REM for now we will just copy relevenat WP8 dlls to the merge directory
 COPY .\%1\*.dll .\WP8\%1\Core\
 COPY .\%1\*.pdb .\WP8\%1\Core\
