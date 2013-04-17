@@ -9,7 +9,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: Android.Runtime.ResourceDesignerAttribute("ExamplesChat.Android.Resource", IsApplication=true)]
+[assembly: global::Android.Runtime.ResourceDesignerAttribute("ExamplesChat.Android.Resource", IsApplication=true)]
 
 namespace ExamplesChat.Android
 {
@@ -19,9 +19,9 @@ namespace ExamplesChat.Android
 	public partial class Resource
 	{
 		
-		Resource()
+		static Resource()
 		{
-			global::Android.Runtime.ResourceIdManager.UpdateIdValues ();
+			global::Android.Runtime.ResourceIdManager.UpdateIdValues();
 		}
 		
 		public static void UpdateIdValues()
@@ -46,8 +46,13 @@ namespace ExamplesChat.Android
 		public partial class Array
 		{
 			
-			// aapt resource value: 0x7f060000
-			public const int ConnectionTypes = 2131099648;
+			// aapt resource value: 0x7f050000
+			public const int ConnectionTypes = 2131034112;
+			
+			static Array()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
 			
 			private Array()
 			{
@@ -56,6 +61,11 @@ namespace ExamplesChat.Android
 		
 		public partial class Attribute
 		{
+			
+			static Attribute()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
 			
 			private Attribute()
 			{
@@ -70,6 +80,11 @@ namespace ExamplesChat.Android
 			
 			// aapt resource value: 0x7f020001
 			public const int monoandroidsplash = 2130837505;
+			
+			static Drawable()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
 			
 			private Drawable()
 			{
@@ -109,6 +124,11 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f070009
 			public const int sendButton = 2131165193;
 			
+			static Id()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
+			
 			private Id()
 			{
 			}
@@ -123,6 +143,11 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f030001
 			public const int monoandroidsplash = 2130903041;
 			
+			static Layout()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
+			
 			private Layout()
 			{
 			}
@@ -131,11 +156,16 @@ namespace ExamplesChat.Android
 		public partial class String
 		{
 			
-			// aapt resource value: 0x7f040001
-			public const int ApplicationName = 2130968577;
-			
 			// aapt resource value: 0x7f040000
-			public const int Hello = 2130968576;
+			public const int ApplicationName = 2130968576;
+			
+			// aapt resource value: 0x7f040001
+			public const int Hello = 2130968577;
+			
+			static String()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
 			
 			private String()
 			{
@@ -145,8 +175,13 @@ namespace ExamplesChat.Android
 		public partial class Style
 		{
 			
-			// aapt resource value: 0x7f050000
-			public const int Mono_Android_Theme_Splash = 2131034112;
+			// aapt resource value: 0x7f060000
+			public const int Mono_Android_Theme_Splash = 2131099648;
+			
+			static Style()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
 			
 			private Style()
 			{
