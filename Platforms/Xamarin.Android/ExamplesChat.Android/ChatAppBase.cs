@@ -14,8 +14,9 @@ using DPSBase;
 
 namespace ExamplesChat.Android
 {
-    public abstract class ChatWindowApp
+    public abstract class ChatAppBase
     {
+        #region Public Fields
         /// <summary>
         /// The type of connection currently used to send and recieve messages. Default is TCP.
         /// </summary>
@@ -26,16 +27,33 @@ namespace ExamplesChat.Android
         /// </summary>
         public bool FirstInitialisation { get; set; }
 
+        /// <summary>
+        /// The IP address of the master (server)
+        /// </summary>
         public string MasterIPAddress { get; set; }
+
+        /// <summary>
+        /// The port of the master (server)
+        /// </summary>
         public int MasterPort { get; set; }
+
+        /// <summary>
+        /// The local name used when sending messages
+        /// </summary>
         public string LocalName { get; set; }
+
+        /// <summary>
+        /// A boolean used to track if encryption is currently being used
+        /// </summary>
         public bool UseEncryption { get; set; }
 
         /// <summary>
         /// A global link to the chatBox
         /// </summary>
         public string ChatBox { get; set; }
-        
+        #endregion
+
+        #region Private Fields
         /// <summary>
         /// Dictionary to keep track of which peer messages have already been written to the chat window
         /// </summary>
@@ -51,11 +69,12 @@ namespace ExamplesChat.Android
         /// this instance.
         /// </summary>
         long messageSendIndex = 0;
+        #endregion
 
         /// <summary>
         /// Constructor for the Application object.
         /// </summary>
-        public ChatWindowApp(string name, ConnectionType connectionType)
+        public ChatAppBase(string name, ConnectionType connectionType)
         {           
             MasterIPAddress = "";
             MasterPort = 10000;
@@ -74,9 +93,6 @@ namespace ExamplesChat.Android
         {
             PrintUsageInstructions();
 
-            for (int i = 0; i < 5; i++)
-                AppendLineToChatBox("");
-
             if (ConnectionType == ConnectionType.TCP)
             {
                 //Start listening for new incoming TCP connections
@@ -84,7 +100,7 @@ namespace ExamplesChat.Android
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatBox("Initialising WPF chat example.\nAccepting TCP connections on:");
+                AppendLineToChatBox("Initialising android chat example.\nAccepting TCP connections on:");
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
@@ -95,7 +111,7 @@ namespace ExamplesChat.Android
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatBox("Initialising WPF chat example.\nAccepting UDP connections on:");
+                AppendLineToChatBox("Initialising android chat example.\nAccepting UDP connections on:");
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
                    AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
@@ -130,7 +146,7 @@ namespace ExamplesChat.Android
             AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows chat example.");
             AppendLineToChatBox("Step 2. Decide which application will be the 'master', aka server.");
             AppendLineToChatBox("Step 3. Enter the masters IP address and port number into the other applications.");
-            AppendLineToChatBox("Step 4. Start chatting. Don't forget to checkout encryption and the UDP connection method.");
+            AppendLineToChatBox("Step 4. Start chatting. Don't forget to the UDP connection method.");
             AppendLineToChatBox("");
         }
 
@@ -291,19 +307,22 @@ namespace ExamplesChat.Android
         /// Append the provided message to the chatBox text box.
         /// </summary>
         /// <param name="message">Message to be appended</param>
-        protected abstract void AppendLineToChatBox(string message);
+        public abstract void AppendLineToChatBox(string message);
+
+        /// <summary>
+        /// Clears all previous chat history
+        /// </summary>
+        public abstract void ClearChatHistory();
 
         /// <summary>
         /// Clears the input text box
         /// </summary>
-        protected abstract void ClearInputLine();
+        public abstract void ClearInputLine();
 
         /// <summary>
         /// Ouput message on error
         /// </summary>
         /// <param name="message">Message to be output</param>
-        protected abstract void ShowMessage(string message);
-
-
+        public abstract void ShowMessage(string message);
     }
 }
