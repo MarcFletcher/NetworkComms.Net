@@ -421,7 +421,9 @@ namespace DPSBase
 
 #if !WINDOWS_PHONE && !iOS && !ANDROID
                     AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
-                    AppDomain.CurrentDomain.Load(args.entryDomain);                    
+
+                    if (args.entryDomain != null)
+                        AppDomain.CurrentDomain.Load(args.entryDomain);                    
 #endif
 
                     //Store the serializer and processor types as we will need then repeatedly
