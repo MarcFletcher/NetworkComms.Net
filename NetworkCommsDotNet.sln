@@ -1522,6 +1522,7 @@ Global
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|ARM.ActiveCfg = Debug|iPhone
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|iPhone.ActiveCfg = Debug|iPhone
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|iPhone.Build.0 = Debug|iPhone
+		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|iPhone.Deploy.0 = Debug|iPhone
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|iPhoneSimulator.ActiveCfg = Debug|iPhoneSimulator
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|iPhoneSimulator.Build.0 = Debug|iPhoneSimulator
 		{7F574D7B-E090-469C-A787-813B8B74D331}.Debug|Mixed Platforms.ActiveCfg = Debug|iPhone

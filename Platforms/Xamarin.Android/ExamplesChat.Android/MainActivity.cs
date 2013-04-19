@@ -82,6 +82,7 @@ namespace ExamplesChat.Android
             //Append the method 'connectionType_Selected' to the connection type selected event
             connectionTypeSelector.ItemSelected += connectionType_Selected;
 
+            //Uncomment this line to enable logging
             //EnableLogging();
 
             //Initialise the chat application
@@ -159,23 +160,23 @@ namespace ExamplesChat.Android
             }
         }
 
+        /// <summary>
+        /// Enable NetworkComms.Net logging
+        /// </summary>
         void EnableLogging()
         {
             var sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
             var commsDir = Path.Combine(sdCardDir, "NetworkComms");
-
-            chatHistory.Text += "\n" + "Logging enabled to directory " + commsDir;
 
             if(!Directory.Exists(commsDir))
                 Directory.CreateDirectory(commsDir);
             
             var logFileName = Path.Combine(commsDir, "log.txt");
 
-            chatHistory.Text += "\n" + "Directory created, logging to file " + logFileName;
+            chatHistory.Text += "\n" + "Logging enabled to " + logFileName;
                 
             NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
         }
-
     }
 }
 

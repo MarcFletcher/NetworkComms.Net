@@ -141,6 +141,7 @@ namespace ExamplesChat.Android
         /// </summary>
         private void PrintUsageInstructions()
         {
+            AppendLineToChatBox("");
             AppendLineToChatBox("Chat usage instructions:");
             AppendLineToChatBox("");
             AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows chat example.");

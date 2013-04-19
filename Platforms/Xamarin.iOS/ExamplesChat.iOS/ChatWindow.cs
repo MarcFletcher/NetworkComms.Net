@@ -11,6 +11,7 @@ using System.Net;
 using System.Collections.Generic;
 using System.Drawing;
 using DPSBase;
+using System.IO;
 
 namespace ExamplesChat.iOS
 {
@@ -47,6 +48,11 @@ namespace ExamplesChat.iOS
         /// this instance.
         /// </summary>
         static long messageSendIndex = 0;
+
+        /// <summary>
+        /// Static object used for thread safety
+        /// </summary>
+        static object locker = new object();
         #endregion
 
         public ChatWindow (IntPtr handle) : base (handle)
@@ -72,8 +78,28 @@ namespace ExamplesChat.iOS
             //Set the static reference
             chatHistoryBox = ChatHistory;
 
+            //Uncomment this line to enable logging
+            //EnableLogging();
+
             //Initialise NetworkComms.Net using TCP as the default
             InitialiseComms(ConnectionType.TCP);
+        }
+
+        /// <summary>
+        /// Enable NetworkComms.Net logging
+        /// </summary>
+        private void EnableLogging()
+        {
+            var localDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var commsDir = Path.Combine(localDirectory, "NetworkComms");
+
+            if (!Directory.Exists(commsDir))
+                Directory.CreateDirectory(commsDir);
+
+            var logFileName = Path.Combine(commsDir, "log.txt");
+            AppendLineToChatBox("Logging enabled to " + logFileName);
+
+            NetworkComms.EnableLogging(logFileName);
         }
 
         /// <summary>
@@ -84,9 +110,12 @@ namespace ExamplesChat.iOS
         {
             chatHistoryBox.InvokeOnMainThread(new NSAction(() =>
             {
-                chatHistoryBox.Text += text + Environment.NewLine;
-                PointF bottomOffset = new PointF(0, chatHistoryBox.ContentSize.Height - chatHistoryBox.Bounds.Size.Height);
-                chatHistoryBox.SetContentOffset(bottomOffset, true);
+                lock (locker)
+                {
+                    chatHistoryBox.Text += text + Environment.NewLine;
+                    PointF bottomOffset = new PointF(0, chatHistoryBox.ContentSize.Height - chatHistoryBox.Bounds.Size.Height);
+                    chatHistoryBox.SetContentOffset(bottomOffset, true);
+                }
             }));
         }
 
@@ -135,7 +164,7 @@ namespace ExamplesChat.iOS
         public static void InitialiseComms(ConnectionType connectionType)
         {
             //Start by printing some usage instructions
-            chatHistoryBox.Text = "";
+            AppendLineToChatBox("");
             AppendLineToChatBox("iOS chat usage instructions:");
             AppendLineToChatBox("");
             AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows or windows phone 8 chat example.");

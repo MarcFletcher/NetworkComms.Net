@@ -19,8 +19,8 @@ md ".\Xamarin.Android"
 md ".\Xamarin.Android\%1\Complete"
 md ".\Xamarin.Android\%1\Core"
 
-.\ILMerge.exe /lib:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\MonoAndroid\v4.2" /out:.\Xamarin.Android\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
-.\ILMerge.exe /lib:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\MonoAndroid\v4.2" /out:.\Xamarin.Android\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll
+.\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoAndroid\v4.2" /out:.\Xamarin.Android\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
+.\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoAndroid\v4.2" /out:.\Xamarin.Android\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll
 
 DEL .\%1\*.dll .\%1\*.pdb
 REM DEL .\Xamarin.Android\%1\Complete\*.pdb .\Xamarin.Android\%1\Core\*.pdb
