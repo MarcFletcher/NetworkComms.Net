@@ -76,7 +76,7 @@ namespace DebugTests
                     Thread.Sleep(5000);
                     Console.WriteLine(" XXX Connection established with {0}",connection);
                     connection.SendObject("Message", "message from establish handler");
-                }, false);
+                }, true);
 
             BasicSend.RunExample();
             //AliveTest.RunExample();

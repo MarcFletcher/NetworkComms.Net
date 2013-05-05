@@ -122,20 +122,6 @@ namespace NetworkCommsDotNet
                     if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                         throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
 
-                    //Call asynchronous connection establish delegates here
-                    if (NetworkComms.globalConnectionEstablishDelegatesAsync != null)
-                    {
-                        NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
-                        {
-                            Connection connectionParam = obj as Connection;
-                            NetworkComms.globalConnectionEstablishDelegatesAsync(connectionParam);
-                        }), this);
-                    }
-
-                    //Call synchronous connection establish delegates here
-                    if (NetworkComms.globalConnectionEstablishDelegatesSync != null)
-                        NetworkComms.globalConnectionEstablishDelegatesSync(this);
-
                     //Once the above has been done the last step is to allow other threads to use the connection
                     ConnectionInfo.NoteCompleteConnectionEstablish();
                     NetworkComms.AddConnectionReferenceByIdentifier(this);
@@ -164,9 +150,24 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Any connection type specific establish tasks
+        /// Any connection type specific establish tasks. Base should be called to trigger connection establish delegates
         /// </summary>
-        protected abstract void EstablishConnectionSpecific();
+        protected virtual void EstablishConnectionSpecific()
+        {
+            //Call asynchronous connection establish delegates here
+            if (NetworkComms.globalConnectionEstablishDelegatesAsync != null)
+            {
+                NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
+                {
+                    Connection connectionParam = obj as Connection;
+                    NetworkComms.globalConnectionEstablishDelegatesAsync(connectionParam);
+                }), this);
+            }
+
+            //Call synchronous connection establish delegates here
+            if (NetworkComms.globalConnectionEstablishDelegatesSync != null)
+                NetworkComms.globalConnectionEstablishDelegatesSync(this);
+        }
 
         /// <summary>
         /// Return true if the connection is established within the provided timeout, otherwise false
