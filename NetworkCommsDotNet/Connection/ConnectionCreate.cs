@@ -122,16 +122,26 @@ namespace NetworkCommsDotNet
                     if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
                         throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
 
+                    //Call asynchronous connection establish delegates here
+                    if (NetworkComms.globalConnectionEstablishDelegatesAsync != null)
+                    {
+                        NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
+                        {
+                            Connection connectionParam = obj as Connection;
+                            NetworkComms.globalConnectionEstablishDelegatesAsync(connectionParam);
+                        }), this);
+                    }
+
+                    //Call synchronous connection establish delegates here
+                    if (NetworkComms.globalConnectionEstablishDelegatesSync != null)
+                        NetworkComms.globalConnectionEstablishDelegatesSync(this);
+
                     //Once the above has been done the last step is to allow other threads to use the connection
                     ConnectionInfo.NoteCompleteConnectionEstablish();
                     NetworkComms.AddConnectionReferenceByIdentifier(this);
                     connectionEstablishWait.Set();
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
-
-                    //Call the establish delegate if one is set
-                    if (NetworkComms.globalConnectionEstablishDelegates != null)
-                        NetworkComms.globalConnectionEstablishDelegates(this);
                 }
             }
             catch (SocketException e)

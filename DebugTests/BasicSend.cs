@@ -35,41 +35,49 @@ namespace DebugTests
         /// </summary>
         public static void RunExample()
         {
-            //Add an incoming packet handler for a 'Message' packet Type. We can also define what we want the handler to do inline by using a lambda expression.
-            //This handler will just write the incoming string message to the console window.
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, message) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + message + "'."); });
+            //We need to define what happens when packets are received.
+            //To do this we add an incoming packet handler for a 'Message' packet type. 
+            //
+            //We will define what we want the handler to do inline by using a lambda expression
+            //http://msdn.microsoft.com/en-us/library/bb397687.aspx.
+            //We could also just point the AppendGlobalIncomingPacketHandler method 
+            //to a standard method (See AdvancedSend example)
+            //
+            //This handler will convert the incoming raw bytes into a string (this is what 
+            //the <string> bit means) and then write that string to the local console window.
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
 
-            //Add a 'TCP' listener so that incoming connections can be accepted. See also UDPConnection.StartListening()
+            //Start listening for incoming 'TCP' connections. The true parameter means
+            //try to use the default port and if that fails just choose a random port
+            //See also UDPConnection.StartListening()
             TCPConnection.StartListening(true);
 
-            //Print the IP addresses and ports we are listening on.
+            //Print the IP addresses and ports we are listening on to make sure everything
+            //worked as expected.
             Console.WriteLine("Listening for messages on:");
             foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-            //We can loop here to allow any number of test messages to be sent and received
+            //We loop here to allow any number of test messages to be sent and received
             while (true)
             {
                 //Request a message to send somewhere
                 Console.WriteLine("\nPlease enter your message and press enter (Type 'exit' to quit):");
-                string message = Console.ReadLine();
+                string stringToSend = Console.ReadLine();
 
                 //If the user has typed exit then we leave our loop and end the example
-                if (message == "exit") break;
+                if (stringToSend == "exit") break;
                 else
                 {
+                    //Once we have a message we need to know where to send it
+                    //We have created a small wrapper class to help keep things clean here
                     ConnectionInfo targetServerConnectionInfo;
                     ExampleHelper.GetServerDetails(out targetServerConnectionInfo);
 
-                    //Once we have a message we need to know where to send it
-                    //Expecting user to enter ip address as 192.168.0.1:4000
-                    Console.WriteLine("Please enter the destination IP address and press enter, e.g '192.168.0.1'");
-
-                    //Parse the provided destination information
-                    //If the user entered using a bad format we are going to get an exception
-                    string ipAddressStr = Console.ReadLine();
-
-                    //Send the message to the provided destination, voila!
-                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, message);
+                    //There are loads of ways of sending data (see AdvancedSend example for more)
+                    //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
+                    //We pull these values out of the ConnectionInfo object we got above and voila!
+                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
+                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
                 }
             }
 

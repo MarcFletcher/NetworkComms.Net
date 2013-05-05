@@ -1323,9 +1323,14 @@ namespace NetworkCommsDotNet
         internal static int globalConnectionShutdownDelegateCount = 0;
 
         /// <summary>
-        /// Multicast delegate pointer for connection establishments.
+        /// Multicast delegate pointer for connection establishments, run asynchronously.
         /// </summary>
-        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegates;
+        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegatesAsync;
+
+        /// <summary>
+        /// Multicast delegate pointer for connection establishments, run synchronously.
+        /// </summary>
+        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegatesSync;
 
         /// <summary>
         /// Delegate counter for debugging.
@@ -1375,14 +1380,25 @@ namespace NetworkCommsDotNet
         /// Add a new connection establish delegate which will be called for every connection once it has been succesfully established.
         /// </summary>
         /// <param name="connectionEstablishDelegate">The delegate to call after all connection establishments.</param>
-        public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
+        /// <param name="runSynchronously">If true this ConnectionEstablishShutdownDelegate will be called synchronously during the connection establish. The connection will not be considered established until the ConnectionEstablishShutdownDelegate has completed.</param>
+        public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate, bool runSynchronously = false)
         {
             lock (globalDictAndDelegateLocker)
             {
-                if (globalConnectionEstablishDelegates == null)
-                    globalConnectionEstablishDelegates = connectionEstablishDelegate;
+                if (runSynchronously)
+                {
+                    if (globalConnectionEstablishDelegatesSync == null)
+                        globalConnectionEstablishDelegatesSync = connectionEstablishDelegate;
+                    else
+                        globalConnectionEstablishDelegatesSync += connectionEstablishDelegate;
+                }
                 else
-                    globalConnectionEstablishDelegates += connectionEstablishDelegate;
+                {
+                    if (globalConnectionEstablishDelegatesAsync == null)
+                        globalConnectionEstablishDelegatesAsync = connectionEstablishDelegate;
+                    else
+                        globalConnectionEstablishDelegatesAsync += connectionEstablishDelegate;
+                }
 
                 globalConnectionEstablishDelegateCount++;
 
@@ -1398,7 +1414,10 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-                globalConnectionEstablishDelegates -= connectionEstablishDelegate;
+                //Remove from either async or sync delegates
+                globalConnectionEstablishDelegatesAsync -= connectionEstablishDelegate;
+                globalConnectionEstablishDelegatesSync -= connectionEstablishDelegate;
+
                 globalConnectionEstablishDelegateCount--;
 
                 if (LoggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
