@@ -305,12 +305,13 @@ namespace NetworkCommsDotNet
         /// During a connection handShake we might be provided with more update information regarding endPoints, connectability and identifiers
         /// </summary>
         /// <param name="handshakeInfo"><see cref="ConnectionInfo"/> provided by remoteEndPoint during connection handshake.</param>
-        internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo)
+        internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo, IPEndPoint remoteEndPoint)
         {
             lock (internalLocker)
             {
                 NetworkIdentifier = handshakeInfo.NetworkIdentifier;
-                RemoteEndPoint = handshakeInfo.LocalEndPoint;
+                RemoteEndPoint = remoteEndPoint;
+                LocalEndPoint.Address = handshakeInfo.LocalEndPoint.Address;
                 IsConnectable = handshakeInfo.IsConnectable;
             }
         }

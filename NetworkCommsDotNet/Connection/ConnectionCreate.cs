@@ -262,48 +262,45 @@ namespace NetworkCommsDotNet
         /// <returns>True if connection is successfully setup, otherwise false</returns>
         private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
         {
-            //try
-            //{
-                lock (NetworkComms.globalDictAndDelegateLocker)
-                {
-                    Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
 
-                    //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
-                    if (connectionByEndPoint == null)
+                //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
+                if (connectionByEndPoint == null)
+                {
+                    connectionSetupException = true;
+                    connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
+                }
+                else
+                {
+                    //We need to check for a possible GUID clash
+                    //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
+                    //but hey, we live in a crazy world!
+                    if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
                     {
                         connectionSetupException = true;
-                        connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
+                        connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
+                    }
+                    else if (connectionByEndPoint != this)
+                    {
+                        possibleClashConnectionWithPeer_ByEndPoint = true;
+                        existingConnection = connectionByEndPoint;
                     }
                     else
                     {
-                        //We need to check for a possible GUID clash
-                        //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
-                        //but hey, we live in a crazy world!
-                        if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
-                        {
-                            connectionSetupException = true;
-                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
-                        }
-                        else if (connectionByEndPoint != this)
-                        {
-                            possibleClashConnectionWithPeer_ByEndPoint = true;
-                            existingConnection = connectionByEndPoint;
-                        }
-                        else
-                        {
-                            //Update the connection info
-                            NetworkComms.UpdateConnectionReferenceByEndPoint(this, remoteConnectionInfo.LocalEndPoint);
-                            ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo);
+                        //Update the connection info
+                        //We never change the this.ConnectionInfo.RemoteEndPoint.Address as there might be NAT involved
+                        //We may update the port however
+                        IPEndPoint newRemoteIPEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteEndPoint.Address, remoteConnectionInfo.LocalEndPoint.Port);
+                        NetworkComms.UpdateConnectionReferenceByEndPoint(this, newRemoteIPEndPoint);
 
-                            return true;
-                        }
+                        ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo, newRemoteIPEndPoint);
+
+                        return true;
                     }
                 }
-            //}
-            //catch (Exception ex)
-            //{
-                //NetworkComms.LogError(ex, "ConnectionSetupHandlerInnerError");
-            //}
+            }
 
             return false;
         }

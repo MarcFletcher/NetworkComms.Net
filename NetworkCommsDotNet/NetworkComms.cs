@@ -2283,18 +2283,18 @@ namespace NetworkCommsDotNet
         /// Update the endPoint reference for the provided connection with the newEndPoint. If there is no change just returns
         /// </summary>
         /// <param name="connection"></param>
-        /// <param name="newEndPoint"></param>
-        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newEndPoint)
+        /// <param name="newRemoteEndPoint"></param>
+        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newRemoteEndPoint)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newEndPoint != null ? " Provided new endPoint of " + newEndPoint.Address + ":" + newEndPoint.Port : ""));
+                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.Address + ":" + newRemoteEndPoint.Port : ""));
 
-            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newEndPoint))
+            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint))
             {
                 lock (globalDictAndDelegateLocker)
                 {
                     RemoveConnectionReference(connection, false);
-                    AddConnectionByReferenceEndPoint(connection, newEndPoint);
+                    AddConnectionByReferenceEndPoint(connection, newRemoteEndPoint);
                 }
             }
         }
