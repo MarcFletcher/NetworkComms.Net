@@ -159,7 +159,11 @@ namespace NetworkCommsDotNet
             int processId = 0;
             
 #if !iOS && !WINDOWS_PHONE
-            try {processId = System.Diagnostics.Process.GetCurrentProcess().Id;}
+            try 
+            {
+                using(System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
+                    processId = process.Id;
+            }
             catch (Exception) { }
 #endif
 

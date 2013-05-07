@@ -33,7 +33,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace NetworkCommsDotNet
 {
-    public partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : Connection
     {
 #if WINDOWS_PHONE
         /// <summary>

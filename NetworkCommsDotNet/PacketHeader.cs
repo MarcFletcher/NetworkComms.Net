@@ -30,7 +30,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Any <see cref="PacketHeader"/> options which are stored as a long.
     /// </summary>
-    public enum PacketHeaderLongItems : byte
+    public enum PacketHeaderLongItems
     {
         /// <summary>
         /// The size of the packet data payload in bytes. This is a compulsory option.
@@ -56,7 +56,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Any <see cref="PacketHeader"/> options which are stored as a string.
     /// </summary>
-    public enum PacketHeaderStringItems : byte
+    public enum PacketHeaderStringItems
     {
         /// <summary>
         /// The type of the packet. This is a compulsory option which determines how the incoming packet is handled.
@@ -147,8 +147,8 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (packetData == null) throw new NullReferenceException("Provided packetData parameter was null.");
-                if (sendReceiveOptions == null) throw new NullReferenceException("Provided sendReceiveOptions parameter was null.");
+                if (packetData == null) throw new ArgumentNullException("packetData", "Provided MemoryStream parameter cannot be null.");
+                if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
 
                 if (packetData.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");

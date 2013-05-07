@@ -35,11 +35,20 @@ namespace NetworkCommsDotNet
         /// <returns>The equivalent <see cref="System.Net.IPEndPoint"/></returns>
         public static IPEndPoint ParseEndPointFromString(string ipAddressAndPort)
         {
+            if (ipAddressAndPort == null) throw new ArgumentNullException("ipAddressAndPort", "string cannot be null.");
+
             int lastColonPosition = ipAddressAndPort.LastIndexOf(':');
             string serverIP = ipAddressAndPort.Substring(0, lastColonPosition);
-            int serverPort = int.Parse(ipAddressAndPort.Substring(lastColonPosition + 1, ipAddressAndPort.Length - lastColonPosition - 1));
 
-            return new IPEndPoint(IPAddress.Parse(serverIP), serverPort);
+            int serverPort;
+            if (!int.TryParse(ipAddressAndPort.Substring(lastColonPosition + 1, ipAddressAndPort.Length - lastColonPosition - 1), out serverPort))
+                throw new ArgumentException("Provided ipAddressAndPort string was not succesfully parsed to a port number.", "ipAddressAndPort");
+
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(serverIP, out ipAddress))
+                throw new ArgumentException("Provided ipAddressAndPort string was not succesfully parsed to an IPAddress.", "ipAddressAndPort");
+
+            return new IPEndPoint(ipAddress, serverPort);
         }
     }
 }

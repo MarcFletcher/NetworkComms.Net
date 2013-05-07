@@ -123,7 +123,7 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(DataSerializer serializer, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (serializer == null)
-                throw new ArgumentNullException("The serializer argument when creating a sendReceiveOptions object should never be null.");
+                throw new ArgumentNullException("serializer", "The serializer argument when creating a sendReceiveOptions object should never be null.");
 
             this.DataSerializer = serializer;
             this.DataProcessors = dataProcessors;
@@ -154,6 +154,8 @@ namespace NetworkCommsDotNet
         /// <remarks>Two <see cref="SendReceiveOptions"/> instances will be compatible if they use the same <see cref="DPSBase.DataSerializer"/> and the same set of <see cref="DPSBase.DataProcessor"/>s</remarks>
         public bool OptionsCompatible(SendReceiveOptions options)
         {
+            if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
+
             bool equal = options.DataSerializer == DataSerializer;
 
             for (int i = 0; i < options.DataProcessors.Count; i++)
@@ -173,9 +175,9 @@ namespace NetworkCommsDotNet
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    public class SendReceiveOptions<DS> : SendReceiveOptions 
-        where DS : DataSerializer
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS> : SendReceiveOptions 
+        where T_DS : DataSerializer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> is passed as a generic parameter and no <see cref="DPSBase.DataProcessor"/>s are used. To provide additional options see other overrides. 
@@ -183,11 +185,11 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions()
             : base(null)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = null; //Note that this will cause data processors to be set to an empty list
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
 
         /// <summary>
@@ -198,20 +200,20 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = null; //Note that this will cause data processors to be set to an empty list
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1> : SendReceiveOptions 
-        where DS : DataSerializer 
-        where DP1 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1> : SendReceiveOptions 
+        where T_DS : DataSerializer 
+        where T_DP1 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and a single <see cref="DPSBase.DataProcessor"/> while will be used are passed as generic parameters. To provide additional options see other overrides. 
@@ -219,11 +221,11 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions()
             : base(null)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
-            DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<DP1>() };
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
+            DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<T_DP1>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
 
         /// <summary>
@@ -234,22 +236,22 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
-            DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<DP1>() };
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
+            DataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<T_DP1>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 2 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -259,26 +261,26 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(),
-                DPSManager.GetDataProcessor<DP2>() };
+                DPSManager.GetDataProcessor<T_DP1>(),
+                DPSManager.GetDataProcessor<T_DP2>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2, DP3> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
-        where DP3 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2, T_DP3> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
+        where T_DP3 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 3 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -288,29 +290,29 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(), 
-                DPSManager.GetDataProcessor<DP2>(), 
-                DPSManager.GetDataProcessor<DP3>() };
+                DPSManager.GetDataProcessor<T_DP1>(), 
+                DPSManager.GetDataProcessor<T_DP2>(), 
+                DPSManager.GetDataProcessor<T_DP3>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2, DP3, DP4> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
-        where DP3 : DataProcessor
-        where DP4 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2, T_DP3, T_DP4> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
+        where T_DP3 : DataProcessor
+        where T_DP4 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 4 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -320,32 +322,32 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(),
-                DPSManager.GetDataProcessor<DP2>(),
-                DPSManager.GetDataProcessor<DP3>(),
-                DPSManager.GetDataProcessor<DP4>() };
+                DPSManager.GetDataProcessor<T_DP1>(),
+                DPSManager.GetDataProcessor<T_DP2>(),
+                DPSManager.GetDataProcessor<T_DP3>(),
+                DPSManager.GetDataProcessor<T_DP4>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2, DP3, DP4, DP5> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
-        where DP3 : DataProcessor
-        where DP4 : DataProcessor
-        where DP5 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2, T_DP3, T_DP4, T_DP5> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
+        where T_DP3 : DataProcessor
+        where T_DP4 : DataProcessor
+        where T_DP5 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 5 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -355,35 +357,35 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(),
-                DPSManager.GetDataProcessor<DP2>(),
-                DPSManager.GetDataProcessor<DP3>(),
-                DPSManager.GetDataProcessor<DP4>(),
-                DPSManager.GetDataProcessor<DP5>() };
+                DPSManager.GetDataProcessor<T_DP1>(),
+                DPSManager.GetDataProcessor<T_DP2>(),
+                DPSManager.GetDataProcessor<T_DP3>(),
+                DPSManager.GetDataProcessor<T_DP4>(),
+                DPSManager.GetDataProcessor<T_DP5>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2, DP3, DP4, DP5, DP6> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
-        where DP3 : DataProcessor
-        where DP4 : DataProcessor
-        where DP5 : DataProcessor
-        where DP6 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2, T_DP3, T_DP4, T_DP5, T_DP6> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
+        where T_DP3 : DataProcessor
+        where T_DP4 : DataProcessor
+        where T_DP5 : DataProcessor
+        where T_DP6 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 6 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -393,38 +395,38 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(),
-                DPSManager.GetDataProcessor<DP2>(),
-                DPSManager.GetDataProcessor<DP3>(),
-                DPSManager.GetDataProcessor<DP4>(),
-                DPSManager.GetDataProcessor<DP5>(),
-                DPSManager.GetDataProcessor<DP6>() };
+                DPSManager.GetDataProcessor<T_DP1>(),
+                DPSManager.GetDataProcessor<T_DP2>(),
+                DPSManager.GetDataProcessor<T_DP3>(),
+                DPSManager.GetDataProcessor<T_DP4>(),
+                DPSManager.GetDataProcessor<T_DP5>(),
+                DPSManager.GetDataProcessor<T_DP6>() };
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 
     /// <inheritdoc />
-    /// <typeparam name="DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
-    /// <typeparam name="DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    /// <typeparam name="DP7">The type of the seventh <see cref="DPSBase.DataProcessor"/> to use</typeparam>
-    public class SendReceiveOptions<DS, DP1, DP2, DP3, DP4, DP5, DP6, DP7> : SendReceiveOptions
-        where DS : DataSerializer
-        where DP1 : DataProcessor
-        where DP2 : DataProcessor
-        where DP3 : DataProcessor
-        where DP4 : DataProcessor
-        where DP5 : DataProcessor
-        where DP6 : DataProcessor
-        where DP7 : DataProcessor
+    /// <typeparam name="T_DS">The type of <see cref="DPSBase.DataSerializer"/> to use</typeparam>
+    /// <typeparam name="T_DP1">The type of the first <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP2">The type of the second <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP3">The type of the third <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP4">The type of the fourth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP5">The type of the fifth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP6">The type of the sixth <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    /// <typeparam name="T_DP7">The type of the seventh <see cref="DPSBase.DataProcessor"/> to use</typeparam>
+    public class SendReceiveOptions<T_DS, T_DP1, T_DP2, T_DP3, T_DP4, T_DP5, T_DP6, T_DP7> : SendReceiveOptions
+        where T_DS : DataSerializer
+        where T_DP1 : DataProcessor
+        where T_DP2 : DataProcessor
+        where T_DP3 : DataProcessor
+        where T_DP4 : DataProcessor
+        where T_DP5 : DataProcessor
+        where T_DP6 : DataProcessor
+        where T_DP7 : DataProcessor
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class. The <see cref="DPSBase.DataSerializer"/> and 7 <see cref="DPSBase.DataProcessor"/>s while will be used are passed as generic parameters
@@ -434,18 +436,18 @@ namespace NetworkCommsDotNet
         public SendReceiveOptions(Dictionary<string, string> options)
             : base(options)
         {
-            DataSerializer = DPSManager.GetDataSerializer<DS>();
+            DataSerializer = DPSManager.GetDataSerializer<T_DS>();
             DataProcessors = new List<DataProcessor>() {
-                DPSManager.GetDataProcessor<DP1>(),
-                DPSManager.GetDataProcessor<DP2>(),
-                DPSManager.GetDataProcessor<DP3>(),
-                DPSManager.GetDataProcessor<DP4>(),
-                DPSManager.GetDataProcessor<DP5>(),
-                DPSManager.GetDataProcessor<DP6>(),
-                DPSManager.GetDataProcessor<DP7>() };
+                DPSManager.GetDataProcessor<T_DP1>(),
+                DPSManager.GetDataProcessor<T_DP2>(),
+                DPSManager.GetDataProcessor<T_DP3>(),
+                DPSManager.GetDataProcessor<T_DP4>(),
+                DPSManager.GetDataProcessor<T_DP5>(),
+                DPSManager.GetDataProcessor<T_DP6>(),
+                DPSManager.GetDataProcessor<T_DP7>()};
 
             if (DataSerializer == null)
-                throw new ArgumentNullException("Attempted to set DataSerializer to null. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
+                throw new InvalidOperationException("Attempted to use null DataSerializer. If this exception is thrown DPSManager.GetDataSerializer<DS>() has failed.");
         }
     }
 }

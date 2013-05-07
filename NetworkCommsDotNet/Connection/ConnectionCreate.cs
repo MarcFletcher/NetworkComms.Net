@@ -133,13 +133,13 @@ namespace NetworkCommsDotNet
             catch (SocketException e)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true, 5);
+                CloseConnection(true, 43);
                 throw new ConnectionSetupException(e.ToString());
             }
             catch (Exception ex)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true, 6);
+                CloseConnection(true, 44);
 
                 //For some odd reason not all SocketExceptions get caught above, so another check here
                 if (ex.GetBaseException().GetType() == typeof(SocketException))

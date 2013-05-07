@@ -69,7 +69,7 @@ namespace NetworkCommsDotNet
             else
             {
                 if (options.DataSerializer == null)
-                    throw new NullReferenceException("The provided options.DataSerializer was null. Cannot continue with deserialise.");
+                    throw new ArgumentNullException("options", "The provided options.DataSerializer was null. Cannot continue with deserialise.");
 
                 return options.DataSerializer.DeserialiseDataObject<T>(incomingBytes, options.DataProcessors, options.Options);
             }

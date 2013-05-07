@@ -24,7 +24,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// The type of <see cref="Connection"/>.
     /// </summary>
-    public enum ConnectionType : byte
+    public enum ConnectionType
     {
         /// <summary>
         /// An undefined connection type. This is used as the default value.

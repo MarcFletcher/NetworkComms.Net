@@ -87,7 +87,7 @@ namespace NetworkCommsDotNet
                 if (numBytesToRemove > 0)
                 {
                     if (numBytesToRemove > totalBytesCached)
-                        throw new CommunicationException("Attempting to remove "+numBytesToRemove+" bytes when ConnectionPacketBuilder only contains " + totalBytesCached);
+                        throw new CommunicationException("Attempting to remove " + numBytesToRemove.ToString() + " bytes when ConnectionPacketBuilder only contains " + totalBytesCached.ToString());
 
                     int bytesRemoved = 0;
 
@@ -317,7 +317,7 @@ namespace NetworkCommsDotNet
                     }
                 }
 
-                if (writeTotal != length) throw new Exception("Not enough data available in packetBuilder to complete request. Requested " + length + " bytes but only " + writeTotal + " bytes were copied.");
+                if (writeTotal != length) throw new Exception("Not enough data available in packetBuilder to complete request. Requested " + length.ToString() + " bytes but only " + writeTotal.ToString() + " bytes were copied.");
 
                 return new MemoryStream(returnArray, 0, returnArray.Length, false, true);
             }

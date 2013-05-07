@@ -34,7 +34,7 @@ using Windows.Storage.Streams;
 
 namespace NetworkCommsDotNet
 {
-    public partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : Connection
     {
         /// <summary>
         /// Asynchronous incoming connection data delegate
@@ -232,7 +232,7 @@ namespace NetworkCommsDotNet
                     else if (totalBytesRead == 0 && (!dataAvailable || ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                     {
                         //If we read 0 bytes and there is no data available we should be shutting down
-                        CloseConnection(false, -1);
+                        CloseConnection(false, -10);
                         break;
                     }
 
@@ -265,7 +265,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
-                CloseConnection(true, 31);
+                CloseConnection(true, 39);
             }
 
             //Clear the listen thread object because the thread is about to end
@@ -345,8 +345,8 @@ namespace NetworkCommsDotNet
                     maxSendTimePerKB = DefaultMSPerKBSendTimeout;
             }
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " + 
-                ConnectionInfo + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes. Allowing " +
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " +
+                ConnectionInfo + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes. Allowing " +
                 maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
             
             DateTime startTime = DateTime.Now;

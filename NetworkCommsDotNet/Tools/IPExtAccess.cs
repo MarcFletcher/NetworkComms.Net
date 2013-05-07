@@ -41,6 +41,9 @@ namespace NetworkCommsDotNet
         /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
         public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
+            if (targetIPAddress == null)
+                throw new ArgumentNullException("targetIPAddress", "Provided IPAddress cannot be null.");
+
 #if WINDOWS_PHONE
             foreach (var name in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
                 if (name.IPInformation.NetworkAdapter == Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().NetworkAdapter)

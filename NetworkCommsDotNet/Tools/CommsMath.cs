@@ -27,6 +27,8 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class CommsMath
     {
+        private const double SMALLVALUE = 1E-10;
+
         private List<double> values;
         private List<double> weights;
 
@@ -208,6 +210,8 @@ namespace NetworkCommsDotNet
         /// <returns>The mean of provided values</returns>
         public static double CalculateMean(List<double> localValues)
         {
+            if (localValues == null) throw new ArgumentNullException("localValues", "Provided List<double> cannot be null.");
+
             if (localValues.Count == 0)
                 return 0;
 
@@ -243,8 +247,11 @@ namespace NetworkCommsDotNet
         /// <returns>The mean of provided values</returns>
         public static double CalculateMean(List<double> localValues, List<double> weights)
         {
+            if (localValues == null) throw new ArgumentNullException("localValues", "Provided List<double> cannot be null.");
+            if (weights == null) throw new ArgumentNullException("weights", "Provided List<double> cannot be null.");
+
             if (localValues.Count != weights.Count)
-                throw new Exception("Equal number of values and weights expected.");
+                throw new ArgumentException("Equal number of values and weights expected.", "localValues");
 
             if (localValues.Count == 0)
                 return 0;
@@ -262,7 +269,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (countedValues == 0)
+            if (Math.Abs(countedValues) < SMALLVALUE)
                 result = 0;
             else
                 result = sum / countedValues;
@@ -293,7 +300,7 @@ namespace NetworkCommsDotNet
             else if (localValues.Count > 0)
                 result = localValues[0];
             else
-                throw new ArgumentNullException("Unable to calculate standard deviation if no values are provided.");
+                throw new ArgumentException("Unable to calculate standard deviation if no values are provided.", "localValues");
 
             if (double.IsNaN(result))
                 throw new Exception("Error");
@@ -309,6 +316,9 @@ namespace NetworkCommsDotNet
         /// <returns>The standard deviation of provided values</returns>
         public static double CalculateStdDeviation(List<double> localValues, List<double> weights)
         {
+            if (localValues == null) throw new ArgumentNullException("localValues", "Provided List<double> cannot be null.");
+            if (weights == null) throw new ArgumentNullException("weights", "Provided List<double> cannot be null.");
+
             if (localValues.Count != weights.Count)
                 throw new Exception("Equal number of values and weights expected.");
 
@@ -328,10 +338,10 @@ namespace NetworkCommsDotNet
             else if (localValues.Count > 0)
                 result = localValues[0];
             else
-                throw new ArgumentNullException("Unable to calculate standard deviation if no values are provided.");
+                throw new ArgumentException("Unable to calculate standard deviation if no values are provided.", "localValues");
 
             if (double.IsNaN(result))
-                throw new Exception("Error");
+                throw new ArithmeticException("Error");
 
             return Math.Sqrt(result);
         }

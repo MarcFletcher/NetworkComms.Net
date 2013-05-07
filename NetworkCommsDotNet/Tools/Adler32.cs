@@ -34,6 +34,8 @@ namespace NetworkCommsDotNet
         /// <returns>The checksum value</returns>
         public static long GenerateCheckSum(byte[] buffer)
         {
+            if (buffer == null) throw new ArgumentNullException("buffer", "Provided byte[] cannot be null.");
+
             uint BASE = 65521;
             uint checksum = 1;
 
@@ -72,6 +74,8 @@ namespace NetworkCommsDotNet
         /// <returns>The checksum value</returns>
         public static long GenerateCheckSum(byte[][] splitBuffer)
         {
+            if (splitBuffer == null) throw new ArgumentNullException("splitBuffer", "Provided byte[][] cannot be null.");
+
             uint BASE = 65521;
             uint checksum = 1;
 

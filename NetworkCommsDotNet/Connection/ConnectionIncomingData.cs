@@ -69,7 +69,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached + " bytes read.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached.ToString() + " bytes read.");
 
                 if (packetBuilder.TotalPartialPacketCount == 0)
                     throw new Exception("Executing IncomingPacketHandleHandOff when no packets exist in packetbuilder.");
@@ -82,7 +82,7 @@ namespace NetworkCommsDotNet
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (packetBuilder.FirstByte() == 0)
                     {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from "+ConnectionInfo+", loop index - " + loopCounter);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from " + ConnectionInfo + ", loop index - " + loopCounter.ToString());
 
                         packetBuilder.ClearNTopBytes(1);
 
@@ -108,7 +108,9 @@ namespace NetworkCommsDotNet
                         }
 
                         //We have enough for a header
-                        PacketHeader topPacketHeader = new PacketHeader(packetBuilder.ReadDataSection(1, packetHeaderSize - 1), NetworkComms.InternalFixedSendReceiveOptions);
+                        PacketHeader topPacketHeader;
+                        using(MemoryStream headerStream = packetBuilder.ReadDataSection(1, packetHeaderSize - 1))
+                            topPacketHeader = new PacketHeader(headerStream, NetworkComms.InternalFixedSendReceiveOptions);
 
                         //Idiot test
                         if (topPacketHeader.PacketType == null)
@@ -118,7 +120,7 @@ namespace NetworkCommsDotNet
                         //First case is when we have not yet received enough data
                         if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.PayloadPacketSize)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.PayloadPacketSize) + " total packet bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " total packet bytes.");
 
                             //Set the expected number of bytes and then return
                             packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
@@ -131,7 +133,7 @@ namespace NetworkCommsDotNet
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize + " header bytes and " + topPacketHeader.PayloadPacketSize + " payload bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.PayloadPacketSize.ToString() + " payload bytes.");
 
                             //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             bool isReservedType = false;
@@ -155,7 +157,7 @@ namespace NetworkCommsDotNet
 #endif
 
                                 PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter);
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter.ToString());
                                 NetworkComms.CompleteIncomingItemTask(item);
                             }
                             else
@@ -165,7 +167,7 @@ namespace NetworkCommsDotNet
 
                                 int threadId = NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
 
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads + ") with priority " + itemPriority + (threadId > 0 ? ". Selected threadId=" + threadId : "") +". Loop index=" + loopCounter + ".");
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads.ToString() + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads.ToString() + ") with priority " + itemPriority.ToString() + (threadId > 0 ? ". Selected threadId=" + threadId.ToString() : "") + ". Loop index=" + loopCounter.ToString() + ".");
                             }
 
                             //We clear the bytes we have just handed off
@@ -191,7 +193,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A fatal exception occured in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
 
                 NetworkComms.LogError(ex, "CommsError");
-                CloseConnection(true, 16);
+                CloseConnection(true, 45);
             }
         }
 
