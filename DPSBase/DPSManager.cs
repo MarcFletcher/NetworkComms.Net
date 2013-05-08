@@ -470,7 +470,13 @@ namespace DPSBase
                     if (args.loadedDomains != null)
                     {
                         foreach (var domain in args.loadedDomains)
-                            AppDomain.CurrentDomain.Load(domain);
+                        {
+                            try
+                            {
+                                AppDomain.CurrentDomain.Load(domain);
+                            }
+                            catch (FileNotFoundException) { }
+                        }
                     }
 #endif
 
