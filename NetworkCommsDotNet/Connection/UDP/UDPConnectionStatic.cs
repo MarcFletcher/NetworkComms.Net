@@ -29,7 +29,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</see> to communicate between peers.
     /// </summary>
-    public partial class UDPConnection : Connection
+    public sealed partial class UDPConnection : Connection
     {
         /// <summary>
         /// By default a UDP datagram sent to an unreachable destination will result in an ICMP Destination Unreachable packet. This can result in a SocketException on the local end.
@@ -220,8 +220,8 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
-                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port.ToString() + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port.ToString() + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
 
@@ -236,7 +236,7 @@ namespace NetworkCommsDotNet
                 else
                 {
                     udpConnectionListeners.Add(ipEndPointUsed, newListeningConnection);
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new UDP listener localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port.ToString());
                 }
             }
 
@@ -251,6 +251,8 @@ namespace NetworkCommsDotNet
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
+            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
+
             try
             {
                 foreach (var endPoint in localEndPoints)
@@ -362,7 +364,11 @@ namespace NetworkCommsDotNet
         /// <param name="port">The destination port.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, string ipAddress, int port)
         {
-            SendObject(sendingPacketType, objectToSend, new IPEndPoint(IPAddress.Parse(ipAddress), port));
+            IPAddress ipAddressParse;
+            if(!IPAddress.TryParse(ipAddress, out ipAddressParse))
+                throw new ArgumentException("Provided ipAddress string was not succesfully parsed.", "ipAddress");
+
+            SendObject(sendingPacketType, objectToSend, new IPEndPoint(ipAddressParse, port));
         }
 
         /// <summary>

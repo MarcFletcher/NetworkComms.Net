@@ -38,10 +38,10 @@ namespace NetworkCommsDotNet
         public PriorityQueueItem(QueueItemPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendReceiveOptions)
         {
             //Nullreference checks
-            if (connection == null) throw new NullReferenceException("Provided connection parameter can not be null.");
-            if (packetHeader == null) throw new NullReferenceException("Provided packetHeader parameter can not be null.");
-            if (dataStream == null) throw new NullReferenceException("Provided dataStream parameter can not be null.");
-            if (sendReceiveOptions == null) throw new NullReferenceException("Provided sendReceiveOptions parameter can not be null.");
+            if (connection == null) throw new ArgumentNullException("connection", "Provided Connection parameter cannot be null.");
+            if (packetHeader == null) throw new ArgumentNullException("packetHeader", "Provided PacketHeader parameter cannot be null.");
+            if (dataStream == null) throw new ArgumentNullException("dataStream", "Provided MemoryStream parameter cannot be null.");
+            if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided sendReceiveOptions cannot be null.");
 
             this.Priority = priority;
             this.Connection = connection;

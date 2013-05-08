@@ -154,8 +154,8 @@ namespace NetworkCommsDotNet
         /// <param name="destStartingIndex">The position within destination to start copying to</param>
         public void CopyTo(KeyValuePair<QueueItemPriority, TValue>[] destination, int destStartingIndex)
         {
-            if (destination == null) throw new ArgumentNullException();
-            if (destStartingIndex < 0) throw new ArgumentOutOfRangeException();
+            if (destination == null) throw new ArgumentNullException("destination", "Provided KeyValuePair<QueueItemPriority, TValue>[] cannot be null.");
+            if (destStartingIndex < 0) throw new ArgumentOutOfRangeException("destStartingIndex", "Provided int must be positive.");
 
             int remaining = destination.Length;
             KeyValuePair<QueueItemPriority, TValue>[] temp = this.ToArray();
@@ -187,21 +187,21 @@ namespace NetworkCommsDotNet
             }
         }
 
-        /// <summary>
-        /// Returns an Enumerator for all items, highest priority first descending
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerator<KeyValuePair<QueueItemPriority, TValue>> GetEnumerator()
-        {
-            lock (internalQueues)
-            {
-                for (int i = numDistinctPriorities - 1; i >= 0; i--)
-                {
-                    foreach (var item in internalQueues[QueueItemPriorityVals[i]])
-                        yield return item;
-                }
-            }
-        }
+        //// <summary>
+        //// Returns an Enumerator for all items, highest priority first descending
+        //// </summary>
+        //// <returns></returns>
+        //public IEnumerator<KeyValuePair<QueueItemPriority, TValue>> GetEnumerator()
+        //{
+        //    lock (internalQueues)
+        //    {
+        //        for (int i = numDistinctPriorities - 1; i >= 0; i--)
+        //        {
+        //            foreach (var item in internalQueues[QueueItemPriorityVals[i]])
+        //                yield return item;
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// Gets a value indicating whether access to the PriorityQueue is synchronized (thread safe). Always returns true.

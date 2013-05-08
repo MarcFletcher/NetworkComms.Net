@@ -123,14 +123,6 @@ namespace NetworkCommsDotNet
                 if (NetworkIdentifierStr == null || NetworkIdentifierStr == "") return ShortGuid.Empty;
                 else return new ShortGuid(NetworkIdentifierStr);
             }
-            private set 
-            {
-                lock (internalLocker)
-                {
-                    NetworkIdentifierStr = value;
-                    hashCodeCacheSet = false;
-                }
-            }
         }
 
         DateTime lastTrafficTime;
@@ -180,7 +172,11 @@ namespace NetworkCommsDotNet
         /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
         public ConnectionInfo(string remoteIPAddress, int remotePort)
         {
-            this.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(remoteIPAddress),remotePort);
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
+                throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
+
+            this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.ConnectionCreationTime = DateTime.Now;
         }
 
@@ -194,7 +190,7 @@ namespace NetworkCommsDotNet
         public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
         {
             this.ConnectionType = connectionType;
-            this.NetworkIdentifier = localNetworkIdentifier;
+            this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
         }
@@ -305,12 +301,14 @@ namespace NetworkCommsDotNet
         /// During a connection handShake we might be provided with more update information regarding endPoints, connectability and identifiers
         /// </summary>
         /// <param name="handshakeInfo"><see cref="ConnectionInfo"/> provided by remoteEndPoint during connection handshake.</param>
-        internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo)
+        /// <param name="remoteEndPoint">The correct remoteEndPoint of this connection.</param>
+        internal void UpdateInfoAfterRemoteHandshake(ConnectionInfo handshakeInfo, IPEndPoint remoteEndPoint)
         {
             lock (internalLocker)
             {
-                NetworkIdentifier = handshakeInfo.NetworkIdentifier;
-                RemoteEndPoint = handshakeInfo.LocalEndPoint;
+                NetworkIdentifierStr = handshakeInfo.NetworkIdentifier.ToString();
+                RemoteEndPoint = remoteEndPoint;
+                LocalEndPoint.Address = handshakeInfo.LocalEndPoint.Address;
                 IsConnectable = handshakeInfo.IsConnectable;
             }
         }
@@ -330,7 +328,7 @@ namespace NetworkCommsDotNet
         /// <param name="networkIdentifier">The new networkIdentifier for this connectionInfo</param>
         public void ResetNetworkIdentifer(ShortGuid networkIdentifier)
         {
-            NetworkIdentifier = networkIdentifier;
+            NetworkIdentifierStr = networkIdentifier.ToString();
         }
 
         /// <summary>
@@ -352,11 +350,14 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            var other = obj as ConnectionInfo;
-            if (((object)other) == null)
-                return false;
-            else
-                return this == other;
+            lock (internalLocker)
+            {
+                var other = obj as ConnectionInfo;
+                if (((object)other) == null)
+                    return false;
+                else
+                    return this == other;
+            }
         }
 
         /// <summary>
@@ -366,7 +367,8 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public bool Equals(ConnectionInfo other)
         {
-            return this == other;
+            lock (internalLocker)
+                return this == other;
         }
 
         /// <summary>
@@ -427,18 +429,18 @@ namespace NetworkCommsDotNet
         /// <returns>A string containing suitable information about this connection</returns>
         public override string ToString()
         {
-            string returnString = "[" + ConnectionType + "] ";
+            string returnString = "[" + ConnectionType.ToString() + "] ";
 
             if (ConnectionState == ConnectionState.Established)
-                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port + " (" + NetworkIdentifier + ")";
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString() + " (" + NetworkIdentifier + ")";
             else
             {
                 if (RemoteEndPoint != null && LocalEndPoint != null)
-                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
+                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
                 else if (RemoteEndPoint != null)
-                    returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port;
+                    returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
                 else if (LocalEndPoint != null)
-                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port + " " + (IsConnectable ? "Connectable" : "NotConnectable");
+                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " " + (IsConnectable ? "Connectable" : "NotConnectable");
             }
 
             return returnString.Trim();

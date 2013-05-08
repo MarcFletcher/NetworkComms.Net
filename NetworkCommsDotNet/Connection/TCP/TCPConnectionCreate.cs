@@ -33,7 +33,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace NetworkCommsDotNet
 {
-    public partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : Connection
     {
 #if WINDOWS_PHONE
         /// <summary>
@@ -231,9 +231,11 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
                 }
 
+                //Trigger the connection establish delegates before replying to the connection establish 
+                base.EstablishConnectionSpecific();
+
                 //Once we have the clients id we send our own
-                //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
             }
             else
             {
@@ -241,9 +243,7 @@ namespace NetworkCommsDotNet
 
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
-                //SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), this, false, (NetworkComms.isListening ? new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, NetworkComms.CommsPort) : new ConnectionInfo(NetworkComms.localNetworkIdentifier.ToString(), LocalConnectionIP, -1)), NetworkComms.internalFixedSerializer, NetworkComms.internalFixedCompressor);
-
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
@@ -257,6 +257,9 @@ namespace NetworkCommsDotNet
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
                     throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
                 }
+
+                //Trigger the connection establish delegates once the server has replied to the connection establish
+                base.EstablishConnectionSpecific();
             }
 
 #if !WINDOWS_PHONE

@@ -57,14 +57,14 @@ namespace NetworkCommsDotNet
 
         private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
         {
-            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("The provided packetTypeStr can not be zero length or null.");
-            if (options == null) throw new ArgumentNullException("The provided SendReceiveOptions cannot be null.");
+            if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("sendingPacketTypeStr", "The provided string can not be null or zero length.");
+            if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
 
             if (packetObject == null)
                 this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
             else
             {
-                if (options.DataSerializer == null) throw new ArgumentNullException("The provided SendReceiveOptions should not contain a null DataSerializer.");
+                if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null.");
                 this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
             }
 
@@ -106,6 +106,8 @@ namespace NetworkCommsDotNet
         /// <returns>The serialised header as byte[]</returns>
         public byte[] SerialiseHeader(SendReceiveOptions options)
         {
+            if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
+
             //We need to start of by serialising the header
             byte[] serialisedHeader = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null).ThreadSafeStream.ToArray(1);
 

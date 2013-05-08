@@ -201,7 +201,7 @@ namespace NetworkCommsDotNet
                 {
                     //Launch a new thread
                     Thread newThread = new Thread(ThreadWorker);
-                    newThread.Name = "ManagedThreadPool_" + newThread.ManagedThreadId;
+                    newThread.Name = "ManagedThreadPool_" + newThread.ManagedThreadId.ToString();
 
                     WorkerInfo info = new WorkerInfo(newThread.ManagedThreadId, new WaitCallBackWrapper(callback, state));
 
@@ -233,7 +233,7 @@ namespace NetworkCommsDotNet
                         }
 
                         if (checkCount == workerInfoDict.Count)
-                            throw new Exception("IdleThreads count is " + requireJobThreadsCount + " but unable to locate thread marked as idle.");
+                            throw new Exception("IdleThreads count is " + requireJobThreadsCount.ToString() + " but unable to locate thread marked as idle.");
                     }
                 }
                 else if (!shutdown)
@@ -400,7 +400,7 @@ namespace NetworkCommsDotNet
             lock (SyncRoot)
             {
                 UpdateThreadWaitSleepJoinCountCache();
-                return "TotalTs:" + CurrentNumTotalThreads + ", IdleTs:" + CurrentNumIdleThreads + ", SleepTs:" + CurrentNumWaitSleepJoinThreadsCache + ", Q:" + QueueCount;
+                return "TotalTs:" + CurrentNumTotalThreads.ToString() + ", IdleTs:" + CurrentNumIdleThreads.ToString() + ", SleepTs:" + CurrentNumWaitSleepJoinThreadsCache.ToString() + ", Q:" + QueueCount.ToString();
             }
         }
     }

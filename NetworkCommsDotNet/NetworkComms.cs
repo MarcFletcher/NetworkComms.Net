@@ -33,6 +33,9 @@ using NLog;
 using NLog.Config;
 #endif
 
+// Assembly marked as compliant.
+//[assembly: CLSCompliant(true)]
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -200,8 +203,10 @@ namespace NetworkCommsDotNet
 #else
 
             //We want to ignore IP's that have been autoassigned
-            IPAddress autoAssignSubnetv4 = IPAddress.Parse("169.254.0.0");
-            IPAddress autoAssignSubnetMaskv4 = IPAddress.Parse("255.255.0.0");
+            //169.254.0.0
+            IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
+            //255.255.0.0
+            IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
 
             List<IPAddress> validIPAddresses = new List<IPAddress>();
             IPComparer comparer = new IPComparer();
@@ -337,9 +342,10 @@ namespace NetworkCommsDotNet
 
                 foreach (var address in unicastAddresses)
                 {
-                    if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                    var addressInformation = address.Address;
+                    if (addressInformation.AddressFamily == AddressFamily.InterNetwork || addressInformation.AddressFamily == AddressFamily.InterNetworkV6)
                     {
-                        if (!IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        if (!IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
                         {
                             bool allowed = false;
 
@@ -366,7 +372,7 @@ namespace NetworkCommsDotNet
                             {
                                 foreach (var ip in AllowedIPPrefixes)
                                 {
-                                    if (comparer.Equals(address.Address.ToString(), ip))
+                                    if (comparer.Equals(addressInformation.ToString(), ip))
                                     {
                                         allowed = true;
                                         break;
@@ -379,8 +385,8 @@ namespace NetworkCommsDotNet
                             if (!allowed)
                                 continue;
 
-                            if (address.Address != IPAddress.None)
-                                validIPAddresses.Add(address.Address);
+                            if (addressInformation != IPAddress.None)
+                                validIPAddresses.Add(addressInformation);
                         }
                     }
                 }               
@@ -447,6 +453,18 @@ namespace NetworkCommsDotNet
         /// <returns>True if address is in the provided subnet</returns>
         public static bool IsAddressInSubnet(IPAddress address, IPAddress subnet, IPAddress mask)
         {
+            if (address == null) throw new ArgumentNullException("address", "Provided IPAddress cannot be null.");
+            if (subnet == null) throw new ArgumentNullException("subnet", "Provided IPAddress cannot be null.");
+            if (mask == null) throw new ArgumentNullException("mask", "Provided IPAddress cannot be null.");
+
+            //Catch for IPv6
+            if (subnet.AddressFamily == AddressFamily.InterNetworkV6 || 
+                mask.AddressFamily == AddressFamily.InterNetworkV6)
+                throw new NotImplementedException("This method does not yet support IPv6. Please contact NetworkComms.Net support if you would like this functionality.");
+            //If we have provided IPV4 subnets and masks and we have an ipv6 address then return false
+            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
+                return false;
+
             byte[] addrBytes = address.GetAddressBytes();
             byte[] maskBytes = mask.GetAddressBytes();
             byte[] maskedAddressBytes = new byte[addrBytes.Length];
@@ -645,7 +663,9 @@ namespace NetworkCommsDotNet
         /// <param name="remoteIPEndPoint">The remote end point</param>
         /// <returns>The selected local end point</returns>
         public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
-        {           
+        {
+            if (remoteIPEndPoint == null) throw new ArgumentNullException("remoteIPEndPoint", "Provided IPEndPoint cannot be null.");
+
 #if WINDOWS_PHONE
             var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
             if (t.Wait(20) && t.Result.Count > 0)
@@ -660,9 +680,14 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("Unable to determine correct local end point.");
 #else
             //We use UDP as its connectionless hence faster
-            Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-            testSocket.Connect(remoteIPEndPoint);
-            return (IPEndPoint)testSocket.LocalEndPoint;
+            IPEndPoint result;
+            using (Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            {
+                testSocket.Connect(remoteIPEndPoint);
+                result = (IPEndPoint)testSocket.LocalEndPoint;
+            }
+
+            return result;
 #endif
         }
 
@@ -827,7 +852,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority + ".");
 
                 if (item == null)
-                    throw new NullReferenceException("PriorityQueueItem was null, unable to continue.");
+                    throw new ArgumentNullException("item", "Cast from object to PriorityQueueItem resulted in null reference, unable to continue.");
 
 #if !WINDOWS_PHONE
                 if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
@@ -921,7 +946,7 @@ namespace NetworkCommsDotNet
                 if (item != null)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(ex.Message != null ? ex.Message : "A possible duplicate connection was detected with " + item.Connection + ". Closing connection.");
-                    item.Connection.CloseConnection(true, 2);
+                    item.Connection.CloseConnection(true, 42);
                 }
             }
             catch (Exception ex)
@@ -1032,6 +1057,10 @@ namespace NetworkCommsDotNet
         /// <param name="sendReceiveOptions">The SendReceiveOptions to be used for the provided packet type</param>
         public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
         {
+            if (packetTypeStr == null) throw new ArgumentNullException("packetTypeStr", "Provided packetType string cannot be null.");
+            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided PacketHandlerCallBackDelegate<T> cannot be null.");
+            if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions cannot be null.");
+
             lock (globalDictAndDelegateLocker)
             {
                 //Add the custom serializer and compressor if necessary
@@ -1323,9 +1352,14 @@ namespace NetworkCommsDotNet
         internal static int globalConnectionShutdownDelegateCount = 0;
 
         /// <summary>
-        /// Multicast delegate pointer for connection establishments.
+        /// Multicast delegate pointer for connection establishments, run asynchronously.
         /// </summary>
-        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegates;
+        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegatesAsync;
+
+        /// <summary>
+        /// Multicast delegate pointer for connection establishments, run synchronously.
+        /// </summary>
+        internal static ConnectionEstablishShutdownDelegate globalConnectionEstablishDelegatesSync;
 
         /// <summary>
         /// Delegate counter for debugging.
@@ -1352,7 +1386,7 @@ namespace NetworkCommsDotNet
 
                 globalConnectionShutdownDelegateCount++;
 
-                if (LoggingEnabled) logger.Info("Added globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
+                if (LoggingEnabled) logger.Info("Added globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount.ToString());
             }
         }
 
@@ -1367,7 +1401,7 @@ namespace NetworkCommsDotNet
                 globalConnectionShutdownDelegates -= connectionShutdownDelegate;
                 globalConnectionShutdownDelegateCount--;
 
-                if (LoggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount);
+                if (LoggingEnabled) logger.Info("Removed globalConnectionShutdownDelegates. " + globalConnectionShutdownDelegateCount.ToString());
             }
         }
 
@@ -1375,18 +1409,29 @@ namespace NetworkCommsDotNet
         /// Add a new connection establish delegate which will be called for every connection once it has been succesfully established.
         /// </summary>
         /// <param name="connectionEstablishDelegate">The delegate to call after all connection establishments.</param>
-        public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate)
+        /// <param name="runSynchronously">If true this ConnectionEstablishShutdownDelegate will be called synchronously during the connection establish. The connection will not be considered established until the ConnectionEstablishShutdownDelegate has completed.</param>
+        public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate, bool runSynchronously = false)
         {
             lock (globalDictAndDelegateLocker)
             {
-                if (globalConnectionEstablishDelegates == null)
-                    globalConnectionEstablishDelegates = connectionEstablishDelegate;
+                if (runSynchronously)
+                {
+                    if (globalConnectionEstablishDelegatesSync == null)
+                        globalConnectionEstablishDelegatesSync = connectionEstablishDelegate;
+                    else
+                        globalConnectionEstablishDelegatesSync += connectionEstablishDelegate;
+                }
                 else
-                    globalConnectionEstablishDelegates += connectionEstablishDelegate;
+                {
+                    if (globalConnectionEstablishDelegatesAsync == null)
+                        globalConnectionEstablishDelegatesAsync = connectionEstablishDelegate;
+                    else
+                        globalConnectionEstablishDelegatesAsync += connectionEstablishDelegate;
+                }
 
                 globalConnectionEstablishDelegateCount++;
 
-                if (LoggingEnabled) logger.Info("Added globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
+                if (LoggingEnabled) logger.Info("Added globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount.ToString());
             }
         }
 
@@ -1398,10 +1443,13 @@ namespace NetworkCommsDotNet
         {
             lock (globalDictAndDelegateLocker)
             {
-                globalConnectionEstablishDelegates -= connectionEstablishDelegate;
+                //Remove from either async or sync delegates
+                globalConnectionEstablishDelegatesAsync -= connectionEstablishDelegate;
+                globalConnectionEstablishDelegatesSync -= connectionEstablishDelegate;
+
                 globalConnectionEstablishDelegateCount--;
 
-                if (LoggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount);
+                if (LoggingEnabled) logger.Info("Removed globalConnectionEstablishDelegates. " + globalConnectionEstablishDelegateCount.ToString());
             }
         }
 
@@ -1441,7 +1489,7 @@ namespace NetworkCommsDotNet
                     if (!NetworkLoadThread.Join(threadShutdownTimeoutMS))
                     {
                         NetworkLoadThread.Abort();
-                        throw new CommsSetupShutdownException("Timeout waiting for NetworkLoadThread thread to shutdown after " + threadShutdownTimeoutMS + " ms. ");
+                        throw new CommsSetupShutdownException("Timeout waiting for NetworkLoadThread thread to shutdown after " + threadShutdownTimeoutMS.ToString() + " ms. ");
                     }
                 }
             }
@@ -1634,7 +1682,8 @@ namespace NetworkCommsDotNet
 #elif WINDOWS_PHONE
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]");
 #else
-                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + System.Diagnostics.Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
+                using(Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
+                    entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
 #endif
 
                 try
@@ -1723,17 +1772,23 @@ namespace NetworkCommsDotNet
         /// <returns>The MD5 checksum as a string</returns>
         public static string MD5Bytes(Stream streamToMD5)
         {
-            System.Security.Cryptography.HashAlgorithm md5;
+            if (streamToMD5 == null) throw new ArgumentNullException("streamToMD5", "Provided Stream cannot be null.");
 
+            string resultStr;
+
+            using (System.Security.Cryptography.HashAlgorithm md5 =
 #if WINDOWS_PHONE
-            md5 = new DPSBase.MD5Managed();
+            new DPSBase.MD5Managed())
 #else
-            md5 = System.Security.Cryptography.MD5.Create();
+            System.Security.Cryptography.MD5.Create())
 #endif
+            {
+                //If we don't ensure the position is consistent the MD5 changes
+                streamToMD5.Seek(0, SeekOrigin.Begin);
+                resultStr = BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
+            }
 
-            //If we don't ensure the position is consistent the MD5 changes
-            streamToMD5.Seek(0, SeekOrigin.Begin);
-            return BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
+            return resultStr;
         }
 
         /// <summary>
@@ -1743,7 +1798,10 @@ namespace NetworkCommsDotNet
         /// <returns>The MD5 checksum as a string</returns>
         public static string MD5Bytes(byte[] bytesToMd5)
         {
-            return MD5Bytes(new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false, true));
+            if (bytesToMd5 == null) throw new ArgumentNullException("bytesToMd5", "Provided byte[] cannot be null.");
+
+            using(MemoryStream stream = new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false, true))
+                return MD5Bytes(stream);
         }
 
         /// <summary>
@@ -1920,7 +1978,7 @@ namespace NetworkCommsDotNet
                 }                
             }
 
-            if (LoggingEnabled) logger.Trace("Closing " + connectionsToClose.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("Closing " + connectionsToClose.Count.ToString() + " connections.");
 
             foreach (Connection connection in connectionsToClose)
                 connection.CloseConnection(false, -6);
@@ -1955,7 +2013,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (LoggingEnabled) logger.Trace("RetrieveConnection by connectionType='"+connectionType+"'. Returning list of " + result.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("RetrieveConnection by connectionType='" + connectionType.ToString() + "'. Returning list of " + result.Count.ToString() + " connections.");
 
             return result;
         }
@@ -1981,7 +2039,7 @@ namespace NetworkCommsDotNet
                 }                
             }
 
-            if (LoggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'. Returning list of " + resultList.Count + " connections.");
+            if (LoggingEnabled) logger.Trace("RetrieveConnection by networkIdentifier='" + networkIdentifier + "' and connectionType='" + connectionType.ToString() + "'. Returning list of " + resultList.Count.ToString() + " connections.");
 
             return resultList;
         }
@@ -1993,6 +2051,8 @@ namespace NetworkCommsDotNet
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection GetExistingConnection(ConnectionInfo connectionInfo)
         {
+            if (connectionInfo == null) throw new ArgumentNullException("connectionInfo", "Provided ConnectionInfo cannot be null.");
+
             Connection result = null;
             lock (globalDictAndDelegateLocker)
             {
@@ -2039,10 +2099,11 @@ namespace NetworkCommsDotNet
 
             if (LoggingEnabled)
             {
+                string connectionTypeStr = connectionType.ToString();
                 if (result == null)
-                    logger.Trace("RetrieveConnection by remoteEndPoint='"+remoteEndPoint.Address+":"+remoteEndPoint.Port+"' and connectionType='"+connectionType+"'. No matching connection was found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "' and connectionType='" + connectionTypeStr + "'. No matching connection was found.");
                 else
-                    logger.Trace("RetrieveConnection by remoteEndPoint='"+remoteEndPoint.Address+":"+remoteEndPoint.Port+"' and connectionType='"+connectionType+"'. Matching connection was found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "' and connectionType='" + connectionTypeStr + "'. Matching connection was found.");
             }
 
             return result;
@@ -2055,6 +2116,8 @@ namespace NetworkCommsDotNet
         /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(ConnectionInfo connectionInfo)
         {
+            if (connectionInfo == null) throw new ArgumentNullException("connectionInfo", "Provided ConnectionInfo cannot be null.");
+
             bool result = false;
             lock (globalDictAndDelegateLocker)
             {
@@ -2084,7 +2147,11 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            if (LoggingEnabled) logger.Trace("Checking for existing connection by identifier='"+networkIdentifier+"' and connectionType='"+connectionType+"'");
+            if (LoggingEnabled)
+            {
+                string connectionTypeStr = connectionType.ToString();
+                logger.Trace("Checking for existing connection by identifier='" + networkIdentifier + "' and connectionType='" + connectionTypeStr + "'");
+            }
             return result;
         }
 
@@ -2103,7 +2170,11 @@ namespace NetworkCommsDotNet
                     result = allConnectionsByEndPoint[remoteEndPoint].ContainsKey(connectionType);
             }
 
-            if (LoggingEnabled) logger.Trace("Checking for existing connection by endPoint='"+remoteEndPoint.Address + ":" + remoteEndPoint.Port+"' and connectionType='" + connectionType + "'");
+            if (LoggingEnabled)
+            {
+                string connectionTypeStr = connectionType.ToString();
+                logger.Trace("Checking for existing connection by endPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "' and connectionType='" + connectionTypeStr + "'");
+            }
             return result;
         }
 
@@ -2264,18 +2335,18 @@ namespace NetworkCommsDotNet
         /// Update the endPoint reference for the provided connection with the newEndPoint. If there is no change just returns
         /// </summary>
         /// <param name="connection"></param>
-        /// <param name="newEndPoint"></param>
-        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newEndPoint)
+        /// <param name="newRemoteEndPoint"></param>
+        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newRemoteEndPoint)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newEndPoint != null ? " Provided new endPoint of " + newEndPoint.Address + ":" + newEndPoint.Port : ""));
+                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.Address + ":" + newRemoteEndPoint.Port : ""));
 
-            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newEndPoint))
+            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint))
             {
                 lock (globalDictAndDelegateLocker)
                 {
                     RemoveConnectionReference(connection, false);
-                    AddConnectionByReferenceEndPoint(connection, newEndPoint);
+                    AddConnectionByReferenceEndPoint(connection, newRemoteEndPoint);
                 }
             }
         }
@@ -2371,6 +2442,8 @@ namespace NetworkCommsDotNet
         }
 
         public Logger() { }
+
+        public void Shutdown() { }
     }
 #endif
 }

@@ -33,7 +33,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace NetworkCommsDotNet
 {
-    public partial class UDPConnection : Connection
+    public sealed partial class UDPConnection : Connection
     {
 #if WINDOWS_PHONE
         DatagramSocket socket;
@@ -207,9 +207,9 @@ namespace NetworkCommsDotNet
 
             //We are limited in size for the isolated send
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
-                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
+                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
@@ -232,7 +232,7 @@ namespace NetworkCommsDotNet
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
         }
 
         /// <summary>
@@ -310,7 +310,7 @@ namespace NetworkCommsDotNet
                 }
                 catch (Exception)
                 {
-                    CloseConnection(true, 19);
+                    CloseConnection(true, 40);
                 }
             }
         }
@@ -395,6 +395,10 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 25);
             }
+            catch (ArgumentNullException)
+            {
+                CloseConnection(true, 38);
+            }
             catch (IOException)
             {
                 CloseConnection(true, 26);
@@ -424,7 +428,7 @@ namespace NetworkCommsDotNet
         /// Incoming data listen async method
         /// </summary>
         /// <param name="ar">Call back state data</param>
-        protected void IncomingUDPPacketHandler(IAsyncResult ar)
+        private void IncomingUDPPacketHandler(IAsyncResult ar)
         {
             try
             {
@@ -432,7 +436,7 @@ namespace NetworkCommsDotNet
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                 byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
                 if (isIsolatedUDPConnection)
                 {
@@ -473,6 +477,10 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 25);
             }
+            catch (ArgumentNullException)
+            {
+                CloseConnection(true, 36);
+            }
             catch (IOException)
             {
                 CloseConnection(true, 26);
@@ -501,7 +509,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Incoming data listen sync method
         /// </summary>
-        protected void IncomingUDPPacketWorker()
+        private void IncomingUDPPacketWorker()
         {
             try
             {
@@ -513,7 +521,7 @@ namespace NetworkCommsDotNet
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                     byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port + ".");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
                     if (isIsolatedUDPConnection)
                     {
@@ -553,6 +561,10 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 20);
             }
+            catch (ArgumentNullException)
+            {
+                CloseConnection(true, 37);
+            }
             catch (IOException)
             {
                 CloseConnection(true, 21);
@@ -574,7 +586,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
-                CloseConnection(true, 30);
+                CloseConnection(true, 41);
             }
 
             //Clear the listen thread object because the thread is about to end

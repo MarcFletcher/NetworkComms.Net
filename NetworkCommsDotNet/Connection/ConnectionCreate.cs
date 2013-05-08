@@ -128,22 +128,18 @@ namespace NetworkCommsDotNet
                     connectionEstablishWait.Set();
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
-
-                    //Call the establish delegate if one is set
-                    if (NetworkComms.globalConnectionEstablishDelegates != null)
-                        NetworkComms.globalConnectionEstablishDelegates(this);
                 }
             }
             catch (SocketException e)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true, 5);
+                CloseConnection(true, 43);
                 throw new ConnectionSetupException(e.ToString());
             }
             catch (Exception ex)
             {
                 //If anything goes wrong we close the connection.
-                CloseConnection(true, 6);
+                CloseConnection(true, 44);
 
                 //For some odd reason not all SocketExceptions get caught above, so another check here
                 if (ex.GetBaseException().GetType() == typeof(SocketException))
@@ -154,9 +150,24 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Any connection type specific establish tasks
+        /// Any connection type specific establish tasks. Base should be called to trigger connection establish delegates
         /// </summary>
-        protected abstract void EstablishConnectionSpecific();
+        protected virtual void EstablishConnectionSpecific()
+        {
+            //Call asynchronous connection establish delegates here
+            if (NetworkComms.globalConnectionEstablishDelegatesAsync != null)
+            {
+                NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
+                {
+                    Connection connectionParam = obj as Connection;
+                    NetworkComms.globalConnectionEstablishDelegatesAsync(connectionParam);
+                }), this);
+            }
+
+            //Call synchronous connection establish delegates here
+            if (NetworkComms.globalConnectionEstablishDelegatesSync != null)
+                NetworkComms.globalConnectionEstablishDelegatesSync(this);
+        }
 
         /// <summary>
         /// Return true if the connection is established within the provided timeout, otherwise false
@@ -251,48 +262,45 @@ namespace NetworkCommsDotNet
         /// <returns>True if connection is successfully setup, otherwise false</returns>
         private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
         {
-            //try
-            //{
-                lock (NetworkComms.globalDictAndDelegateLocker)
-                {
-                    Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
+            lock (NetworkComms.globalDictAndDelegateLocker)
+            {
+                Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
 
-                    //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
-                    if (connectionByEndPoint == null)
+                //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
+                if (connectionByEndPoint == null)
+                {
+                    connectionSetupException = true;
+                    connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
+                }
+                else
+                {
+                    //We need to check for a possible GUID clash
+                    //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
+                    //but hey, we live in a crazy world!
+                    if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
                     {
                         connectionSetupException = true;
-                        connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
+                        connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
+                    }
+                    else if (connectionByEndPoint != this)
+                    {
+                        possibleClashConnectionWithPeer_ByEndPoint = true;
+                        existingConnection = connectionByEndPoint;
                     }
                     else
                     {
-                        //We need to check for a possible GUID clash
-                        //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
-                        //but hey, we live in a crazy world!
-                        if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
-                        {
-                            connectionSetupException = true;
-                            connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
-                        }
-                        else if (connectionByEndPoint != this)
-                        {
-                            possibleClashConnectionWithPeer_ByEndPoint = true;
-                            existingConnection = connectionByEndPoint;
-                        }
-                        else
-                        {
-                            //Update the connection info
-                            NetworkComms.UpdateConnectionReferenceByEndPoint(this, remoteConnectionInfo.LocalEndPoint);
-                            ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo);
+                        //Update the connection info
+                        //We never change the this.ConnectionInfo.RemoteEndPoint.Address as there might be NAT involved
+                        //We may update the port however
+                        IPEndPoint newRemoteIPEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteEndPoint.Address, remoteConnectionInfo.LocalEndPoint.Port);
+                        NetworkComms.UpdateConnectionReferenceByEndPoint(this, newRemoteIPEndPoint);
 
-                            return true;
-                        }
+                        ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo, newRemoteIPEndPoint);
+
+                        return true;
                     }
                 }
-            //}
-            //catch (Exception ex)
-            //{
-                //NetworkComms.LogError(ex, "ConnectionSetupHandlerInnerError");
-            //}
+            }
 
             return false;
         }

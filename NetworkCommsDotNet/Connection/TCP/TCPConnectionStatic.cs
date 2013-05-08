@@ -34,7 +34,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
     /// </summary>
-    public partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : Connection
     {
         static object staticTCPConnectionLocker = new object();
 
@@ -137,8 +137,8 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
-                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + newLocalEndPoint.Port.ToString() + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        throw new CommsSetupShutdownException("It was not possible to open port #" + newLocalEndPoint.Port.ToString() + " on " + newLocalEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
 
@@ -154,7 +154,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
                     tcpListenerDict.Add(ipEndPointUsed, newListenerInstance);
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint - " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port.ToString());
                 }
             }
 
@@ -170,6 +170,8 @@ namespace NetworkCommsDotNet
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
         {
+            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
+
             try
             {
                 foreach (var endPoint in localEndPoints)

@@ -142,7 +142,9 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (options == null) throw new PacketHandlerException("Provided sendReceiveOptions should not be null for packetType " + packetHeader.PacketType);
+                if (packetHeader == null) throw new ArgumentNullException("packetHeader", "Provided PacketHeader cannot not be null.");
+                if (incomingObjectBytes == null) throw new ArgumentNullException("incomingObjectBytes", "Provided MemoryStream cannot not be null for packetType " + packetHeader.PacketType);
+                if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot not be null for packetType " + packetHeader.PacketType);
 
                 //We take a copy of the handlers list incase it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
@@ -218,6 +220,10 @@ namespace NetworkCommsDotNet
         /// <param name="options">The <see cref="SendReceiveOptions"/> to be used for the provided packet type</param>
         public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options)
         {
+            if (packetTypeStr == null) throw new ArgumentNullException("packetTypeStr", "Provided packetType string cannot be null.");
+            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided NetworkComms.PacketHandlerCallBackDelegate<T> cannot be null.");
+            if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
+
             lock (delegateLocker)
             {
                 //Add the custom serializer and compressor if necessary

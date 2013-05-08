@@ -196,7 +196,7 @@ namespace NetworkCommsDotNet
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
             {
                 RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
-                throw new ExpectedReturnTimeoutException("Timeout occurred after " + returnPacketTimeOutMilliSeconds + "ms waiting for response packet of type '" + expectedReturnPacketTypeStr + "'.");
+                throw new ExpectedReturnTimeoutException("Timeout occurred after " + returnPacketTimeOutMilliSeconds.ToString() + "ms waiting for response packet of type '" + expectedReturnPacketTypeStr + "'.");
             }
 
             RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
@@ -244,9 +244,9 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled)
                 {
                     if (closeDueToError)
-                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " due to error from [" + logLocation + "].");
+                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " due to error from [" + logLocation.ToString() + "].");
                     else
-                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " from [" + logLocation + "].");
+                        NetworkComms.Logger.Debug("Closing connection with " + ConnectionInfo + " from [" + logLocation.ToString() + "].");
                 }
 
                 ConnectionInfo.NoteConnectionShutdown();
@@ -255,7 +255,7 @@ namespace NetworkCommsDotNet
                 if (closeDueToError)
                 {
                     connectionSetupException = true;
-                    connectionSetupExceptionStr = "Connection was closed during setup from [" + logLocation + "].";
+                    connectionSetupExceptionStr = "Connection was closed during setup from [" + logLocation.ToString() + "].";
                 }
 
                 //Ensure we are not waiting for a connection to be established if we have died due to error
@@ -321,7 +321,7 @@ namespace NetworkCommsDotNet
                 if (ex is ThreadAbortException)
                 { /*Ignore the threadabort exception if we had to nuke a thread*/ }
                 else
-                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation + (closeDueToError ? " due to error." : "."));
+                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation.ToString() + (closeDueToError ? " due to error." : "."));
 
                 //We try to rethrow where possible but CloseConnection could very likely be called from within networkComms so we just have to be happy with a log here
             }
@@ -369,7 +369,7 @@ namespace NetworkCommsDotNet
             {
                 if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
                 {
-                    CloseConnection(false, -1);
+                    CloseConnection(false, -11);
                     return false;
                 }
                 else
@@ -385,13 +385,13 @@ namespace NetworkCommsDotNet
 
                     responseTimeMS = timer.ElapsedMilliseconds;
 
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds + "ms.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds.ToString() + "ms.");
 
                     return returnValue[0] == 1;
                 }
                 catch (Exception)
                 {
-                    CloseConnection(true, 4);
+                    CloseConnection(true, 46);
                     return false;
                 }
             }   
@@ -541,7 +541,7 @@ namespace NetworkCommsDotNet
                 catch (CommunicationException)
                 {
                     //We close the connection due to communication exceptions
-                    CloseConnection(true, 33);
+                    CloseConnection(true, 47);
                     throw;
                 }
                 catch (TimeoutException ex)
@@ -549,13 +549,13 @@ namespace NetworkCommsDotNet
                     //We close the connection due to communication exceptions
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("Timeout exception for connection " + this.ConnectionInfo + (ex.Message != null ? ". " +ex.Message : "."));
 
-                    CloseConnection(true, 34);
+                    CloseConnection(true, 48);
                     throw new ConnectionSendTimeoutException(ex.ToString());
                 }
                 catch (Exception ex)
                 {
                     //We close the connection due to communication exceptions
-                    CloseConnection(true, 35);
+                    CloseConnection(true, 49);
                     throw new CommunicationException(ex.ToString());
                 }
                 finally

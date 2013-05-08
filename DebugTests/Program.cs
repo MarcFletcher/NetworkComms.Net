@@ -71,13 +71,20 @@ namespace DebugTests
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
-            //BasicSend.RunExample();
+            NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
+                {
+                    Thread.Sleep(5000);
+                    Console.WriteLine(" XXX Connection established with {0}",connection);
+                    connection.SendObject("Message", "message from establish handler");
+                }, true);
+
+            BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
             //LoadTest.RunExample();
             //DebugTest.GoStreamTest();
-            ThreadPoolTest.RunExample();
+            //ThreadPoolTest.RunExample();
         }
     }
 }
