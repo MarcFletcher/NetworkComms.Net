@@ -348,25 +348,47 @@ namespace DPSBase
             AssemblyLoader loader;
             ProcessArgument args;
 #if !WINDOWS_PHONE && !iOS && !ANDROID
+
+            AppDomain tempDomain = null;
+
             try
             {
-                AppDomain tempDomain = AppDomain.CreateDomain("Temp");
+                //Create a new domain with the same settings as the current domain
+                AppDomainSetup setup = AppDomain.CurrentDomain.SetupInformation;
+                tempDomain = AppDomain.CreateDomain("Temp_" + Guid.NewGuid().ToString(), AppDomain.CurrentDomain.Evidence, setup);
 
-                loader = (AssemblyLoader)tempDomain.CreateInstanceAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
+                try
+                {
+                    //First try creating the proxy from the assembly using the assembly name
+                    loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
+                }
+                catch (FileNotFoundException)
+                {
+                    //If that fails try with the assembly location.  An exception here 
+                    loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.Location, typeof(AssemblyLoader).FullName);
+                }
 
                 args = new ProcessArgument();
-                args.entryDomain = Assembly.GetEntryAssembly().FullName;
 
-                loader.ProcessApplicationAssemblies(args);
+                //If an entry asssembly exists just pass that, the rest can be worked out from there.  
+                //On WCF there is no entry assembly. In that case fill the loaded domains list with those already loaded
+                if (Assembly.GetEntryAssembly() != null)
+                    args.loadedDomains = new List<string>() { Assembly.GetEntryAssembly().FullName };
+                else
+                {
+                    List<string> loadedDomains = new List<string>();
 
-                //app.DoCallBack(new CrossAppDomainDelegate(loader.ProcessApplicationAssemblies));
-                AppDomain.Unload(tempDomain);
-                tempDomain = null;
-                GC.Collect();
+                    foreach (var ass in AppDomain.CurrentDomain.GetAssemblies())
+                        loadedDomains.Add(ass.FullName);
+
+                    args.loadedDomains = loadedDomains;
+                }
+
+                loader.ProcessApplicationAssemblies(args);                
             }
             catch (FileNotFoundException)
             {
-                //In mono the above load method may not work so we will fall back to our older way of doing the same
+                //In mono, using mkbundle, the above load method may not work so we will fall back to our older way of doing the same
                 //The disadvantage of this approach is that all assemblies are loaded and then stay in memory increasing the footprint slightly 
                 loader = new AssemblyLoader();
                 args = new ProcessArgument();
@@ -379,6 +401,29 @@ namespace DPSBase
                 args = new ProcessArgument();
 
                 loader.ProcessApplicationAssemblies(args);
+            }
+            catch (Exception)
+            {
+                loader = new AssemblyLoader();
+                args = new ProcessArgument();
+
+                loader.ProcessApplicationAssemblies(args);
+            }
+            finally
+            {
+                if (tempDomain != null)
+                {
+                    try
+                    {
+                        AppDomain.Unload(tempDomain);
+                    }
+                    catch (Exception) { }
+                    finally
+                    {
+                        tempDomain = null;
+                        GC.Collect();
+                    }
+                }
             }
 #else
             loader = new AssemblyLoader();
@@ -403,7 +448,7 @@ namespace DPSBase
         private class ProcessArgument : MarshalByRefObject
         {
 #if !WINDOWS_PHONE  && !iOS && !ANDROID
-            public string entryDomain;
+            public List<string> loadedDomains;
 #endif
             public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
             public Dictionary<byte, string> processorTypes;// = new Dictionary<byte, string>();
@@ -422,8 +467,11 @@ namespace DPSBase
 #if !WINDOWS_PHONE && !iOS && !ANDROID
                     AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
 
-                    if (args.entryDomain != null)
-                        AppDomain.CurrentDomain.Load(args.entryDomain);                    
+                    if (args.loadedDomains != null)
+                    {
+                        foreach (var domain in args.loadedDomains)
+                            AppDomain.CurrentDomain.Load(domain);
+                    }
 #endif
 
                     //Store the serializer and processor types as we will need then repeatedly
@@ -588,6 +636,8 @@ namespace DPSBase
                 }
                 catch (Exception ex)
                 {
+                    int i = 1;
+
                     //using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
                         //Console.WriteLine(ex.ToString());
                 }
