@@ -24,6 +24,9 @@ namespace DPSBase
         /// <returns>The average time in milliseconds per KB written</returns>
         public static double Write(byte[] sendBuffer, int bufferLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
+            if (sendBuffer == null) throw new ArgumentNullException("sendBuffer");
+            if (destinationStream == null) throw new ArgumentNullException("destinationStream");
+
             int totalBytesCompleted = 0;
             Exception innerException = null;
             AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
@@ -50,7 +53,7 @@ namespace DPSBase
                     }), null);
 
                 if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
-                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS + "ms");
+                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
                 if (innerException != null)
                     throw innerException;
@@ -78,6 +81,9 @@ namespace DPSBase
         /// <returns>The average time in milliseconds per byte written</returns>
         public static double Write(Stream inputStream, long inputStart, long inputLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
+            if (inputStream == null) throw new ArgumentException("inputStream");
+            if (destinationStream == null) throw new ArgumentException("destinationStream");
+
             //Make sure we start in the right place
             inputStream.Seek(inputStart, SeekOrigin.Begin);
             long totalBytesCompleted = 0;
@@ -118,7 +124,7 @@ namespace DPSBase
                 }), null);
 
                 if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
-                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS + "ms");
+                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
                 if (innerException != null)
                     throw innerException;

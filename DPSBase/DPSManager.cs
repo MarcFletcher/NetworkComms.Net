@@ -202,6 +202,8 @@ namespace DPSBase
         /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
+            if (dataProcessor == null) throw new ArgumentNullException("dataProcessor");
+
             if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType().AssemblyQualifiedName))
                 if (instance.DataProcessorsByType[dataProcessor.GetType().AssemblyQualifiedName] != dataProcessor)
                     throw new ArgumentException("A different DataProcessor of the same Type or Id has already been added to DPSManager");
@@ -244,6 +246,8 @@ namespace DPSBase
         /// <exception cref="ArgumentException">Thrown if A different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataSerializer(DataSerializer dataSerializer)
         {
+            if (dataSerializer == null) throw new ArgumentNullException("dataSerializer");
+
             if (instance.SerializersByType.ContainsKey(dataSerializer.GetType().AssemblyQualifiedName))
                 if (instance.SerializersByType[dataSerializer.GetType().AssemblyQualifiedName] != dataSerializer)
                     throw new ArgumentException("A different DataSerializer of the same Type or Id has already been added to DPSManager");
@@ -289,6 +293,8 @@ namespace DPSBase
         /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be used when transmitting data using NetworkCommsDotNet</remarks>
         public static long CreateSerializerDataProcessorIdentifier(DataSerializer serializer, List<DataProcessor> dataProcessors)
         {
+            if (serializer == null) throw new ArgumentNullException("serializer");
+
             long res = 0;
 
             res |= serializer.Identifier;

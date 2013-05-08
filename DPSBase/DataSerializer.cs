@@ -80,11 +80,11 @@ namespace DPSBase
         /// <returns>Serialized array of bytes</returns>
         public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            if (objectToSerialise == null) throw new ArgumentNullException("Provided paramater objectToSerialise should not be null.");
+            if (objectToSerialise == null) throw new ArgumentNullException("objectToSerialise");
 
             Type objectToSerialiseType = objectToSerialise.GetType();
-            if (objectToSerialiseType == typeof(Stream)) 
-                throw new ArgumentException("Provided parameter objectToSerialise should not be of type Stream. Consider using StreamSendWrapper as send object instead.");
+            if (objectToSerialiseType == typeof(Stream))
+                throw new ArgumentException("Parameter should not be of type Stream. Consider using StreamSendWrapper as send object instead.", "objectToSerialise");
             else if (objectToSerialiseType == typeof(StreamSendWrapper))
                 return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamSendWrapper, dataProcessors, options);
 
@@ -177,7 +177,10 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
         {
-            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true));
+            if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
+
+            using (var ms = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true))
+                return DeserialiseDataObject<T>(ms);
         }
 
         /// <summary>
@@ -188,6 +191,8 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(MemoryStream receivedObjectStream)
         {
+            if (receivedObjectStream == null) throw new ArgumentNullException("receivedObjectStream");
+
             return DeserialiseDataObject<T>(receivedObjectStream, null, null);
         }
 
@@ -201,6 +206,8 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
+            if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
+
             return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true), dataProcessors, options);
         }
 
@@ -214,7 +221,7 @@ namespace DPSBase
         /// <returns>The deserialized object</returns>
         public T DeserialiseDataObject<T>(MemoryStream receivedObjectStream, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            if (receivedObjectStream == null) throw new ArgumentNullException("Provided paramater receivedObjectBytes should not be null.");
+            if (receivedObjectStream == null) throw new ArgumentNullException("receivedObjectStream");
 
             //Ensure the stream is at the beginning
             receivedObjectStream.Seek(0, SeekOrigin.Begin);

@@ -16,9 +16,6 @@ namespace DPSBase
         /// </summary>
         public event EventHandler Completed;
 
-        private readonly Stream input;
-        private readonly Stream output;
-
         private byte[] buffer = new byte[4096];
 
         /// <summary>
@@ -26,30 +23,33 @@ namespace DPSBase
         /// </summary>
         /// <param name="input"></param>
         /// <param name="output"></param>
-        public AsyncStreamCopier(Stream input, Stream output)
-        {
-            this.input = input;
-            this.output = output;
+        public AsyncStreamCopier()
+        {                        
         }
 
         /// <summary>
         /// Starts the async copy
         /// </summary>
-        public void Start()
+        public void Start(Stream input, Stream output)
         {
-            GetNextChunk();
+            GetNextChunk(new Stream[] { input, output });
         }
 
-        private void GetNextChunk()
+        private void GetNextChunk(Stream[] streams)
         {
-            input.BeginRead(buffer, 0, buffer.Length, InputReadComplete, null);
+            var input = streams[0];
+            input.BeginRead(buffer, 0, buffer.Length, InputReadComplete, streams);
         }
 
         private void InputReadComplete(IAsyncResult ar)
         {
+            var streams = ar.AsyncState as Stream[];
+            var input = streams[0];
+            var output = streams[1];
+
             // input read asynchronously completed
             int bytesRead = input.EndRead(ar);
-
+            
             if (bytesRead == 0)
             {
                 RaiseCompleted();
@@ -60,7 +60,7 @@ namespace DPSBase
             output.Write(buffer, 0, bytesRead);
 
             // get next
-            GetNextChunk();
+            GetNextChunk(streams);
         }
 
         private void RaiseCompleted()
@@ -81,9 +81,9 @@ namespace DPSBase
             var completedEvent = new ManualResetEvent(false);
 
             // copy as usual but listen for completion
-            var copier = new AsyncStreamCopier(source, destination);
+            var copier = new AsyncStreamCopier();
             copier.Completed += (s, e) => completedEvent.Set();
-            copier.Start();
+            copier.Start(source, destination);
 
             completedEvent.WaitOne();
         }

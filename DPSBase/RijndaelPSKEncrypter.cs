@@ -35,9 +35,9 @@ namespace DPSBase
     /// <see cref="DataProcessor"/> which encrypts/decrypts data using the Rijndael algorithm and a pre-shared password
     /// </summary>
     [DataSerializerProcessor(4)]
-    public class RijndaelPSKEncrypter : DataProcessor
+    public class RijndaelPSKEncrypter : DataProcessor, IDisposable
     {        
-        private static readonly string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
+        private const string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
         private static readonly byte[] SALT = new byte[] { 118, 100, 123, 136, 20, 242, 170, 227, 97, 168, 101, 177, 214, 211, 118, 137 };
 
 #if WINDOWS_PHONE
@@ -57,31 +57,47 @@ namespace DPSBase
         /// <inheritdoc />
         public override void ForwardProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
-            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
-            
-            var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16));
-            
-            CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
-            inStream.Flush();
-            csEncrypt.FlushFinalBlock();
+            if (options == null) throw new ArgumentNullException("options");
+            else if (!options.ContainsKey(PasswordOption)) throw new ArgumentException("Options must contain encryption key", "options");
 
-            writtenBytes = outStream.Position; 
+            if (outStream == null) throw new ArgumentNullException("outStream");
+
+            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
+
+            using (var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
+            {
+                using (CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write))
+                {
+                    AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
+                    inStream.Flush();
+                    csEncrypt.FlushFinalBlock();
+
+                    writtenBytes = outStream.Position;
+                }
+            }
         }
 
         /// <inheritdoc />
         public override void ReverseProcessDataStream(System.IO.Stream inStream, System.IO.Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
+            if (options == null) throw new ArgumentNullException("options");
+            else if (!options.ContainsKey(PasswordOption)) throw new ArgumentException("Options must contain encryption key", "options");
+
+            if (outStream == null) throw new ArgumentNullException("outStream");
+
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
 
-            var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16));
+            using (var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
+            {
+                using (CryptoStream csDecrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write))
+                {
+                    AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
+                    inStream.Flush();
+                    csDecrypt.FlushFinalBlock();
 
-            CryptoStream csDecrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write);
-            AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
-            inStream.Flush();
-            csDecrypt.FlushFinalBlock();
-
-            writtenBytes = outStream.Position; 
+                    writtenBytes = outStream.Position;
+                }
+            }
         }
         
         /// <summary>
@@ -91,7 +107,15 @@ namespace DPSBase
         /// <param name="password">The password</param>        
         public static void AddPasswordToOptions(Dictionary<string, string> options, string password)
         {
+            if (options == null) throw new ArgumentNullException("options");
+
             options[PasswordOption] = password;
+        }
+
+        public void Dispose()
+        {
+            if (encrypter != null)
+                (encrypter as IDisposable).Dispose();
         }
     }
 #endif

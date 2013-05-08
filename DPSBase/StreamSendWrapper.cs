@@ -79,7 +79,20 @@ namespace DPSBase
         /// <returns></returns>
         public string MD5CheckSum()
         {
-            throw new NotImplementedException();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                ThreadSafeStream.CopyTo(ms, Start, Length, 8000);
+
+#if WINDOWS_PHONE
+                using(var = md5 = new DPSBase.MD5Managed())
+                {
+#else
+                using (var md5 = System.Security.Cryptography.MD5.Create())
+                {
+#endif
+                    return BitConverter.ToString(md5.ComputeHash(ms)).Replace("-", "");
+                }
+            }
         }
     }
 }

@@ -100,12 +100,12 @@ namespace DPSBase
         public byte[] ToArray(long start, long length, int numberZeroBytesPrefex = 0)
         {
             if (length>int.MaxValue)
-                throw new ArgumentOutOfRangeException("Unable to return array whose size is larger than int.MaxValue. Consider requesting multiple smaller arrays.");
+                throw new ArgumentOutOfRangeException( "length", "Unable to return array whose size is larger than int.MaxValue. Consider requesting multiple smaller arrays.");
 
             lock (streamLocker)
             {
                 if (start + length > stream.Length)
-                    throw new ArgumentOutOfRangeException("Provided start and length parameters reference past the end of the available stream.");
+                    throw new ArgumentOutOfRangeException("length", "Provided start and length parameters reference past the end of the available stream.");
 
                 stream.Seek(start, SeekOrigin.Begin);
                 byte[] returnData = new byte[length + numberZeroBytesPrefex];
@@ -123,15 +123,17 @@ namespace DPSBase
             lock (streamLocker)
             {
                 stream.Seek(0, SeekOrigin.Begin);
-                HashAlgorithm md5;
-
+                
 #if WINDOWS_PHONE
-                    md5 = new DPSBase.MD5Managed();
+                using(var md5 = new DPSBase.MD5Managed())
+                {
 #else
-                    md5 = System.Security.Cryptography.MD5.Create();
+                using (var md5 = System.Security.Cryptography.MD5.Create())
+                {
 #endif
+                    return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "");
+                }
 
-                return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "");
             }
         }
 
@@ -142,6 +144,8 @@ namespace DPSBase
         /// <param name="startPosition"></param>
         public void Write(byte[] data, long startPosition)
         {
+            if (data == null) throw new ArgumentNullException("data");
+
             lock (streamLocker)
             {
                 stream.Seek(startPosition, SeekOrigin.Begin);
@@ -167,11 +171,11 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Call Close on the internal stream
+        /// Call Dispose on the internal stream
         /// </summary>
         public void Dispose()
         {
-            lock (streamLocker) stream.Close();
+            lock (streamLocker) stream.Dispose();
         }
 
         /// <summary>
