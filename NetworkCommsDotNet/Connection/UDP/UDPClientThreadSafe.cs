@@ -79,14 +79,6 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public void AllowNatTraversal(bool allowed)
-        {
-            throw new Exception("Cannot enable NAT traversal on .net 2.0");
-
-            //lock (locker)
-            //    udpClient.AllowNatTraversal(allowed);
-        }
-
         public void CloseClient()
         {
             lock (locker)

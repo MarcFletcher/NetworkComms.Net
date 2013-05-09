@@ -520,7 +520,7 @@ namespace NetworkCommsDotNet
 
         private static double currentNetworkLoadIncoming;
         private static double currentNetworkLoadOutgoing;
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
         private static Thread NetworkLoadThread = null;
         private static CommsMath currentNetworkLoadValuesIncoming;
         private static CommsMath currentNetworkLoadValuesOutgoing;
@@ -539,8 +539,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-#if WINDOWS_PHONE || ANDROID
-#else
+#if !WINDOWS_PHONE && !ANDROID
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -843,16 +842,19 @@ namespace NetworkCommsDotNet
         /// <param name="itemAsObj">Possible PriorityQueueItem. If null is provided an item will be removed from the global item queue</param>
         internal static void CompleteIncomingItemTask(object itemAsObj)
         {
+            if (itemAsObj == null)
+                throw new ArgumentNullException("itemAsObj", "Provided parameter itemAsObj cannot be null.");
+
             PriorityQueueItem item = null;
             try
             {
                 //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
                 item = itemAsObj as PriorityQueueItem;
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority + ".");
-
                 if (item == null)
-                    throw new ArgumentNullException("item", "Cast from object to PriorityQueueItem resulted in null reference, unable to continue.");
+                    throw new InvalidCastException("Cast from object to PriorityQueueItem resulted in null reference, unable to continue.");
+
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
 
 #if !WINDOWS_PHONE
                 if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
@@ -1252,7 +1254,7 @@ namespace NetworkCommsDotNet
                     object returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
 
                     //Pass the data onto the handler and move on.
-                    if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count + " selected global handlers.");
+                    if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count.ToString() + " selected global handlers.");
 
                     //Pass the object to all necessary delgates
                     //We need to use a copy because we may modify the original delegate list during processing
@@ -1480,7 +1482,7 @@ namespace NetworkCommsDotNet
                 LogError(ex, "CommsShutdownError");
             }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !ANDROID
             try
             {
                 if (NetworkLoadThread != null)
@@ -2202,10 +2204,12 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 #region Update NetworkComms Connection Dictionaries
+                ShortGuid currentNetworkIdentifier = connection.ConnectionInfo.NetworkIdentifier;
+
                 //We establish whether we have already done this step
-                if ((allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
-                    allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
-                    allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                if ((allConnectionsById.ContainsKey(currentNetworkIdentifier) &&
+                    allConnectionsById[currentNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                    allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                     ||
                     (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) &&
                     allConnectionsByEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType)))
@@ -2217,33 +2221,33 @@ namespace NetworkCommsDotNet
                 //Keep a reference of the connection for possible debugging later
                 if (maintainConnectionInfoHistory)
                 {
-                    if (oldNetworkIdentifierToConnectionInfo.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                    if (oldNetworkIdentifierToConnectionInfo.ContainsKey(currentNetworkIdentifier))
                     {
-                        if (oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                            oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
+                        if (oldNetworkIdentifierToConnectionInfo[currentNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            oldNetworkIdentifierToConnectionInfo[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo);
                         else
-                            oldNetworkIdentifierToConnectionInfo[connection.ConnectionInfo.NetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
+                            oldNetworkIdentifierToConnectionInfo[currentNetworkIdentifier].Add(connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo });
                     }
                     else
-                        oldNetworkIdentifierToConnectionInfo.Add(connection.ConnectionInfo.NetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
+                        oldNetworkIdentifierToConnectionInfo.Add(currentNetworkIdentifier, new Dictionary<ConnectionType, List<ConnectionInfo>>() { { connection.ConnectionInfo.ConnectionType, new List<ConnectionInfo>() { connection.ConnectionInfo } } });
                 }
 
-                if (allConnectionsById.ContainsKey(connection.ConnectionInfo.NetworkIdentifier) &&
-                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                if (allConnectionsById.ContainsKey(currentNetworkIdentifier) &&
+                        allConnectionsById[currentNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
                 {
-                    //if (!allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                    //if (!allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                     //    throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
                     //else
-                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
-                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Remove(connection);
+                    if (allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
+                        allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Remove(connection);
 
                     //Remove the connection type reference if it is empty
-                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Count == 0)
-                        allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Remove(connection.ConnectionInfo.ConnectionType);
+                    if (allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Count == 0)
+                        allConnectionsById[currentNetworkIdentifier].Remove(connection.ConnectionInfo.ConnectionType);
 
                     //Remove the identifier reference
-                    if (allConnectionsById[connection.ConnectionInfo.NetworkIdentifier].Count == 0)
-                        allConnectionsById.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                    if (allConnectionsById[currentNetworkIdentifier].Count == 0)
+                        allConnectionsById.Remove(currentNetworkIdentifier);
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by ID for " + connection.ConnectionInfo);
                 }
@@ -2274,8 +2278,8 @@ namespace NetworkCommsDotNet
         internal static void AddConnectionByReferenceEndPoint(Connection connection, IPEndPoint endPointToUse = null)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." + 
-                    (endPointToUse!=null ? " Provided override endPoint of " +endPointToUse.Address+ ":" + endPointToUse.Port : ""));
+                NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." +
+                    (endPointToUse != null ? " Provided override endPoint of " + endPointToUse.Address + ":" + endPointToUse.Port.ToString() : ""));
 
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
             if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (endPointToUse != null && endPointToUse.Address.Equals(IPAddress.Any)))
@@ -2301,8 +2305,8 @@ namespace NetworkCommsDotNet
                     existingConnection = GetExistingConnection(endPointToUse, connection.ConnectionInfo.ConnectionType);
                     if (existingConnection != connection)
                     {
-                        throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port + "). This can occasionaly occur if two peers try to connect to each other simultaneously. New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
-                            ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " - " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime) + " - " + " details - " + existingConnection.ConnectionInfo);
+                        throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + endPointToUse.Address + ":" + endPointToUse.Port.ToString() + "). This can occasionaly occur if two peers try to connect to each other simultaneously. New connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
+                            ". Existing connection is " + (existingConnection.ConnectionInfo.ServerSide ? "server side" : "client side") + ", " + existingConnection.ConnectionInfo.ConnectionState.ToString() + " - " + (existingConnection.ConnectionInfo.ConnectionState == ConnectionState.Establishing ? "creationTime:" + existingConnection.ConnectionInfo.ConnectionCreationTime.ToString() : "establishedTime:" + existingConnection.ConnectionInfo.ConnectionEstablishedTime.ToString()) + " - " + " details - " + existingConnection.ConnectionInfo);
                     }
                     else
                     {
@@ -2339,7 +2343,7 @@ namespace NetworkCommsDotNet
         internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newRemoteEndPoint)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.Address + ":" + newRemoteEndPoint.Port : ""));
+                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.Address + ":" + newRemoteEndPoint.Port.ToString() : ""));
 
             if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint))
             {

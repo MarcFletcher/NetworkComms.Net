@@ -21,8 +21,6 @@ namespace DPSBase
         /// <summary>
         /// Initialise a new instance of the asyncStreamCopier
         /// </summary>
-        /// <param name="input"></param>
-        /// <param name="output"></param>
         public AsyncStreamCopier()
         {                        
         }
@@ -30,6 +28,8 @@ namespace DPSBase
         /// <summary>
         /// Starts the async copy
         /// </summary>
+        /// <param name="input">Input stream</param>
+        /// <param name="output">Output stream</param>
         public void Start(Stream input, Stream output)
         {
             GetNextChunk(new Stream[] { input, output });

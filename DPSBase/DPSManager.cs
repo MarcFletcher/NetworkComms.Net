@@ -646,9 +646,9 @@ namespace DPSBase
                     }
 #endif
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    int i = 1;
+                    //int i = 1;
 
                     //using (StreamWriter sw = new StreamWriter("DPSManagerLoadError.txt", false))
                         //Console.WriteLine(ex.ToString());

@@ -251,9 +251,9 @@ namespace NetworkCommsDotNet
 
             //We are limited in size for the isolated send
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
-                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length) + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes + ". Consider using a TCP connection to send this object.");
+                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from "+ConnectionInfo.LocalEndPoint.Address +":"+ ConnectionInfo.LocalEndPoint.Port +" to " + ipEndPoint.Address + ":" + ipEndPoint.Port + " containing " + headerBytes.Length + " header bytes and " + packet.PacketData.Length + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
@@ -273,7 +273,7 @@ namespace NetworkCommsDotNet
             udpClientThreadSafe.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 #endif
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ".");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + ".");
         }
 
         /// <summary>

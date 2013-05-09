@@ -112,6 +112,9 @@ namespace DPSBase
             options[PasswordOption] = password;
         }
 
+        /// <summary>
+        /// Dispose of all resources.
+        /// </summary>
         public void Dispose()
         {
             if (encrypter != null)

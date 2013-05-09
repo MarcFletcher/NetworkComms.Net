@@ -238,7 +238,11 @@ namespace NetworkCommsDotNet
         [ProtoAfterDeserialization]
         private void OnDeserialise()
         {
-            LocalEndPoint = new IPEndPoint(IPAddress.Parse(localEndPointIPStr), localEndPointPort);
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(localEndPointIPStr, out ipAddress))
+                throw new ArgumentException("Failed to parse IPAddress from localEndPointIPStr", "localEndPointIPStr");
+
+            LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
         }
 
         /// <summary>

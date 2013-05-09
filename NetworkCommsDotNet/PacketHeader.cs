@@ -180,7 +180,7 @@ namespace NetworkCommsDotNet
         public int PayloadPacketSize
         {
             get { return (int)longItems[PacketHeaderLongItems.PayloadPacketSize]; }
-            private set { longItems[PacketHeaderLongItems.PayloadPacketSize] = value; }
+            //private set { longItems[PacketHeaderLongItems.PayloadPacketSize] = value; }
         }
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace NetworkCommsDotNet
         public string PacketType
         {
             get { return stringItems[PacketHeaderStringItems.PacketType]; }
-            private set { stringItems[PacketHeaderStringItems.PacketType] = value; }
+            //private set { stringItems[PacketHeaderStringItems.PacketType] = value; }
         }
 
         /// <summary>

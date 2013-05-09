@@ -45,7 +45,7 @@ namespace NetworkCommsDotNet
 
         public override string ToString()
         {
-            return "[" + (SentPacketCreationTime).ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length + " bytes.";
+            return "[" + (SentPacketCreationTime).ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length.ToString() + " bytes.";
         }
     }
 }

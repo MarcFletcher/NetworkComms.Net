@@ -81,7 +81,7 @@ namespace NetworkCommsDotNet
             //Add an identifier specifying the serializers and processors we have used
             this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length + " bytes");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length.ToString() + " bytes");
         }
 
         /// <summary>
