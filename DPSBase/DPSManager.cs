@@ -27,6 +27,9 @@ using System.Reflection;
 using MarshalByRefObject = System.Object;
 #endif
 
+//Assembly marked as CLSCompliant
+[assembly: CLSCompliant(true)]
+
 namespace DPSBase
 {
     /// <summary>

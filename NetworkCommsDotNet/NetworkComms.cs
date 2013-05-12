@@ -33,8 +33,8 @@ using NLog;
 using NLog.Config;
 #endif
 
-// Assembly marked as compliant.
-//[assembly: CLSCompliant(true)]
+//Assembly marked as CLSCompliant
+[assembly: CLSCompliant(true)]
 
 namespace NetworkCommsDotNet
 {

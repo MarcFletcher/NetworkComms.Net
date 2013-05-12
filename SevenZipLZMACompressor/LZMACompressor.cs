@@ -29,6 +29,9 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
+//Assembly marked as CLSCompliant
+[assembly: CLSCompliant(true)]
+
 namespace SevenZipLZMACompressor
 {
     /// <summary>
