@@ -27,7 +27,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Wrapper for <see cref="PacketHeader"/> and packetData.
     /// </summary>
-    public class Packet
+    public class Packet : IDisposable
     {
         PacketHeader packetHeader;
         StreamSendWrapper packetData;
@@ -109,7 +109,9 @@ namespace NetworkCommsDotNet
             if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
 
             //We need to start of by serialising the header
-            byte[] serialisedHeader = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null).ThreadSafeStream.ToArray(1);
+            byte[] serialisedHeader;
+            using(StreamSendWrapper sendWrapper = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null))
+                serialisedHeader = sendWrapper.ThreadSafeStream.ToArray(1);
 
             if (serialisedHeader.Length - 1 > byte.MaxValue)
                 throw new SerialisationException("Unable to send packet as header size is larger than Byte.MaxValue. Try reducing the length of provided packetTypeStr or turning off checkSum validation.");
@@ -121,6 +123,14 @@ namespace NetworkCommsDotNet
                 throw new SerialisationException("Serialised header bytes should never be null.");
 
             return serialisedHeader;
+        }
+
+        /// <summary>
+        /// Dispose of internal resources
+        /// </summary>
+        public void Dispose()
+        {
+            packetData.Dispose();
         }
     }
 }

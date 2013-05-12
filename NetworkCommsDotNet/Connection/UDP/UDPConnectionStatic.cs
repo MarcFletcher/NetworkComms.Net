@@ -431,8 +431,8 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "BestLocalEndPointError");
             }
 
-            Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
-            connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
+            using(Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
+                connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
     }
 }

@@ -26,7 +26,7 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    public abstract partial class Connection
+    public abstract partial class Connection : IDisposable
     {
         /// <summary>
         /// Lockers for maintaing thread safe operation
@@ -189,8 +189,8 @@ namespace NetworkCommsDotNet
             AppendShutdownHandler(SendReceiveShutDownDelegate);
             AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
-            Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions);
-            SendPacket(sendPacket, out sentPacketSequenceNumber);
+            using(Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions))
+                SendPacket(sendPacket, out sentPacketSequenceNumber);
 
             //We wait for the return data here
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
@@ -582,5 +582,20 @@ namespace NetworkCommsDotNet
         /// Connection specific implementation for sending a null packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
         /// </summary>
         protected abstract void SendNullPacket();
+
+        /// <summary>
+        /// Dispose of the connection. Recommended usage is to call CloseConnection instead.
+        /// </summary>
+        public void Dispose()
+        {
+            CloseConnection(false, -3);
+
+            try
+            {
+                ((IDisposable)connectionSetupWait).Dispose();
+                ((IDisposable)connectionEstablishWait).Dispose();
+            }
+            catch (Exception) { }
+        }
     }
 }
