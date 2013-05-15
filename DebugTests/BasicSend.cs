@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using NetworkCommsDotNet;
 
@@ -46,6 +47,14 @@ namespace DebugTests
             //This handler will convert the incoming raw bytes into a string (this is what 
             //the <string> bit means) and then write that string to the local console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
+
+            //String m_ListeningAddress = "192.168.0.104";
+            //Int32 m_ListeningPort1 = 50000;
+            //Int32 m_ListeningPort2 = 50100;
+            //List<IPEndPoint> Listeners = new List<IPEndPoint>();
+            //Listeners.Add(new IPEndPoint(IPAddress.Parse(m_ListeningAddress), m_ListeningPort1));
+            //Listeners.Add(new IPEndPoint(IPAddress.Parse(m_ListeningAddress), m_ListeningPort2));
+            //TCPConnection.StartListening(Listeners, true);
 
             //Start listening for incoming 'TCP' connections. The true parameter means
             //try to use the default port and if that fails just choose a random port
@@ -77,7 +86,7 @@ namespace DebugTests
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
                     NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
-                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
+                    //NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
                 }
             }
 

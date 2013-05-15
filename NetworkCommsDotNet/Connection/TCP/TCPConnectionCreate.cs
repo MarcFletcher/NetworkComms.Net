@@ -211,13 +211,19 @@ namespace NetworkCommsDotNet
             //Start listening for incoming data
             StartIncomingDataListen();
 
-            IPEndPoint existingListener = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+            //Get a list of existing listeners
+            List<IPEndPoint> existingListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+
+            //Select a listener for this connection
+            IPEndPoint selectedExistingListener = null;
+            if (existingListeners.Count > 0)
+                selectedExistingListener = (existingListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingListeners[0]);
 
             //If we are server side and we have just received an incoming connection we need to return a conneciton id
             //This id will be used in all future connections from this machine
             if (ConnectionInfo.ServerSide)
             {
-                if (existingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
+                if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
@@ -235,7 +241,7 @@ namespace NetworkCommsDotNet
                 base.EstablishConnectionSpecific();
 
                 //Once we have the clients id we send our own
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, existingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
             }
             else
             {
@@ -243,14 +249,14 @@ namespace NetworkCommsDotNet
 
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (existingListener != null ? existingListener.Port : ConnectionInfo.LocalEndPoint.Port)), existingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
-                if (existingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(existingListener);
+                if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
 
                 if (connectionSetupException)
                 {

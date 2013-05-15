@@ -71,12 +71,12 @@ namespace DebugTests
             //NetworkComms.ListenOnAllAllowedInterfaces = false;
             //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
 
-            NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
-                {
-                    Thread.Sleep(5000);
-                    Console.WriteLine(" XXX Connection established with {0}",connection);
-                    connection.SendObject("Message", "message from establish handler");
-                }, true);
+            //NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
+            //    {
+            //        Thread.Sleep(5000);
+            //        Console.WriteLine(" XXX Connection established with {0}",connection);
+            //        connection.SendObject("Message", "message from establish handler");
+            //    }, true);
 
             BasicSend.RunExample();
             //AliveTest.RunExample();

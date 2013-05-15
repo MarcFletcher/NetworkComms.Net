@@ -202,20 +202,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding to a possible local listeners on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns empty list.
         /// </summary>
         /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
         /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
-        public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
+        public static List<IPEndPoint> ExistingLocalListenEndPoints(IPAddress ipAddress)
         {
+            List<IPEndPoint> returnList = new List<IPEndPoint>();
             lock (staticTCPConnectionLocker)
             {                
                 foreach (var pair in tcpListenerDict)
                     if (pair.Key.Address.Equals(ipAddress))
-                        return pair.Key;
-                
-                return default(IPEndPoint);                
+                        returnList.Add(pair.Key);         
             }
+
+            return returnList;
         }
 
         /// <summary>
