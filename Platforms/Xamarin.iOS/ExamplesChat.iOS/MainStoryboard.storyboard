@@ -85,73 +85,78 @@
                         <rect key="frame" x="0.0" y="64" width="320" height="416"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Master IP Address" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="sPA-Ng-i9M">
-                                <rect key="frame" x="20" y="25" width="140" height="21"/>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Remote Server IP" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="sPA-Ng-i9M">
+                                <rect key="frame" x="17" y="132" width="136" height="21"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="See main screen for local IP information once server enabled." textAlignment="center" lineBreakMode="wordWrap" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="L9J-ZZ-lMO">
+                                <rect key="frame" x="29" y="32" width="248" height="71"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" minimumFontSize="17" id="adk-lI-CyJ">
-                                <rect key="frame" x="168" y="21" width="132" height="30"/>
+                                <rect key="frame" x="176" y="128" width="127" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                             </textField>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Master Port Num" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="odM-Lq-ho1">
-                                <rect key="frame" x="20" y="63" width="129" height="21"/>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Remote Server Port" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="odM-Lq-ho1">
+                                <rect key="frame" x="17" y="170" width="151" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="10000" borderStyle="roundedRect" minimumFontSize="17" id="bvb-8g-EED">
-                                <rect key="frame" x="168" y="59" width="132" height="30"/>
+                                <rect key="frame" x="176" y="166" width="127" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                             </textField>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Local Name" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="4rc-b8-k48">
-                                <rect key="frame" x="20" y="101" width="91" height="21"/>
+                                <rect key="frame" x="17" y="210" width="91" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Use TCP" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="p9u-f1-gry">
-                                <rect key="frame" x="20" y="176" width="69" height="21"/>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Connection Mode" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="p9u-f1-gry">
+                                <rect key="frame" x="17" y="285" width="134" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Use UDP" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="Vma-yG-i1m">
-                                <rect key="frame" x="20" y="219" width="71" height="21"/>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Enable Local Server" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="lrX-7S-YO6">
+                                <rect key="frame" x="33" y="19" width="154" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="iPhone" borderStyle="roundedRect" minimumFontSize="17" id="C1r-cD-zAt">
-                                <rect key="frame" x="168" y="97" width="132" height="30"/>
+                                <rect key="frame" x="176" y="204" width="127" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                             </textField>
-                            <switch opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" id="fdW-H0-Tmd">
-                                <rect key="frame" x="196" y="216" width="79" height="27"/>
+                            <switch opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" id="EFS-3k-8Eg">
+                                <rect key="frame" x="213" y="13" width="79" height="27"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <connections>
-                                    <action selector="ToggleConnectionType:" destination="mGm-jQ-27o" eventType="valueChanged" id="vUD-0y-rAQ"/>
-                                </connections>
                             </switch>
-                            <switch opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" id="9Lg-rW-hZx">
-                                <rect key="frame" x="196" y="173" width="79" height="27"/>
+                            <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" id="S74-WN-Ek5">
+                                <rect key="frame" x="186" y="274" width="107" height="44"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <connections>
-                                    <action selector="ToggleConnectionType:" destination="mGm-jQ-27o" eventType="touchUpInside" id="Gsc-Bu-03G"/>
-                                </connections>
-                            </switch>
+                                <segments>
+                                    <segment title="TCP"/>
+                                    <segment title="UDP"/>
+                                </segments>
+                            </segmentedControl>
                         </subviews>
                         <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
                     </view>
@@ -159,11 +164,11 @@
                         <barButtonItem key="backBarButtonItem" title="Back" id="Pcm-nW-Mzb"/>
                     </navigationItem>
                     <connections>
+                        <outlet property="ConnectionMode" destination="S74-WN-Ek5" id="XqN-Bz-CgJ"/>
                         <outlet property="LocalName" destination="C1r-cD-zAt" id="rbe-ub-4FA"/>
+                        <outlet property="LocalServerEnabled" destination="EFS-3k-8Eg" id="YeW-gZ-daW"/>
                         <outlet property="MasterIP" destination="adk-lI-CyJ" id="79q-yq-Zq1"/>
                         <outlet property="MasterPort" destination="bvb-8g-EED" id="RmZ-KE-c91"/>
-                        <outlet property="TCPSwitch" destination="9Lg-rW-hZx" id="1Wa-hr-7CE"/>
-                        <outlet property="UDPSwitch" destination="fdW-H0-Tmd" id="thx-EV-eJx"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="TEa-sc-YQx" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -194,7 +199,6 @@
             <source key="sourceIdentifier" type="project" relativePath="./Classes/ChatWindow.h"/>
             <relationships>
                 <relationship kind="action" name="SendButtonClick:"/>
-                <relationship kind="action" name="SendClick:"/>
                 <relationship kind="outlet" name="ChatHistory" candidateClass="UITextView"/>
                 <relationship kind="outlet" name="ChatView" candidateClass="UIView"/>
                 <relationship kind="outlet" name="MessageBox" candidateClass="UITextField"/>
@@ -204,15 +208,11 @@
         <class className="Settings" superclassName="UIViewController">
             <source key="sourceIdentifier" type="project" relativePath="./Classes/Settings.h"/>
             <relationships>
-                <relationship kind="action" name="ToggleConnType:"/>
-                <relationship kind="action" name="ToggleConnectionType:"/>
-                <relationship kind="action" name="ToggleTCP:"/>
-                <relationship kind="action" name="ToggleUDP:"/>
+                <relationship kind="outlet" name="ConnectionMode" candidateClass="UISegmentedControl"/>
                 <relationship kind="outlet" name="LocalName" candidateClass="UITextField"/>
+                <relationship kind="outlet" name="LocalServerEnabled" candidateClass="UISwitch"/>
                 <relationship kind="outlet" name="MasterIP" candidateClass="UITextField"/>
                 <relationship kind="outlet" name="MasterPort" candidateClass="UITextField"/>
-                <relationship kind="outlet" name="TCPSwitch" candidateClass="UISwitch"/>
-                <relationship kind="outlet" name="UDPSwitch" candidateClass="UISwitch"/>
             </relationships>
         </class>
     </classes>

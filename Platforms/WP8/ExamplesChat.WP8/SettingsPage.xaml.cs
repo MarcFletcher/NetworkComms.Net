@@ -19,19 +19,27 @@ namespace ExamplesWP8Chat
         /// This can be changed freely but must obviously be the same
         /// for both sender and reciever.
         /// </summary>
-        string encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
+        string _encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
+
+        /// <summary>
+        /// Local variable for tracking if the connection type has been changed
+        /// </summary>
+        bool _connectionTypeChanged = false;
 
         public SettingsPage()
         {
             InitializeComponent();
 
-            MasterIPInputBox.Text = (App.Current as App).MasterIPAddress;
+            LocalServerEnabled.IsChecked = (App.Current as App).LocalSeverEnabled;
+            MasterIPInputBox.Text = (App.Current as App).ServerIPAddress;
             MasterIPInputBox.Select(MasterIPInputBox.Text.Length, 0);
             oldText = MasterIPInputBox.Text;
-            MasterPortInputBox.Text = (App.Current as App).MasterPort.ToString();
+            MasterPortInputBox.Text = (App.Current as App).ServerPort.ToString();
             LocalNameInputBox.Text = (App.Current as App).LocalName;
 
             UseEncryptionCheckBox.IsChecked = (App.Current as App).UseEncryption;
+
+            _connectionTypeChanged = false;
 
             if ((App.Current as App).ConnectionType == ConnectionType.TCP)
             {
@@ -47,15 +55,41 @@ namespace ExamplesWP8Chat
 
         private void BackKeyPressHandler(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            (App.Current as App).MasterIPAddress = MasterIPInputBox.Text;
-            (App.Current as App).MasterPort = int.Parse(MasterPortInputBox.Text);
+            (App.Current as App).LocalSeverEnabled = (bool)LocalServerEnabled.IsChecked;
+            (App.Current as App).ServerIPAddress = MasterIPInputBox.Text;
+            (App.Current as App).ServerPort = int.Parse(MasterPortInputBox.Text);
             (App.Current as App).LocalName = LocalNameInputBox.Text;
             (App.Current as App).UseEncryption = (bool)UseEncryptionCheckBox.IsChecked;
+
+            //If the local server is enabled and we have changed the connection type
+            //The ending logic "|| (!TCPConnection.Listening() && !UDPConnection.Listening())" is to catch the first
+            //enable of local server mode if the ConnectionTypeValue has not been updated
+            if ((App.Current as App).LocalSeverEnabled && (_connectionTypeChanged || (!TCPConnection.Listening() && !UDPConnection.Listening())))
+            {
+                //If we were previously listening we first shutdown comms.
+                if (TCPConnection.Listening() || UDPConnection.Listening())
+                {
+                    (App.Current as App).AppendLineToChatBox("Connection mode has been updated. Any existing connections have been closed.");
+                    NetworkComms.Shutdown();
+                }
+
+                //Initialise comms again using the updated connection type
+                (App.Current as App).InitialiseNetworkComms();
+            }
+            else if (!(App.Current as App).LocalSeverEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
+            {
+                //If the local server mode has been disabled but we are still listening we need to stop accepting incoming connections
+                NetworkComms.Shutdown();
+                (App.Current as App).AppendLineToChatBox("Local server mode disabled. Any existing connections have been closed.");
+            }
+
+            //Ensure the connection type changed value always initialises to false when we view the settings
+            _connectionTypeChanged = false;
         }
 
         private string oldText;
 
-        private void MasterIPInputBox_TextChanged_1(object sender, TextChangedEventArgs e)
+        private void ServerIPInputBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             var textBox = sender as TextBox;
             var newText = textBox.Text;
@@ -121,7 +155,7 @@ namespace ExamplesWP8Chat
         /// <param name="e"></param>
         private void UseEncryptionBox_Checked(object sender, RoutedEventArgs e)
         {
-            RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, encryptionKey);
+            RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, _encryptionKey);
             NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
         }
 
@@ -146,14 +180,8 @@ namespace ExamplesWP8Chat
             {
                 //Update the application and connectionType
                 this.UseTCP.IsChecked = false;
+                _connectionTypeChanged = true;
                 (App.Current as App).ConnectionType = ConnectionType.UDP;
-
-                //Shutdown comms and clear any existing chat messages
-                NetworkComms.Shutdown();
-                (App.Current as App).ChatBox.Text = "";
-
-                //Initialise network comms using the new connection type
-                (App.Current as App).InitialiseNetworkComms();
             }
         }
 
@@ -168,14 +196,8 @@ namespace ExamplesWP8Chat
             {
                 //Update the application and connectionType
                 this.UseUDP.IsChecked = false;
+                _connectionTypeChanged = true;
                 (App.Current as App).ConnectionType = ConnectionType.TCP;
-
-                //Shutdown comms and clear any existing chat messages
-                NetworkComms.Shutdown();
-                (App.Current as App).ChatBox.Text = "";
-
-                //Initialise network comms using the new connection type
-                (App.Current as App).InitialiseNetworkComms();
             }
         }
     }

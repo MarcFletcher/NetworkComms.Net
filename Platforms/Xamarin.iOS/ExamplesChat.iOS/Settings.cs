@@ -33,14 +33,9 @@ namespace ExamplesChat.iOS
         static ConnectionType _connectionTypeValue = ConnectionType.TCP;
 
         /// <summary>
-        /// Boolean for tracking if the connection type has been changed
+        /// Boolean for recording if the local device is acting as a server
         /// </summary>
-        static bool _connectionTypeChanged = false;
-
-        /// <summary>
-        /// Locker for safely udating _connectionTypeValue
-        /// </summary>
-        static object locker = new object();
+        static bool _localServerEnabled = false;
         #endregion
 
         #region Get & Set
@@ -58,7 +53,7 @@ namespace ExamplesChat.iOS
         {
             base.ViewDidLoad();
 
-            //Remove the keyboard on a tap
+            //Remove the keyboard on a tap gesture
             var tap = new UITapGestureRecognizer();
             tap.AddTarget(() =>
             {
@@ -66,56 +61,17 @@ namespace ExamplesChat.iOS
             });
             this.View.AddGestureRecognizer(tap);
 
+            //Update the settings based on previous values
+            LocalServerEnabled.SetState(_localServerEnabled, false);
             MasterIP.Text = MasterIPValue;
             MasterPort.Text = MasterPortValue.ToString();
             LocalName.Text = LocalNameValue;
 
-            UpdateConnectionTypeSwitches();
+            //Set the correct segment on the connection mode toggle
+            ConnectionMode.SelectedSegment = (ConnectionTypeValue == ConnectionType.TCP ? 0 : 1);
         }
 
         #region Event Handlers
-        /// <summary>
-        /// Update the TCP and UDP GUI switches to their correct positions
-        /// </summary>
-        private void UpdateConnectionTypeSwitches()
-        {
-            if (ConnectionTypeValue == ConnectionType.UDP)
-            {
-                UDPSwitch.Enabled = false;
-                UDPSwitch.SetState(true, true);
-
-                TCPSwitch.Enabled = true;
-                TCPSwitch.SetState(false, true);
-            }
-            else
-            {
-                TCPSwitch.Enabled = false;
-                TCPSwitch.SetState(true, true);
-
-                UDPSwitch.Enabled = true;
-                UDPSwitch.SetState(false, true);
-            }
-        }
-
-        /// <summary>
-        /// Toggle the connection type if one of the switches are updated
-        /// </summary>
-        /// <param name="sender"></param>
-        partial void ToggleConnectionType(NSObject sender)
-        {
-            lock (locker)
-            {
-                if (ConnectionTypeValue == ConnectionType.TCP)
-                    ConnectionTypeValue = ConnectionType.UDP;
-                else
-                    ConnectionTypeValue = ConnectionType.TCP;
-
-                UpdateConnectionTypeSwitches();
-
-                _connectionTypeChanged = true;
-            }
-        }
-
         /// <summary>
         /// Update the settings when the user goes back to the main interface
         /// </summary>
@@ -130,14 +86,42 @@ namespace ExamplesChat.iOS
             int.TryParse(MasterPort.Text, out port);
             MasterPortValue = port;
 
-            if (_connectionTypeChanged)
-            {
-                //Shutdown any existing connections
-                NetworkComms.Shutdown();
+            //Store if we are running a local server
+            _localServerEnabled = LocalServerEnabled.On;
 
-                //Initialise comms again using the latest connection type
+            //If connection mode has been changed we will update ConnectionTypeValue 
+            bool connectionTypeChanged = false;
+            if (ConnectionMode.SelectedSegment == 0 && ConnectionTypeValue == ConnectionType.UDP)
+            {
+                connectionTypeChanged = true;
+                ConnectionTypeValue = ConnectionType.TCP;
+            }
+            else if (ConnectionMode.SelectedSegment == 1 && ConnectionTypeValue == ConnectionType.TCP)
+            {
+                connectionTypeChanged = true;
+                ConnectionTypeValue = ConnectionType.UDP;
+            }
+
+            //If the local server is enabled and we have changed the connection type
+            //The ending logic "|| (!TCPConnection.Listening() && !UDPConnection.Listening())" is to catch the first
+            //enable of local server mode if the ConnectionTypeValue has not been updated
+            if (_localServerEnabled && (connectionTypeChanged || (!TCPConnection.Listening() && !UDPConnection.Listening())))
+            {
+                //If we were previously listening we first shutdown comms.
+                if (TCPConnection.Listening() || UDPConnection.Listening())
+                {
+                    ChatWindow.AppendLineToChatBox("Connection mode has been updated. Any existing connections have been closed.");
+                    NetworkComms.Shutdown();
+                }
+
+                //Initialise comms again using the updated connection type
                 ChatWindow.InitialiseComms(ConnectionTypeValue);
-                _connectionTypeChanged = false;
+            }
+            else if (!_localServerEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
+            {
+                //If the local server mode has been disabled but we are still listening we need to stop accepting incoming connections
+                NetworkComms.Shutdown();
+                ChatWindow.AppendLineToChatBox("Local server mode disabled. Any existing connections have been closed.");
             }
 
             return base.ResignFirstResponder();

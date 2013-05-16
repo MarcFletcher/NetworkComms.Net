@@ -21,13 +21,10 @@ namespace ExamplesChat.iOS
 		MonoTouch.UIKit.UITextField LocalName { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UISwitch TCPSwitch { get; set; }
+		MonoTouch.UIKit.UISegmentedControl ConnectionMode { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UISwitch UDPSwitch { get; set; }
-
-		[Action ("ToggleConnectionType:")]
-		partial void ToggleConnectionType (MonoTouch.Foundation.NSObject sender);
+		MonoTouch.UIKit.UISwitch LocalServerEnabled { get; set; }
 		
 		void ReleaseDesignerOutlets ()
 		{
@@ -46,14 +43,14 @@ namespace ExamplesChat.iOS
 				LocalName = null;
 			}
 
-			if (TCPSwitch != null) {
-				TCPSwitch.Dispose ();
-				TCPSwitch = null;
+			if (ConnectionMode != null) {
+				ConnectionMode.Dispose ();
+				ConnectionMode = null;
 			}
 
-			if (UDPSwitch != null) {
-				UDPSwitch.Dispose ();
-				UDPSwitch = null;
+			if (LocalServerEnabled != null) {
+				LocalServerEnabled.Dispose ();
+				LocalServerEnabled = null;
 			}
 		}
 	}

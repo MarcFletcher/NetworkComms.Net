@@ -22,7 +22,7 @@ namespace ExamplesWP8Chat
             (App.Current as App).ChatBox = this.chatBox;
             (App.Current as App).ChatBoxScroller = this.ChatBoxScroller;
             (App.Current as App).CurrentMessageInputBox = this.CurrentMessageInputBox;
-            (App.Current as App).InitialiseNetworkComms();
+            (App.Current as App).PrintUsageInstructions();
         }
 
         /// <summary>

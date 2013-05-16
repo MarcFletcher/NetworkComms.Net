@@ -300,9 +300,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if there is atleast one local UDP listeners
+        /// Returns true if listening for new UDP connections.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True if listening for new UDP connections.</returns>
         public static bool Listening()
         {
             lock (udpClientListenerLocker)

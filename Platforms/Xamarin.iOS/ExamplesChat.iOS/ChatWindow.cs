@@ -81,8 +81,11 @@ namespace ExamplesChat.iOS
             //Uncomment this line to enable logging
             //EnableLogging();
 
-            //Initialise NetworkComms.Net using TCP as the default
-            InitialiseComms(ConnectionType.TCP);
+            //Print out the application usage instructions
+            PrintUsageInstructions();
+
+            //Uncomment this line to enable a local server on application startup
+            //InitialiseComms(ConnectionType.TCP);
         }
 
         /// <summary>
@@ -157,35 +160,37 @@ namespace ExamplesChat.iOS
         #endregion
 
         #region NetworkComms.Net Methods
+        public static void PrintUsageInstructions()
+        {
+            //Start by printing some usage instructions
+            AppendLineToChatBox("");
+            AppendLineToChatBox("iOS chat usage instructions:");
+            AppendLineToChatBox("");
+            AppendLineToChatBox("Step 1. Open two chat applications. Other applications could be android or windows phone versions.");
+            AppendLineToChatBox("Step 2. Enable local server mode in a single application, see settings.");
+            AppendLineToChatBox("Step 3. Provide remote server IP and port information in settings on remaining application.");
+            AppendLineToChatBox("Step 4. Start chatting.");
+            AppendLineToChatBox("");
+        }
+
         /// <summary>
         /// Initialises NetworkComms.Net
         /// </summary>
         /// <param name="connectionType"></param>
         public static void InitialiseComms(ConnectionType connectionType)
         {
-            //Start by printing some usage instructions
-            AppendLineToChatBox("");
-            AppendLineToChatBox("iOS chat usage instructions:");
-            AppendLineToChatBox("");
-            AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows or windows phone 8 chat example.");
-            AppendLineToChatBox("Step 2. Decide which application will be the 'master', aka server.");
-            AppendLineToChatBox("Step 3. Enter the masters IP address and port number into the other applications settings.");
-            AppendLineToChatBox("Step 4. Start chatting. Don't forget to checkout UDP connection methods.");
-            AppendLineToChatBox("");
-            AppendLineToChatBox("Initialising chat ...");
-
             //We can listen on either TCP or UDP
             if (connectionType == ConnectionType.TCP)
             {
                 TCPConnection.StartListening(true);
-                AppendLineToChatBox("Listening for incoming TCP connections on:");
+                AppendLineToChatBox("Enabled local server mode. Listening for incoming TCP connections on:");
                 foreach (IPEndPoint endPoint in TCPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(endPoint.Address + ":" + endPoint.Port);
             }
             else if (connectionType == ConnectionType.UDP)
             {
                 UDPConnection.StartListening(true);
-                AppendLineToChatBox("Listening for incoming UDP connections on:");
+                AppendLineToChatBox("Enabled local server mode. Listening for incoming UDP connections on:");
                 foreach (IPEndPoint endPoint in UDPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(endPoint.Address + ":" + endPoint.Port);
             }

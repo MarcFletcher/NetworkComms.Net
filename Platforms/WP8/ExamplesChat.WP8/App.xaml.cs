@@ -33,8 +33,9 @@ namespace ExamplesWP8Chat
         /// </summary>
         public bool FirstInitialisation { get; set; }
 
-        public string MasterIPAddress { get; set; }
-        public int MasterPort { get; set; }
+        public bool LocalSeverEnabled { get; set; }
+        public string ServerIPAddress { get; set; }
+        public int ServerPort { get; set; }
         public string LocalName { get; set; }
         public bool UseEncryption { get; set; }
 
@@ -86,8 +87,9 @@ namespace ExamplesWP8Chat
             // Language display initialization
             InitializeLanguage();
 
-            MasterIPAddress = "";
-            MasterPort = 10000;
+            LocalSeverEnabled = false;
+            ServerIPAddress = "";
+            ServerPort = 10000;
             LocalName = "WindowsPhone";
             UseEncryption = false;
 
@@ -121,11 +123,6 @@ namespace ExamplesWP8Chat
         /// </summary>
         public void InitialiseNetworkComms()
         {
-            PrintUsageInstructions();
-
-            for (int i = 0; i < 5; i++)
-                AppendLineToChatBox("");
-
             if ((App.Current as App).ConnectionType == ConnectionType.TCP)
             {
                 //Start listening for new incoming TCP connections
@@ -133,7 +130,7 @@ namespace ExamplesWP8Chat
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatBox("Initialising WPF chat example.\nAccepting TCP connections on:");
+                AppendLineToChatBox("Enabled local server mode.\nListening for incoming TCP connections on:");
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
@@ -144,7 +141,7 @@ namespace ExamplesWP8Chat
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatBox("Initialising WPF chat example.\nAccepting UDP connections on:");
+                AppendLineToChatBox("Enabled local server mode.\nListening for incoming UDP connections on:");
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
                    AppendLineToChatBox(listenEndPoint.Address + ":" + listenEndPoint.Port);
             }
@@ -172,15 +169,18 @@ namespace ExamplesWP8Chat
         /// <summary>
         /// Outputs the usage instructions to the chat window
         /// </summary>
-        private void PrintUsageInstructions()
+        public void PrintUsageInstructions()
         {
             AppendLineToChatBox("WPF chat usage instructions:");
             AppendLineToChatBox("");
-            AppendLineToChatBox("Step 1. Open atleast two chat applications. One of them could be the native windows chat example.");
-            AppendLineToChatBox("Step 2. Decide which application will be the 'master', aka server.");
-            AppendLineToChatBox("Step 3. Enter the masters IP address and port number into the other applications.");
-            AppendLineToChatBox("Step 4. Start chatting. Don't forget to checkout encryption and the UDP connection method.");
+            AppendLineToChatBox("Step 1. Open two chat applications. Other applications could be android or iOS versions.");
+            AppendLineToChatBox("Step 2. Enable local server mode in a single application, see settings.");
+            AppendLineToChatBox("Step 3. Provide remote server IP and port information in settings on remaining application.");
+            AppendLineToChatBox("Step 4. Start chatting.");
             AppendLineToChatBox("");
+
+            for (int i = 0; i < 5; i++)
+                AppendLineToChatBox("");
         }
 
         /// <summary>
@@ -277,9 +277,9 @@ namespace ExamplesWP8Chat
 
             //We may or may not have entered some master connection information
             ConnectionInfo masterConnectionInfo = null;
-            if ((App.Current as App).MasterIPAddress != "")
+            if ((App.Current as App).ServerIPAddress != "")
             {
-                try { masterConnectionInfo = new ConnectionInfo((App.Current as App).MasterIPAddress, (App.Current as App).MasterPort); }
+                try { masterConnectionInfo = new ConnectionInfo((App.Current as App).ServerIPAddress, (App.Current as App).ServerPort); }
                 catch (Exception)
                 {
                     MessageBox.Show("Failed to parse the master IP and port. Please ensure it is correct and try again", "Master IP & Port Parse Error", MessageBoxButton.OK);
@@ -340,7 +340,7 @@ namespace ExamplesWP8Chat
         /// Append the provided message to the chatBox text box.
         /// </summary>
         /// <param name="message"></param>
-        private void AppendLineToChatBox(string message)
+        public void AppendLineToChatBox(string message)
         {
             //To ensure we can succesfully append to the text box from any thread
             //we need to wrap the append within an invoke action.

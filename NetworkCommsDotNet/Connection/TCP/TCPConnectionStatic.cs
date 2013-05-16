@@ -220,9 +220,9 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if there is atleast one local TCP listeners
+        /// Returns true if listening for new TCP connections.
         /// </summary>
-        /// <returns>True if there is atleast one local TCP listeners</returns>
+        /// <returns>True if listening for new TCP connections.</returns>
         public static bool Listening()
         {
             lock (staticTCPConnectionLocker)
