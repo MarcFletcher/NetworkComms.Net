@@ -1794,6 +1794,24 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on return, this ensures the MD5 is consistent.
+        /// </summary>
+        /// <param name="streamToMD5">The bytes which will be checksummed</param>
+        /// <param name="start">The start position in the stream</param>
+        /// <param name="length">The length in the stream to MD5</param>
+        /// <returns>The MD5 checksum as a string</returns>
+        public static string MD5Bytes(Stream streamToMD5, long start, int length)
+        {
+            if (streamToMD5 == null) throw new ArgumentNullException("streamToMD5", "Provided Stream cannot be null.");
+
+            using (MemoryStream stream = new MemoryStream(length))
+            {
+                StreamWriteWithTimeout.Write(streamToMD5, start, length, stream, 8000, 100, 2000);
+                return MD5Bytes(stream);
+            }
+        }
+
+        /// <summary>
         /// Return the MD5 hash of the provided byte array as a string
         /// </summary>
         /// <param name="bytesToMd5">The bytes which will be checksummed</param>

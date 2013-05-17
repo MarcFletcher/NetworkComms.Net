@@ -50,8 +50,12 @@ namespace DistributedFileSystem
         public string ItemIdentifier { get; private set; }
         [ProtoMember(2)]
         public string ItemTypeStr { get; private set; }
+
         [ProtoMember(3)]
         public string ItemCheckSum { get; private set; }
+        [ProtoMember(11)]
+        public string[] ChunkCheckSums { get; private set; }
+
         [ProtoMember(4)]
         public byte TotalNumChunks { get; private set; }
         [ProtoMember(5)]
@@ -111,7 +115,7 @@ namespace DistributedFileSystem
 
         private DistributedItem() { }
 
-        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, int itemBuildCascadeDepth = 1)
+        public DistributedItem(string itemTypeStr, string itemIdentifier, Stream itemData, ConnectionInfo seedConnectionInfo, ItemBuildTarget itemBuildTarget, bool enableChunkChecksum=false, int itemBuildCascadeDepth = 1)
         {
             //CurrentChunkEnterCounter = 0;
             this.ItemTypeStr = itemTypeStr;
@@ -145,6 +149,8 @@ namespace DistributedFileSystem
             //Intialise the swarm availability
             SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, TotalNumChunks);
 
+            if (enableChunkChecksum) BuildChunkCheckSums();
+
             if (DFS.loggingEnabled) DFS.logger.Debug("... created new original DFS item (" + this.ItemCheckSum + ").");
         }
 
@@ -160,6 +166,7 @@ namespace DistributedFileSystem
             this.TotalNumChunks = assemblyConfig.TotalNumChunks;
             this.ChunkSizeInBytes = assemblyConfig.ChunkSizeInBytes;
             this.ItemCheckSum = assemblyConfig.ItemCheckSum;
+            this.ChunkCheckSums = assemblyConfig.ChunkCheckSums;
             this.ItemBytesLength = assemblyConfig.TotalItemSizeInBytes;
             this.ItemBuildCascadeDepth = assemblyConfig.ItemBuildCascadeDepth;
 
@@ -246,6 +253,9 @@ namespace DistributedFileSystem
             if (DFS.loggingEnabled) DFS.logger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
         }
 
+        /// <summary>
+        /// Calculates the corresponding chunk positions and lengths when this item is dersialised
+        /// </summary>
         private void InitialiseChunkPositionLengthDict()
         {
             int currentPosition = 0;
@@ -913,6 +923,23 @@ namespace DistributedFileSystem
                     if (incomingReply.ChunkIndex > TotalNumChunks)
                         throw new Exception("Provided chunkindex (" + incomingReply.ChunkIndex + ") is greater than the total num of the chunks for this item (" + TotalNumChunks + ").");
 
+                    //If we have set the chunk check sums we can check it here
+                    if (ChunkCheckSums != null && ChunkCheckSums[incomingReply.ChunkIndex] != "")
+                    {
+                        if (NetworkComms.MD5Bytes(incomingReply.ChunkData) == ChunkCheckSums[incomingReply.ChunkIndex])
+                        {
+                            AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
+                        }
+                        else
+                        {
+                            AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation.");
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation.");
+
+                            throw new InvalidDataException("Chunk index " + incomingReply.ChunkIndex + " data failed validation.");
+                        }
+                    }
+
                     lock (itemLocker)
                         chunkDataToIntegrateQueue.Enqueue(incomingReply);
                 }
@@ -991,7 +1018,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if itembytes validate correctly
+        /// Returns true if itembytes validate correctly as a whole
         /// </summary>
         /// <returns></returns>
         public bool LocalItemValid()
@@ -1003,40 +1030,19 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the checksums for each chunk in the item
+        /// Uses the loaded stream and builds the individual chunk checksums
         /// </summary>
         /// <returns></returns>
-        public string[] ItemChunkCheckSums(bool saveOut = false)
+        public void BuildChunkCheckSums()
         {
-            throw new NotImplementedException("Implementation not completed after moving to a stream build.");
-//            string[] returnValues = new string[TotalNumChunks];
-
-//            for (byte i = 0; i < TotalNumChunks; i++)
-//            {
-//                byte[] testBytes = GetChunkBytes(i);
-//                if (testBytes == null)
-//                    throw new Exception("Cant checksum a locked chunk.");
-//                else
-//                    returnValues[i] = Adler32Checksum.GenerateCheckSum(testBytes);
-
-//                //LeaveChunkBytes(i);
-//            }
-
-//            if (saveOut)
-//            {
-//#if iOS
-//                string fileName = "checkSumError " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
-//#else
-//                string fileName = "checkSumError " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Process.GetCurrentProcess().Id + "-" + Thread.CurrentContext.ContextID + "]");
-//#endif
-//                using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", false))
-//                {
-//                    for (int i = 0; i < returnValues.Length; i++)
-//                        sw.WriteLine(returnValues[i]);
-//                }
-//            }
-
-//            return returnValues;
+            if (LocalItemValid())
+            {
+                ChunkCheckSums = new string[TotalNumChunks];
+                for (int i = 0; i < TotalNumChunks; i++)
+                    ChunkCheckSums[i] = this.ItemDataStream.MD5CheckSum(i * ChunkSizeInBytes, ChunkSizeInBytes);
+            }
+            else
+                throw new Exception("Current loadad data is not valid.");
         }
 
         /// <summary>
@@ -1072,19 +1078,20 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static DistributedItem Load(string fileName, Stream dataStream, ConnectionInfo seedConnectionInfo)
+        public static DistributedItem Load(string fileName, Stream itemDataStream, ConnectionInfo seedConnectionInfo)
         {
             DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
-            loadedItem.ItemDataStream = new ThreadSafeStream(dataStream);
+            loadedItem.ItemDataStream = new ThreadSafeStream(itemDataStream);
             loadedItem.InitialiseChunkPositionLengthDict();
             loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfo, loadedItem.TotalNumChunks);
+            //loadedItem.BuildChunkCheckSums();
             return loadedItem;
         }
 
         //[ProtoAfterDeserialization]
         //private void AfterDeserialisation()
         //{
-        //    InitialiseChunkPositionLengthDict();
+        //    BuildChunkCheckSums();
         //}
 
         /// <summary>

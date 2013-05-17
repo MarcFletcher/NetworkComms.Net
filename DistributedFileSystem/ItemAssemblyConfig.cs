@@ -55,6 +55,12 @@ namespace DistributedFileSystem
         public string ItemCheckSum { get; private set; }
 
         /// <summary>
+        /// Optional checksums for individual chunks.
+        /// </summary>
+        [ProtoMember(11)]
+        public string[] ChunkCheckSums { get; private set; }
+
+        /// <summary>
         /// The packetType to use when the item has been fully assembled
         /// </summary>
         [ProtoMember(6)]
@@ -92,6 +98,7 @@ namespace DistributedFileSystem
         public ItemAssemblyConfig(DistributedItem itemToDistribute, string completedPacketType)
         {
             this.ItemCheckSum = itemToDistribute.ItemCheckSum;
+            this.ChunkCheckSums = itemToDistribute.ChunkCheckSums;
             this.TotalNumChunks = itemToDistribute.TotalNumChunks;
             this.ChunkSizeInBytes = itemToDistribute.ChunkSizeInBytes;
             this.TotalItemSizeInBytes = itemToDistribute.ItemBytesLength;

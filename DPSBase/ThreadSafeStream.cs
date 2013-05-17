@@ -122,18 +122,45 @@ namespace DPSBase
         {
             lock (streamLocker)
             {
-                stream.Seek(0, SeekOrigin.Begin);
-                
+                return MD5Stream(stream);
+            }
+        }
+
+        /// <summary>
+        /// Return the MD5 hash of part of the current <see cref="ThreadSafeStream"/> as a string
+        /// </summary>
+        /// <param name="start">The start position in the stream</param>
+        /// <param name="length">The length of stream to MD5</param>
+        /// <returns></returns>
+        public string MD5CheckSum(long start, int length)
+        {
+            using (MemoryStream partialStream = new MemoryStream(length))
+            {
+                StreamWriteWithTimeout.Write(stream, start, length, partialStream, 8000, 1000, 500);
+                lock (streamLocker)
+                {
+                    return MD5Stream(partialStream);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculate the MD5 of the provided stream
+        /// </summary>
+        /// <param name="streamToMD5">The stream to calcualte Md5 for</param>
+        /// <returns></returns>
+        private static string MD5Stream(Stream streamToMD5)
+        {
+            streamToMD5.Seek(0, SeekOrigin.Begin);
+
 #if WINDOWS_PHONE
                 using(var md5 = new DPSBase.MD5Managed())
                 {
 #else
-                using (var md5 = System.Security.Cryptography.MD5.Create())
-                {
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
 #endif
-                    return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "");
-                }
-
+                return BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
             }
         }
 
