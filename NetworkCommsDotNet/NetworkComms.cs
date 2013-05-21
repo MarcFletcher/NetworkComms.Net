@@ -114,7 +114,7 @@ namespace NetworkCommsDotNet
 #endif
             
             //We want to instantiate our own thread pool here
-            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
+            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, 1000, new TimeSpan(0, 0, 10));
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
@@ -1677,16 +1677,18 @@ namespace NetworkCommsDotNet
 
             lock (errorLocker)
             {
-                if (LoggingEnabled) logger.Fatal(fileName + (optionalCommentStr != "" ? " - " + optionalCommentStr : ""), ex);
-
+                
 #if iOS
-                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentContext.ContextID + "]");
+                //We need to ensure we add the correct document path for iOS
+                entireFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]"));
 #elif WINDOWS_PHONE
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]");
 #else
-                using(Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
+                using (Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
                     entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
 #endif
+
+                if (LoggingEnabled) logger.Fatal(entireFileName, ex);
 
                 try
                 {
@@ -2404,7 +2406,7 @@ namespace NetworkCommsDotNet
                             foreach (var current in allConnectionsById[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType])
                             {
                                 if (current.ConnectionInfo.RemoteEndPoint.Equals(connection.ConnectionInfo.RemoteEndPoint))
-                                    throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere.");
+                                    throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere. Existing connection " + current.ConnectionInfo + ", new connection " + connection.ConnectionInfo);
                             }
                         }
                         else

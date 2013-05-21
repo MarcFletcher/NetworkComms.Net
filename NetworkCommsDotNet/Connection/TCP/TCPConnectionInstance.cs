@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder.");
+                        //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder.");
 
                         //If there is more data to get then add it to the packets lists;
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
@@ -110,7 +110,7 @@ namespace NetworkCommsDotNet
                                 }
                                 else
                                 {
-                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
+                                    //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
                                     packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                                     dataAvailable = netStream.DataAvailable;
                                 }
@@ -359,20 +359,24 @@ namespace NetworkCommsDotNet
 #endif
 
             double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-            double dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            double dataWriteTime = 0;
+            if (packet.PacketData.Length > 0)
+                dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
 
 #if WINDOWS_PHONE
             sendingStream.Flush();
 #endif
-
-            SendTimesMSPerKBCache.AddValue((headerWriteTime + dataWriteTime) /2, headerBytes.Length + packet.PacketData.Length);
+            //We record each send independantly as if one is considerably larger than 
+            //the other it will provide a much more reliable rate
+            SendTimesMSPerKBCache.AddValue(headerWriteTime, headerBytes.Length);
+            SendTimesMSPerKBCache.AddValue(dataWriteTime, packet.PacketData.Length);
             SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
 
             //Correctly dispose the stream if we are finished with it
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes written to TCP netstream at " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (headerWriteTime + dataWriteTime).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + ((headerBytes.Length + packet.PacketData.Length)/1024.0).ToString("0.000") + "KB written to TCP netstream at average of " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + ((headerWriteTime + dataWriteTime)/2).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
 
 #if !WINDOWS_PHONE
             if (!tcpClient.Connected)

@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet
         {
             this.udpClient = udpClient;
 
-#if !ANDROID
+#if !ANDROID && !iOS
             //By default we ignore ICMP destination unreachable packets so that we can continue to use the udp client even if we send something down a black hole
             //This is unsupported in Mono but also not required as the same behaviour is not observed.
             if (UDPConnection.IgnoreICMPDestinationUnreachable && Type.GetType("Mono.Runtime") == null)

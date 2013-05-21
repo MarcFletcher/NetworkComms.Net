@@ -47,7 +47,7 @@
   <ItemGroup>
     <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net20\NLog.dll</HintPath>
+      <HintPath>..\DLL\Net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -67,6 +67,7 @@
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="LoadTest.cs" />
+    <Compile Include="LogAnalyser.cs" />
     <Compile Include="ThreadPoolTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

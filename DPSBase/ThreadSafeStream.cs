@@ -136,9 +136,9 @@ namespace DPSBase
         {
             using (MemoryStream partialStream = new MemoryStream(length))
             {
-                StreamWriteWithTimeout.Write(stream, start, length, partialStream, 8000, 1000, 500);
                 lock (streamLocker)
                 {
+                    StreamWriteWithTimeout.Write(stream, start, length, partialStream, 8000, 1000, 500);
                     return MD5Stream(partialStream);
                 }
             }

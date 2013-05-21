@@ -42,12 +42,12 @@ namespace NetworkCommsDotNet
         static Connection()
         {
             ConnectionKeepAlivePollIntervalSecs = 30;
-            MinimumMSPerKBSendTimeout = 5;
             MaxNumSendTimes = 100;
             MinNumSendsBeforeConnectionSpecificSendTimeout = 4;
             MinSendTimeoutMS = 2000;
+            MinimumMSPerKBSendTimeout = 20;
             DefaultMSPerKBSendTimeout = 1000;
-            NumberOfStDeviationsForWriteTimeout = 4;
+            NumberOfStDeviationsForWriteTimeout = 3;
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace NetworkCommsDotNet
         public static int MinNumSendsBeforeConnectionSpecificSendTimeout { get; set; }
 
         /// <summary>
-        /// The default milliseconds per KB write timeout before connection specific values become available. Default is 2000. See <see cref="MinNumSendsBeforeConnectionSpecificSendTimeout"/>.
+        /// The default milliseconds per KB write timeout before connection specific values become available. Default is 1000. See <see cref="MinNumSendsBeforeConnectionSpecificSendTimeout"/>.
         /// </summary>
         public static int DefaultMSPerKBSendTimeout { get; set; }
 
@@ -205,7 +205,7 @@ namespace NetworkCommsDotNet
             //Max wait is 1 seconds per connection
             if (!returnImmediately && allConnections.Count > 0)
             {
-                if (!allConnectionsComplete.WaitOne(allConnections.Count * 2000))
+                if (!allConnectionsComplete.WaitOne(allConnections.Count * 2500))
                     //This timeout should not really happen so we are going to log an error if it does
                     NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
             }

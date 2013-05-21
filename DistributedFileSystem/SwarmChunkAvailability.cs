@@ -427,6 +427,25 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
+        /// Returns true if a peer with the provided networkIdentifier exists in the swarm for this item
+        /// </summary>
+        /// <param name="networkIdentifier"></param>
+        /// <returns></returns>
+        public bool PeerExistsInSwarm(IPEndPoint peerEndPoint)
+        {
+            lock (peerLocker)
+            {
+                foreach (ConnectionInfo peerInfo in peerNetworkIdentifierToConnectionInfo.Values)
+                {
+                    if (peerInfo.LocalEndPoint.Equals(peerEndPoint))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Returns true if the specified peer has the provided chunkIndex.
         /// </summary>
         /// <param name="networkIdentifier"></param>
@@ -514,7 +533,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Delets the knowledge of a peer from our local swarm chunk availability
+        /// Deletes the knowledge of a peer from our local swarm chunk availability
         /// </summary>
         /// <param name="networkIdentifier"></param>
         public void RemovePeerFromSwarm(ShortGuid networkIdentifier, bool forceRemove = false)

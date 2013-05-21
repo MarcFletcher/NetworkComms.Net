@@ -44,12 +44,12 @@ namespace DistributedFileSystem
         public const int MaxConcurrentLocalItemBuild = 3;
         public const int PeerMaxNumTimeouts = 2;
 
-        public const int PeerBusyTimeoutMS = 500;
+        public const int PeerBusyTimeoutMS = 1000;
 
         /// <summary>
         /// While the peer network load goes above this value it will always reply with a busy response 
         /// </summary>
-        public const double PeerBusyNetworkLoadThreshold = 0.9;
+        public const double PeerBusyNetworkLoadThreshold = 0.94;
 
         public const int ItemBuildTimeoutSecsPerMB = 5;
 
@@ -71,7 +71,8 @@ namespace DistributedFileSystem
         internal static List<string> allowedPeerIPs = new List<string>();
         internal static List<string> disallowedPeerIPs = new List<string>();
 
-        internal static bool DFSShutdownRequested { get; private set; }
+        internal static ManualResetEvent DFSShutdownEvent { get; private set; }
+        //internal static bool DFSShutdownRequested { get; private set; }
         public static bool DFSInitialised { get; private set; }
 
         public static int MinTargetLocalPort { get; set; }
@@ -82,6 +83,20 @@ namespace DistributedFileSystem
         /// </summary>
         public static bool ValidateEachChunkMD5 { get; set; }
 
+        /// <summary>
+        /// Runs a background timer which can be used to decide timeouts for item builds
+        /// </summary>
+        static Thread elapsedTimerThread;
+
+        /// <summary>
+        /// The number of seconds since the initialisation of the DFS. Primarily used to ensure builds do not time
+        /// out when a suspended process is restarted.
+        /// </summary>
+        public static long ElapsedExecutionSeconds { get; private set; }
+
+        /// <summary>
+        /// Linking this DFS to others
+        /// </summary>
         static Thread linkWorkerThread;
         static string linkTargetIP;
         static int linkTargetPort;
@@ -142,10 +157,14 @@ namespace DistributedFileSystem
                 if (TCPConnection.ExistingLocalListenEndPoints().Count > 0)
                     throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
+                DFSShutdownEvent = new ManualResetEvent(false);
+
+                elapsedTimerThread = new Thread(ElapsedTimerWorker);
+                elapsedTimerThread.Name = "DFSElapsedTimerThread";
+                elapsedTimerThread.Start();
+
                 //Load the allowed ip addresses
                 LoadAllowedDisallowedPeerIPs();
-
-                DFSShutdownRequested = false;
 
                 NetworkComms.IgnoreUnknownPacketTypes = true;
 
@@ -214,6 +233,15 @@ namespace DistributedFileSystem
                     else
                         throw;
                 }
+
+                //Do some validation
+                if (TCPConnection.ExistingLocalListenEndPoints().Except(UDPConnection.ExistingLocalListenEndPoints()).Count() > 0)
+                    throw new CommsSetupShutdownException("Port mismatch when comparing TCP and UDP local listen end points.");
+
+                if ((from current in TCPConnection.ExistingLocalListenEndPoints()
+                     where current.Port > MaxTargetLocalPort || current.Port < MinTargetLocalPort
+                     select current).Count() > 0)
+                     throw new CommsSetupShutdownException("Local port selected that is not within the valid range.");
                 #endregion
 
                 if (DFS.loggingEnabled) DFS.logger.Info("Initialised DFS");
@@ -302,9 +330,10 @@ namespace DistributedFileSystem
                     NetworkComms.LogError(e, "RepeaterWorkerError");
                 }
 
-                Thread.Sleep(linkRequestIntervalSecs * 1000);
+                if (DFSShutdownEvent.WaitOne(linkRequestIntervalSecs * 1000))
+                    break;
 
-            } while (!DFSShutdownRequested);
+            } while (true);
 
             IsLinked = false;
         }
@@ -355,7 +384,7 @@ namespace DistributedFileSystem
 
         public static void ShutdownDFS()
         {
-            DFSShutdownRequested = true;
+            DFSShutdownEvent.Set();
             RemoveAllItemsFromLocalOnly();
             NetworkComms.Shutdown();
 
@@ -368,7 +397,45 @@ namespace DistributedFileSystem
                     Directory.Delete("DFS_" + NetworkComms.NetworkIdentifier, true);
             }
 
+            if (elapsedTimerThread != null && !elapsedTimerThread.Join(2000))
+            {
+                try
+                {
+                    NetworkComms.LogError(new Exception("DFS elapsedTimerThread did not close after 2 seconds."), "DFSShutdownError");
+                    elapsedTimerThread.Abort();
+                }
+                catch (Exception) { }
+            }
+
             if (loggingEnabled) DFS.logger.Debug("DFS Shutdown.");
+        }
+
+        /// <summary>
+        /// Runs in the background to estimate the elapsed time of the application.
+        /// We can't use DateTime as elapsed time should not include time during which process was suspended
+        /// </summary>
+        private static void ElapsedTimerWorker()
+        {
+            ElapsedExecutionSeconds = 0;
+
+            try
+            {
+                while (true)
+                {
+                    if (DFSShutdownEvent.WaitOne(1000))
+                        break;
+
+                    ElapsedExecutionSeconds++;
+                }
+            }
+            catch (ThreadAbortException)
+            {
+
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "DFSElapsedWorkerError");
+            }
         }
 
         #region Logging
@@ -826,16 +893,9 @@ namespace DistributedFileSystem
                 }
 
                 if (selectedItem == null)
-                {
-                    //Reply with an empty "DFS_KnownPeersUpdate" so that we don't hold up the peer
-                    //connection.SendObject("DFS_KnownPeersUpdate", new string[] { "" }, nullCompressionSRO);
-
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
-                    //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
                     UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
-                }
                 else
-                    //connection.SendObject("DFS_KnownPeersUpdate", selectedItem.SwarmChunkAvailability.AllPeerEndPoints(), nullCompressionSRO);
                     UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.ItemCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
             }
             catch (CommsException)
@@ -848,6 +908,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// The response to a DFS_KnownPeersRequest
+        /// </summary>
+        /// <param name="packetHeader"></param>
+        /// <param name="connection"></param>
+        /// <param name="peerList"></param>
         private static void KnownPeersUpdate(PacketHeader packetHeader, Connection connection, KnownPeerEndPoints peerList)
         {
             try
@@ -863,16 +929,15 @@ namespace DistributedFileSystem
                 if (currentItem != null)
                 {
                     //If we have some unknown peers we can request an update from them as well
-                    foreach (string peerContactInfoOuter in peerList.PeerEndPoints)
+                    foreach (string peerContactInfo in peerList.PeerEndPoints)
                     {
-                        string peerContactInfo = peerContactInfoOuter;
                         try
                         {
-                            //IPEndPoint peerEndPoint = new IPEndPoint(IPAddress.Parse(peerContactInfo.Split(':')[0]), int.Parse(peerContactInfo.Split(':')[1]));
                             IPEndPoint peerEndPoint = IPTools.ParseEndPointFromString(peerContactInfo);
 
+                            //We don't want to contact existing peers as this has already been done by SwarmChunkAvailability.UpdatePeerAvailability
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (currentItem.SwarmChunkAvailability.PeerContactAllowed(ShortGuid.Empty, peerEndPoint, false))
+                            if (!currentItem.SwarmChunkAvailability.PeerExistsInSwarm(peerEndPoint) && currentItem.SwarmChunkAvailability.PeerContactAllowed(ShortGuid.Empty, peerEndPoint, false))
                             {
                                 currentItem.AddBuildLogLine("Contacting " + peerContactInfo + " for a DFS_ChunkAvailabilityRequest from within KnownPeersUpdate.");
                                 UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", peerList.ItemChecksm, peerEndPoint, nullCompressionSRO);
@@ -1278,6 +1343,7 @@ namespace DistributedFileSystem
                     lock (chunkDataCacheLocker)
                     {
                         //We generally expect the data to arrive first, but we handle both situations anyway
+                        //Realistic testing across a 100MB connection shows that we already have the data 90.1% of the time
                         if (chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier) && chunkDataCache[incomingReply.SourceNetworkIdentifier].ContainsKey(incomingReply.DataSequenceNumber))
                         {
                             incomingReply.SetChunkData(chunkDataCache[incomingReply.SourceNetworkIdentifier][incomingReply.DataSequenceNumber].Data);

@@ -78,13 +78,20 @@ namespace DebugTests
             //        connection.SendObject("Message", "message from establish handler");
             //    }, true);
 
-            BasicSend.RunExample();
+            //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
             //LoadTest.RunExample();
             //DebugTest.GoStreamTest();
             //ThreadPoolTest.RunExample();
+
+            LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\WALerrors\ExamplesConsoleLog_zibAIsn37EOb4XQ2iLEB_w.txt");
+            //log.LinesWithMatch(new string[] { "Received packet of type", "Sending a packet of type ", "Sending a UDP packet" }, "matchLog.txt");
+            //log.LinesWithMatch(new string[] { "Completed ChunkAvailabilityReply using data", "Added ChunkAvailabilityReply to chunkDataCache"}, "matchLog.txt");
+            log.LinesWithMatch(new string[] { "written to TCP netstream at" }, "matchLog.txt");
+            //log.ThreadPoolInfo("threadPool.csv");
+            //log.DataSendReceive(10, "sendReceiveStats.csv");
         }
     }
 }

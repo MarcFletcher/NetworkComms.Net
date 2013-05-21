@@ -138,7 +138,7 @@ namespace ExamplesConsole
                 LoggingConfiguration logConfig = new LoggingConfiguration();
                 FileTarget fileTarget = new FileTarget();
                 fileTarget.FileName = "${basedir}/ExamplesConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
-                fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
+                fileTarget.Layout = "${date:format=HH\\:mm\\:ss\\:fff} [${threadid} - ${level}] - ${message}";
                 ConsoleTarget consoleTarget = new ConsoleTarget();
                 consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
 
