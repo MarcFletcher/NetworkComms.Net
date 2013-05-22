@@ -114,9 +114,6 @@ namespace ExamplesWPFChat
                 //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
                 NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
             }
-
-            //TextBlock txt = new TextBlock();
-            //txt.Inlines.Add(new Bold(new Run("bold")));
         }
 
         /// <summary>

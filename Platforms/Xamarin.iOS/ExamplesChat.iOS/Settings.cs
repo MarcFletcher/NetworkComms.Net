@@ -114,8 +114,8 @@ namespace ExamplesChat.iOS
                     NetworkComms.Shutdown();
                 }
 
-                //Initialise comms again using the updated connection type
-                ChatWindow.InitialiseComms(ConnectionTypeValue);
+                //Enable local server mode using the selected connection type
+                ChatWindow.InitialiseComms(true, ConnectionTypeValue);
             }
             else if (!_localServerEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
             {

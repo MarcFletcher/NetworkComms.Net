@@ -11,7 +11,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>MinimumOSVersion</key>
-	<string>6.1</string>
+	<string>5.0</string>
 	<key>CFBundleDisplayName</key>
 	<string>iOSChat</string>
 	<key>CFBundleIdentifier</key>

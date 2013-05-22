@@ -24,8 +24,8 @@ md ".\Net35"
 md ".\Net35\%1\Complete"
 md ".\Net35\%1\Core"
 
-.\ILMerge.exe /out:.\Net35\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll
-.\ILMerge.exe /out:.\Net35\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll
+.\ILMerge.exe /lib:"C:\Program Files\Reference Assemblies\Microsoft\Framework\v3.5" /out:.\Net35\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll
+.\ILMerge.exe /lib:"C:\Program Files\Reference Assemblies\Microsoft\Framework\v3.5" /out:.\Net35\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll
 
 DEL .\%1\*.dll .\%1\*.pdb
 REM DEL .\Net35\%1\Complete\*.pdb .\Net35\%1\Core\*.pdb

@@ -84,8 +84,9 @@ namespace ExamplesChat.iOS
             //Print out the application usage instructions
             PrintUsageInstructions();
 
-            //Uncomment this line to enable a local server on application startup
-            //InitialiseComms(ConnectionType.TCP);
+            //Initialise comms to add the neccessary packet handlers
+            //To enable local server on startup change false parameter to true
+            InitialiseComms(false, ConnectionType.TCP);
         }
 
         /// <summary>
@@ -93,8 +94,7 @@ namespace ExamplesChat.iOS
         /// </summary>
         private void EnableLogging()
         {
-            var localDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var commsDir = Path.Combine(localDirectory, "NetworkComms");
+            var commsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NetworkComms");
 
             if (!Directory.Exists(commsDir))
                 Directory.CreateDirectory(commsDir);
@@ -177,33 +177,36 @@ namespace ExamplesChat.iOS
         /// Initialises NetworkComms.Net
         /// </summary>
         /// <param name="connectionType"></param>
-        public static void InitialiseComms(ConnectionType connectionType)
+        public static void InitialiseComms(bool enableLocalListen, ConnectionType connectionType)
         {
             //We can listen on either TCP or UDP
-            if (connectionType == ConnectionType.TCP)
+            if (enableLocalListen && connectionType == ConnectionType.TCP)
             {
                 TCPConnection.StartListening(true);
                 AppendLineToChatBox("Enabled local server mode. Listening for incoming TCP connections on:");
                 foreach (IPEndPoint endPoint in TCPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(endPoint.Address + ":" + endPoint.Port);
+
+                AppendLineToChatBox(Environment.NewLine);
             }
-            else if (connectionType == ConnectionType.UDP)
+            else if (enableLocalListen && connectionType == ConnectionType.UDP)
             {
                 UDPConnection.StartListening(true);
                 AppendLineToChatBox("Enabled local server mode. Listening for incoming UDP connections on:");
                 foreach (IPEndPoint endPoint in UDPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatBox(endPoint.Address + ":" + endPoint.Port);
-            }
-            else
-                AppendLineToChatBox("Error: Unknown connection type provided.");
 
-            AppendLineToChatBox(Environment.NewLine);
+                AppendLineToChatBox(Environment.NewLine);
+            }
+            else if (enableLocalListen)
+                AppendLineToChatBox("Error: Unknown connection type provided.");
 
             //Configure the incoming packet handlers
             //We only ever need to do this once
             if (firstInitialisation)
             {
                 firstInitialisation = false;
+                //NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions<ProtobufSerializer>();
 
                 //Configure NetworkCommsDotNet to handle and incoming packet of type 'ChatMessage'
                 //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
@@ -330,7 +333,7 @@ namespace ExamplesChat.iOS
             //We clear the text within the messageText box.
             MessageBox.Text = "";
 
-            //If we provided master information we send to the master first
+            //If we provided server information we send to the master first
             if (masterConnectionInfo != null)
             {
                 //We perform the send within a try catch to ensure the application continues to run if there is a problem.
@@ -347,7 +350,7 @@ namespace ExamplesChat.iOS
             }
 
             //If we have any other connections we now send the message to those as well
-            //This ensures that if we are the master everyone who is connected to us gets our message
+            //This ensures that if we are the server everyone who is connected to us gets our message
             var otherConnectionInfos = (from current in NetworkComms.AllConnectionInfo() where current != masterConnectionInfo select current).ToArray();
             foreach (ConnectionInfo info in otherConnectionInfos)
             {

@@ -64,57 +64,55 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-            ReceiveBufferSizeBytes = 80000;
-
 #if SILVERLIGHT || WINDOWS_PHONE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
-            SendBufferSizeBytes = 8000;
+            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
 #elif iOS
             CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_iOS;
-            SendBufferSizeBytes = 8000;
+            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
 #elif ANDROID
             CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_Android;
-            SendBufferSizeBytes = 8000;
+            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
 #elif NET2
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net2;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = 8000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net2;
-                SendBufferSizeBytes = 80000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
             }
 #elif NET35
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net35;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = 8000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net35;
-                SendBufferSizeBytes = 80000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
             }
 #else
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = 8000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net4;
-                SendBufferSizeBytes = 80000;
+                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
             }
 #endif
-            
+
             //We want to instantiate our own thread pool here
-            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, 1000, new TimeSpan(0, 0, 10));
+            CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount*2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
@@ -1720,6 +1718,15 @@ namespace NetworkCommsDotNet
             }
 
             return entireFileName;
+        }
+
+        /// <summary>
+        /// The current memory usage of the application in MB
+        /// </summary>
+        /// <returns></returns>
+        public static double CurrentApplicationMemoryUsageMB()
+        {
+            return Math.Abs(Process.GetCurrentProcess().WorkingSet64 / 1048576.0);
         }
         #endregion
 
