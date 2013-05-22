@@ -93,23 +93,23 @@ namespace LZMA
     internal static class SevenZipHelper
     {
 
-       static int dictionary = 1 << 23;
+        static int dictionary = 1 << 23;
 
-      // static Int32 posStateBits = 2;
-     // static  Int32 litContextBits = 3; // for normal files
+        // static Int32 posStateBits = 2;
+        // static  Int32 litContextBits = 3; // for normal files
         // UInt32 litContextBits = 0; // for 32-bit data
-     // static  Int32 litPosBits = 0;
+        // static  Int32 litPosBits = 0;
         // UInt32 litPosBits = 2; // for 32-bit data
-    // static   Int32 algorithm = 2;
-    // static    Int32 numFastBytes = 128;
+        // static   Int32 algorithm = 2;
+        // static    Int32 numFastBytes = 128;
 
-     static   bool eos = false;
-
-
+        static bool eos = false;
 
 
 
-     static   CoderPropID[] propIDs = 
+
+
+        static CoderPropID[] propIDs = 
 				{
 					CoderPropID.DictionarySize,
 					CoderPropID.PosStateBits,
@@ -122,7 +122,7 @@ namespace LZMA
 				};
 
         // these are the default properties, keeping it simple for now:
-     static   object[] properties = 
+        static object[] properties = 
 				{
 					(Int32)(dictionary),
 					(Int32)(2),
@@ -134,39 +134,74 @@ namespace LZMA
 					eos
 				};
 
+#if iOS
+        //For iOS we create static instances to avoid significant memory usages
+        //This means we can only compress/decompress in serial but that's most likely
+        //acceptable on mobile platforms.
+        static object staticEncoderLocker = new object();
+        static LZMA.Encoder staticEncoder = new LZMA.Encoder();
+
+        static object staticDecoderLocker = new object();
+        static LZMA.Decoder staticDecoder = new LZMA.Decoder();
+#endif
 
         internal static byte[] Compress(byte[] inputBytes)
         {
+#if iOS
+            lock (staticEncoderLocker)
+            {
+                LZMA.Encoder encoder = staticEncoder;
+#else
+                LZMA.Encoder encoder = new LZMA.Encoder();
+#endif
 
-            MemoryStream inStream = new MemoryStream(inputBytes);
-            MemoryStream outStream = new MemoryStream();
-            LZMA.Encoder encoder = new LZMA.Encoder();
-            encoder.SetCoderProperties(propIDs, properties);
-            encoder.WriteCoderProperties(outStream);
-            long fileSize = inStream.Length;
-            for (int i = 0; i < 8; i++)
-                outStream.WriteByte((Byte)(fileSize >> (8 * i)));
-            encoder.Code(inStream, outStream, -1, -1);
-            return outStream.ToArray();
+                MemoryStream inStream = new MemoryStream(inputBytes);
+                MemoryStream outStream = new MemoryStream();
+
+                encoder.SetCoderProperties(propIDs, properties);
+                encoder.WriteCoderProperties(outStream);
+                long fileSize = inStream.Length;
+                for (int i = 0; i < 8; i++)
+                    outStream.WriteByte((Byte)(fileSize >> (8 * i)));
+                encoder.Code(inStream, outStream, -1, -1);
+                return outStream.ToArray();
+#if iOS
+            }
+#endif
         }
 
         internal static void CompressToStream(Stream inStream, Stream outStream)
-        {            
-            LZMA.Encoder encoder = new LZMA.Encoder();
+        {
+#if iOS
+            lock (staticEncoderLocker)
+            {
+                LZMA.Encoder encoder = staticEncoder;
+#else
+                LZMA.Encoder encoder = new LZMA.Encoder();
+#endif
+
             encoder.SetCoderProperties(propIDs, properties);
             encoder.WriteCoderProperties(outStream);
             long fileSize = inStream.Length;
             for (int i = 0; i < 8; i++)
                 outStream.WriteByte((Byte)(fileSize >> (8 * i)));
             encoder.Code(inStream, outStream, -1, -1);
+#if iOS
+            }
+#endif
         }
-        
+
         internal static byte[] Decompress(byte[] inputBytes)
         {
-            MemoryStream newInStream = new MemoryStream(inputBytes);
+#if iOS
+            lock (staticEncoderLocker)
+            {
+                LZMA.Decoder decoder = staticDecoder;
+#else
+                LZMA.Decoder decoder = new LZMA.Decoder();
+#endif
 
-            LZMA.Decoder decoder = new LZMA.Decoder();
-            
+            MemoryStream newInStream = new MemoryStream(inputBytes);
             newInStream.Seek(0, 0);
             MemoryStream newOutStream = new MemoryStream();
 
@@ -189,11 +224,21 @@ namespace LZMA
             byte[] b = newOutStream.ToArray();
 
             return b;
+
+#if iOS
+            }
+#endif
         }
 
         internal static byte[] DecompressFromStream(Stream newInStream)
         {
-            LZMA.Decoder decoder = new LZMA.Decoder();
+#if iOS
+            lock (staticEncoderLocker)
+            {
+                LZMA.Decoder decoder = staticDecoder;
+#else
+                LZMA.Decoder decoder = new LZMA.Decoder();
+#endif
 
             newInStream.Seek(0, 0);
             MemoryStream newOutStream = new MemoryStream();
@@ -217,14 +262,24 @@ namespace LZMA
             byte[] b = newOutStream.ToArray();
 
             return b;
+
+#if iOS
+            }
+#endif
         }
 
         internal static void DecompressStreamToStream(Stream inStream, Stream outStream)
         {
-            LZMA.Decoder decoder = new LZMA.Decoder();
+#if iOS
+            lock (staticEncoderLocker)
+            {
+                LZMA.Decoder decoder = staticDecoder;
+#else
+                LZMA.Decoder decoder = new LZMA.Decoder();
+#endif
 
             inStream.Seek(0, 0);
-            
+
             byte[] properties2 = new byte[5];
             if (inStream.Read(properties2, 0, 5) != 5)
                 throw (new Exception("input .lzma is too short"));
@@ -239,7 +294,11 @@ namespace LZMA
             decoder.SetDecoderProperties(properties2);
 
             long compressedSize = inStream.Length - inStream.Position;
-            decoder.Code(inStream, outStream, compressedSize, outSize);            
+            decoder.Code(inStream, outStream, compressedSize, outSize);
+
+#if iOS
+            }
+#endif
         }
     }
 }
