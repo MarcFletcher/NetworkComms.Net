@@ -45,25 +45,31 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Enable Local Server" Grid.Column="0" Grid.Row="0" VerticalAlignment="Center"/>
-                <ToggleButton x:Name="LocalServerEnabled" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
+                <TextBlock Text="Remote Server IP Address" Grid.Column="0" VerticalAlignment="Center"/>
+                <TextBlock Text="Remote Server Port Num" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" Grid.RowSpan="2"/>
+                <TextBox x:Name="ServerIPInputBox" Grid.Column="1" VerticalAlignment="Center" Text="" TextAlignment="Center" InputScope="Digits" FontSize="22"/>
+                <TextBox x:Name="ServerPortInputBox" Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Text="10000" TextAlignment="Center" InputScope="Digits" FontSize="22" Grid.RowSpan="2"/>
+                <TextBlock Text="Local Name" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center"/>
+                <TextBox x:Name="LocalNameInputBox" Grid.Column="1" Grid.Row="3" VerticalAlignment="Center" Text="WinPhone8" TextAlignment="Center" FontSize="22"/>
 
-                <TextBlock Text="Remote Server IP Address" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center"/>
-                <TextBlock Text="Remote Server Port Num" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center"/>
-                <TextBox x:Name="MasterIPInputBox" Grid.Column="1" Grid.Row="2" VerticalAlignment="Center" Text="255.255.255.255" TextAlignment="Center" InputScope="Digits" TextChanged="ServerIPInputBox_TextChanged" FontSize="22"/>
-                <TextBox x:Name="MasterPortInputBox" Grid.Column="1" Grid.Row="3" VerticalAlignment="Center" Text="10000" TextAlignment="Center" InputScope="Digits" FontSize="22"/>
-                <TextBlock Text="Local Name" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center"/>
-                <TextBox x:Name="LocalNameInputBox" Grid.Column="1" Grid.Row="4" VerticalAlignment="Center" Text="WinPhone8" TextAlignment="Center" FontSize="22"/>
+                <TextBlock Text="Use TCP" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center"/>
+                <TextBlock Text="Use UDP" Grid.Column="0" Grid.Row="5" VerticalAlignment="Center"/>
+                <ToggleButton x:Name="UseTCP" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseTCP_Checked" Unchecked="UseUDP_Checked"/>
+                <ToggleButton x:Name="UseUDP" Grid.Column="1" Grid.Row="5" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseUDP_Checked" Unchecked="UseTCP_Checked"/>
 
-                <TextBlock Text="Use TCP" Grid.Column="0" Grid.Row="6" VerticalAlignment="Center"/>
-                <TextBlock Text="Use UDP" Grid.Column="0" Grid.Row="7" VerticalAlignment="Center"/>
-                <ToggleButton x:Name="UseTCP" Grid.Column="1" Grid.Row="6" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseTCP_Checked"/>
-                <ToggleButton x:Name="UseUDP" Grid.Column="1" Grid.Row="7" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseUDP_Checked"/>
+                <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="6" VerticalAlignment="Center"/>
+                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="6" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
 
-                <TextBlock Text="Enable Encryption" Grid.Column="0" Grid.Row="8" VerticalAlignment="Center"/>
-                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="8" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false" Checked="UseEncryptionBox_Checked" Unchecked="UseEncryptionBox_Unchecked"/>
+                <TextBlock Text="Enable Local Server" Grid.Column="0" Grid.Row="8" VerticalAlignment="Center"/>
+                <ToggleButton x:Name="LocalServerEnabled" Grid.Column="1" Grid.Row="8" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
+                <TextBlock Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="9" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.75">
+                	<Run Text="See main screen for local IP "/>
+                	<LineBreak/>
+                	<Run Text="information if enabled."/>
+                </TextBlock>
             </Grid>
         </Grid>
     </Grid>

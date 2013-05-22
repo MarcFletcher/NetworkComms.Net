@@ -79,6 +79,8 @@
     <AssemblyName>ExamplesChat.iOS</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ChatAppBase.cs" />
+    <Compile Include="ChatAppiOS.cs" />
     <Compile Include="ChatMessage.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />

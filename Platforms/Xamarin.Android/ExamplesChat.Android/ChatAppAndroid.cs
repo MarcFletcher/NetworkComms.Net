@@ -12,43 +12,54 @@ using Android.Widget;
 
 namespace ExamplesChat.Android
 {
+    /// <summary>
+    /// All NetworkComms.Net implementation can be found here and in ChatAppBase
+    /// </summary>
     public class ChatAppAndroid : ChatAppBase
     {
+        #region Public Fields
         /// <summary>
         /// The chat history window. This is where all of the message appear
         /// </summary>
-        TextView chatHistory;
+        public TextView ChatHistory { get; private set; }
 
         /// <summary>
         /// The input box where new messages are input
         /// </summary>
-        AutoCompleteTextView input;
+        public AutoCompleteTextView Input { get; private set; }
 
         /// <summary>
         /// The parent context of this object
         /// </summary>
-        Context parentContext;
+        public Context ParentContext { get; private set; }
+        #endregion
 
+        #region Private Fields
         /// <summary>
         /// Handler used to post information to the parent context
         /// </summary>
         Handler handler = new Handler();
+        #endregion
 
+        /// <summary>
+        /// Constructor for the Android chat app.
+        /// </summary>
         public ChatAppAndroid(Context parentContext, TextView chatHistory, AutoCompleteTextView input)
             : base("Android", NetworkCommsDotNet.ConnectionType.TCP)
         {
-            this.parentContext = parentContext;
-            this.chatHistory = chatHistory;
-            this.input = input;
+            this.ParentContext = parentContext;
+            this.ChatHistory = chatHistory;
+            this.Input = input;
         }
 
+        #region GUI Interface Overrides
         /// <summary>
         /// Append the provided message to the chatBox text box.
         /// </summary>
         /// <param name="message">Message to be appended</param>
-        public override void AppendLineToChatBox(string message)
+        public override void AppendLineToChatHistory(string message)
         {
-            handler.Post(() => { chatHistory.Text += System.Environment.NewLine + message; });
+            handler.Post(() => { ChatHistory.Text += System.Environment.NewLine + message; });
         }
 
         /// <summary>
@@ -57,7 +68,7 @@ namespace ExamplesChat.Android
         /// <param name="message">Message to be appended</param>
         public override void ClearChatHistory()
         {
-            handler.Post(() => { chatHistory.Text = ""; });
+            handler.Post(() => { ChatHistory.Text = ""; });
         }
 
         /// <summary>
@@ -65,7 +76,7 @@ namespace ExamplesChat.Android
         /// </summary>
         public override void ClearInputLine()
         {
-            handler.Post(() => { input.Text = ""; });
+            handler.Post(() => { Input.Text = ""; });
         }
 
         /// <summary>
@@ -76,7 +87,7 @@ namespace ExamplesChat.Android
         {
             handler.Post(() =>
                 {
-                    AlertDialog dialog = (new AlertDialog.Builder(parentContext)).Create();
+                    AlertDialog dialog = (new AlertDialog.Builder(ParentContext)).Create();
                     dialog.SetCancelable(false); // This blocks the 'BACK' button  
                     dialog.SetMessage(message);
                     dialog.SetButton("OK", new EventHandler<DialogClickEventArgs>((obj, args) =>
@@ -87,5 +98,6 @@ namespace ExamplesChat.Android
                     dialog.Show();
                 });
         }
+        #endregion
     }
 }

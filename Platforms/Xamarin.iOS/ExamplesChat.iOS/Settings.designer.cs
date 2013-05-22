@@ -24,6 +24,9 @@ namespace ExamplesChat.iOS
 		MonoTouch.UIKit.UISegmentedControl ConnectionMode { get; set; }
 
 		[Outlet]
+		MonoTouch.UIKit.UISwitch EncryptionEnabled { get; set; }
+
+		[Outlet]
 		MonoTouch.UIKit.UISwitch LocalServerEnabled { get; set; }
 		
 		void ReleaseDesignerOutlets ()
@@ -46,6 +49,11 @@ namespace ExamplesChat.iOS
 			if (ConnectionMode != null) {
 				ConnectionMode.Dispose ();
 				ConnectionMode = null;
+			}
+
+			if (EncryptionEnabled != null) {
+				EncryptionEnabled.Dispose ();
+				EncryptionEnabled = null;
 			}
 
 			if (LocalServerEnabled != null) {

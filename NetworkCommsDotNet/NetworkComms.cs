@@ -118,7 +118,7 @@ namespace NetworkCommsDotNet
             DPSManager.AddDataSerializer<ProtobufSerializer>();
 
             DPSManager.AddDataSerializer<NullSerializer>();
-            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();  
+            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
 
 #if !FREETRIAL
             //Only the full version includes the encrypter
@@ -1718,15 +1718,6 @@ namespace NetworkCommsDotNet
             }
 
             return entireFileName;
-        }
-
-        /// <summary>
-        /// The current memory usage of the application in MB
-        /// </summary>
-        /// <returns></returns>
-        public static double CurrentApplicationMemoryUsageMB()
-        {
-            return Math.Abs(Process.GetCurrentProcess().WorkingSet64 / 1048576.0);
         }
         #endregion
 

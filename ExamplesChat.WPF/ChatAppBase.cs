@@ -3,16 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Android.App;
-using Android.Content;
-using Android.OS;
-using Android.Runtime;
-using Android.Views;
-using Android.Widget;
 using NetworkCommsDotNet;
 using DPSBase;
 
-namespace ExamplesChat.Android
+namespace ExamplesWPFChat
 {
     /// <summary>
     /// In an attempt to keep things as clear as possible all shared implementation across chat examples
@@ -286,7 +280,7 @@ namespace ExamplesChat.Android
                 lastPeerMessageDict.Remove(connection.ConnectionInfo.NetworkIdentifier);
             }
         }
-
+        
         /// <summary>
         /// Send a message.
         /// </summary>

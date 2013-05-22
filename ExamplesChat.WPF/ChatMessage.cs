@@ -16,7 +16,7 @@ namespace ExamplesWPFChat
     /// serialisation is performed by protobuf.net.
     /// </summary>
     [ProtoContract]
-    class ChatMessage
+    public class ChatMessage
     {
         /// <summary>
         /// The source identifier of this ChatMessage.

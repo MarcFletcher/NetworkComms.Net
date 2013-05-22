@@ -11,44 +11,13 @@ namespace ExamplesChat.iOS
 {
 	public partial class Settings : UIViewController
     {
-        #region Private Fields
-        /// <summary>
-        /// The IP address of the master (server)
-        /// </summary>
-        static string _masterIPValue = "";
-
-        /// <summary>
-        /// The port of the master (server)
-        /// </summary>
-        static int _masterPortValue = 10000;
-
-        /// <summary>
-        /// The local name used when sending messages
-        /// </summary>
-        static string _localNameValue = "iphone";
-
-        /// <summary>
-        /// The type of connection currently being used for sending and receiving
-        /// </summary>
-        static ConnectionType _connectionTypeValue = ConnectionType.TCP;
-
-        /// <summary>
-        /// Boolean for recording if the local device is acting as a server
-        /// </summary>
-        static bool _localServerEnabled = false;
-        #endregion
-
-        #region Get & Set
-        public static string MasterIPValue { get { return _masterIPValue; } private set { _masterIPValue = value; } }
-        public static int MasterPortValue { get { return _masterPortValue; } private set { _masterPortValue = value; } }
-        public static string LocalNameValue { get { return _localNameValue; } private set { _localNameValue = value; } }
-        public static ConnectionType ConnectionTypeValue { get { return _connectionTypeValue; } private set { _connectionTypeValue = value; } }
-        #endregion
-
         public Settings (IntPtr handle) : base (handle)
 		{
 		}
 
+        /// <summary>
+        /// On load set the config as per the chat application
+        /// </summary>
         public override void ViewDidLoad()
         {
             base.ViewDidLoad();
@@ -61,71 +30,49 @@ namespace ExamplesChat.iOS
             });
             this.View.AddGestureRecognizer(tap);
 
+            //Get a reference to the chat application
+            ChatAppiOS chatApplication = ChatWindow.ChatApplication;
+
             //Update the settings based on previous values
-            LocalServerEnabled.SetState(_localServerEnabled, false);
-            MasterIP.Text = MasterIPValue;
-            MasterPort.Text = MasterPortValue.ToString();
-            LocalName.Text = LocalNameValue;
+            LocalServerEnabled.SetState(chatApplication.LocalServerEnabled, false);
+            MasterIP.Text = chatApplication.ServerIPAddress;
+            MasterPort.Text = chatApplication.ServerPort.ToString();
+            LocalName.Text = chatApplication.LocalName;
+            EncryptionEnabled.SetState(chatApplication.EncryptionEnabled, false);
 
             //Set the correct segment on the connection mode toggle
-            ConnectionMode.SelectedSegment = (ConnectionTypeValue == ConnectionType.TCP ? 0 : 1);
+            ConnectionMode.SelectedSegment = (chatApplication.ConnectionType == ConnectionType.TCP ? 0 : 1);
         }
 
-        #region Event Handlers
         /// <summary>
         /// Update the settings when the user goes back to the main interface
         /// </summary>
         /// <returns></returns>
         public override bool ResignFirstResponder()
         {
-            //Parse the name, ip and port information
-            LocalNameValue = LocalName.Text.Trim();
-            MasterIPValue = MasterIP.Text.Trim();
+            //Get a reference to the chat application
+            ChatAppiOS chatApplication = ChatWindow.ChatApplication;
 
-            int port;
+            //Parse settings and store back in chat application
+            chatApplication.ServerIPAddress = MasterIP.Text.Trim();
+
+            int port = 10000;
             int.TryParse(MasterPort.Text, out port);
-            MasterPortValue = port;
+            chatApplication.ServerPort = port;
 
-            //Store if we are running a local server
-            _localServerEnabled = LocalServerEnabled.On;
+            chatApplication.LocalName = LocalName.Text.Trim();
+            chatApplication.EncryptionEnabled = EncryptionEnabled.On;
+            chatApplication.LocalServerEnabled = LocalServerEnabled.On;
 
-            //If connection mode has been changed we will update ConnectionTypeValue 
-            bool connectionTypeChanged = false;
-            if (ConnectionMode.SelectedSegment == 0 && ConnectionTypeValue == ConnectionType.UDP)
-            {
-                connectionTypeChanged = true;
-                ConnectionTypeValue = ConnectionType.TCP;
-            }
-            else if (ConnectionMode.SelectedSegment == 1 && ConnectionTypeValue == ConnectionType.TCP)
-            {
-                connectionTypeChanged = true;
-                ConnectionTypeValue = ConnectionType.UDP;
-            }
+            if (ConnectionMode.SelectedSegment == 0)
+                chatApplication.ConnectionType = ConnectionType.TCP;
+            else
+                chatApplication.ConnectionType = ConnectionType.UDP;
 
-            //If the local server is enabled and we have changed the connection type
-            //The ending logic "|| (!TCPConnection.Listening() && !UDPConnection.Listening())" is to catch the first
-            //enable of local server mode if the ConnectionTypeValue has not been updated
-            if (_localServerEnabled && (connectionTypeChanged || (!TCPConnection.Listening() && !UDPConnection.Listening())))
-            {
-                //If we were previously listening we first shutdown comms.
-                if (TCPConnection.Listening() || UDPConnection.Listening())
-                {
-                    ChatWindow.AppendLineToChatBox("Connection mode has been updated. Any existing connections have been closed.");
-                    NetworkComms.Shutdown();
-                }
-
-                //Enable local server mode using the selected connection type
-                ChatWindow.InitialiseComms(true, ConnectionTypeValue);
-            }
-            else if (!_localServerEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
-            {
-                //If the local server mode has been disabled but we are still listening we need to stop accepting incoming connections
-                NetworkComms.Shutdown();
-                ChatWindow.AppendLineToChatBox("Local server mode disabled. Any existing connections have been closed.");
-            }
+            //Refresh the NetworkComms.Net configuration once any changes have been made
+            chatApplication.RefreshNetworkCommsConfiguration();
 
             return base.ResignFirstResponder();
         }
-        #endregion
     }
 }

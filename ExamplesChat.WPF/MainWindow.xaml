@@ -20,14 +20,14 @@
             </Grid.ColumnDefinitions>
             
             <Grid Grid.Column="0">
-                <TextBox Height="23" HorizontalAlignment="Left" Margin="71,2,0,0" Name="masterIP" VerticalAlignment="Top" Width="97" />
-                <Label Content="Master IP:" Height="28" HorizontalAlignment="Left" Margin="8,0,0,0" Name="label1" VerticalAlignment="Top" />
-                <TextBox Height="23" HorizontalAlignment="Left" Margin="201,2,0,0" Name="masterPort" VerticalAlignment="Top" Width="47" />
-                <Label Content="Port:" Height="28" HorizontalAlignment="Left" Margin="168,0,0,0" Name="label2" VerticalAlignment="Top" />
+                <TextBox Height="23" HorizontalAlignment="Left" Margin="69,2,0,0" Name="serverIP" VerticalAlignment="Top" Width="97" LostFocus="ServerIP_LostFocus" />
+                <Label Content="Server IP:" Height="28" HorizontalAlignment="Left" Margin="8,0,0,0" Name="label1" VerticalAlignment="Top" />
+                <TextBox Height="23" HorizontalAlignment="Left" Margin="243,2,0,0" Name="serverPort" VerticalAlignment="Top" Width="47" LostFocus="ServerPort_LostFocus"/>
+                <Label Content="Server Port:" Height="28" HorizontalAlignment="Left" Margin="170,0,0,0" Name="label2" VerticalAlignment="Top" />
             </Grid>
             <Grid Grid.Column="1">
                 <Label Content="Local Name:" Height="28" HorizontalAlignment="right" Width="80" Margin="0,0,127,0" Name="label4" VerticalAlignment="Top" />
-                <TextBox Height="23" HorizontalAlignment="right" Margin="0,2,5,0" Name="localName" VerticalAlignment="Top" Width="128" />
+                <TextBox Height="23" HorizontalAlignment="right" Margin="0,2,5,0" Name="localName" VerticalAlignment="Top" Width="128" LostFocus="LocalName_LostFocus" />
             </Grid>
         </Grid>
         <Grid Grid.Row="2">
@@ -46,29 +46,34 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
+                    <RowDefinition Height="25"/>
                     <RowDefinition Height="20"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0">
+                    <CheckBox Content="Enable Local Server" Height="16" HorizontalAlignment="center" Margin="0,0,0,0" Name="enableLocalServer" VerticalAlignment="Bottom" IsChecked="False" Checked="EnableLocalServer_CheckedUnChecked" Unchecked="EnableLocalServer_CheckedUnChecked"/>
+                </Grid>
+                
+                <Grid Grid.Row="1">
                     <Label Content="Connection Method:" HorizontalAlignment="center" Margin="0,0,0,0" VerticalAlignment="Top"/>
                 </Grid>
 
-                <Grid Grid.Row="1">
+                <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                        <ColumnDefinition />
                     </Grid.ColumnDefinitions>
                     
                     <RadioButton Grid.Column="0" Name="UseTCP" Content="TCP" IsChecked="True" HorizontalAlignment="right" Margin="0,0,5,0" VerticalAlignment="Top" Checked="UseTCP_Checked"/>
                     <RadioButton Grid.Column="1" Name="UseUDP" Content="UDP" IsChecked="False" HorizontalAlignment="left" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseUDP_Checked"/>
                 </Grid>
 
-                <Grid Grid.Row="2">
-                    <CheckBox Content="Use Encryption" Height="16" HorizontalAlignment="center" Margin="0,0,0,0" Name="useEncryptionBox" VerticalAlignment="Top" Checked="UseEncryptionBox_Checked" Unchecked="UseEncryptionBox_Unchecked"/>
+                <Grid Grid.Row="3">
+                    <CheckBox Content="Use Encryption" Height="16" HorizontalAlignment="center" Margin="0,0,0,0" Name="useEncryptionBox" VerticalAlignment="Top" IsChecked="False" Checked="UseEncryptionBox_CheckedUnchecked" Unchecked="UseEncryptionBox_CheckedUnchecked"/>
                 </Grid>
                 
-                <Grid Grid.Row="3">
+                <Grid Grid.Row="4">
                     <Label Content="Messages from:" Height="28" HorizontalAlignment="center" Margin="0,0,0,0" Name="label3" VerticalAlignment="Top" Width="98" />
                     <TextBox HorizontalAlignment="Stretch" Margin="3,24,5,0" Name="messagesFrom" VerticalAlignment="Stretch" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
                 </Grid>

@@ -15,18 +15,22 @@ namespace ExamplesWP8Chat
 {
     public partial class MainPage : PhoneApplicationPage
     {
-        // Constructor
         public MainPage()
         {
             InitializeComponent();
-            (App.Current as App).ChatBox = this.chatBox;
-            (App.Current as App).ChatBoxScroller = this.ChatBoxScroller;
-            (App.Current as App).CurrentMessageInputBox = this.CurrentMessageInputBox;
-            (App.Current as App).PrintUsageInstructions();
+
+            //Initialise the chat application instance here as we have easy access to the GUI fields
+            (App.Current as App).ChatApplication = new ChatAppWP8(CurrentMessageInputBox, chatBox, ChatBoxScroller);
+
+            //Print out the usage instructions
+            (App.Current as App).ChatApplication.PrintUsageInstructions();
+
+            //Refresh the network configuration to ensure we are ready to send messages
+            (App.Current as App).ChatApplication.RefreshNetworkCommsConfiguration();
         }
 
         /// <summary>
-        /// Switch to the settings page
+        /// Switch to the settings page when selected
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -36,16 +40,15 @@ namespace ExamplesWP8Chat
         }
 
         /// <summary>
-        /// Catch text entry
+        /// Send a message when the user presses enter/return
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void CurrentMessageInputBox_KeyDown_1(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            var textBox = sender as TextBox;
-
+            TextBox textBox = sender as TextBox;
             if (e.Key == System.Windows.Input.Key.Enter)
-                (App.Current as App).SendMessage(textBox.Text);
+                (App.Current as App).ChatApplication.SendMessage(textBox.Text);
         }        
     }
 }

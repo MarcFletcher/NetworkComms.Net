@@ -87,12 +87,12 @@ namespace ExamplesChat.Android
 
             //Initialise the chat application
             chatApplication = new ChatAppAndroid(this, chatHistory, input);
-            chatApplication.MasterIPAddress = "";
-            chatApplication.MasterPort = 10000;
-            chatApplication.UseEncryption = false;
 
-            //Initialise NetworkComms.Net
-            chatApplication.InitialiseNetworkComms();
+            //Print the usage instructions
+            chatApplication.PrintUsageInstructions();
+
+            //Initialise NetworkComms.Net but without a local server
+            chatApplication.RefreshNetworkCommsConfiguration();
         }
 
         /// <summary>
@@ -106,17 +106,17 @@ namespace ExamplesChat.Android
             IPAddress newMasterIPAddress;
             if (!IPAddress.TryParse(ipTextBox.Text, out newMasterIPAddress))
                 //If the parse failed set the ipTextBox back to the the previous good value
-                ipTextBox.Text = chatApplication.MasterIPAddress;
+                ipTextBox.Text = chatApplication.ServerIPAddress;
             else
-                chatApplication.MasterIPAddress = newMasterIPAddress.ToString();
+                chatApplication.ServerIPAddress = newMasterIPAddress.ToString();
 
             //Parse the port number
             int newPort;
             if (!int.TryParse(portTextBox.Text, out newPort) || newPort < 1 || newPort > ushort.MaxValue)
                 //If the parse failed we set the portTextBox back to the previous good value
-                portTextBox.Text = chatApplication.MasterPort.ToString();
-            else 
-                chatApplication.MasterPort = newPort;
+                portTextBox.Text = chatApplication.ServerPort.ToString();
+            else
+                chatApplication.ServerPort = newPort;
 
             //Send the text entered in the input box
             chatApplication.SendMessage(input.Text);
@@ -149,14 +149,13 @@ namespace ExamplesChat.Android
             //of the example we only want to use one at a time
             if (connectionTypeChanged)
             {
+                chatApplication.AppendLineToChatHistory("Connection mode has been updated. Any existing connections have been closed.");
+
                 //Shutdown NetworkComms.Net
                 NetworkCommsDotNet.NetworkComms.Shutdown();
 
-                //Clear any previous chat history
-                chatApplication.ClearChatHistory();
-
                 //Initialise network comms using the new connection type
-                chatApplication.InitialiseNetworkComms();
+                chatApplication.RefreshNetworkCommsConfiguration();
             }
         }
 
