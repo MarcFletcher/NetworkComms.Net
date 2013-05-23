@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// A boolean used to signal a connection setup exception.
         /// </summary>
-        protected volatile bool connectionSetupException = false;
+        protected bool connectionSetupException = false;
         /// <summary>
         /// If <see cref="connectionSetupException"/> is true provides additional exception information.
         /// </summary>

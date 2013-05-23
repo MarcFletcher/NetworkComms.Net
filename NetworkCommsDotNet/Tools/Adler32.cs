@@ -72,7 +72,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="splitBuffer">Buffers for which the checksum should be calculated.</param>
         /// <returns>The checksum value</returns>
-        public static long GenerateCheckSum(byte[][] splitBuffer)
+        public static long GenerateCheckSumSplitBuffer(byte[][] splitBuffer)
         {
             if (splitBuffer == null) throw new ArgumentNullException("splitBuffer", "Provided byte[][] cannot be null.");
 

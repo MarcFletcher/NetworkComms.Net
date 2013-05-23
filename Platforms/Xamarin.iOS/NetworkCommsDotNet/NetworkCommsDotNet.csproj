@@ -202,9 +202,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="NLog">
-      <HintPath>..\..\..\DLL\Net20\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="protobuf-net">
       <HintPath>..\..\..\DLL\Xamarin.iOS\protobuf-net.dll</HintPath>
     </Reference>

@@ -17,8 +17,9 @@ namespace ExamplesChat.Android
     public class Activity1 : Activity
     {
         #region Private Fields
-        //The class used for chat functionality
-        //This helps keep the networking code independent of the GUI
+        /// <summary>
+        /// An instance of the chat applications
+        /// </summary>
         ChatAppAndroid chatApplication;
 
         /// <summary>
@@ -50,6 +51,11 @@ namespace ExamplesChat.Android
         /// The spinner (drop down) menu for selecting the connection type to use
         /// </summary>
         Spinner connectionTypeSelector;
+
+        /// <summary>
+        /// The checkbox which can be used to enable local server mode
+        /// </summary>
+        CheckBox enableLocalServerCheckBox;
         #endregion
 
         /// <summary>
@@ -70,9 +76,7 @@ namespace ExamplesChat.Android
             ipTextBox = FindViewById<AutoCompleteTextView>(Resource.Id.ipTextInput);
             portTextBox = FindViewById<AutoCompleteTextView>(Resource.Id.portTextInput);
             sendButton = FindViewById<Button>(Resource.Id.sendButton);
-
-            //Append the method 'sendButton_Click' to the button click event
-            sendButton.Click += sendButton_Click;
+            enableLocalServerCheckBox = FindViewById<CheckBox>(Resource.Id.enableLocalServer);
 
             //Set the connection type selection drop down options
             ArrayAdapter adapter = ArrayAdapter.CreateFromResource(this, Resource.Array.ConnectionTypes, global::Android.Resource.Layout.SimpleSpinnerItem);
@@ -81,6 +85,13 @@ namespace ExamplesChat.Android
 
             //Append the method 'connectionType_Selected' to the connection type selected event
             connectionTypeSelector.ItemSelected += connectionType_Selected;
+
+            //Append the method 'sendButton_Click' to the button click event
+            sendButton.Click += sendButton_Click;
+
+            //Append the method 'enableLocalServerCheckBox_CheckedChange' when the enable
+            //local server checkbox state is changed
+            enableLocalServerCheckBox.CheckedChange += enableLocalServerCheckBox_CheckedChange;
 
             //Uncomment this line to enable logging
             //EnableLogging();
@@ -92,6 +103,18 @@ namespace ExamplesChat.Android
             chatApplication.PrintUsageInstructions();
 
             //Initialise NetworkComms.Net but without a local server
+            chatApplication.RefreshNetworkCommsConfiguration();
+        }
+
+        /// <summary>
+        /// Event triggered when the enable local server checkbox is changed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void enableLocalServerCheckBox_CheckedChange(object sender, CompoundButton.CheckedChangeEventArgs e)
+        {
+            //Update the local server enabled state and then refresh the network configuration
+            chatApplication.LocalServerEnabled = enableLocalServerCheckBox.Checked;
             chatApplication.RefreshNetworkCommsConfiguration();
         }
 
@@ -129,34 +152,15 @@ namespace ExamplesChat.Android
         /// <param name="e"></param>
         void connectionType_Selected(object sender, EventArgs e)
         {
-            bool connectionTypeChanged = false;
-
             //Parse the connection type
             string selectedItem = connectionTypeSelector.SelectedItem.ToString();
-            if (selectedItem == "TCP" && chatApplication.ConnectionType == NetworkCommsDotNet.ConnectionType.UDP)
-            {
-                connectionTypeChanged = true;
+            if (selectedItem == "TCP")
                 chatApplication.ConnectionType = NetworkCommsDotNet.ConnectionType.TCP;
-            }
-            else if (selectedItem == "UDP" && chatApplication.ConnectionType == NetworkCommsDotNet.ConnectionType.TCP)
-            {
-                connectionTypeChanged = true;
+            else if (selectedItem == "UDP")
                 chatApplication.ConnectionType = NetworkCommsDotNet.ConnectionType.UDP;
-            }
 
-            //If the connection type has been changed we reset NetworkComms.Net
-            //NetworkComms.Net can support both connection types simultaneously but for the purposes
-            //of the example we only want to use one at a time
-            if (connectionTypeChanged)
-            {
-                chatApplication.AppendLineToChatHistory("Connection mode has been updated. Any existing connections have been closed.");
-
-                //Shutdown NetworkComms.Net
-                NetworkCommsDotNet.NetworkComms.Shutdown();
-
-                //Initialise network comms using the new connection type
-                chatApplication.RefreshNetworkCommsConfiguration();
-            }
+            //Update the NetworkComms.Net configuration
+            chatApplication.RefreshNetworkCommsConfiguration();
         }
 
         /// <summary>
@@ -172,8 +176,8 @@ namespace ExamplesChat.Android
             
             var logFileName = Path.Combine(commsDir, "log.txt");
 
-            chatHistory.Text += "\n" + "Logging enabled to " + logFileName;
-                
+            chatApplication.AppendLineToChatHistory(System.Environment.NewLine + "Logging enabled to " + logFileName);
+
             NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
         }
     }
