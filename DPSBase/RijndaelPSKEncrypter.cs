@@ -66,13 +66,18 @@ namespace DPSBase
 
             using (var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
             {
-                using (CryptoStream csEncrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write))
+                using (MemoryStream internalStream = new MemoryStream())
                 {
-                    AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
-                    inStream.Flush();
-                    csEncrypt.FlushFinalBlock();
+                    using (CryptoStream csEncrypt = new CryptoStream(internalStream, transform, CryptoStreamMode.Write))
+                    {
+                        AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
+                        inStream.Flush();
+                        csEncrypt.FlushFinalBlock();
 
-                    writtenBytes = outStream.Position;
+                        internalStream.Seek(0, 0);
+                        AsyncStreamCopier.CopyStreamTo(internalStream, outStream);
+                        writtenBytes = outStream.Position;
+                    }                    
                 }
             }
         }
@@ -89,13 +94,18 @@ namespace DPSBase
 
             using (var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
             {
-                using (CryptoStream csDecrypt = new CryptoStream(outStream, transform, CryptoStreamMode.Write))
+                using (MemoryStream internalStream = new MemoryStream())
                 {
-                    AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
-                    inStream.Flush();
-                    csDecrypt.FlushFinalBlock();
+                    using (CryptoStream csDecrypt = new CryptoStream(internalStream, transform, CryptoStreamMode.Write))
+                    {
+                        AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
+                        inStream.Flush();
+                        csDecrypt.FlushFinalBlock();
 
-                    writtenBytes = outStream.Position;
+                        internalStream.Seek(0, 0);
+                        AsyncStreamCopier.CopyStreamTo(internalStream, outStream);
+                        writtenBytes = outStream.Position;
+                    }
                 }
             }
         }

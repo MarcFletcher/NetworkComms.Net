@@ -32,43 +32,28 @@ namespace ExamplesWP8Chat
 
             UseEncryptionCheckBox.IsChecked = chatApplication.EncryptionEnabled;
             LocalServerEnabled.IsChecked = chatApplication.LocalServerEnabled;
-
+            
             if (chatApplication.ConnectionType == ConnectionType.TCP)
             {
-                this.UseTCP.IsChecked = true;
-                this.UseUDP.IsChecked = false;
+                this.TCPRadioButton.IsChecked = true;
             }
             else
             {
-                this.UseUDP.IsChecked = true;
-                this.UseTCP.IsChecked = false;
+                this.UDPRadioButton.IsChecked = true;
             }
         }
-
+        
         /// <summary>
-        /// Update the connectionType if the UseUDP connection mode is selected
+        /// Update the connectionType if the radio buttons are changed
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void UseUDP_Checked(object sender, RoutedEventArgs e)
+        private void ConnectionType_Checked(object sender, RoutedEventArgs e)
         {
-            //Update the application and connectionType
-            this.UseUDP.IsChecked = true;
-            this.UseTCP.IsChecked = false;
-            (App.Current as App).ChatApplication.ConnectionType = ConnectionType.UDP;
-        }
-
-        /// <summary>
-        /// Update the connectionType if the UseTCP connection mode is selected
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void UseTCP_Checked(object sender, RoutedEventArgs e)
-        {
-            //Update the application and connectionType
-            this.UseTCP.IsChecked = true;
-            this.UseUDP.IsChecked = false;
-            (App.Current as App).ChatApplication.ConnectionType = ConnectionType.TCP;
+            if ((sender as RadioButton).Content.ToString() == "TCP" && (bool)(sender as RadioButton).IsChecked)
+                (App.Current as App).ChatApplication.ConnectionType = ConnectionType.TCP;
+            else
+                (App.Current as App).ChatApplication.ConnectionType = ConnectionType.UDP;
         }
 
         /// <summary>
