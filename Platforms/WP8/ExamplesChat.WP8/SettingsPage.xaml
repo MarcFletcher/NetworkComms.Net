@@ -55,8 +55,8 @@
 
                 <TextBlock Text="Connection Type" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="1,19,191,19"/>
                 <StackPanel Grid.Column="1" Grid.Row="3" >
-                    <RadioButton x:Name="TCPRadioButton" Margin="50,0,0,0" Padding="0,0,0,0" Content="TCP"  HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="true" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
-                    <RadioButton x:Name="UDPRadioButton" Margin="50,-10,0,0" Padding="0,0,0,0" Content="UDP" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="false" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
+                    <RadioButton x:Name="TCPRadioButton" Margin="50,0,0,0" Padding="0,0,0,0" Content="TCP"  HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
+                    <RadioButton x:Name="UDPRadioButton" Margin="50,-10,0,0" Padding="0,0,0,0" Content="UDP" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
                 </StackPanel>
 
                 <TextBlock x:Name="UseEncryptionLabel" Text="Enable Encryption" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center"/>
