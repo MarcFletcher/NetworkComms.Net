@@ -94,16 +94,11 @@ namespace ExamplesChat.iOS
         #endregion
 
         /// <summary>
-        /// Enable logging, usefull for debugging applications
+        /// Enable logging, usefull for debugging applications. Log file created in local documents folder.
         /// </summary>
         private void EnableLogging()
         {
-            var commsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NetworkComms");
-
-            if (!Directory.Exists(commsDir))
-                Directory.CreateDirectory(commsDir);
-
-            var logFileName = Path.Combine(commsDir, "log.txt");
+            string logFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "log.txt");
             ChatApplication.AppendLineToChatHistory("Logging enabled to " + logFileName);
 
             NetworkComms.EnableLogging(logFileName);

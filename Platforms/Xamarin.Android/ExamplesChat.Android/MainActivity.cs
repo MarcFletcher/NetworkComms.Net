@@ -93,9 +93,6 @@ namespace ExamplesChat.Android
             //local server checkbox state is changed
             enableLocalServerCheckBox.CheckedChange += enableLocalServerCheckBox_CheckedChange;
 
-            //Uncomment this line to enable logging
-            //EnableLogging();
-
             //Initialise the chat application
             chatApplication = new ChatAppAndroid(this, chatHistory, input);
 
@@ -104,6 +101,9 @@ namespace ExamplesChat.Android
 
             //Initialise NetworkComms.Net but without a local server
             chatApplication.RefreshNetworkCommsConfiguration();
+
+            //Uncomment this line to enable logging
+            //EnableLogging();
         }
 
         /// <summary>
@@ -164,17 +164,12 @@ namespace ExamplesChat.Android
         }
 
         /// <summary>
-        /// Enable NetworkComms.Net logging
+        /// Enable NetworkComms.Net logging. Usefull for debugging.
         /// </summary>
         void EnableLogging()
         {
-            var sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
-            var commsDir = Path.Combine(sdCardDir, "NetworkComms");
-
-            if(!Directory.Exists(commsDir))
-                Directory.CreateDirectory(commsDir);
-            
-            var logFileName = Path.Combine(commsDir, "log.txt");
+            string sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+            string logFileName = Path.Combine(sdCardDir, "NetworkCommsLog.txt");
 
             chatApplication.AppendLineToChatHistory(System.Environment.NewLine + "Logging enabled to " + logFileName);
 

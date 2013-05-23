@@ -1679,6 +1679,8 @@ namespace NetworkCommsDotNet
 #if iOS
                 //We need to ensure we add the correct document path for iOS
                 entireFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]"));
+#elif ANDROID
+                entireFileName = Path.Combine(global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]"));
 #elif WINDOWS_PHONE
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId + "]");
 #else
@@ -2452,12 +2454,12 @@ namespace NetworkCommsDotNet
 
                 lock (locker)
                 {
-                    using (var sw = new StreamWriter(File.Open(LogFileLocation, FileMode.Append)))
+                    using (var sw = new StreamWriter(LogFileLocation, true))
                     {
                         if (threadId != null)
-                            sw.WriteLine(DateTime.Now.ToShortTimeString() + " [" + threadId + " - " + level + "] - " + message);
+                            sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + threadId + " - " + level + "] - " + message);
                         else
-                            sw.WriteLine(DateTime.Now.ToShortTimeString() + " [" + level + "] - " + message);
+                            sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + level + "] - " + message);
                     }
                 }
             }
