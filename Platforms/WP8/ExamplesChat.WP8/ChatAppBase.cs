@@ -367,6 +367,8 @@ namespace ExamplesWP8Chat
             AppendLineToChatHistory("Step 3. Provide remote server IP and port information in settings on remaining application.");
             AppendLineToChatHistory("Step 4. Start chatting.");
             AppendLineToChatHistory("");
+            AppendLineToChatHistory("Note: Connections are established on the first message send.");
+            AppendLineToChatHistory("");
         }
 
         /// <summary>

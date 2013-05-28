@@ -8,7 +8,7 @@ using Android.Widget;
 using Android.OS;
 using System.Net;
 using System.Collections.Generic;
-using System.Net.NetworkInformation;
+//using System.Net.NetworkInformation;
 using System.IO;
 
 namespace ExamplesChat.Android
@@ -107,6 +107,21 @@ namespace ExamplesChat.Android
         }
 
         /// <summary>
+        /// Enable NetworkComms.Net logging. Usefull for debugging.
+        /// </summary>
+        void EnableLogging()
+        {
+            //We will create the log file in the root external storage directory
+            string sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+            string logFileName = Path.Combine(sdCardDir, "NetworkCommsLog.txt");
+
+            chatApplication.AppendLineToChatHistory(System.Environment.NewLine + "Logging enabled to " + logFileName);
+
+            NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
+        }
+
+        #region Event Handlers
+        /// <summary>
         /// Event triggered when the enable local server checkbox is changed
         /// </summary>
         /// <param name="sender"></param>
@@ -162,19 +177,7 @@ namespace ExamplesChat.Android
             //Update the NetworkComms.Net configuration
             chatApplication.RefreshNetworkCommsConfiguration();
         }
-
-        /// <summary>
-        /// Enable NetworkComms.Net logging. Usefull for debugging.
-        /// </summary>
-        void EnableLogging()
-        {
-            string sdCardDir = global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
-            string logFileName = Path.Combine(sdCardDir, "NetworkCommsLog.txt");
-
-            chatApplication.AppendLineToChatHistory(System.Environment.NewLine + "Logging enabled to " + logFileName);
-
-            NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
-        }
+        #endregion
     }
 }
 

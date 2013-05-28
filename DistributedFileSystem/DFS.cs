@@ -51,7 +51,7 @@ namespace DistributedFileSystem
         /// </summary>
         public const double PeerBusyNetworkLoadThreshold = 0.94;
 
-        public const int ItemBuildTimeoutSecsPerMB = 5;
+        public const int ItemBuildTimeoutSecsPerMB = 12;
 
         internal static object globalDFSLocker = new object();
         /// <summary>
@@ -1076,9 +1076,9 @@ namespace DistributedFileSystem
                     //If there was a build error we just pass null data to the handlers so that the errors can get called up the relevevant stack traces.
                     try
                     {
-                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem.ItemBytesLength);
+                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem == null ? 0 : newItem.ItemBytesLength);
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
-                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem.ItemCheckSum);
+                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" : newItem.ItemCheckSum);
 
                         NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
                     }

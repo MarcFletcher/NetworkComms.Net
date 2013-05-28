@@ -709,7 +709,7 @@ namespace DistributedFileSystem
                                 ItemDataStream.Write(incomingReply.ChunkData, ChunkPositionLengthDict[incomingReply.ChunkIndex].Position);
 
                                 //The data we have received may be correct but if the disk is faulty it may not read back the same 
-                                if (ChunkCheckSums != null && ChunkCheckSums[incomingReply.ChunkIndex] != "")
+                                if (ItemBuildTarget == ItemBuildTarget.Disk && ChunkCheckSums != null && ChunkCheckSums[incomingReply.ChunkIndex] != "")
                                 {
                                     string chunkDiskMD5 = ItemDataStream.MD5CheckSum(ChunkPositionLengthDict[incomingReply.ChunkIndex].Position, ChunkPositionLengthDict[incomingReply.ChunkIndex].Length);
                                     if (chunkDiskMD5 == ChunkCheckSums[incomingReply.ChunkIndex])
