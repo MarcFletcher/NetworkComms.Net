@@ -143,13 +143,18 @@ namespace ExamplesWPFChat
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
                 }
+                else
+                {
+                    AppendLineToChatHistory("Enabling local server mode. Any existing connections will be closed.");
+                    NetworkComms.Shutdown();
+                }
 
                 //Start listening for new incoming TCP connections
                 //Parameter is true so that we listen on a random port if the default is not available
                 TCPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatHistory("Enabled local server mode. Listening for incoming TCP connections on:");
+                AppendLineToChatHistory("Listening for incoming TCP connections on:");
                 foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
@@ -164,13 +169,18 @@ namespace ExamplesWPFChat
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
                 }
+                else
+                {
+                    AppendLineToChatHistory("Enabling local server mode. Any existing connections will be closed.");
+                    NetworkComms.Shutdown();
+                }
 
                 //Start listening for new incoming UDP connections
                 //Parameter is true so that we listen on a random port if the default is not available
                 UDPConnection.StartListening(true);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
-                AppendLineToChatHistory("Enabled local server mode. Listening for incoming UDP connections on:");
+                AppendLineToChatHistory("Listening for incoming UDP connections on:");
                 foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
@@ -280,7 +290,7 @@ namespace ExamplesWPFChat
                 lastPeerMessageDict.Remove(connection.ConnectionInfo.NetworkIdentifier);
             }
         }
-        
+
         /// <summary>
         /// Send a message.
         /// </summary>
@@ -332,7 +342,13 @@ namespace ExamplesWPFChat
 
             //If we have any other connections we now send the message to those as well
             //This ensures that if we are the server everyone who is connected to us gets our message
-            var otherConnectionInfos = (from current in NetworkComms.AllConnectionInfo() where current != serverConnectionInfo select current).ToArray();
+            //We want a list of all established connections not including the server if set
+            List<ConnectionInfo> otherConnectionInfos;
+            if (serverConnectionInfo != null)
+                otherConnectionInfos = (from current in NetworkComms.AllConnectionInfo() where current.RemoteEndPoint != serverConnectionInfo.RemoteEndPoint select current).ToList();
+            else
+                otherConnectionInfos = NetworkComms.AllConnectionInfo();
+
             foreach (ConnectionInfo info in otherConnectionInfos)
             {
                 //We perform the send within a try catch to ensure the application continues to run if there is a problem.
@@ -345,8 +361,8 @@ namespace ExamplesWPFChat
                     else
                         throw new Exception("An invalid connectionType is set.");
                 }
-                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
-                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
+                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + info + ". Please check settings and try again."); }
+                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + info + ". Please check settings and try again."); }
             }
 
             return;

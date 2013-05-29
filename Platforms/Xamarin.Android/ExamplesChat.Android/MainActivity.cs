@@ -8,7 +8,6 @@ using Android.Widget;
 using Android.OS;
 using System.Net;
 using System.Collections.Generic;
-//using System.Net.NetworkInformation;
 using System.IO;
 
 namespace ExamplesChat.Android
@@ -141,20 +140,33 @@ namespace ExamplesChat.Android
         void sendButton_Click(object sender, EventArgs e)
         {
             //Parse the ip address box
-            IPAddress newMasterIPAddress;
-            if (!IPAddress.TryParse(ipTextBox.Text, out newMasterIPAddress))
-                //If the parse failed set the ipTextBox back to the the previous good value
-                ipTextBox.Text = chatApplication.ServerIPAddress;
+            if (ipTextBox.Text != "")
+            {
+                IPAddress newMasterIPAddress;
+                if (IPAddress.TryParse(ipTextBox.Text, out newMasterIPAddress))
+                    //If the parse was succesfull we can update the chat application
+                    chatApplication.ServerIPAddress = newMasterIPAddress.ToString();
+                else
+                    //If the parse failed set the ipTextBox back to the the previous good value
+                    ipTextBox.Text = chatApplication.ServerIPAddress;
+            }
             else
-                chatApplication.ServerIPAddress = newMasterIPAddress.ToString();
+                //If no server IP has been entered we ensure the chat application has a blank address
+                chatApplication.ServerIPAddress = "";
 
             //Parse the port number
-            int newPort;
-            if (!int.TryParse(portTextBox.Text, out newPort) || newPort < 1 || newPort > ushort.MaxValue)
-                //If the parse failed we set the portTextBox back to the previous good value
-                portTextBox.Text = chatApplication.ServerPort.ToString();
+            if (portTextBox.Text != "")
+            {
+                int newPort;
+                bool portParseResult = int.TryParse(portTextBox.Text, out newPort);
+                if (!portParseResult || newPort < 1 || newPort > ushort.MaxValue)
+                    //If the parse failed we set the portTextBox back to the previous good value
+                    portTextBox.Text = chatApplication.ServerPort.ToString();
+                else
+                    chatApplication.ServerPort = newPort;
+            }
             else
-                chatApplication.ServerPort = newPort;
+                chatApplication.ServerPort = -1;
 
             //Send the text entered in the input box
             chatApplication.SendMessage(input.Text);
