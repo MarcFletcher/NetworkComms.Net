@@ -46,8 +46,8 @@ namespace ExamplesChat.Android
 		public partial class Array
 		{
 			
-			// aapt resource value: 0x7f050000
-			public const int ConnectionTypes = 2131034112;
+			// aapt resource value: 0x7f060000
+			public const int ConnectionTypes = 2131099648;
 			
 			static Array()
 			{
@@ -97,6 +97,12 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f070005
 			public const int connectionTypeSpinner = 2131165189;
 			
+			// aapt resource value: 0x7f070007
+			public const int enableLocalServer = 2131165191;
+			
+			// aapt resource value: 0x7f070006
+			public const int enableServerLabel = 2131165190;
+			
 			// aapt resource value: 0x7f070004
 			public const int encryptionLabel = 2131165188;
 			
@@ -106,14 +112,14 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f070001
 			public const int ipTextInput = 2131165185;
 			
+			// aapt resource value: 0x7f07000a
+			public const int mainText = 2131165194;
+			
 			// aapt resource value: 0x7f070008
-			public const int mainText = 2131165192;
+			public const int mainTextScroll = 2131165192;
 			
-			// aapt resource value: 0x7f070006
-			public const int mainTextScroll = 2131165190;
-			
-			// aapt resource value: 0x7f070007
-			public const int messageTextInput = 2131165191;
+			// aapt resource value: 0x7f070009
+			public const int messageTextInput = 2131165193;
 			
 			// aapt resource value: 0x7f070002
 			public const int portSeperatorLabel = 2131165186;
@@ -121,8 +127,8 @@ namespace ExamplesChat.Android
 			// aapt resource value: 0x7f070003
 			public const int portTextInput = 2131165187;
 			
-			// aapt resource value: 0x7f070009
-			public const int sendButton = 2131165193;
+			// aapt resource value: 0x7f07000b
+			public const int sendButton = 2131165195;
 			
 			static Id()
 			{
@@ -156,11 +162,11 @@ namespace ExamplesChat.Android
 		public partial class String
 		{
 			
-			// aapt resource value: 0x7f040000
-			public const int ApplicationName = 2130968576;
-			
 			// aapt resource value: 0x7f040001
-			public const int Hello = 2130968577;
+			public const int ApplicationName = 2130968577;
+			
+			// aapt resource value: 0x7f040000
+			public const int Hello = 2130968576;
 			
 			static String()
 			{
@@ -175,8 +181,8 @@ namespace ExamplesChat.Android
 		public partial class Style
 		{
 			
-			// aapt resource value: 0x7f060000
-			public const int Mono_Android_Theme_Splash = 2131099648;
+			// aapt resource value: 0x7f050000
+			public const int Mono_Android_Theme_Splash = 2131034112;
 			
 			static Style()
 			{

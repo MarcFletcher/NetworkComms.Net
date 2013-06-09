@@ -19,8 +19,8 @@ md ".\Xamarin.iOS"
 REM md ".\Xamarin.iOS\%1\Complete"
 md ".\Xamarin.iOS\%1\Core"
 
-.\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoTouch\v4.0" /out:.\Xamarin.iOS\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
-REM .\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoTouch\v4.0" /out:.\Xamarin.iOS\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll
+REM .\ILMerge.exe /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoTouch\v4.0" /out:.\Xamarin.iOS\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
+.\ILMerge.exe /targetplatform:"v2","%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoTouch\v4.0" /lib:"%ProgramFiles(x86)%\Reference Assemblies\Microsoft\Framework\MonoTouch\v4.0" /out:.\Xamarin.iOS\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll
 
 DEL .\%1\*.dll .\%1\*.pdb
 REM DEL .\Xamarin.iOS\%1\Complete\*.pdb .\Xamarin.iOS\%1\Core\*.pdb
