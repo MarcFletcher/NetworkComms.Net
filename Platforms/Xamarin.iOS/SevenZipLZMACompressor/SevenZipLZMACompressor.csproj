@@ -83,6 +83,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>iOS,NO_LOGGING,NET2</DefineConstants>
+    <DocumentationFile>bin\Release\SevenZipLZMACompressor.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ad-Hoc|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>

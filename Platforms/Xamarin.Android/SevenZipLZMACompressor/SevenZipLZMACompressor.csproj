@@ -31,6 +31,7 @@
     <DefineConstants>TRACE;ANDROID; NO_LOGGING; NET2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\SevenZipLZMACompressor.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Mono.Android" />
