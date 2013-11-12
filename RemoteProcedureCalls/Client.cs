@@ -29,14 +29,54 @@ using System.Threading.Tasks;
 using System.Threading;
 
 namespace RemoteProcedureCalls
-{    
-    
+{
+    /// <summary>
+    /// Interface for the RPC proxy generated on the client side. All RPC objects returned from Client.CreateRPCProxyTo{X} implement this interface
+    /// </summary>
+    public interface IRPCProxy
+    {
+        /// <summary>
+        /// The interface the proxy implements
+        /// </summary>
+        Type ImplementedInterface { get; }
+        
+        /// <summary>
+        /// The server generated object id for the remote instance
+        /// </summary>
+        string ServerInstanceID { get; }
+
+        /// <summary>
+        /// The NetworkComms.Net connection associated wth the proxy
+        /// </summary>
+        Connection ServerConnection { get; }
+
+        /// <summary>
+        /// The timeout for all RPC calls made with this proxy in ms
+        /// </summary>
+        int RPCTimeout { get; set;  }
+    }
 
     /// <summary>
     /// Provides functions for managing proxy classes to remote objects client side
     /// </summary>
     public static class Client
     {
+        /// <summary>
+        /// The default timeout period in ms for new RPC proxies. Default value is 1000ms 
+        /// </summary>
+        public static int DefaultRPCTimeout { get; set; }
+
+        /// <summary>
+        /// The timeout period allowed for creating new RPC proxies
+        /// </summary>
+        public static int RPCInitialisationTimeout { get; set; }
+
+        static Client()
+        {
+            DefaultRPCTimeout = 1000;
+            RPCInitialisationTimeout = 1000;
+        }
+
         /// <summary>
         /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
         /// use the instance on the server unless they have the instanceId returned by this method
@@ -53,7 +93,7 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceName);
+            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
@@ -77,7 +117,7 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceName);
+            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Named instance does not exist");
@@ -99,7 +139,7 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, 1000, instanceId);
+            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceId);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Instance with given Id not found");
@@ -121,7 +161,7 @@ namespace RemoteProcedureCalls
             public static T CreateInstance(string instanceId, Connection connection)
             {
                 //Create the instance
-                var res = (T)Activator.CreateInstance(Type, instanceId, connection);
+                var res = (T)Activator.CreateInstance(Type, instanceId, connection, typeof(T), Client.DefaultRPCTimeout);
 
                 //Dictionary<string, FieldInfo> eventFields = new Dictionary<string,FieldInfo>();
 
@@ -155,6 +195,8 @@ namespace RemoteProcedureCalls
 
             static Cache()
             {
+                ILGenerator il;
+
                 //Make sure the type is an interface
                 if (!typeof(T).IsInterface)
                     throw new InvalidOperationException(typeof(T).Name + " is not an interface");
@@ -171,32 +213,43 @@ namespace RemoteProcedureCalls
                 //Define our new type implementing the desired interface
                 var type = module.DefineType(ns + "grp_" + typeof(T).Name, TypeAttributes.Class | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.NotPublic);
 
+                //Define the interface implementations
                 type.AddInterfaceImplementation(typeof(T));
+                type.AddInterfaceImplementation(typeof(IRPCProxy));
 
-                var serverInstanceId = type.DefineField("ServerInstanceID", typeof(string), FieldAttributes.Private);
-                var networkConnection = type.DefineField("ServerConnection", typeof(Connection), FieldAttributes.Private);
-
+                //Define private fields for the IRPCClient interface
+                var serverInstanceId = type.DefineField("serverInstanceID", typeof(string), FieldAttributes.Private);
+                var networkConnection = type.DefineField("serverConnection", typeof(Connection), FieldAttributes.Private);
+                var rpcTimeout = type.DefineField("rpcTimeout", typeof(int), FieldAttributes.Private);
+                var implementedInterface = type.DefineField("implementedInterface", typeof(Type), FieldAttributes.Private);
+                
                 //Get the methods for the reflection invocation.  MOVE OUTSIDE THIS LOOP
                 MethodInfo getTypeMethod = typeof(Type).GetMethod("GetType", new Type[] { typeof(string) });
                 MethodInfo getgetMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string), typeof(BindingFlags) });
                 MethodInfo invokeMethod = typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
 
                 //Give the type an empty constructor
-                var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection) });
-                var il = ctor.GetILGenerator();
+                var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection), typeof(Type), typeof(int) });
+                il = ctor.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Stfld, serverInstanceId);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_2);
                 il.Emit(OpCodes.Stfld, networkConnection);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_3);
+                il.Emit(OpCodes.Stfld, implementedInterface);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_S, 4);
+                il.Emit(OpCodes.Stfld, rpcTimeout);
                 il.Emit(OpCodes.Ret);
                                
                 //Loop through each method in the interface but exclude any event methods
-                foreach (var method in typeof(T).GetMethods().Except(typeof(T).GetEvents().SelectMany(a => { return new MethodInfo[] { a.GetAddMethod(), a.GetRemoveMethod() }; })))
+                foreach (var method in typeof(T).GetMethods().Where(m => (m.Attributes & MethodAttributes.SpecialName) == 0))
                 {
                     #region Method
-
+                    
                     //Get the method arguements and implement as a public virtual method that we will override
                     var args = method.GetParameters();
                     var methodImpl = type.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, Array.ConvertAll(args, arg => arg.ParameterType));
@@ -253,39 +306,25 @@ namespace RemoteProcedureCalls
 
                     //Declare an array to hold the parameters for the reflection invocation
                     LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                    il.Emit(OpCodes.Ldc_I4_S, 5);
+                    il.Emit(OpCodes.Ldc_I4_S, 3);
                     il.Emit(OpCodes.Newarr, typeof(object));
                     il.Emit(OpCodes.Stloc, reflectionParamArray);
 
-                    //Load the connection id into first element of array for reflection invocation of method
+                    //Load the client object into first element of array for reflection invocation of method
                     il.Emit(OpCodes.Ldloc, reflectionParamArray);
                     il.Emit(OpCodes.Ldc_I4_0);
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, networkConnection);
                     il.Emit(OpCodes.Stelem_Ref);
-
-                    //Load the handler name to call into second element of array for reflection invocation of method
+                                        
+                    //Load the function name to call into second element of array for reflection invocation of method
                     il.Emit(OpCodes.Ldloc, reflectionParamArray);
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(OpCodes.Ldstr, typeof(T).ToString() + "-RPC-CALL");
+                    il.Emit(OpCodes.Ldstr, method.Name);
                     il.Emit(OpCodes.Stelem_Ref);
 
                     //Load the connection ip into third element of array for reflection invocation of method
                     il.Emit(OpCodes.Ldloc, reflectionParamArray);
                     il.Emit(OpCodes.Ldc_I4_2);
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, serverInstanceId);
-                    il.Emit(OpCodes.Stelem_Ref);
-
-                    //Load the function name to call into fourth element of array for reflection invocation of method
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Ldc_I4_3);
-                    il.Emit(OpCodes.Ldstr, method.Name);
-                    il.Emit(OpCodes.Stelem_Ref);
-
-                    //Load the connection ip into fith element of array for reflection invocation of method
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Ldc_I4_4);
                     il.Emit(OpCodes.Ldloc, array);
                     il.Emit(OpCodes.Stelem_Ref);
 
@@ -350,6 +389,73 @@ namespace RemoteProcedureCalls
                     MethodAttributes.SpecialName |
                     MethodAttributes.HideBySig;
 
+                //Next we implement local properties of IRPCClient interface
+                foreach (var property in typeof(IRPCProxy).GetProperties())
+                {
+                    var args = property.GetIndexParameters();
+                    var propImpl = type.DefineProperty(property.Name, property.Attributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+
+                    FieldBuilder underlyingField = null;
+
+                    switch (property.Name)
+                    {
+                        case "ServerInstanceID":
+                            underlyingField = serverInstanceId;
+                            break;
+                        case "ServerConnection":
+                            underlyingField = networkConnection;
+                            break;
+                        case "RPCTimeout":
+                            underlyingField = rpcTimeout;
+                            break;
+                        case "ImplementedInterface":
+                            underlyingField = implementedInterface;
+                            break;
+                        default:
+                            throw new RPCException("Error initialising IRPCClient property");
+                    }
+
+                    if (property.CanRead)
+                    {
+                        #region Property Get
+
+                        var getMethod = type.DefineMethod("get_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                        il = getMethod.GetILGenerator();
+
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, underlyingField);
+
+                        //Return
+                        il.Emit(OpCodes.Ret);
+
+                        propImpl.SetGetMethod(getMethod);
+
+                        #endregion Property Get
+                    }
+                                        
+                    if (property.CanWrite)
+                    {
+                        #region Property Set
+
+                        var argTypes = args.Select(a => a.ParameterType).ToList();
+                        argTypes.Add(property.PropertyType);
+                        
+                        var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, typeof(void), argTypes.ToArray());
+                        il = setMethod.GetILGenerator();
+
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Stfld, underlyingField);
+                        
+                        //Return
+                        il.Emit(OpCodes.Ret);
+
+                        propImpl.SetSetMethod(setMethod);
+
+                        #endregion Property Set
+                    }
+                }
+
                 //Next we should implement remote properties
                 foreach (var property in typeof(T).GetProperties())
                 {
@@ -395,39 +501,25 @@ namespace RemoteProcedureCalls
 
                         //Declare an array to hold the parameters for the reflection invocation
                         LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                        il.Emit(OpCodes.Ldc_I4_S, 5);
+                        il.Emit(OpCodes.Ldc_I4_S, 3);
                         il.Emit(OpCodes.Newarr, typeof(object));
                         il.Emit(OpCodes.Stloc, reflectionParamArray);
 
-                        //Load the connection id into first element of array for reflection invocation of method
+                        //Load the client object into first element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, networkConnection);
                         il.Emit(OpCodes.Stelem_Ref);
 
-                        //Load the handler name to call into second element of array for reflection invocation of method
+                        //Load the function name to call into second element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Ldstr, typeof(T).ToString() + "-RPC-CALL");
+                        il.Emit(OpCodes.Ldstr, getMethod.Name);
                         il.Emit(OpCodes.Stelem_Ref);
 
                         //Load the connection ip into third element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_2);
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, serverInstanceId);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the function name to call into fourth element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_3);
-                        il.Emit(OpCodes.Ldstr, getMethod.Name);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the connection ip into fith element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_4);
                         il.Emit(OpCodes.Ldloc, array);
                         il.Emit(OpCodes.Stelem_Ref);
 
@@ -467,26 +559,29 @@ namespace RemoteProcedureCalls
                     {
                         #region Property Set
 
-                        var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                        var argTypes = args.Select(a => a.ParameterType).ToList();
+                        argTypes.Add(property.PropertyType);
+
+                        var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, typeof(void), argTypes.ToArray());
                         il = setMethod.GetILGenerator();
                         
                         //Create a local array to store the parameters
                         LocalBuilder array = il.DeclareLocal(typeof(object[]));
 
                         //Allocate the array and store reference in local variable above
-                        il.Emit(OpCodes.Ldc_I4_S, args.Length);
+                        il.Emit(OpCodes.Ldc_I4_S, argTypes.Count);
                         il.Emit(OpCodes.Newarr, typeof(object));
                         il.Emit(OpCodes.Stloc, array);
 
                         LocalBuilder objRef = il.DeclareLocal(typeof(object));
 
                         //Loop through the arguements to the function and store in the array.  Boxing of value types is performced as necessary
-                        for (int i = 0; i < args.Length; i++)
+                        for (int i = 0; i < argTypes.Count; i++)
                         {
                             il.Emit(OpCodes.Ldarg, i + 1);
 
-                            if (args[i].ParameterType.IsValueType)
-                                il.Emit(OpCodes.Box, args[i].ParameterType);
+                            if (argTypes[i].IsValueType)
+                                il.Emit(OpCodes.Box, argTypes[i]);
 
                             il.Emit(OpCodes.Castclass, typeof(object));
                             il.Emit(OpCodes.Stloc, objRef);
@@ -502,39 +597,25 @@ namespace RemoteProcedureCalls
 
                         //Declare an array to hold the parameters for the reflection invocation
                         LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                        il.Emit(OpCodes.Ldc_I4_S, 5);
+                        il.Emit(OpCodes.Ldc_I4_S, 3);
                         il.Emit(OpCodes.Newarr, typeof(object));
                         il.Emit(OpCodes.Stloc, reflectionParamArray);
 
-                        //Load the connection id into first element of array for reflection invocation of method
+                        //Load the client object into first element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, networkConnection);
                         il.Emit(OpCodes.Stelem_Ref);
 
-                        //Load the handler name to call into second element of array for reflection invocation of method
+                        //Load the function name to call into second element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Ldstr, typeof(T).ToString() + "-RPC-CALL");
+                        il.Emit(OpCodes.Ldstr, setMethod.Name);
                         il.Emit(OpCodes.Stelem_Ref);
 
                         //Load the connection ip into third element of array for reflection invocation of method
                         il.Emit(OpCodes.Ldloc, reflectionParamArray);
                         il.Emit(OpCodes.Ldc_I4_2);
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, serverInstanceId);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the function name to call into fourth element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_3);
-                        il.Emit(OpCodes.Ldstr, setMethod.Name);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the connection ip into fith element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_4);
                         il.Emit(OpCodes.Ldloc, array);
                         il.Emit(OpCodes.Stelem_Ref);
 
@@ -715,20 +796,22 @@ namespace RemoteProcedureCalls
         /// <summary>
         /// Private method for simplifying the remote procedure call.  I don't want to write this in IL!!
         /// </summary>
-        /// <param name="connection"></param>
-        /// <param name="handlerType"></param>
-        /// <param name="instanceId"></param>
+        /// <param name="clientObject"></param>
         /// <param name="functionToCall"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        private static object RemoteCallClient(Connection connection, string handlerType, string instanceId, string functionToCall, object[] args)
+        private static object RemoteCallClient(IRPCProxy clientObject, string functionToCall, object[] args)
         {
+            var connection = clientObject.ServerConnection;
+
             RemoteCallWrapper wrapper = new RemoteCallWrapper();
             wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
             wrapper.name = functionToCall;
-            wrapper.instanceId = instanceId;
+            wrapper.instanceId = clientObject.ServerInstanceID;
 
-            wrapper = connection.SendReceiveObject<RemoteCallWrapper>(handlerType, handlerType, 1000, wrapper);
+            string packetType = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
+
+            wrapper = connection.SendReceiveObject<RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
 
             if (wrapper.Exception != null)
                 throw new RPCException(wrapper.Exception);
