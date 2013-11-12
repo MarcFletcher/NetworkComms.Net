@@ -16,10 +16,10 @@
     <Name>Documentation</Name>
     <!-- SHFB properties -->
     <OutputPath>.\Help\</OutputPath>
-    <HtmlHelpName>APIReference</HtmlHelpName>
+    <HtmlHelpName>NetworkCommsDotNet_API</HtmlHelpName>
     <Language>en-US</Language>
     <BuildAssemblerVerbosity>AllMessages</BuildAssemblerVerbosity>
-    <HelpFileFormat>HtmlHelp1, Website</HelpFileFormat>
+    <HelpFileFormat>HtmlHelp1, MSHelpViewer, Website</HelpFileFormat>
     <IndentHtml>False</IndentHtml>
     <FrameworkVersion>.NET Framework 4.0</FrameworkVersion>
     <KeepLogFile>True</KeepLogFile>
@@ -31,7 +31,7 @@
     <RootNamespaceContainer>True</RootNamespaceContainer>
     <PresentationStyle>VS2010</PresentationStyle>
     <Preliminary>False</Preliminary>
-    <NamingMethod>Guid</NamingMethod>
+    <NamingMethod>MemberName</NamingMethod>
     <HelpTitle>NetworkComms.Net Help</HelpTitle>
     <ContentPlacement>BelowNamespaces</ContentPlacement>
     <DocumentationSources>
@@ -80,13 +80,14 @@
     </ComponentConfigurations>
     <NamespaceSummaries>
       <NamespaceSummaryItem name="DPSBase" isDocumented="True">Abstract classes for defining data serialization and processing techniques as well as basic implementations of both.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
-<NamespaceSummaryItem name="(global)" isDocumented="False" /></NamespaceSummaries>
+      <NamespaceSummaryItem name="ExamplesConsole" isDocumented="True">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="(global)" isDocumented="False" />
+    </NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcomms.net</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />
@@ -96,6 +97,17 @@
     <HtmlHelp2xCompilerPath />
     <SandcastlePath />
     <WorkingPath />
+    <CatalogName>VisualStudio11</CatalogName>
+    <TocParentId>-1</TocParentId>
+    <TocParentVersion>100</TocParentVersion>
+    <TopicVersion>100</TopicVersion>
+    <TocOrder>-1</TocOrder>
+    <ProductTitle>NetworkComms.Net Help</ProductTitle>
+    <VendorName>NetworkCommsNet</VendorName>
+    <MSHelpViewerSdkLinkType>Msdn</MSHelpViewerSdkLinkType>
+    <CatalogVersion>100</CatalogVersion>
+    <CatalogProductId>VS</CatalogProductId>
+    <FooterText>We welcome any and all feedback on our network library.</FooterText>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in
        order for Visual Studio to perform the build.  The others are optional

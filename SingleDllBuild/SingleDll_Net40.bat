@@ -38,11 +38,11 @@ md ".\Net40\%1\Complete"
 md ".\Net40\%1\Core"
 
 REM The following line is for building on .Net4.0 systems
-.\ILMerge.exe /targetplatform:v4 /out:.\Net40\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll /xmldocs
-.\ILMerge.exe /targetplatform:v4 /out:.\Net40\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll .\%1\RemoteProcedureCalls.dll .\%1\DistributedFileSystem.dll /xmldocs
+REM .\ILMerge.exe /targetplatform:v4 /out:.\Net40\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll /xmldocs
+REM .\ILMerge.exe /targetplatform:v4 /out:.\Net40\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll .\%1\RemoteProcedureCalls.dll .\%1\DistributedFileSystem.dll /xmldocs
 
 REM On .Net4.5 systems (Windows 8) a static path to the 4.0 assemblies is required. This may require manually creating this path.
-REM.\ILMerge.exe /targetplatform:"v4,C:\Program Files\Reference Assemblies\Microsoft\Framework\v4.0" /out:.\Net40\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll /xmldocs
-REM.\ILMerge.exe /targetplatform:"v4,C:\Program Files\Reference Assemblies\Microsoft\Framework\v4.0" /out:.\Net40\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll .\%1\RemoteProcedureCalls.dll .\%1\DistributedFileSystem.dll /xmldocs
+.\ILMerge.exe /targetplatform:"v4,C:\Program Files\Reference Assemblies\Microsoft\Framework\v4.0" /out:.\Net40\%1\Core\NetworkCommsDotNetCore.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll /xmldocs
+.\ILMerge.exe /targetplatform:"v4,C:\Program Files\Reference Assemblies\Microsoft\Framework\v4.0" /out:.\Net40\%1\Complete\NetworkCommsDotNetComplete.dll .\%1\NetworkCommsDotNet.dll .\%1\protobuf-net.dll .\%1\DPSBase.dll .\%1\SevenZipLZMACompressor.dll .\%1\NLog.dll .\%1\ICSharpCode.SharpZipLib.dll .\%1\SharpZipLibCompressor.dll .\%1\QuickLZCompressor.dll .\%1\RemoteProcedureCalls.dll .\%1\DistributedFileSystem.dll /xmldocs
 
 DEL .\%1\*.dll .\%1\*.pdb .\%1\*.xml
