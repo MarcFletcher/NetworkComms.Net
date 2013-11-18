@@ -1,3 +1,16 @@
+Version 2.3 - Released 11/06/13
+
+- Extended mobile platform support to include Xamarion.iOS and Xamarin.Android
+- NetworkComms.Net also available from Xamarin component store.
+- New examples for mobile platforms and file transfer.
+- Updated existing examples to ensure greater clarity.
+- Bug fixes when using streams over 2GB, NAT configurations.
+- Inline XML documentation for merged DLLs.
+- Corrected gendarme high severity notifications.
+- DFS improvments when using disk build targets.
+- Added light logging optional alternative to NLOG.
+- Updated to protobuf r638.
+
 Version 2.2 - Released 16/03/13
 
 - Extended platform support, .Net2+, Windows Phone 8 (WP8) and Silverlight.

@@ -166,6 +166,9 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void EstablishConnectionSpecific()
         {
+            //Trigger the connection establish delegates before replying to the connection establish 
+            base.EstablishConnectionSpecific();
+
             //There is generally no establish for a UDP connection
             if (UDPOptions > 0)
                 throw new NotImplementedException("A future version of networkComms.Net will support additional udp levels.");
