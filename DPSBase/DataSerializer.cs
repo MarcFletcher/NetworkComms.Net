@@ -276,7 +276,7 @@ namespace DPSBase
                                     tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
                                     tempStream1.Seek(0, 0);
                                     //Process the data
-                                    dataProcessors[i].ReverseProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
+                                    dataProcessors[i - 1].ReverseProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
                                 }
                             }
 
