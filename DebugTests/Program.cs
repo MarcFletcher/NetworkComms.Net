@@ -65,20 +65,10 @@ namespace DebugTests
                 NetworkComms.EnableLogging(logConfig);
 
                 //Incase we run the DFS test we will also enable logging for that
-                DistributedFileSystem.DFS.EnableLogging(logConfig);
+                //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
-            //NetworkComms.ListenOnAllAllowedInterfaces = false;
-            //NetworkComms.AllowedIPPrefixes = new string[] { "131.111", "172.24" };
-
-            //NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
-            //    {
-            //        Thread.Sleep(5000);
-            //        Console.WriteLine(" XXX Connection established with {0}",connection);
-            //        connection.SendObject("Message", "message from establish handler");
-            //    }, true);
-
-            //BasicSend.RunExample();
+            BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.GoTCP();
             //DFSTest.RunExample();
@@ -86,10 +76,10 @@ namespace DebugTests
             //DebugTest.GoStreamTest();
             //ThreadPoolTest.RunExample();
 
-            LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\WALerrors\ExamplesConsoleLog_zibAIsn37EOb4XQ2iLEB_w.txt");
+            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\WALerrors\ExamplesConsoleLog_zibAIsn37EOb4XQ2iLEB_w.txt");
             //log.LinesWithMatch(new string[] { "Received packet of type", "Sending a packet of type ", "Sending a UDP packet" }, "matchLog.txt");
             //log.LinesWithMatch(new string[] { "Completed ChunkAvailabilityReply using data", "Added ChunkAvailabilityReply to chunkDataCache"}, "matchLog.txt");
-            log.LinesWithMatch(new string[] { "written to TCP netstream at" }, "matchLog.txt");
+            //log.LinesWithMatch(new string[] { "written to TCP netstream at" }, "matchLog.txt");
             //log.ThreadPoolInfo("threadPool.csv");
             //log.DataSendReceive(10, "sendReceiveStats.csv");
         }

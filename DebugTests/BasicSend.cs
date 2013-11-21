@@ -19,9 +19,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text;
+using DPSBase;
 using NetworkCommsDotNet;
+using ProtoBuf;
 
 namespace DebugTests
 {
@@ -31,11 +32,31 @@ namespace DebugTests
     /// </summary>
     public static class BasicSend
     {
+        [ProtoContract]
+        public class PingRequestReturnDC
+        {
+            [ProtoMember(1)]
+            public short ClientID	 { get; set; }
+            [ProtoMember(2)]
+            public short PingID	 { get; set; }
+
+            private PingRequestReturnDC() { }
+
+            public PingRequestReturnDC(short clientId, short pingId) 
+            {
+                this.ClientID = clientId;
+                this.PingID = pingId;
+            }
+        }
+
         /// <summary>
         /// Run example
         /// </summary>
         public static void RunExample()
         {
+            SendReceiveOptions nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(), null, null);
+            NetworkComms.DefaultSendReceiveOptions = nullCompressionSRO;
+
             //We need to define what happens when packets are received.
             //To do this we add an incoming packet handler for a 'Message' packet type. 
             //
@@ -46,15 +67,7 @@ namespace DebugTests
             //
             //This handler will convert the incoming raw bytes into a string (this is what 
             //the <string> bit means) and then write that string to the local console window.
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
-
-            //String m_ListeningAddress = "192.168.0.104";
-            //Int32 m_ListeningPort1 = 50000;
-            //Int32 m_ListeningPort2 = 50100;
-            //List<IPEndPoint> Listeners = new List<IPEndPoint>();
-            //Listeners.Add(new IPEndPoint(IPAddress.Parse(m_ListeningAddress), m_ListeningPort1));
-            //Listeners.Add(new IPEndPoint(IPAddress.Parse(m_ListeningAddress), m_ListeningPort2));
-            //TCPConnection.StartListening(Listeners, true);
+            NetworkComms.AppendGlobalIncomingPacketHandler<PingRequestReturnDC>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString.ClientID + "'-'" + incomingString .PingID+ "'."); });
 
             //Start listening for incoming 'TCP' connections. The true parameter means
             //try to use the default port and if that fails just choose a random port
@@ -82,11 +95,12 @@ namespace DebugTests
                     ConnectionInfo targetServerConnectionInfo;
                     ExampleHelper.GetServerDetails(out targetServerConnectionInfo);
 
+                    PingRequestReturnDC test = new PingRequestReturnDC(0,0);
+
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
-                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
-                    //NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend);
+                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, test);
                 }
             }
 

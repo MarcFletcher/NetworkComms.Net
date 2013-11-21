@@ -65,14 +65,15 @@ namespace NetworkCommsDotNet
 
         public object DeSerialize(MemoryStream incomingBytes, SendReceiveOptions options)
         {
-            if (incomingBytes == null || incomingBytes.Length == 0) return null;
+            if (incomingBytes == null) return null;
+            //if (incomingBytes == null || incomingBytes.Length == 0) return null;
             else
-            {
-                if (options.DataSerializer == null)
-                    throw new ArgumentNullException("options", "The provided options.DataSerializer was null. Cannot continue with deserialise.");
+            //{
+                //if (options.DataSerializer == null)
+                //    throw new ArgumentNullException("options", "The provided options.DataSerializer was null. Cannot continue with deserialise.");
 
                 return options.DataSerializer.DeserialiseDataObject<T>(incomingBytes, options.DataProcessors, options.Options);
-            }
+            //}
         }
 
         public void Process(PacketHeader packetHeader, Connection connection, object obj)
