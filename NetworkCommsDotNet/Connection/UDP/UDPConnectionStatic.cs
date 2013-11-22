@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The rogue udp connection is used for sending ONLY if no available locally bound client is available
         /// </summary>
-        static UDPConnection udpRogueSender;
+        static Dictionary<AddressFamily, UDPConnection> udpRogueSenders = new Dictionary<AddressFamily,UDPConnection>();
         static object udpRogueSenderCreationLocker = new object();
 
         /// <summary>
@@ -324,8 +324,8 @@ namespace NetworkCommsDotNet
                 NetworkComms.LogError(ex, "UDPCommsShutdownError");
             }
 
-            //Set the rouge sender to null so that it is recreated if we restart anything
-            udpRogueSender = null;
+            //reset the rouge senders to null so that it is recreated if we restart anything
+            udpRogueSenders = new Dictionary<AddressFamily,UDPConnection>();
         }
 
         /// <summary>
@@ -393,17 +393,26 @@ namespace NetworkCommsDotNet
         {
             UDPConnection connectionToUse;
             lock (udpRogueSenderCreationLocker)
-            {
+            {                
                 if (NetworkComms.commsShutdown)
                     throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
-                else if (udpRogueSender == null || (udpRogueSender != null && udpRogueSender.ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
+                else if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily) || udpRogueSenders[ipEndPoint.AddressFamily].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
-                    udpRogueSender = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
+
+                    IPAddress any;
+                    if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                        any = IPAddress.Any;
+                    else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+                        any = IPAddress.IPv6Any;
+                    else
+                        throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPoint.AddressFamily.ToString());
+
+                    udpRogueSenders[ipEndPoint.AddressFamily] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
                 }
 
                 //Get the rouge sender here
-                connectionToUse = udpRogueSender;
+                connectionToUse = udpRogueSenders[ipEndPoint.AddressFamily];
             }
 
             //Get connection defaults if no sendReceiveOptions were provided

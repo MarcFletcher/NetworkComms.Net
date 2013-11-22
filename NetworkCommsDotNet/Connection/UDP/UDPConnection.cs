@@ -71,7 +71,7 @@ namespace NetworkCommsDotNet
 
             if (existingConnection == null)
             {
-                if (connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
+                if (connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.IPv6Any))
                 {
 #if WINDOWS_PHONE
                     //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
