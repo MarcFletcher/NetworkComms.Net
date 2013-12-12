@@ -33,6 +33,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// If true any packets sent with this <see cref="SendReceiveOptions"/> will be forced to trigger a receive confirmation.
         /// </summary>
+        [Obsolete("May be removed in future version.", false)]
         public bool ReceiveConfirmationRequired
         {
             get { return Options.ContainsKey("ReceiveConfirmationRequired"); }
@@ -45,6 +46,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// If true any packets sent with this <see cref="SendReceiveOptions"/> will include the packet creation time in the header.
         /// </summary>
+        [Obsolete("May be removed in future version.", false)]
         public bool IncludePacketConstructionTime
         {
             get { return Options.ContainsKey("IncludePacketConstructionTime"); }

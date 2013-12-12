@@ -1547,7 +1547,7 @@ namespace NetworkCommsDotNet
         public static int ConnectionAliveTestTimeoutMS { get; set; }
 
         /// <summary>
-        /// By deefault NetworkComms.Net closes connections for which sends take a long time. The timeout is calculated based on previous connection send performances. Set this to true to disable this feature.
+        /// By default NetworkComms.Net closes connections for which sends take a long time. The timeout is calculated based on previous connection send performances. Set this to true to disable this feature.
         /// </summary>
         public static bool DisableConnectionSendTimeouts { get; set; }
         #endregion
