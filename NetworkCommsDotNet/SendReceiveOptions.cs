@@ -142,6 +142,9 @@ namespace NetworkCommsDotNet
         /// <param name="options">Allows additional options to be passed to the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s</param>
         public SendReceiveOptions(Dictionary<string, string> options)
         {
+            DataSerializer = null; //This will set the NullSerialiser as a default
+            DataProcessors = null; //This will set an empty options dictionary
+
             if (options != null)
                 this.options = options;
             else

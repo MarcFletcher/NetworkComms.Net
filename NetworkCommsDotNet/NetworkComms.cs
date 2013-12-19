@@ -1063,25 +1063,16 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-                //Add the custom serializer and compressor if necessary
-                if (sendReceiveOptions.DataSerializer != null)
+
+                if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                 {
-                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                    {
-                        //Make sure if we already have an existing entry that it matches with the provided
-                        if (!globalIncomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(sendReceiveOptions))
-                            throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
-                    }
-                    else
-                        globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
+                    //Make sure if we already have an existing entry that it matches with the provided
+                    if (!globalIncomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(sendReceiveOptions))
+                        throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
                 }
                 else
-                {
-                    //If we have not specified the serialiser and compressor we assume to be using defaults
-                    //If a handler has already been added for this type and has specified specific serialiser and compressor then so should this call to AppendIncomingPacketHandler
-                    if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
-                        throw new PacketHandlerException("A handler already exists for this packetTypeStr with specified SendReceiveOptions. Please ensure the same options are provided.");
-                }
+                    globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
+                
 
                 //Ad the handler to the list
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
