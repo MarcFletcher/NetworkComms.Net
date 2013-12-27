@@ -64,6 +64,9 @@ namespace NetworkCommsDotNet
         {
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && level != UDPOptions.None)
+                throw new ArgumentException("If the application layer protocol has been disabled the provided UDPOptions can only be UDPOptions.None.");
+
             UDPOptions = level;
 
             if (listenForIncomingPackets && existingConnection != null)
@@ -206,7 +209,17 @@ namespace NetworkCommsDotNet
             if (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
                 throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
 
-            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            byte[] headerBytes = new byte[0];
+            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            else
+            {
+                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
+
+                if (packet.PacketData.Length == 0)
+                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
+            }
 
             //We are limited in size for the isolated send
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
@@ -215,10 +228,16 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
-            byte[] udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
+            byte[] udpDatagram;
+            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            {
+                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
-            //Copy the header bytes into the datagram
-            Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
+                //Copy the header bytes into the datagram
+                Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
+            }
+            else
+                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
 #if WINDOWS_PHONE
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask();
@@ -250,7 +269,17 @@ namespace NetworkCommsDotNet
                 throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
 #endif
 
-            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            byte[] headerBytes = new byte[0];
+            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            else
+            {
+                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
+
+                if (packet.PacketData.Length == 0)
+                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
+            }
 
             //We are limited in size for the isolated send
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
@@ -259,10 +288,16 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
-            byte[] udpDatagram = new byte[headerBytes.Length + packet.PacketData.Length];
+            byte[] udpDatagram;
+            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            {
+                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
-            Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            Buffer.BlockCopy(packet.PacketData.ThreadSafeStream.ToArray(), 0, udpDatagram, headerBytes.Length, (int)packet.PacketData.Length);
+                //Copy the header bytes into the datagram
+                Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
+            }
+            else
+                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
 #if WINDOWS_PHONE
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ipEndPoint.Address.ToString()), ipEndPoint.Port.ToString()).AsTask();
@@ -287,6 +322,12 @@ namespace NetworkCommsDotNet
             //We cant send a null packet to the IPAddress.Any address
             if (!ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
             {
+                if (!ConnectionInfo.ApplicationLayerProtocolEnabled)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Ignoring null packet send to " + ConnectionInfo + " as the application layer protocol is disabled.");
+                    return;
+                }
+
                 try
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
@@ -375,7 +416,7 @@ namespace NetworkCommsDotNet
 
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -455,7 +496,7 @@ namespace NetworkCommsDotNet
                 {
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -540,7 +581,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                         //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                         lock (connection.packetBuilder.Locker)

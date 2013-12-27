@@ -74,7 +74,7 @@ namespace ExamplesConsole
             if (connectionTypeToUse == ConnectionType.TCP)
                 TCPConnection.StartListening(false, true);
             else
-                UDPConnection.StartListening(true);
+                UDPConnection.StartListening(false, true);
 
             //***************************************************************//
             //                End of interesting stuff                       //

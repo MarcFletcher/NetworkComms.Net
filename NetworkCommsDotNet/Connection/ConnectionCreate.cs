@@ -59,6 +59,9 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ConnectionSetupException("Attempted to create new connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+
             SendTimesMSPerKBCache = new CommsMath();
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
             packetBuilder = new PacketBuilder();

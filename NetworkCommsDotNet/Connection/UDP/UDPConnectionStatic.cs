@@ -44,9 +44,10 @@ namespace NetworkCommsDotNet
         static object udpClientListenerLocker = new object();
   
         /// <summary>
-        /// The rogue udp connection is used for sending ONLY if no available locally bound client is available
+        /// The rogue udp connection is used for sending ONLY if no available locally bound client is available.
+        /// First key is address family of rogue sender, second key is value of ApplicationLayerProtocolEnabled.
         /// </summary>
-        static Dictionary<AddressFamily, UDPConnection> udpRogueSenders = new Dictionary<AddressFamily,UDPConnection>();
+        static Dictionary<AddressFamily, Dictionary<bool, UDPConnection>> udpRogueSenders = new Dictionary<AddressFamily, Dictionary<bool, UDPConnection>>();
         static object udpRogueSenderCreationLocker = new object();
 
         /// <summary>
@@ -72,7 +73,19 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
         {
-            return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+            if (connectionInfo.ApplicationLayerProtocolEnabled)
+                return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+            else
+            {
+                //For unmanaged connections we need to make sure that the NullSerializer is being used.
+                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
+
+                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
+                if (optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    optionsToUse = new SendReceiveOptions<NullSerializer>();
+
+                return GetConnection(connectionInfo, optionsToUse, level, listenForReturnPackets, null);
+            }
         }
 
         /// <summary>
@@ -86,6 +99,9 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true)
         {
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+
             return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null);
         }
 
@@ -100,6 +116,9 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
         {
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
             UDPConnection connection = null;
@@ -118,13 +137,20 @@ namespace NetworkCommsDotNet
 
                             lock (udpClientListenerLocker)
                             {
-                                IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(localEndPoint.Address);
-                                if (existingLocalEndPoint != null)
+                                //For each existing local endPoint check if the application layer protocol status matches the desired one
+                                List<IPEndPoint> existingLocalEndPoints = ExistingLocalListenEndPoints(localEndPoint.Address);
+                                for(int i=0; i<existingLocalEndPoints.Count; i++)
                                 {
-                                    existingConnection = udpConnectionListeners[existingLocalEndPoint];
+                                    if (udpConnectionListeners[existingLocalEndPoints[i]].ConnectionInfo.ApplicationLayerProtocolEnabled == connectionInfo.ApplicationLayerProtocolEnabled)
+                                    {
+                                        existingConnection = udpConnectionListeners[existingLocalEndPoints[i]];
 
-                                    //If we are using an existing listener there is no need to listen for packets
-                                    listenForReturnPackets = false;
+                                        //If we are using an existing listener there is no need to listen for packets
+                                        listenForReturnPackets = false;
+
+                                        //Once we have a matching connection we can break
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -166,7 +192,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), true, useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -182,7 +208,94 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true, useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Listen for incoming UDP packets on all allowed local IP's on default port.
+        /// </summary>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="useRandomPortFailOver">If true and the default local port is not available will select one at random. If false and a port is unavailable listening will not be enabled on that adaptor unless NetworkComms.ListenOnAllAllowedInterfaces is false in which case a <see cref="CommsSetupShutdownException"/> will be thrown instead.</param>
+        public static void StartListening(bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = false)
+        {
+            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
+
+            if (NetworkComms.ListenOnAllAllowedInterfaces)
+            {
+                try
+                {
+                    foreach (IPAddress ip in localIPs)
+                    {
+                        try
+                        {
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), applicationLayerProtocolEnabled, useRandomPortFailOver);
+                        }
+                        catch (CommsSetupShutdownException)
+                        {
+
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    //If there is an exception here we remove any added listeners and then rethrow
+                    Shutdown();
+                    throw;
+                }
+            }
+            else
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), applicationLayerProtocolEnabled, useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Listen for incoming UDP packets on provided list of <see cref="IPEndPoint"/>. 
+        /// </summary>
+        /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        {
+            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
+
+            try
+            {
+                foreach (var endPoint in localEndPoints)
+                    StartListening(endPoint, true, useRandomPortFailOver);
+            }
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                Shutdown();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Listen for incoming UDP packets on provided list of <see cref="IPEndPoint"/>. 
+        /// </summary>
+        /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = true)
+        {
+            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
+
+            try
+            {
+                foreach (var endPoint in localEndPoints)
+                    StartListening(endPoint, applicationLayerProtocolEnabled, useRandomPortFailOver);
+            }
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                Shutdown();
+                throw;
+            }
         }
 
         /// <summary>
@@ -192,16 +305,37 @@ namespace NetworkCommsDotNet
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
+            StartListening(newLocalEndPoint, true, useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Listen for incoming UDP packets on specified <see cref="IPEndPoint"/>. 
+        /// </summary>
+        /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = true)
+        {
             lock (udpClientListenerLocker)
             {
-                //If a listener has already been added there is no need to continue
-                if (udpConnectionListeners.ContainsKey(newLocalEndPoint)) return;
+                //If a listener has already been added with a matching applicationLayerProtocolEnabled status there is no need to continue
+                if (udpConnectionListeners.ContainsKey(newLocalEndPoint) && 
+                    udpConnectionListeners[newLocalEndPoint].ConnectionInfo.ApplicationLayerProtocolEnabled == applicationLayerProtocolEnabled) 
+                    return;
+
+                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
+                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
+                if (!applicationLayerProtocolEnabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    optionsToUse = new SendReceiveOptions<NullSerializer>();
 
                 UDPConnection newListeningConnection;
 
                 try
                 {
-                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
+                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint, applicationLayerProtocolEnabled), optionsToUse, UDPOptions.None, true);
                 }
                 catch (SocketException)
                 {
@@ -209,7 +343,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, true);
+                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0), applicationLayerProtocolEnabled), optionsToUse, UDPOptions.None, true);
                         }
                         catch (SocketException)
                         {
@@ -245,28 +379,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Listen for incoming UDP packets on provided list of <see cref="IPEndPoint"/>. 
-        /// </summary>
-        /// <param name="localEndPoints">The localEndPoints to listen for packets on.</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
-        {
-            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
-
-            try
-            {
-                foreach (var endPoint in localEndPoints)
-                    StartListening(endPoint, useRandomPortFailOver);
-            }
-            catch (Exception)
-            {
-                //If there is an exception here we remove any added listeners and then rethrow
-                Shutdown();
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Returns a list of <see cref="IPEndPoint"/> corresponding with all UDP local listeners
         /// </summary>
         /// <returns>List of <see cref="IPEndPoint"/> corresponding with all UDP local listeners</returns>
@@ -283,19 +395,38 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns an <see cref="IPEndPoint"/> corresponding to a possible local listener on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns null.
+        /// Returns all <see cref="IPEndPoint"/> corresponding to local listeners on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns empty list.
         /// </summary>
         /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
         /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
-        public static IPEndPoint ExistingLocalListenEndPoints(IPAddress ipAddress)
+        public static List<IPEndPoint> ExistingLocalListenEndPoints(IPAddress ipAddress)
         {
+            List<IPEndPoint> returnList = new List<IPEndPoint>();
             lock (udpClientListenerLocker)
             {
                 foreach (var pair in udpConnectionListeners)
                     if (pair.Key.Address.Equals(ipAddress))
-                        return pair.Key;
+                        returnList.Add(pair.Key);
+            }
 
-                return default(IPEndPoint);
+            return returnList;
+        }
+
+        /// <summary>
+        /// If the provided <see cref="IPEndPoint"/> matches an existing local listener returns true if the listener has
+        /// the NetworkComms.Net application layer protocol enabled. If the <see cref="IPEndPoint"/> does not match
+        /// an existing local listener returns null.
+        /// </summary>
+        /// <param name="ipEndPoint">The <see cref="IPEndPoint"/> of an existing local listener.</param>
+        /// <returns>True if the listener has the NetworkComms.Net application layer protocol enabled.</returns>
+        public static bool? ExistingLocalListenEndPointApplicationLayerProtocolEnabled(IPEndPoint ipEndPoint)
+        {
+            lock (udpClientListenerLocker)
+            {
+                if (udpConnectionListeners.ContainsKey(ipEndPoint))
+                    return udpConnectionListeners[ipEndPoint].ConnectionInfo.ApplicationLayerProtocolEnabled;
+                else
+                    return null;
             }
         }
 
@@ -325,7 +456,7 @@ namespace NetworkCommsDotNet
             }
 
             //reset the rouge senders to null so that it is recreated if we restart anything
-            udpRogueSenders = new Dictionary<AddressFamily,UDPConnection>();
+            udpRogueSenders = new Dictionary<AddressFamily, Dictionary<bool, UDPConnection>>();
         }
 
         /// <summary>
@@ -391,56 +522,87 @@ namespace NetworkCommsDotNet
         /// <param name="sendReceiveOptions">The sendReceiveOptions to use for this send</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions)
         {
-            UDPConnection connectionToUse;
-            lock (udpRogueSenderCreationLocker)
-            {                
-                if (NetworkComms.commsShutdown)
-                    throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
-                else if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily) || udpRogueSenders[ipEndPoint.AddressFamily].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
+            SendObject(sendingPacketType, objectToSend, ipEndPoint, sendReceiveOptions, true);
+        }
 
-                    IPAddress any;
-                    if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                        any = IPAddress.Any;
-                    else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                        any = IPAddress.IPv6Any;
-                    else
-                        throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPoint.AddressFamily.ToString());
+        /// <summary>
+        /// Sends a single object to the provided endPoint. NOTE: Any possible reply will be ignored unless listening for incoming udp packets. 
+        /// </summary>
+        /// <param name="sendingPacketType">The sending packet type</param>
+        /// <param name="objectToSend">The object to send</param>
+        /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
+        /// <param name="sendReceiveOptions">The sendReceiveOptions to use for this send</param>
+        /// <param name="useApplicationLayerProtocol">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you use the NetworkComms.Net application layer protocol.
+        public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, bool useApplicationLayerProtocol)
+        {
+            //Check the send recieve options
+            if (useApplicationLayerProtocol && sendReceiveOptions == null)
+                sendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
+            else if (!useApplicationLayerProtocol && sendReceiveOptions == null)
+                sendReceiveOptions = new SendReceiveOptions<NullSerializer>();
 
-                    udpRogueSenders[ipEndPoint.AddressFamily] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0)), NetworkComms.DefaultSendReceiveOptions, UDPOptions.None, false);
-                }
+            UDPConnection connectionToUse = null;
 
-                //Get the rouge sender here
-                connectionToUse = udpRogueSenders[ipEndPoint.AddressFamily];
-            }
-
-            //Get connection defaults if no sendReceiveOptions were provided
-            if (sendReceiveOptions == null) sendReceiveOptions = connectionToUse.ConnectionDefaultSendReceiveOptions;
-
-            //If we are listening on what will be the outgoing adaptor we send with that client to ensure reply packets are collected
-            //Determining this is annoyingly non-trivial
-
-            //For now we will use the following method and look to improve upon it in future
-            //Some very quick testing gave an average runtime of this method to be 0.12ms (averageover 1000 iterations) (perhaps not so bad after all)
+            //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
             try
             {
                 IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(ipEndPoint);
 
                 lock (udpClientListenerLocker)
                 {
-                    IPEndPoint existingLocalEndPoint = ExistingLocalListenEndPoints(localEndPoint.Address);
-                    if (existingLocalEndPoint != null)
-                        connectionToUse = udpConnectionListeners[existingLocalEndPoint];
+                    //For each existing local endPoint check if the application layer protocol status matches the desired one
+                    List<IPEndPoint> existingLocalEndPoints = ExistingLocalListenEndPoints(localEndPoint.Address);
+                    for (int i = 0; i < existingLocalEndPoints.Count; i++)
+                    {
+                        if (udpConnectionListeners[existingLocalEndPoints[i]].ConnectionInfo.ApplicationLayerProtocolEnabled == useApplicationLayerProtocol)
+                        {
+                            connectionToUse = udpConnectionListeners[existingLocalEndPoints[i]];
+
+                            //Once we have a matching connection we can break
+                            break;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + ipEndPoint.Address + ":" + ipEndPoint.Port + ". Will just use the rogue udp sender instead.");
                 NetworkComms.LogError(ex, "BestLocalEndPointError");
             }
 
-            using(Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
+            //If we have not picked up a connection above we need to use a rougeSender
+            if (connectionToUse == null)
+            {
+                lock (udpRogueSenderCreationLocker)
+                {
+                    if (NetworkComms.commsShutdown)
+                        throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
+                    else if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily) || !udpRogueSenders[ipEndPoint.AddressFamily].ContainsKey(useApplicationLayerProtocol) || udpRogueSenders[ipEndPoint.AddressFamily][useApplicationLayerProtocol].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                    {
+                        //Create a new rogue sender
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
+
+                        IPAddress any;
+                        if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                            any = IPAddress.Any;
+                        else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+                            any = IPAddress.IPv6Any;
+                        else
+                            throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPoint.AddressFamily.ToString());
+
+                        if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily)) udpRogueSenders.Add(ipEndPoint.AddressFamily, new Dictionary<bool, UDPConnection>());
+
+                        udpRogueSenders[ipEndPoint.AddressFamily][useApplicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), useApplicationLayerProtocol), sendReceiveOptions, UDPOptions.None, false);
+                    }
+
+                    //Get the rouge sender here
+                    connectionToUse = udpRogueSenders[ipEndPoint.AddressFamily][useApplicationLayerProtocol];
+                }
+            }
+
+            using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
                 connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
     }
