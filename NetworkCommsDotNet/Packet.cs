@@ -60,13 +60,11 @@ namespace NetworkCommsDotNet
             if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("sendingPacketTypeStr", "The provided string can not be null or zero length.");
             if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
 
-            if (packetObject == null)
-                this.packetData = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
-            else
-            {
-                if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null.");
-                this.packetData = options.DataSerializer.SerialiseDataObject(packetObject, options.DataProcessors, options.Options);
-            }
+            object packetDataObject = packetObject;
+            if (packetDataObject == null) packetDataObject = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
+
+            if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
+            this.packetData = options.DataSerializer.SerialiseDataObject(packetDataObject, options.DataProcessors, options.Options);
 
             //We only calculate the checkSum if we are going to use it
             string hashStr = null;

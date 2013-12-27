@@ -603,6 +603,7 @@ namespace NetworkCommsDotNet
                     tcpListenerDict = new Dictionary<IPEndPoint,StreamSocketListener>();
 #else
                     tcpListenerDict = new Dictionary<IPEndPoint, TcpListener>();
+                    tcpListenerAppLayProtocolEnabledDict = new Dictionary<IPEndPoint, bool>();
 #endif
                 }
             }
