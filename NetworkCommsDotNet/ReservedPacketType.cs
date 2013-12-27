@@ -31,5 +31,6 @@ namespace NetworkCommsDotNet
         CheckSumFailResend,
         AliveTestPacket,
         ConnectionSetup,
+        Unmanaged,
     }
 }

@@ -81,7 +81,7 @@ namespace NetworkCommsDotNet
 
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
             if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
-                throw new ConnectionSetupException("A connection already exists with " + ConnectionInfo);
+                throw new ConnectionSetupException("A " + connectionInfo.ConnectionType + " connection already exists with " + connectionInfo.RemoteEndPoint);
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
             NetworkComms.AddConnectionByReferenceEndPoint(this);
@@ -119,12 +119,13 @@ namespace NetworkCommsDotNet
 
                     if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Connection was closed during establish handshake.");
 
-                    if (ConnectionInfo.NetworkIdentifier == ShortGuid.Empty)
-                        throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
-
                     //Once the above has been done the last step is to allow other threads to use the connection
                     ConnectionInfo.NoteCompleteConnectionEstablish();
-                    NetworkComms.AddConnectionReferenceByIdentifier(this);
+
+                    //Not all connection types will have a known remote network identifier
+                    if (ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
+                        NetworkComms.AddConnectionReferenceByIdentifier(this);
+
                     connectionEstablishWait.Set();
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);

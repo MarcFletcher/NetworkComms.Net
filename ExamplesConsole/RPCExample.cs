@@ -381,8 +381,7 @@ namespace ExamplesConsole
             public void Run()
             {
                 //Expecting user to enter ip address as 192.168.0.1:4000
-                ConnectionInfo connectionInfo;
-                ExampleHelper.GetServerDetails(out connectionInfo);
+                ConnectionInfo connectionInfo = ExampleHelper.GetServerDetails();
 
                 SelectConnectionType();
 

@@ -1,3 +1,7 @@
+Version 2.4 - Released TBC
+
+ - Unmanaged connection support.
+
 Version 2.3 - Released 11/06/13
 
 - Extended mobile platform support to include Xamarion.iOS and Xamarin.Android

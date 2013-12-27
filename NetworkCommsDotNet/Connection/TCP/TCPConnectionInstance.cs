@@ -70,7 +70,7 @@ namespace NetworkCommsDotNet
                     ConnectionInfo.UpdateLastTrafficTime();
 
                     //If we have read a single byte which is 0 and we are not expecting other data
-                    if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
+                    if (ConnectionInfo.ApplicationLayerProtocolEnabled && totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 1");
                     }
@@ -103,9 +103,9 @@ namespace NetworkCommsDotNet
                                 ConnectionInfo.UpdateLastTrafficTime();
 
                                 //If we have read a single byte which is 0 and we are not expecting other data
-                                if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
+                                if (ConnectionInfo.ApplicationLayerProtocolEnabled && totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                                 {
-                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandler() from " + ConnectionInfo + ". 2");
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet ignored in IncomingPacketHandler() from " + ConnectionInfo + ". 2");
                                     //LastTrafficTime = DateTime.Now;
                                 }
                                 else
@@ -218,7 +218,7 @@ namespace NetworkCommsDotNet
                         ConnectionInfo.UpdateLastTrafficTime();
 
                         //If we have read a single byte which is 0 and we are not expecting other data
-                        if (totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
+                        if (ConnectionInfo.ApplicationLayerProtocolEnabled && totalBytesRead == 1 && dataBuffer[0] == 0 && packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached == 0)
                         {
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingDataSyncWorker() from "+ConnectionInfo+".");
                         }
@@ -333,8 +333,24 @@ namespace NetworkCommsDotNet
         /// <param name="packet">Packet to send</param>
         protected override void SendPacketSpecific(Packet packet)
         {
-            //To keep memory copies to a minimum we send the header and payload in two calls to networkStream.Write
-            byte[] headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            byte[] headerBytes;
+
+            //If this connection does not use the applicationlayerprotocol we need to check a few things
+            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            {
+                //Serialise the header
+                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            }
+            else
+            {
+                headerBytes = new byte[0];
+
+                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
+
+                if (packet.PacketData.Length == 0)
+                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
+            }
 
             double maxSendTimePerKB = double.MaxValue;
             if (!NetworkComms.DisableConnectionSendTimeouts)
@@ -358,7 +374,15 @@ namespace NetworkCommsDotNet
             sendingStream = tcpClientNetworkStream;
 #endif
 
-            double headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+            //We only need to write the header if we have prepared the necessary bytes
+            double headerWriteTime = 0;
+            if (headerBytes.Length > 0)
+            {
+                headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+                SendTimesMSPerKBCache.AddValue(headerWriteTime, headerBytes.Length);
+            }
+            
+            //We can now write the payload data
             double dataWriteTime = 0;
             if (packet.PacketData.Length > 0)
                 dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
@@ -366,9 +390,9 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
             sendingStream.Flush();
 #endif
+
             //We record each send independantly as if one is considerably larger than 
             //the other it will provide a much more reliable rate
-            SendTimesMSPerKBCache.AddValue(headerWriteTime, headerBytes.Length);
             SendTimesMSPerKBCache.AddValue(dataWriteTime, packet.PacketData.Length);
             SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
 
@@ -392,6 +416,14 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void SendNullPacket()
         {
+            //We can't send null packets if the application layer is disabled
+            //as we have no way to distinquish them on the receiving side
+            if (!ConnectionInfo.ApplicationLayerProtocolEnabled)
+            {
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Ignoring null packet send to " + ConnectionInfo + " as the application layer protocol is disabled.");
+                return;
+            }
+
             try
             {
                 //Only once the connection has been established do we send null packets

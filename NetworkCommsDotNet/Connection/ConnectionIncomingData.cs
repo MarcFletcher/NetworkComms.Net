@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
-                    if (packetBuilder.FirstByte() == 0)
+                    if (ConnectionInfo.ApplicationLayerProtocolEnabled && packetBuilder.FirstByte() == 0)
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from " + ConnectionInfo + ", loop index - " + loopCounter.ToString());
 
@@ -94,23 +94,30 @@ namespace NetworkCommsDotNet
                     }
                     else
                     {
-                        //First determine the expected size of a header packet
-                        int packetHeaderSize = packetBuilder.FirstByte() + 1;
-
-                        //Do we have enough data to build a header?
-                        if (packetBuilder.TotalBytesCached < packetHeaderSize)
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet header.");
-
-                            //Set the expected number of bytes and then return
-                            packetBuilder.TotalBytesExpected = packetHeaderSize;
-                            return;
-                        }
-
-                        //We have enough for a header
+                        int packetHeaderSize = 0;
                         PacketHeader topPacketHeader;
-                        using(MemoryStream headerStream = packetBuilder.ReadDataSection(1, packetHeaderSize - 1))
-                            topPacketHeader = new PacketHeader(headerStream, NetworkComms.InternalFixedSendReceiveOptions);
+
+                        if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                        {
+                            //First determine the expected size of a header packet
+                            packetHeaderSize = packetBuilder.FirstByte() + 1;
+
+                            //Do we have enough data to build a header?
+                            if (packetBuilder.TotalBytesCached < packetHeaderSize)
+                            {
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet header.");
+
+                                //Set the expected number of bytes and then return
+                                packetBuilder.TotalBytesExpected = packetHeaderSize;
+                                return;
+                            }
+
+                            //We have enough for a header
+                            using (MemoryStream headerStream = packetBuilder.ReadDataSection(1, packetHeaderSize - 1))
+                                topPacketHeader = new PacketHeader(headerStream, NetworkComms.InternalFixedSendReceiveOptions);
+                        }
+                        else
+                            topPacketHeader = new PacketHeader(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetBuilder.TotalBytesCached);
 
                         //Idiot test
                         if (topPacketHeader.PacketType == null)
@@ -135,15 +142,18 @@ namespace NetworkCommsDotNet
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.PayloadPacketSize.ToString() + " payload bytes.");
 
-                            //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                             bool isReservedType = false;
-                            foreach (var tName in NetworkComms.reservedPacketTypeNames)
+                            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
                             {
-                                //isReservedType |= topPacketHeader.PacketType == tName;
-                                if (topPacketHeader.PacketType == tName)
+                                //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
+                                foreach (var tName in NetworkComms.reservedPacketTypeNames)
                                 {
-                                    isReservedType = true;
-                                    break;
+                                    //isReservedType |= topPacketHeader.PacketType == tName;
+                                    if (topPacketHeader.PacketType == tName)
+                                    {
+                                        isReservedType = true;
+                                        break;
+                                    }
                                 }
                             }
 

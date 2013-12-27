@@ -1045,7 +1045,14 @@ namespace NetworkCommsDotNet
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
         public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
         {
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, DefaultSendReceiveOptions);
+            //Get the default sendRecieveOptions 
+            SendReceiveOptions optionsToUse = DefaultSendReceiveOptions;
+
+            //If the default data serializer is not NullSerializer we create custom options for unmanaged data types here.
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged) && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                optionsToUse = new SendReceiveOptions<NullSerializer>();
+            
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, optionsToUse);
         }
 
         /// <summary>
@@ -1061,9 +1068,12 @@ namespace NetworkCommsDotNet
             if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided PacketHandlerCallBackDelegate<T> cannot be null.");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions cannot be null.");
 
+            //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged) && sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ArgumentException("sendReceiveOptions", "Provided SendReceiveOptions must use the NullSerializer for unmanaged packet types.");
+
             lock (globalDictAndDelegateLocker)
             {
-
                 if (globalIncomingPacketUnwrappers.ContainsKey(packetTypeStr))
                 {
                     //Make sure if we already have an existing entry that it matches with the provided
@@ -1231,7 +1241,7 @@ namespace NetworkCommsDotNet
                     return;
                 }
                 else if (handlersCopy == null && (IgnoreUnknownPacketTypes || ignoreUnknownPacketTypeOverride))
-                    //If we have received and unknown packet type and we are choosing to ignore them we just finish here
+                    //If we have received an unknown packet type and we are choosing to ignore them we just finish here
                     return;
                 else
                 {

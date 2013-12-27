@@ -112,8 +112,7 @@ namespace ExamplesConsole
                 Console.WriteLine("\nTest speed data created. Using {0}MB.\n", numberMegsToCreate);
 
                 NetworkComms.PacketConfirmationTimeoutMS = 20000;
-                ConnectionInfo serverConnectionInfo;
-                ExampleHelper.GetServerDetails(out serverConnectionInfo);
+                ConnectionInfo serverConnectionInfo = ExampleHelper.GetServerDetails();
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
 

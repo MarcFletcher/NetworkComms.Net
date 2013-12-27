@@ -35,8 +35,11 @@ namespace ExamplesConsole
         /// <summary>
         /// Request user to provide server details and returns the result as a <see cref="ConnectionInfo"/> object. Performs the necessary validation and prevents code duplication across examples.
         /// </summary>
-        /// <param name="connectionInfo"></param>
-        public static void GetServerDetails(out ConnectionInfo connectionInfo)
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        public static ConnectionInfo GetServerDetails(bool applicationLayerProtocolEnabled = true)
         {
             if (lastServerIPEndPoint != null)
                 Console.WriteLine("Please enter the destination IP and port. To reuse '{0}:{1}' use r:", lastServerIPEndPoint.Address, lastServerIPEndPoint.Port);
@@ -64,7 +67,7 @@ namespace ExamplesConsole
                 }
             }
 
-            connectionInfo = new ConnectionInfo(lastServerIPEndPoint);
+            return new ConnectionInfo(lastServerIPEndPoint, applicationLayerProtocolEnabled);
         }
     }
 }

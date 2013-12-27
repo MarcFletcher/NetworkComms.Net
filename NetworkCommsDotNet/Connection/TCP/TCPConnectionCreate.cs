@@ -61,7 +61,19 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            return GetConnection(connectionInfo, null, null, establishIfRequired);
+            if (connectionInfo.ApplicationLayerProtocolEnabled)
+                return GetConnection(connectionInfo, null, null, establishIfRequired);
+            else
+            {
+                //For unmanaged connections we need to make sure that the NullSerializer is being used.
+                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
+
+                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
+                if (optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    optionsToUse = new SendReceiveOptions<NullSerializer>();
+
+                return GetConnection(connectionInfo, optionsToUse, null, establishIfRequired);
+            }
         }
 
         /// <summary>
@@ -74,6 +86,9 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
         }
 
@@ -85,13 +100,15 @@ namespace NetworkCommsDotNet
         /// <param name="tcpClient">If this is an incoming connection we will already have access to the tcpClient, otherwise use null</param>
         /// <param name="establishIfRequired">Establish during create if true</param>
         /// <returns>An existing connection or a new one</returns>
-
 #if WINDOWS_PHONE
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket, bool establishIfRequired = true)
 #else
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
 #endif
         {
+            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
             //If we have a tcpClient at this stage we must be serverside
@@ -214,7 +231,8 @@ namespace NetworkCommsDotNet
             //Get a list of existing listeners
             List<IPEndPoint> existingListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
 
-            //Select a listener for this connection
+            //Check to see if we have a local listener for matching the local endpoint address
+            //If we are client side we use this local listener in our reply to the server
             IPEndPoint selectedExistingListener = null;
             if (existingListeners.Count > 0)
                 selectedExistingListener = (existingListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingListeners[0]);
@@ -225,11 +243,15 @@ namespace NetworkCommsDotNet
             {
                 if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
+                //If ApplicationLayerProtocolEnabled then we wait for the client to forward it's information
+                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
-                //Wait for the client to send its identification
-                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
-                    throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+                    //Wait for the client to send its identification
+                    if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+                        throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+                }
 
                 if (connectionSetupException)
                 {
@@ -240,23 +262,32 @@ namespace NetworkCommsDotNet
                 //Trigger the connection establish delegates before replying to the connection establish 
                 base.EstablishConnectionSpecific();
 
-                //Once we have the clients id we send our own
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+                //If ApplicationLayerProtocolEnabled we forward our information once we have the clients
+                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                {
+                    //Once we have the clients id we send our own
+                    SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+                }
             }
             else
             {
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
+                //If ApplicationLayerProtocolEnabled we forward our information and then wait for the servers
+                //During this exchange we may note an update local listen port
+                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
 
-                //As the client we initiated the connection we now forward our local node identifier to the server
-                //If we are listening we include our local listen port as well
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+                    //As the client we initiated the connection we now forward our local node identifier to the server
+                    //If we are listening we include our local listen port as well
+                    SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
 
-                //Wait here for the server end to return its own identifier
-                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
-                    throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+                    //Wait here for the server end to return its own identifier
+                    if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+                        throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
-                //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
-                if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
+                    //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
+                    if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
+                }
 
                 if (connectionSetupException)
                 {

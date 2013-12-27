@@ -192,8 +192,7 @@ namespace ExamplesConsole
                 #region PeerMode
                 Console.WriteLine("\n ... peer mode selected.");
 
-                ConnectionInfo serverConnectionInfo;
-                ExampleHelper.GetServerDetails(out serverConnectionInfo);
+                ConnectionInfo serverConnectionInfo = ExampleHelper.GetServerDetails();
 
                 DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
                 Console.WriteLine(" ... DFS has been initialised.");

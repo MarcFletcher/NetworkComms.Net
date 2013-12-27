@@ -70,8 +70,7 @@ namespace ExamplesConsole
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    ConnectionInfo targetServerConnectionInfo;
-                    ExampleHelper.GetServerDetails(out targetServerConnectionInfo);
+                    ConnectionInfo targetServerConnectionInfo = ExampleHelper.GetServerDetails();
 
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 

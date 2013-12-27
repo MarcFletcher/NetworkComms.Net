@@ -146,6 +146,13 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// If true NetworkComms.Net uses a custom application layer protocol to provide 
+        /// usefull features such as inline serialisation, transparent packet tranmission, 
+        /// remote peer information etc. Default: True
+        /// </summary>
+        public bool ApplicationLayerProtocolEnabled { get; private set; }
+
+        /// <summary>
         /// Private constructor required for deserialisation.
         /// </summary>
 #if iOS || ANDROID
@@ -155,17 +162,36 @@ namespace NetworkCommsDotNet
 #endif
 
         /// <summary>
-        /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>
+        /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>.
+        /// Uses the custom NetworkComms.Net application layer protocol.
         /// </summary>
         /// <param name="remoteEndPoint">The end point corresponding with the remote target</param>
         public ConnectionInfo(IPEndPoint remoteEndPoint)
         {
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = true;
         }
 
         /// <summary>
-        /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>.
+        /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="remoteEndPoint">The end point corresponding with the remote target</param>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        public ConnectionInfo(IPEndPoint remoteEndPoint, bool applicationLayerProtocolEnabled)
+        {
+            this.RemoteEndPoint = remoteEndPoint;
+            this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+        }
+
+        /// <summary>
+        /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. 
+        /// Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>. Uses the 
+        /// custom NetworkComms.Net application layer protocol.
         /// </summary>
         /// <param name="remoteIPAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
         /// <param name="remotePort">The available port of the remote target. 
@@ -178,10 +204,34 @@ namespace NetworkCommsDotNet
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = true;
         }
 
         /// <summary>
-        /// Create a connectionInfo object which can be used to inform a remote peer of local connectivity
+        /// Create a new ConnectionInfo object pointing at the provided remote ipAddress and port. 
+        /// Provided ipAddress and port are parsed in to <see cref="RemoteEndPoint"/>.
+        /// </summary>
+        /// <param name="remoteIPAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
+        /// <param name="remotePort">The available port of the remote target. 
+        /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        public ConnectionInfo(string remoteIPAddress, int remotePort, bool applicationLayerProtocolEnabled)
+        {
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
+                throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
+
+            this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
+            this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+        }
+
+        /// <summary>
+        /// Create a connectionInfo object which can be used to inform a remote peer of local connectivity.
+        /// Uses the custom NetworkComms.Net application layer protocol.
         /// </summary>
         /// <param name="connectionType">The type of connection</param>
         /// <param name="localNetworkIdentifier">The local network identifier</param>
@@ -193,6 +243,27 @@ namespace NetworkCommsDotNet
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
+            this.ApplicationLayerProtocolEnabled = true;
+        }
+
+        /// <summary>
+        /// Create a connectionInfo object which can be used to inform a remote peer of local connectivity
+        /// </summary>
+        /// <param name="connectionType">The type of connection</param>
+        /// <param name="localNetworkIdentifier">The local network identifier</param>
+        /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
+        /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable, bool applicationLayerProtocolEnabled)
+        {
+            this.ConnectionType = connectionType;
+            this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
+            this.LocalEndPoint = localEndPoint;
+            this.IsConnectable = isConnectable;
+            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
         }
 
         /// <summary>
@@ -201,12 +272,17 @@ namespace NetworkCommsDotNet
         /// <param name="serverSide">True if this connection is being created serverSide</param>
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint)
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, bool applicationLayerProtocolEnabled = true)
         {
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
         }
 
         /// <summary>
@@ -216,13 +292,18 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         /// <param name="localEndPoint">The localEndpoint of this connection</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint)
+        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// application layer protocol to provide usefull features such as inline serialisation, 
+        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, bool applicationLayerProtocolEnabled = true)
         {
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
             this.LocalEndPoint = localEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
+            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
         }
 
         [ProtoBeforeSerialization]
@@ -275,7 +356,9 @@ namespace NetworkCommsDotNet
                 ConnectionState = ConnectionState.Established;
                 ConnectionEstablishedTime = DateTime.Now;
 
-                if (NetworkIdentifier == ShortGuid.Empty) throw new ConnectionSetupException("Unable to set connection established until networkIdentifier has been set.");
+                //We only expect a remote network identifier for managed connections
+                if (ApplicationLayerProtocolEnabled && NetworkIdentifier == ShortGuid.Empty)
+                    throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
             }
         }
 

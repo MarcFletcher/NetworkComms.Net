@@ -51,13 +51,14 @@ namespace ExamplesConsole
             Console.WriteLine("Please enter an example number:");
 
             //Print out the available examples
-            int totalNumberOfExamples = 5;
+            int totalNumberOfExamples = 6;
             Console.WriteLine("1 - Basic - Message Send (Only 11 lines!)");
             Console.WriteLine("2 - Advanced - Object Send");
             Console.WriteLine("3 - Advanced - Distributed File System");
             Console.WriteLine("4 - Advanced - Remote Procedure Call");
+            Console.WriteLine("5 - Advanced - Unmanaged Connections");
             Console.WriteLine("");
-            Console.WriteLine("5 - Debug - Speed Test");
+            Console.WriteLine("6 - Debug - Speed Test");
 
             //Get the user choice
             Console.WriteLine("");
@@ -91,6 +92,9 @@ namespace ExamplesConsole
                         RPCExample.RunExample();
                         break;
                     case 5:
+                        UnmanagedConnection.RunExample();
+                        break;
+                    case 6:
                         SpeedTest.RunExample();
                         break;
                     default:
@@ -101,8 +105,8 @@ namespace ExamplesConsole
             }
             catch (Exception ex)
             {
-                NetworkCommsDotNet.NetworkComms.LogError(ex, "ExampleError");
-                NetworkCommsDotNet.NetworkComms.Shutdown();
+                NetworkComms.LogError(ex, "ExampleError");
+                NetworkComms.Shutdown();
                 Console.WriteLine(ex.ToString());
             }
 
