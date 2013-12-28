@@ -52,6 +52,11 @@ namespace ExamplesConsole
 
             Console.WriteLine("\nNOTE: From this point on make sure both clients are configured in the same way if you want the example to work.");
 
+            Console.WriteLine("\nIMPORTANT!! - Many of the features offered by NetworkComms.Net rely on managed connections, "+
+                "i.e. those which enable the custom ApplicationLayerProtocol. If you use unmanaged connections, i.e. where the custom "+
+                "application protocol has been disabled, you must take into account TCP packet fragmentation and concatenation, "+
+                "correctly handling it, for all circumstances.");
+
             //Choose between unmanaged TCP or UDP
             SelectConnectionType();
 

@@ -28,7 +28,7 @@ using DPSBase;
 
 namespace DebugTests
 {
-    static class LoadTest
+    static class BandwidthLoadTest
     {
         static bool throwerMode;
 

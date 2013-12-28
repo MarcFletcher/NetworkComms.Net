@@ -66,8 +66,9 @@
     <Compile Include="DebugTest.cs" />
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
-    <Compile Include="LoadTest.cs" />
+    <Compile Include="BandwidthLoadTest.cs" />
     <Compile Include="LogAnalyser.cs" />
+    <Compile Include="NumConnectionLoadTest.cs" />
     <Compile Include="ThreadPoolTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
