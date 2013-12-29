@@ -206,11 +206,19 @@ namespace DistributedFileSystem
     }
 
     /// <summary>
-    /// Wrapper class for ChunkFlags which allows us to include a little more information about a peer
+    /// Wrapper class which contains all of the information, for a single peer, for single distributed item. A peer has a single
+    /// known chunk availability and identifier but multiple possible IPEndPoints.
     /// </summary>
     [ProtoContract]
-    public class PeerAvailabilityInfo
+    public class PeerInfo
     {
+        private object syncRoot = new object();
+
+        /// <summary>
+        /// Identifies this peer info
+        /// </summary>
+        public ShortGuid PeerNetworkIdentifier { get; private set; }
+
         /// <summary>
         /// The chunk availability for this peer.
         /// </summary>
@@ -224,77 +232,262 @@ namespace DistributedFileSystem
         public bool SuperPeer { get; private set; }
 
         /// <summary>
-        /// Used to maintain peer busy status
+        /// All connection infos corresponding with this peer
         /// </summary>
-        public DateTime PeerBusyAnnounce { get; private set; }
-        public bool PeerBusy { get; private set; }
+        [ProtoMember(3)]
+        private List<ConnectionInfo> PeerConnectionInfo { get; set; }
 
-        bool peerOnline;
         /// <summary>
-        /// A local variable which is set to true the first time a peer responds to any information/data requests
+        /// Used to maintain peer status
         /// </summary>
-        public bool PeerOnline
+        private Dictionary<ConnectionInfo, DateTime> IPEndPointBusyAnnounceTimeDict = new Dictionary<ConnectionInfo, DateTime>();
+        private Dictionary<ConnectionInfo, bool> IPEndPointOnlineDict = new Dictionary<ConnectionInfo, bool>();
+        private Dictionary<ConnectionInfo, bool> IPEndPointBusyDict = new Dictionary<ConnectionInfo, bool>();
+        private Dictionary<ConnectionInfo, int> IPEndPointTimeoutCountDict = new Dictionary<ConnectionInfo, int>();
+
+        private PeerInfo() { }
+
+        public PeerInfo(List<ConnectionInfo> peerConnectionInfo, ChunkFlags peerChunkFlags, bool superPeer)
         {
-            get
+            this.PeerNetworkIdentifier = peerConnectionInfo[0].NetworkIdentifier;
+            foreach (ConnectionInfo info in peerConnectionInfo)
             {
-                //Super peers are always online
-                return peerOnline || SuperPeer;
+                if (info.NetworkIdentifier != this.PeerNetworkIdentifier)
+                    throw new Exception("The provided peerConnectionInfo contains more than one unique NetworkIdentifier.");
+
+                //Add the necessary entries into status dictionaries
+                IPEndPointBusyAnnounceTimeDict[info] = DateTime.Now;
+                IPEndPointOnlineDict[info] = false;
+                IPEndPointBusyDict[info] = false;
+                IPEndPointTimeoutCountDict[info] = 0;
             }
-            private set
-            {
-                peerOnline = value;
-            }
-        }
 
-        public int timeoutCount;
-        public int CurrentTimeoutCount { get { return timeoutCount; } }
-
-        private PeerAvailabilityInfo() { }
-
-        public PeerAvailabilityInfo(ChunkFlags peerChunkFlags, bool superPeer)
-        {
+            this.PeerConnectionInfo = peerConnectionInfo;
             this.PeerChunkFlags = peerChunkFlags;
             this.SuperPeer = superPeer;
         }
 
-        public void SetPeerBusy()
+        /// <summary>
+        /// Returns PeerConnectionInfo.Count
+        /// </summary>
+        public int NumberOfConnectionInfos { get { return PeerConnectionInfo.Count; } }
+
+        /// <summary>
+        /// Returns true if this peer has atleast one online ipEndPoint
+        /// </summary>
+        /// <returns></returns>
+        public bool HasAtleastOneOnlineIPEndPoint() { return (from current in IPEndPointOnlineDict.Values where current select current).Count() > 0; }
+
+        public bool IsPeerIPEndPointOnline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
-            PeerBusyAnnounce = DateTime.Now;
-            PeerBusy = true;
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                if (SuperPeer) return true;
+
+                if (IPEndPointOnlineDict.ContainsKey(connectionInfo))
+                    return IPEndPointOnlineDict[connectionInfo];
+                else
+                    return false;
+            }
         }
 
-        public void ClearBusy()
+        public void SetPeerIPEndPointOnlineStatus(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint, bool onlineStatus)
         {
-            PeerBusy = false;
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+                IPEndPointOnlineDict[connectionInfo] = onlineStatus;
+            }
         }
 
-        public void SetOnline()
+        public bool IsPeerIPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
-            PeerOnline = true;
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                if (IPEndPointBusyDict.ContainsKey(connectionInfo))
+                    return IPEndPointBusyDict[connectionInfo];
+                else
+                    return false;
+            }
         }
 
-        public void SetOffline()
+        public void SetPeerIPEndPointBusyStatus(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint, bool busyStatus)
         {
-            PeerOnline = false;
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                IPEndPointBusyDict[connectionInfo] = busyStatus;
+                IPEndPointBusyAnnounceTimeDict[connectionInfo] = DateTime.Now;
+            }
         }
 
         /// <summary>
-        /// Returns the new timeout count value after incrementing the current count.
+        /// Clear any busy flags set for the IPEndPoints of this peer if they are older than the provided MS
+        /// </summary>
+        public void CheckAllIPEndPointBusyFlags(int msSinceBusyToClear)
+        {
+            lock (syncRoot)
+            {
+                List<ConnectionInfo> connectionInfos = IPEndPointBusyDict.Keys.ToList();
+                foreach (var connectionInfo in connectionInfos)
+                {
+                    //If marked as busy
+                    if (IPEndPointBusyDict[connectionInfo])
+                    {
+                        if ((DateTime.Now - IPEndPointBusyAnnounceTimeDict[connectionInfo]).TotalMilliseconds > msSinceBusyToClear)
+                            IPEndPointBusyDict[connectionInfo] = false;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Return the current timeout count value.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <returns></returns>
+        public int GetCurrentTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
+        {
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                return IPEndPointTimeoutCountDict[connectionInfo];
+            }
+        }
+
+        /// <summary>
+        /// Returns the new timeout count value after incrementing the timeout count.
         /// </summary>
         /// <returns></returns>
-        public int GetNewTimeoutCount()
+        public int GetNewTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
-            return Interlocked.Increment(ref timeoutCount);
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                return ++IPEndPointTimeoutCountDict[connectionInfo];
+            }
+        }
+
+        /// <summary>
+        /// Returns a new list containing all peer connection infos
+        /// </summary>
+        /// <returns></returns>
+        public List<ConnectionInfo> GetConnectionInfo()
+        {
+            lock (syncRoot)
+                return PeerConnectionInfo.ToList();
+        }
+
+        /// <summary>
+        /// Removes the provided connectionInfo from all internal dictionaries. Returns true if connectionInfo exists, otherwise false
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        /// <returns></returns>
+        public bool RemovePeerIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
+        {
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                if (PeerConnectionInfo.Contains(connectionInfo))
+                {
+                    PeerConnectionInfo.Remove(connectionInfo);
+                    IPEndPointBusyAnnounceTimeDict.Remove(connectionInfo);
+                    IPEndPointOnlineDict.Remove(connectionInfo);
+                    IPEndPointBusyDict.Remove(connectionInfo);
+                    IPEndPointTimeoutCountDict.Remove(connectionInfo);
+
+                    return true;
+                }
+                else
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Add new connectionInfo for this peer. Returns true if succesfully added, otherwise false.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        public bool AddPeerIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
+        {
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                if (PeerConnectionInfo.Contains(connectionInfo))
+                    return false;
+                else
+                {
+                    PeerConnectionInfo.Add(connectionInfo);
+                    IPEndPointBusyAnnounceTimeDict.Add(connectionInfo, DateTime.Now);
+                    IPEndPointOnlineDict.Add(connectionInfo, false);
+                    IPEndPointBusyDict.Add(connectionInfo, false);
+                    IPEndPointTimeoutCountDict.Add(connectionInfo, 0);
+
+                    return true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the provided endPoint exists for this peer
+        /// </summary>
+        /// <param name="networkIdentifier"></param>
+        /// <param name="peerIPEndPoint"></param>
+        /// <returns></returns>
+        public bool PeerContainsIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
+        {
+            ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            lock (syncRoot)
+            {
+                ValidateNetworkIdentifier(connectionInfo);
+
+                return PeerConnectionInfo.Contains(connectionInfo);
+            }
+        }
+
+        /// <summary>
+        /// A private method which checks the provided network idenifier with that expected.
+        /// </summary>
+        /// <param name="connectionInfo"></param>
+        private void ValidateNetworkIdentifier(ConnectionInfo connectionInfo)
+        {
+            if (this.PeerNetworkIdentifier != connectionInfo.NetworkIdentifier)
+                throw new Exception("Attempted to modify PeerInfo for peer " + PeerNetworkIdentifier + " with data corresponding with peer " + connectionInfo.NetworkIdentifier);
         }
     }
 
+    /// <summary>
+    /// Wrapper class which contains all of the information, for all peers, for a single distributed item.
+    /// </summary>
     [ProtoContract]
     public class SwarmChunkAvailability
     {
+        /// <summary>
+        /// Our primary list of peerInfo which is keyed on networkIdentifier
+        /// </summary>
         [ProtoMember(1)]
-        Dictionary<string, PeerAvailabilityInfo> peerAvailabilityByNetworkIdentifierDict;
+        Dictionary<string, PeerInfo> peerAvailabilityByNetworkIdentifierDict;
+
+        /// <summary>
+        /// An index for peers based on IPEndPoints. Key represents a conversion 
+        /// from IPEndPoint.ToString() to network identifier
+        /// </summary>
         [ProtoMember(2)]
-        Dictionary<string, ConnectionInfo> peerNetworkIdentifierToConnectionInfo;
+        Dictionary<string, string> peerEndPointToNetworkIdentifier;
 
         /// <summary>
         /// Triggered when first peer is recorded as being alive
@@ -309,17 +502,31 @@ namespace DistributedFileSystem
         private SwarmChunkAvailability() { }
 
         /// <summary>
-        /// Creates a new instance of SwarmChunkAvailability for the superNode
+        /// Creates a new instance of SwarmChunkAvailability
         /// </summary>
-        /// <param name="sourceNetworkIdentifier"></param>
+        /// <param name="sourceConnectionInfoList">A list of sources. Possibly multiple peers each with multiple IPEndPoints.</param>
         /// <param name="sourceConnectionInfo"></param>
-        public SwarmChunkAvailability(ConnectionInfo sourceConnectionInfo, byte totalNumChunks)
+        public SwarmChunkAvailability(List<ConnectionInfo> sourceConnectionInfoList, byte totalNumChunks)
         {
             //When initialising the chunk availability we add the starting source in the intialisation
-            peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerAvailabilityInfo>() { { sourceConnectionInfo.NetworkIdentifier, new PeerAvailabilityInfo(new ChunkFlags(totalNumChunks), true) } };
-            peerNetworkIdentifierToConnectionInfo = new Dictionary<string, ConnectionInfo>() { { sourceConnectionInfo.NetworkIdentifier, sourceConnectionInfo } };
+            peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerInfo>();
+            peerEndPointToNetworkIdentifier = new Dictionary<string, string>();
 
-            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created by " + sourceConnectionInfo.NetworkIdentifier + ".");
+            foreach (ConnectionInfo info in sourceConnectionInfoList)
+            {
+                //A peer has a unique network identifier but many endpoints
+                if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(info.NetworkIdentifier))
+                    peerAvailabilityByNetworkIdentifierDict[info.NetworkIdentifier].AddPeerIPEndPoint(info.NetworkIdentifier, info.LocalEndPoint);
+                else
+                    peerAvailabilityByNetworkIdentifierDict.Add(info.NetworkIdentifier, new PeerInfo(new List<ConnectionInfo>() { info }, new ChunkFlags(totalNumChunks), true));
+
+                if (peerEndPointToNetworkIdentifier.ContainsKey(info.LocalEndPoint.ToString()))
+                    throw new Exception("sourceConnectionInfoList contained a duplicate entry for the IPEndPoint " + info.LocalEndPoint.ToString());
+                else
+                    peerEndPointToNetworkIdentifier.Add(info.LocalEndPoint.ToString(), info.NetworkIdentifier);
+            }
+
+            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created using " + sourceConnectionInfoList + " possible sources.");
         }
 
         /// <summary>
@@ -327,35 +534,42 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="chunksRequired"></param>
         /// <returns></returns>
-        public Dictionary<byte, Dictionary<ConnectionInfo, PeerAvailabilityInfo>> CachedNonLocalChunkExistences(byte totalChunksInItem, out Dictionary<ConnectionInfo, PeerAvailabilityInfo> nonLocalPeerAvailability)
+        public Dictionary<byte, Dictionary<ConnectionInfo, PeerInfo>> CachedNonLocalChunkExistences(byte totalChunksInItem, out Dictionary<ConnectionInfo, PeerInfo> nonLocalPeerAvailability)
         {
             lock (peerLocker)
             {
-                Dictionary<byte, Dictionary<ConnectionInfo, PeerAvailabilityInfo>> chunkExistence = new Dictionary<byte, Dictionary<ConnectionInfo, PeerAvailabilityInfo>>();
-                nonLocalPeerAvailability = new Dictionary<ConnectionInfo, PeerAvailabilityInfo>();
+                Dictionary<byte, Dictionary<ConnectionInfo, PeerInfo>> chunkExistence = new Dictionary<byte, Dictionary<ConnectionInfo, PeerInfo>>();
+                nonLocalPeerAvailability = new Dictionary<ConnectionInfo, PeerInfo>();
 
                 //We add an entry to the dictionary for every chunk we do not yet have
                 for (byte i = 0; i < totalChunksInItem; i++)
                     if (!PeerHasChunk(NetworkComms.NetworkIdentifier, i))
-                        chunkExistence.Add(i, new Dictionary<ConnectionInfo, PeerAvailabilityInfo>());
+                        chunkExistence.Add(i, new Dictionary<ConnectionInfo, PeerInfo>());
 
                 //Now for each peer we know about we add them to the list if they have a chunck of interest
                 foreach (var peer in peerAvailabilityByNetworkIdentifierDict)
                 {
                     //This is the only place we clear a peers busy status
-                    if (peer.Value.PeerBusy && (DateTime.Now - peer.Value.PeerBusyAnnounce).TotalMilliseconds > DFS.PeerBusyTimeoutMS) peer.Value.ClearBusy();
+                    peer.Value.CheckAllIPEndPointBusyFlags(DFS.PeerBusyTimeoutMS);
 
-                    if (PeerContactAllowed(peer.Key, NetworkIdentifierToConnectionInfo(peer.Key).LocalEndPoint, peer.Value.SuperPeer))
+                    //For this peer for every chunk we are looking for
+                    for (byte i = 0; i < totalChunksInItem; i++)
                     {
-                        //For this peer for every chunk we are looking for
-                        for (byte i = 0; i < totalChunksInItem; i++)
+                        //If we do not have the desired chunk but the current peer does
+                        if (chunkExistence.ContainsKey(i) && peer.Value.PeerChunkFlags.FlagSet(i))
                         {
-                            if (chunkExistence.ContainsKey(i) && peer.Value.PeerChunkFlags.FlagSet(i))
+                            //Add a new entry for every connectionInfo available for this peer
+                            List<ConnectionInfo> peerConnectionInfos = peer.Value.GetConnectionInfo();
+                            foreach (ConnectionInfo info in peerConnectionInfos)
                             {
-                                chunkExistence[i].Add(NetworkIdentifierToConnectionInfo(peer.Key), peer.Value);
+                                //We check every connectionInfo for allowed contact seperately
+                                if (PeerContactAllowed(peer.Key, info.LocalEndPoint, peer.Value.SuperPeer))
+                                {
+                                    chunkExistence[i].Add(info, peer.Value);
 
-                                if (!nonLocalPeerAvailability.ContainsKey(NetworkIdentifierToConnectionInfo(peer.Key)))
-                                    nonLocalPeerAvailability.Add(NetworkIdentifierToConnectionInfo(peer.Key), peer.Value);
+                                    if (!nonLocalPeerAvailability.ContainsKey(info))
+                                        nonLocalPeerAvailability.Add(info, peer.Value);
+                                }
                             }
                         }
                     }
@@ -365,49 +579,47 @@ namespace DistributedFileSystem
             }
         }
 
-        public void SetPeerBusy(ShortGuid networkIdentifier)
+        public void SetIPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
-            if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
-
             lock (peerLocker)
             {
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SetPeerBusy();
+                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SetPeerIPEndPointBusyStatus(networkIdentifier, peerIPEndPoint, true);
             }
         }
 
-        public bool PeerBusy(ShortGuid networkIdentifier)
+        public bool IPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
             lock (peerLocker)
             {
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].PeerBusy;
+                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].IsPeerIPEndPointBusy(networkIdentifier, peerIPEndPoint);
             }
 
             return false;
         }
 
-        public void SetPeerOffline(ShortGuid networkIdentifier)
+        public void SetIPEndPointOffline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
             lock (peerLocker)
             {
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SetOffline();
+                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SetPeerIPEndPointOnlineStatus(networkIdentifier, peerIPEndPoint, true);
             }
         }
 
-        public bool PeerOnline(ShortGuid networkIdentifier)
+        public bool IPEndPointOnline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
             lock (peerLocker)
             {
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].PeerOnline;
+                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].IsPeerIPEndPointOnline(networkIdentifier, peerIPEndPoint);
             }
 
             return false;
@@ -435,14 +647,8 @@ namespace DistributedFileSystem
         {
             lock (peerLocker)
             {
-                foreach (ConnectionInfo peerInfo in peerNetworkIdentifierToConnectionInfo.Values)
-                {
-                    if (peerInfo.LocalEndPoint.Equals(peerEndPoint))
-                        return true;
-                }
+                return peerEndPointToNetworkIdentifier.ContainsKey(peerEndPoint.ToString());
             }
-
-            return false;
         }
 
         /// <summary>
@@ -494,14 +700,13 @@ namespace DistributedFileSystem
             lock (peerLocker)
             {
                 if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
-                    //throw new Exception("networkIdentifier provided does not exist in peerChunksByNetworkIdentifierDict. Check with PeerExistsInSwarm before calling this method.");
                     return false;
 
                 return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer;
             }
         }
 
-        public int GetNewTimeoutCount(ShortGuid networkIdentifier)
+        public int GetNewTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
@@ -510,40 +715,28 @@ namespace DistributedFileSystem
                 if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
                     return 0;
 
-                return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetNewTimeoutCount();
+                return peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetNewTimeoutCount(networkIdentifier, peerIPEndPoint);
             }
         }
 
         /// <summary>
-        /// Converts a provided network identifier into an ip address. There is no guarantee the ip is connectable.
+        /// Deletes the knowledge of a peer IPEndPoint from our local swarm chunk availability. 
+        /// If peerEndPoint.Address is IPAddress.Any then the entire peer will be deleted. 
         /// </summary>
         /// <param name="networkIdentifier"></param>
-        /// <returns></returns>
-        public ConnectionInfo NetworkIdentifierToConnectionInfo(ShortGuid networkIdentifier)
-        {
-            if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
-
-            lock (peerLocker)
-            {
-                if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
-                    return peerNetworkIdentifierToConnectionInfo[networkIdentifier];
-                else
-                    throw new Exception("Unable to convert network identifier to ip as it's entry was not found in peerNetworkIdentifierToIP dictionary.");
-            }
-        }
-
-        /// <summary>
-        /// Deletes the knowledge of a peer from our local swarm chunk availability
-        /// </summary>
-        /// <param name="networkIdentifier"></param>
-        public void RemovePeerFromSwarm(ShortGuid networkIdentifier, bool forceRemove = false)
+        public void RemovePeerIPEndPointFromSwarm(ShortGuid networkIdentifier, IPEndPoint peerEndPoint, bool forceRemoveWholePeer = false)
         {
             try
             {
-                if (networkIdentifier == null || networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
+                if (networkIdentifier == null || networkIdentifier == ShortGuid.Empty) 
+                    throw new Exception("networkIdentifier should not be empty.");
+
+                if (peerEndPoint.Address == IPAddress.Any && !forceRemoveWholePeer)
+                    throw new Exception("IPEndPoint may only reference IPAddress.Any if forceRemoveWholePeer is true.");
 
                 lock (peerLocker)
                 {
+                    //If the have an entry for this peer in peerAvailabilityByNetworkIdentifierDict
                     //We only remove the peer if we have more than one and it is not a super peer
                     if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
                     {
@@ -551,23 +744,56 @@ namespace DistributedFileSystem
                         //1. We have set force remove
                         //or
                         //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other super peer in order to remove
-                        if (forceRemove || (peerAvailabilityByNetworkIdentifierDict.Count > 1 && (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer || (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
+                        if (forceRemoveWholePeer ||
+                            (peerAvailabilityByNetworkIdentifierDict.Count > 1 &&
+                                (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer ||
+                                (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
                         {
-                            peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
-
-                            if (peerNetworkIdentifierToConnectionInfo.ContainsKey(networkIdentifier))
+                            //If we have set force remove for the whole peer
+                            //or this is the last ipendpoint for the peer
+                            if (forceRemoveWholePeer || peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1)
                             {
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + peerNetworkIdentifierToConnectionInfo[networkIdentifier] + " with connectionInfo from item.");
+                                //We need to remove all traces of this peer
+                                if (peerEndPoint.Address != IPAddress.Any && peerEndPointToNetworkIdentifier[peerEndPoint.ToString()] != networkIdentifier ||
+                                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint != peerEndPoint)
+                                    throw new Exception("Possible corruption detected in SwarmChunkAvailability - 1");
 
-                                peerNetworkIdentifierToConnectionInfo.Remove(networkIdentifier);
+                                List<ConnectionInfo> peerConnectionInfos = peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo();
+
+                                foreach(ConnectionInfo connInfo in peerConnectionInfos)
+                                    peerEndPointToNetworkIdentifier.Remove(connInfo.LocalEndPoint.ToString());
+
+                                peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
+
+                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed entire peer from swarm - " + networkIdentifier + ".");
                             }
                             else
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed " + networkIdentifier + " from item.");
+                            {
+                                bool removeResult = peerAvailabilityByNetworkIdentifierDict[networkIdentifier].RemovePeerIPEndPoint(networkIdentifier, peerEndPoint);
+                                peerEndPointToNetworkIdentifier.Remove(peerEndPoint.ToString());
+
+                                if (removeResult)
+                                {
+                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed peer IPEndPoint from swarm - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
+                                }
+                                else
+                                {
+                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... attempted to removed peer IPEndPoint from swarm but it didnt exist - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
+                                }
+                            }
                         }
                         else
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... remove failed as forceRemove= " + forceRemove + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
+                        {
+                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... remove failed as forceRemove= " + forceRemoveWholePeer + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
+                        }
                     }
-                    else if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer not removed as does not exist in local SwarmChunkAvailability.");
+                    else
+                    {
+                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer did not exist in peerAvailabilityByNetworkIdentifierDict. Checking for old ipEndPoint references");
+
+                        //Remove any accidental entries left in the endpoint dict
+                        peerEndPointToNetworkIdentifier.Remove(peerEndPoint.ToString());
+                    }
                 }
             }
             catch (Exception ex)
@@ -589,44 +815,58 @@ namespace DistributedFileSystem
             {
                 if (connectionInfo.ConnectionType != ConnectionType.TCP) throw new Exception("Only the TCP side of a DFS peer should be tracked.");
 
+                //Extract the correct endpoint from the provided connectionInfo
+                //If this is taken from a connection we are after the remoteEndPoint
                 IPEndPoint endPointToUse = null;
                 if (connectionInfo.RemoteEndPoint == null)
                     endPointToUse = connectionInfo.LocalEndPoint;
                 else
                     endPointToUse = connectionInfo.RemoteEndPoint;
 
-                //We can only add a peer if it is listening
+                string endPointToUseString = endPointToUse.ToString();
+                //We can only add a peer if it is listening correctly
                 if (endPointToUse.Port <= DFS.MaxTargetLocalPort && endPointToUse.Port >= DFS.MinTargetLocalPort)
                 {
-                    RemoveOldPeersAtEndPoint(connectionInfo.NetworkIdentifier, endPointToUse);
+                    //Ensure the endpoint is correctly recorded
+                    RemoveOldPeerAtEndPoint(connectionInfo.NetworkIdentifier, endPointToUse);
 
+                    //If we have an existing record of this peer
                     if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(connectionInfo.NetworkIdentifier))
                     {
-                        if (peerNetworkIdentifierToConnectionInfo[connectionInfo.NetworkIdentifier].LocalEndPoint.Port != endPointToUse.Port)
-                            peerNetworkIdentifierToConnectionInfo[connectionInfo.NetworkIdentifier] = connectionInfo;
+                        //If the existing peerInfo is not aware of this endPoint
+                        if (!peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].PeerContainsIPEndPoint(connectionInfo.NetworkIdentifier, endPointToUse))
+                        {
+                            //Add the information to the peerInfo and local index
+                            peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].AddPeerIPEndPoint(connectionInfo.NetworkIdentifier, endPointToUse);
+                            peerEndPointToNetworkIdentifier[endPointToUseString] = connectionInfo.NetworkIdentifier;
+                        }
 
+                        //Finally update the chunk flags
                         peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].PeerChunkFlags.UpdateFlags(latestChunkFlags);
 
                         if (DFS.loggingEnabled) DFS.Logger.Trace("Updated existing chunk flags for "+ connectionInfo);
                     }
                     else
                     {
-                        //We also need to add the ip address. This should not fail as if we are calling this method locally we should have the relevant connection
-                        if (!peerNetworkIdentifierToConnectionInfo.ContainsKey(connectionInfo.NetworkIdentifier))
-                            peerNetworkIdentifierToConnectionInfo.Add(connectionInfo.NetworkIdentifier, new ConnectionInfo(connectionInfo.ConnectionType, connectionInfo.NetworkIdentifier, endPointToUse, connectionInfo.IsConnectable));
+                        //If we don't know anything about this peer we add it to our local swarm availability
+                        //We used comms to get any existing connections to the peer
+                        List<ConnectionInfo> peerConnectionInfos = (from current in NetworkComms.GetExistingConnection(connectionInfo.NetworkIdentifier, ConnectionType.TCP) select current.ConnectionInfo).ToList();
+                        peerAvailabilityByNetworkIdentifierDict.Add(connectionInfo.NetworkIdentifier, new PeerInfo(peerConnectionInfos, latestChunkFlags, superPeer));
 
-                        peerAvailabilityByNetworkIdentifierDict.Add(connectionInfo.NetworkIdentifier, new PeerAvailabilityInfo(latestChunkFlags, superPeer));
+                        //We finish by adding the endPoint references
+                        foreach (ConnectionInfo connInfo in peerConnectionInfos)
+                            peerEndPointToNetworkIdentifier[connInfo.RemoteEndPoint.ToString()] = connectionInfo.NetworkIdentifier;
 
                         if (DFS.loggingEnabled) DFS.Logger.Trace("Added new chunk flags for " + connectionInfo);
                     }
 
                     //By updating cached peer chunk flags we set the peer as being online
-                    peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetOnline();
+                    peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetPeerIPEndPointOnlineStatus(connectionInfo.NetworkIdentifier, endPointToUse, true);
 
                     //We will trigger the alive peers event when we have atleast a third of the existing peers
                     if (!alivePeersReceivedEvent.WaitOne(0))
                     {
-                        int numOnlinePeers = (from current in peerAvailabilityByNetworkIdentifierDict.Values where current.PeerOnline select current).Count();
+                        int numOnlinePeers = (from current in peerAvailabilityByNetworkIdentifierDict.Values where current.HasAtleastOneOnlineIPEndPoint() select current).Count();
                         if (numOnlinePeers >= DFS.MaxTotalItemRequests || numOnlinePeers > peerAvailabilityByNetworkIdentifierDict.Count / 3.0)
                             alivePeersReceivedEvent.Set();
                     }
@@ -641,26 +881,18 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="currentActivePeerIdentifier">The NetworkIdenfier of the known active peer</param>
         /// <param name="currentActivePeerEndPoint">The endPoint of the known active peer</param>
-        public void RemoveOldPeersAtEndPoint(ShortGuid currentActivePeerIdentifier, IPEndPoint currentActivePeerEndPoint)
+        public void RemoveOldPeerAtEndPoint(ShortGuid currentActivePeerIdentifier, IPEndPoint currentActivePeerEndPoint)
         {
             lock (peerLocker)
             {
-                #region Remove Any Duplicate EndPoint Matches
-                //Look for endPoint matches, if there are duplicates we delete any old ones
-                List<ShortGuid> deadIdentifiers = new List<ShortGuid>();
-                foreach (var connectionInfoEntry in peerNetworkIdentifierToConnectionInfo)
+                //If we already have an entry for the provided endPoint but it does not match the provided currentActivePeerIdentifier
+                //We need to remove the provided endPoint from the old peer
+                string ipEndPointString = currentActivePeerEndPoint.ToString();
+                if (peerEndPointToNetworkIdentifier.ContainsKey(ipEndPointString) && peerEndPointToNetworkIdentifier[ipEndPointString] != currentActivePeerIdentifier)
                 {
-                    if (connectionInfoEntry.Value.LocalEndPoint.Equals(currentActivePeerEndPoint) && !connectionInfoEntry.Key.Equals(currentActivePeerIdentifier))
-                        deadIdentifiers.Add(connectionInfoEntry.Key);
+                    //Remove the provided currentActivePeerEndPoint from the old peer
+                    RemovePeerIPEndPointFromSwarm(peerEndPointToNetworkIdentifier[ipEndPointString], currentActivePeerEndPoint);
                 }
-                if (deadIdentifiers.Count > 0)
-                {
-                    if (DFS.loggingEnabled) DFS.Logger.Trace("Removed " + deadIdentifiers.Count + " dead peers from the local swarmChunkAvailability using endPoint " + currentActivePeerEndPoint);
-
-                    peerNetworkIdentifierToConnectionInfo = (from current in peerNetworkIdentifierToConnectionInfo where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
-                    peerAvailabilityByNetworkIdentifierDict = (from current in peerAvailabilityByNetworkIdentifierDict where !deadIdentifiers.Contains(current.Key) select current).ToDictionary(entry => entry.Key, entry => entry.Value);
-                }
-                #endregion
             }
         }
 
@@ -687,8 +919,11 @@ namespace DistributedFileSystem
         {
             if (buildLog != null) buildLog("Starting UpdatePeerAvailability update.");
 
-            string[] currentPeerKeys;
-            lock (peerLocker) currentPeerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
+            Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
+            lock (peerLocker) peerConnInfoDict = (from current in peerAvailabilityByNetworkIdentifierDict.Keys
+                                                  select new KeyValuePair<string, List<ConnectionInfo>>(current, 
+                                                      peerAvailabilityByNetworkIdentifierDict[current].GetConnectionInfo())
+                                                  ).ToDictionary(entry => entry.Key, entry => entry.Value);
 
             if (cascadeDepth > 0)
             {
@@ -696,33 +931,13 @@ namespace DistributedFileSystem
 
                 //If we are going to cascade peers we need to contact all our known peers and get them to send us their known peers
                 #region GetAllUnknownPeers
-                //Contact all known peers and request an availability update
-                foreach (ShortGuid peerIdentifier in currentPeerKeys)
+                //Contact all known endPoints and request an availability update
+                foreach (var peer in peerConnInfoDict)
                 {
+                    PeerInfo peerInfo = null;
                     try
                     {
-                        IPEndPoint peerEndPoint;
-                        bool superPeer;
-                        lock (peerLocker)
-                        {
-                            peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
-                            superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
-                        }
-
-                        //We don't want to contact ourselves plus we check the possible exception lists
-                        if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
-                        {
-                            if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_KnownPeersRequest.");
-                            
-                            UDPConnection.SendObject("DFS_KnownPeersRequest", itemCheckSum, peerEndPoint, DFS.nullCompressionSRO);
-                            //if (buildLog != null) buildLog(" ... completed DFS_KnownPeersRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
-                        }
-                    }
-                    catch (CommsException)
-                    {
-                        //If a peer has disconnected or fails to respond we just remove them from the list
-                        RemovePeerFromSwarm(peerIdentifier);
-                        if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to CommsException.");
+                        peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key]; 
                     }
                     catch (KeyNotFoundException)
                     {
@@ -730,12 +945,35 @@ namespace DistributedFileSystem
                         //but it has been removed since we accessed the peerKeys at the start of this method
                         //We could probably be a bit more carefull with how we maintain these references but we either catch the
                         //exception here or networkcomms will throw one when we try to connect to an old peer.
-                        RemovePeerFromSwarm(peerIdentifier);
-                        if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to KeyNotFoundException.");
+                        RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                        if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                     }
-                    catch (Exception ex)
+
+                    if (peerInfo != null)
                     {
-                        NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_1");
+                        foreach (ConnectionInfo connInfo in peer.Value)
+                        {
+                            try
+                            {
+                                //We don't want to contact ourselves plus we check the possible exception lists
+                                if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                {
+                                    if (buildLog != null) buildLog("Contacting " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " for a DFS_KnownPeersRequest.");
+
+                                    UDPConnection.SendObject("DFS_KnownPeersRequest", itemCheckSum, connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                                }
+                            }
+                            catch (CommsException)
+                            {
+                                //If a peer has disconnected or fails to respond we just remove them from the list
+                                RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                                if (buildLog != null) buildLog("Removing " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " from item swarm due to CommsException.");
+                            }
+                            catch (Exception ex)
+                            {
+                                NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_1");
+                            }
+                        }
                     }
                 }
                 #endregion
@@ -744,35 +982,12 @@ namespace DistributedFileSystem
             //Contact all our original peers and request a chunk availability update
             #region GetAllOriginalPeerAvailabilityFlags
             //Our own current availability
-            foreach (ShortGuid peerIdentifier in currentPeerKeys)
-            { 
+            foreach (var peer in peerConnInfoDict)
+            {
+                PeerInfo peerInfo = null;
                 try
                 {
-                    IPEndPoint peerEndPoint;
-                    bool superPeer;
-                    lock (peerLocker)
-                    {
-                        peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
-                        superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
-                    }
-
-                    //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                    if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
-                    {
-                        if (buildLog != null) buildLog("Contacting " + peerNetworkIdentifierToConnectionInfo[peerIdentifier] + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
-                        
-                        //Request a chunk update
-                        UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", itemCheckSum, peerEndPoint, DFS.nullCompressionSRO);
-
-                        //if (buildLog != null) buildLog(" ... completed DFS_ChunkAvailabilityRequest with " + peerNetworkIdentifierToConnectionInfo[peerIdentifier]);
-                    }
-                }
-                catch (CommsException)
-                {
-                    //If a peer has disconnected we just remove them from the list
-                    RemovePeerFromSwarm(peerIdentifier);
-                    if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to CommsException.");
-                    //NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityCommsError");
+                    peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key];
                 }
                 catch (KeyNotFoundException)
                 {
@@ -780,12 +995,36 @@ namespace DistributedFileSystem
                     //but it has been removed since we accessed the peerKeys at the start of this method
                     //We could probably be a bit more carefull with how we maintain these references but we either catch the
                     //exception here or networkcomms will throw one when we try to connect to an old peer.
-                    RemovePeerFromSwarm(peerIdentifier);
-                    if (buildLog != null) buildLog("Removing " + peerIdentifier + " from item swarm due to KeyNotFoundException.");
+                    RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                    if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                 }
-                catch (Exception ex)
+
+                if (peerInfo != null)
                 {
-                    NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_2");
+                    foreach (ConnectionInfo connInfo in peer.Value)
+                    {
+                        try
+                        {
+                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                            {
+                                if (buildLog != null) buildLog("Contacting " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
+
+                                //Request a chunk update
+                                UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", itemCheckSum, connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                            }
+                        }
+                        catch (CommsException)
+                        {
+                            //If a peer has disconnected or fails to respond we just remove them from the list
+                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                            if (buildLog != null) buildLog("Removing " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " from item swarm due to CommsException.");
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_2");
+                        }
+                    }
                 }
             }
             #endregion
@@ -852,41 +1091,54 @@ namespace DistributedFileSystem
         /// <param name="chunkIndex"></param>
         public void BroadcastLocalAvailability(string itemCheckSum)
         {
-            //Console.WriteLine("Updating swarm availability.");
-
-            string[] peerKeys;
+            Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
             ChunkFlags localChunkFlags;
+
             lock (peerLocker)
             {
-                peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
                 localChunkFlags = peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].PeerChunkFlags;
+
+                peerConnInfoDict = (from current in peerAvailabilityByNetworkIdentifierDict.Keys
+                                                  select new KeyValuePair<string, List<ConnectionInfo>>(current,
+                                                      peerAvailabilityByNetworkIdentifierDict[current].GetConnectionInfo())
+                                                  ).ToDictionary(entry => entry.Key, entry => entry.Value);
             }
 
-            foreach (ShortGuid peerIdentifier in peerKeys)
+            foreach (var peer in peerConnInfoDict)
             {
+                PeerInfo peerInfo = null;
                 try
                 {
-                    IPEndPoint peerEndPoint;
-                    bool superPeer;
-                    lock (peerLocker)
-                    {
-                        peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
-                        superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
-                    }
-
-                    //We don't want to contact ourselves
-                    if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
-                        //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, localChunkFlags));
-                        UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), peerEndPoint, DFS.nullCompressionSRO);
+                    peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key];
                 }
-                //We don't just want to catch comms exceptions because if a peer has potentially disconnected we may get a KeyNotFoundException here
-                catch (Exception)
+                catch (KeyNotFoundException)
                 {
-                    //If a peer has disconnected we just remove them from the list
-                    RemovePeerFromSwarm(peerIdentifier);
+                    //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
+                    //but it has been removed since we accessed the peerKeys at the start of this method
+                    //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                    //exception here or networkcomms will throw one when we try to connect to an old peer.
+                    RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                }
 
-                    if (DFS.loggingEnabled)
-                        DFS.Logger.Trace("Removed peer from swarm during BroadcastLocalAvailability due to exception - " + peerIdentifier);
+                if (peerInfo != null)
+                {
+                    foreach (ConnectionInfo connInfo in peer.Value)
+                    {
+                        try
+                        {
+                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                        }
+                        catch (Exception)
+                        {
+                            //If a peer has disconnected or fails to respond we just remove them from the list
+                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+
+                            if (DFS.loggingEnabled)
+                                DFS.Logger.Trace("Removed peer from swarm during BroadcastLocalAvailability due to exception - " + peer.Key + " - " + connInfo.LocalEndPoint.ToString());
+                        }
+                    }
                 }
             }
         }
@@ -894,11 +1146,11 @@ namespace DistributedFileSystem
         /// <summary>
         /// Closes established connections with completed peers as they are now redundant
         /// </summary>
-        public void CloseConnectionToCompletedPeers(byte totalNumChunks)
+        public void CloseConnectionsToCompletedPeers(byte totalNumChunks)
         {
-            Dictionary<string, PeerAvailabilityInfo> dictCopy;
+            Dictionary<string, PeerInfo> dictCopy;
             lock (peerLocker)
-                dictCopy = new Dictionary<string, PeerAvailabilityInfo>(peerAvailabilityByNetworkIdentifierDict);
+                dictCopy = new Dictionary<string, PeerInfo>(peerAvailabilityByNetworkIdentifierDict);
 
             Parallel.ForEach(dictCopy, peer =>
             {
@@ -909,8 +1161,9 @@ namespace DistributedFileSystem
                         if (peer.Value.PeerChunkFlags.AllFlagsSet(totalNumChunks))
                         {
                             var connections = NetworkComms.GetExistingConnection(peer.Key, ConnectionType.TCP);
-                            //NetworkComms.CloseConnection();
-                            if (connections != null) foreach (var connection in connections) connection.CloseConnection(false);
+                            if (connections != null) 
+                                foreach (var connection in connections) 
+                                    connection.CloseConnection(false);
                         }
                     }
                 }
@@ -950,7 +1203,6 @@ namespace DistributedFileSystem
                 peerAllowed = true;
 
             return peerAllowed;
-
         }
 
         public ChunkFlags PeerChunkAvailability(ShortGuid peerIdentifier)
@@ -972,7 +1224,7 @@ namespace DistributedFileSystem
         /// <param name="itemCheckSum"></param>
         public void BroadcastItemRemoval(string itemCheckSum, bool removeSwarmWide)
         {
-            string[] peerKeys;
+            Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
             lock (peerLocker)
             {
                 if (!peerAvailabilityByNetworkIdentifierDict.ContainsKey(NetworkComms.NetworkIdentifier))
@@ -981,38 +1233,50 @@ namespace DistributedFileSystem
                 if (removeSwarmWide && !peerAvailabilityByNetworkIdentifierDict[NetworkComms.NetworkIdentifier].SuperPeer)
                     throw new Exception("Attempted to trigger a swarm wide item removal but local is not a SuperPeer.");
 
-                peerKeys = peerAvailabilityByNetworkIdentifierDict.Keys.ToArray();
+                peerConnInfoDict = (from current in peerAvailabilityByNetworkIdentifierDict.Keys
+                                    select new KeyValuePair<string, List<ConnectionInfo>>(current,
+                                        peerAvailabilityByNetworkIdentifierDict[current].GetConnectionInfo())
+                                                  ).ToDictionary(entry => entry.Key, entry => entry.Value);
             }
 
-            foreach (ShortGuid peerIdentifier in peerKeys)
+            foreach (var peer in peerConnInfoDict)
             {
+                PeerInfo peerInfo = null;
                 try
                 {
-                    if (peerIdentifier == null) throw new NullReferenceException("peerIdentifier should not be null at this point.");
-                    if (NetworkComms.NetworkIdentifier == null) throw new NullReferenceException("Local networkIdentifier really should NOT be null at this point.");
+                    peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key];
+                }
+                catch (KeyNotFoundException)
+                {
+                    //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
+                    //but it has been removed since we accessed the peerKeys at the start of this method
+                    //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                    //exception here or networkcomms will throw one when we try to connect to an old peer.
+                    RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                }
 
-                    IPEndPoint peerEndPoint;
-                    bool superPeer;
-                    lock (peerLocker)
+                if (peerInfo != null)
+                {
+                    foreach (ConnectionInfo connInfo in peer.Value)
                     {
-                        peerEndPoint = peerNetworkIdentifierToConnectionInfo[peerIdentifier].LocalEndPoint;
-                        superPeer = peerAvailabilityByNetworkIdentifierDict[peerIdentifier].SuperPeer;
-                    }
+                        try
+                        {
+                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                        }
+                        catch(CommsException)
+                        {
+                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                        }
+                        catch (Exception ex)
+                        {
+                            //If a peer has disconnected or fails to respond we just remove them from the list
+                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
 
-                    //We don't want to contact ourselves
-                    if (PeerContactAllowed(peerIdentifier, peerEndPoint, superPeer))
-                        //TCPConnection.GetConnection(new ConnectionInfo(peerEndPoint)).SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(itemCheckSum, removeSwarmWide));
-                        UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), peerEndPoint, DFS.nullCompressionSRO);
-                }
-                catch (CommsException)
-                {
-                    RemovePeerFromSwarm(peerIdentifier);
-                }
-                catch (KeyNotFoundException) { /*The peer has probably already disconnected*/ }
-                catch (Exception e)
-                {
-                    RemovePeerFromSwarm(peerIdentifier);
-                    NetworkComms.LogError(e, "BroadcastItemRemovalError");
+                            NetworkComms.LogError(ex, "BroadcastItemRemovalError");
+                        }
+                    }
                 }
             }
         }
@@ -1056,7 +1320,11 @@ namespace DistributedFileSystem
         public string[] AllPeerEndPoints()
         {
             lock (peerLocker)
-                return (from current in peerNetworkIdentifierToConnectionInfo select current.Value.LocalEndPoint.Address.ToString() + ":" + current.Value.LocalEndPoint.Port).ToArray();
+                return (from current in peerAvailabilityByNetworkIdentifierDict 
+                    select current.Value.GetConnectionInfo().Select(info => 
+                    { 
+                        return info.LocalEndPoint.Address.ToString() + ":" + info.LocalEndPoint.Port.ToString();
+                    })).Aggregate(new List<string>(), (left, right) => { return left.Union(right).ToList(); }).ToArray();
         }
 
         public void ClearAllLocalAvailabilityFlags()
