@@ -150,6 +150,7 @@ namespace NetworkCommsDotNet
         /// usefull features such as inline serialisation, transparent packet tranmission, 
         /// remote peer information etc. Default: True
         /// </summary>
+        [ProtoMember(6)]
         public bool ApplicationLayerProtocolEnabled { get; private set; }
 
         /// <summary>
@@ -472,6 +473,8 @@ namespace NetworkCommsDotNet
             {
                 if (left.RemoteEndPoint != null && right.RemoteEndPoint != null)
                     return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint));
+                else if (left.LocalEndPoint != null && right.LocalEndPoint != null)
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.LocalEndPoint.Equals(right.LocalEndPoint));
                 else
                     return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString());
             }
@@ -516,7 +519,7 @@ namespace NetworkCommsDotNet
         /// <returns>A string containing suitable information about this connection</returns>
         public override string ToString()
         {
-            string returnString = "[" + ConnectionType.ToString() + "] ";
+            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocolEnabled?"M":"U") +"] ";
 
             if (ConnectionState == ConnectionState.Established)
                 returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString() + " (" + NetworkIdentifier + ")";

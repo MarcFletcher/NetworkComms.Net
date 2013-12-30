@@ -1003,6 +1003,11 @@ namespace DistributedFileSystem
                             }
                         }
 
+                        //Ensure all possible local listeners are added here
+                        List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
+                        foreach (ConnectionInfo info in seedConnectionInfoList)
+                            newItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(info, newItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier), newItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier), false);
+
                         //Build the item from the swarm
                         //If the item is already complete this will return immediately
                         newItem.AssembleItem((int)(ItemBuildTimeoutSecsPerMB * (assemblyConfig.TotalItemSizeInBytes / (1024.0 * 1024.0))));

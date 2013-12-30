@@ -217,24 +217,25 @@ namespace DistributedFileSystem
         /// <summary>
         /// Identifies this peer info
         /// </summary>
-        public ShortGuid PeerNetworkIdentifier { get; private set; }
+        [ProtoMember(1)]
+        public string PeerNetworkIdentifier { get; private set; }
 
         /// <summary>
         /// The chunk availability for this peer.
         /// </summary>
-        [ProtoMember(1)]
+        [ProtoMember(2)]
         public ChunkFlags PeerChunkFlags { get; private set; }
 
         /// <summary>
         /// For now the only extra info we want. A superPeer is generally busier network wise and should be contacted last for data.
         /// </summary>
-        [ProtoMember(2)]
+        [ProtoMember(3)]
         public bool SuperPeer { get; private set; }
 
         /// <summary>
         /// All connection infos corresponding with this peer
         /// </summary>
-        [ProtoMember(3)]
+        [ProtoMember(4)]
         private List<ConnectionInfo> PeerConnectionInfo { get; set; }
 
         /// <summary>
@@ -250,6 +251,10 @@ namespace DistributedFileSystem
         public PeerInfo(List<ConnectionInfo> peerConnectionInfo, ChunkFlags peerChunkFlags, bool superPeer)
         {
             this.PeerNetworkIdentifier = peerConnectionInfo[0].NetworkIdentifier;
+
+            if (this.PeerNetworkIdentifier == null || this.PeerNetworkIdentifier == ShortGuid.Empty)
+                throw new Exception("PeerInfo PeerNetworkIdentifier should not be empty.");
+
             foreach (ConnectionInfo info in peerConnectionInfo)
             {
                 if (info.NetworkIdentifier != this.PeerNetworkIdentifier)
@@ -362,7 +367,10 @@ namespace DistributedFileSystem
             {
                 ValidateNetworkIdentifier(connectionInfo);
 
-                return IPEndPointTimeoutCountDict[connectionInfo];
+                if (IPEndPointTimeoutCountDict.ContainsKey(connectionInfo))
+                    return IPEndPointTimeoutCountDict[connectionInfo];
+                else
+                    return 0;
             }
         }
 
@@ -377,7 +385,13 @@ namespace DistributedFileSystem
             {
                 ValidateNetworkIdentifier(connectionInfo);
 
-                return ++IPEndPointTimeoutCountDict[connectionInfo];
+                if (IPEndPointTimeoutCountDict.ContainsKey(connectionInfo))
+                    return ++IPEndPointTimeoutCountDict[connectionInfo];
+                else
+                {
+                    IPEndPointTimeoutCountDict[connectionInfo] = 1;
+                    return 1;
+                }
             }
         }
 
@@ -467,6 +481,11 @@ namespace DistributedFileSystem
         {
             if (this.PeerNetworkIdentifier != connectionInfo.NetworkIdentifier)
                 throw new Exception("Attempted to modify PeerInfo for peer " + PeerNetworkIdentifier + " with data corresponding with peer " + connectionInfo.NetworkIdentifier);
+        }
+
+        public override string ToString()
+        {
+            return "PeerInfo - " + PeerNetworkIdentifier + " ["+NumberOfConnectionInfos+"]";
         }
     }
 
@@ -807,7 +826,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="peerNetworkIdentifier"></param>
         /// <param name="latestChunkFlags"></param>
-        public void AddOrUpdateCachedPeerChunkFlags(ConnectionInfo connectionInfo, ChunkFlags latestChunkFlags, bool superPeer = false)
+        public void AddOrUpdateCachedPeerChunkFlags(ConnectionInfo connectionInfo, ChunkFlags latestChunkFlags, bool superPeer = false, bool setIPEndPointOnline = true)
         {
             if (connectionInfo.NetworkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
 
@@ -850,18 +869,20 @@ namespace DistributedFileSystem
                     {
                         //If we don't know anything about this peer we add it to our local swarm availability
                         //We used comms to get any existing connections to the peer
-                        List<ConnectionInfo> peerConnectionInfos = (from current in NetworkComms.GetExistingConnection(connectionInfo.NetworkIdentifier, ConnectionType.TCP) select current.ConnectionInfo).ToList();
+                        //We have to create new ConnectionInfo in the select as we need to correctly set the "LOCAL IPEndPoint" when passing to new PeerInfo()
+                        List<ConnectionInfo> peerConnectionInfos = (from current in NetworkComms.GetExistingConnection(connectionInfo.NetworkIdentifier, ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, current.ConnectionInfo.NetworkIdentifier, current.ConnectionInfo.RemoteEndPoint, true)).ToList();
                         peerAvailabilityByNetworkIdentifierDict.Add(connectionInfo.NetworkIdentifier, new PeerInfo(peerConnectionInfos, latestChunkFlags, superPeer));
 
                         //We finish by adding the endPoint references
                         foreach (ConnectionInfo connInfo in peerConnectionInfos)
-                            peerEndPointToNetworkIdentifier[connInfo.RemoteEndPoint.ToString()] = connectionInfo.NetworkIdentifier;
+                            peerEndPointToNetworkIdentifier[connInfo.LocalEndPoint.ToString()] = connectionInfo.NetworkIdentifier;
 
                         if (DFS.loggingEnabled) DFS.Logger.Trace("Added new chunk flags for " + connectionInfo);
                     }
 
-                    //By updating cached peer chunk flags we set the peer as being online
-                    peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetPeerIPEndPointOnlineStatus(connectionInfo.NetworkIdentifier, endPointToUse, true);
+                    if (setIPEndPointOnline)
+                        //By updating cached peer chunk flags we set the peer as being online
+                        peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetPeerIPEndPointOnlineStatus(connectionInfo.NetworkIdentifier, endPointToUse, true);
 
                     //We will trigger the alive peers event when we have atleast a third of the existing peers
                     if (!alivePeersReceivedEvent.WaitOne(0))
