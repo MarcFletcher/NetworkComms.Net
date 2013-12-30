@@ -773,9 +773,12 @@ namespace DistributedFileSystem
                             if (forceRemoveWholePeer || peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1)
                             {
                                 //We need to remove all traces of this peer
-                                if (peerEndPoint.Address != IPAddress.Any && peerEndPointToNetworkIdentifier[peerEndPoint.ToString()] != networkIdentifier ||
-                                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint != peerEndPoint)
-                                    throw new Exception("Possible corruption detected in SwarmChunkAvailability - 1");
+                                if (peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1 &&
+                                    !peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint.Equals(peerEndPoint))
+                                    throw new Exception("Possible corruption detected in SwarmChunkAvailability - 1 - " + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint + " - " + peerEndPoint);
+
+                                if (peerEndPointToNetworkIdentifier.ContainsKey(peerEndPoint.ToString()) && peerEndPointToNetworkIdentifier[peerEndPoint.ToString()] != networkIdentifier)
+                                    throw new Exception("Possible corruption detected in SwarmChunkAvailability - 2");
 
                                 List<ConnectionInfo> peerConnectionInfos = peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo();
 
