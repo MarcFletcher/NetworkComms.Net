@@ -73,7 +73,7 @@ namespace ExamplesConsole
                 DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
 
                 //Create the item to be distributed
-                List<ConnectionInfo> seedConnectionInfoList = (from current in NetworkComms.AllAllowedIPs() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(current, NetworkComms.DefaultListenPort), true)).ToList();
+                List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
                 DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildTarget.Disk);
 
