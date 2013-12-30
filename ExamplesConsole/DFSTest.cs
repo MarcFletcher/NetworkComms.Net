@@ -73,10 +73,9 @@ namespace ExamplesConsole
                 DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
 
                 //Create the item to be distributed
-                ConnectionInfo seedConnectionInfo = new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(NetworkComms.AllAllowedIPs()[0], NetworkComms.DefaultListenPort), true);
-                //seedConnectionInfo.ResetNetworkIdentifer(NetworkComms.NetworkIdentifier);
+                List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
-                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", new MemoryStream(someRandomData), seedConnectionInfo, ItemBuildTarget.Disk);
+                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildTarget.Disk);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {

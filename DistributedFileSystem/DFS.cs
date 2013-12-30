@@ -628,7 +628,7 @@ namespace DistributedFileSystem
             lock (globalDFSLocker)
             {
                 foreach(var item in swarmedItemsDict.Values)
-                    item.SwarmChunkAvailability.CloseConnectionToCompletedPeers(item.TotalNumChunks);
+                    item.SwarmChunkAvailability.CloseConnectionsToCompletedPeers(item.TotalNumChunks);
             }
         }
 
@@ -849,7 +849,7 @@ namespace DistributedFileSystem
                             //Remove peer from any items
                             foreach (var item in swarmedItemsDict)
                             {
-                                item.Value.SwarmChunkAvailability.RemovePeerFromSwarm(connection.ConnectionInfo.NetworkIdentifier);
+                                item.Value.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
                             }
                         }
 
@@ -1002,6 +1002,11 @@ namespace DistributedFileSystem
                                 swarmedItemsDict.Add(assemblyConfig.ItemCheckSum, newItem);
                             }
                         }
+
+                        //Ensure all possible local listeners are added here
+                        List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
+                        foreach (ConnectionInfo info in seedConnectionInfoList)
+                            newItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(info, newItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier), newItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier), false);
 
                         //Build the item from the swarm
                         //If the item is already complete this will return immediately
@@ -1486,10 +1491,10 @@ namespace DistributedFileSystem
                         else
                         {
                             //Delete any old references at the same time
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeersAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeerAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
 
                             //If this is not a swarm wide removal we just remove this peer from our local swarm copy
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, true);
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
                         }
                     }
                     else
