@@ -120,8 +120,10 @@ namespace ExamplesConsole
                             new List<DataProcessor>(),
                             new Dictionary<string, string>());
 
-                nullCompressionSRO.ReceiveConfirmationRequired = true;
-                nullCompressionSRO.IncludePacketConstructionTime = true;
+                //Add options which will require receive confirmations and also include packet construction time
+                //in the packet header.
+                nullCompressionSRO.Options.Add("ReceiveConfirmationRequired", "");
+                nullCompressionSRO.Options.Add("IncludePacketConstructionTime", "");
 
                 TCPConnection serverConnection = TCPConnection.GetConnection(serverConnectionInfo);
                 Stopwatch timer = new Stopwatch();

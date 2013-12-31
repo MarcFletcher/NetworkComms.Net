@@ -43,4 +43,30 @@ namespace NetworkCommsDotNet
 
         //We may support others in future such as SSH, FTP, SCP etc.
     }
+
+    /// <summary>
+    /// The connections application layer protocol status.
+    /// </summary>
+    public enum ApplicationLayerProtocolStatus
+    {
+        /// <summary>
+        /// Default value. NetworkComms.Net will use a custom application layer protocol to provide 
+        /// usefull features such as inline serialisation, transparent packet send and receive, 
+        /// connection handshakes and remote information etc. We strongly recommend you enable the 
+        /// NetworkComms.Net application layer protocol.
+        /// </summary>
+        Enabled,
+
+        /// <summary>
+        /// No application layer protocol will be used. TCP packets may fragment or be concatenated 
+        /// with other packets. A large number of library features will be unavailable.
+        /// </summary>
+        Disabled,
+
+        /// <summary>
+        /// Usefull for selecting or searching for connections when the ApplicationLayerProtocolStatus
+        /// is unimportant.
+        /// </summary>
+        Undefined
+    }
 }

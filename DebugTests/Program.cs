@@ -61,7 +61,7 @@ namespace DebugTests
                 logConfig.AddTarget("console", consoleTarget);
 
                 logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
                 NetworkComms.EnableLogging(logConfig);
 
                 //Incase we run the DFS test we will also enable logging for that

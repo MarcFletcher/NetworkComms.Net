@@ -25,8 +25,8 @@ namespace DebugTests
     {
         static bool serverMode;
 
-        static Dictionary<IPEndPoint,bool> TCPServerEndPoints;
-        static Dictionary<IPEndPoint, bool> UDPServerEndPoints;
+        static Dictionary<IPEndPoint, ApplicationLayerProtocolStatus> TCPServerEndPoints;
+        static Dictionary<IPEndPoint, ApplicationLayerProtocolStatus> UDPServerEndPoints;
         static List<IPEndPoint> TCPServerEndPointsKeys;
         static List<IPEndPoint> UDPServerEndPointsKeys;
 
@@ -49,9 +49,11 @@ namespace DebugTests
 
             if (serverMode)
             {
+                TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged;
                 //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
-                TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed;
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
 
                 //Listen for connections
                 int totalNumberOfListenPorts = 500;
@@ -66,16 +68,16 @@ namespace DebugTests
                 for (int i = 0; i < totalNumberOfListenPorts/portDivisor; i++)
                 {
                     if ((mode & TestMode.TCP_Managed) == TestMode.TCP_Managed)
-                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 10000 + i), true, true);
+                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 10000 + i), ApplicationLayerProtocolStatus.Enabled, true);
 
                     if ((mode & TestMode.TCP_Unmanaged) == TestMode.TCP_Unmanaged)
-                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 20000 + i), false, true);
+                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 20000 + i), ApplicationLayerProtocolStatus.Disabled, true);
                    
                     if ((mode & TestMode.UDP_Managed) == TestMode.UDP_Managed)
-                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 30000 + i), true, true);
+                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 30000 + i), ApplicationLayerProtocolStatus.Enabled, true);
 
                     if ((mode & TestMode.UDP_Unmanaged) == TestMode.UDP_Unmanaged)
-                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 40000 + i), false, true);
+                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 40000 + i), ApplicationLayerProtocolStatus.Disabled, true);
                 }
 
                 int messageCount = 0;
@@ -95,7 +97,7 @@ namespace DebugTests
                     List<IPEndPoint> localListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
-                        if ((bool)TCPConnection.ExistingLocalListenEndPointApplicationLayerProtocolEnabled(endPoint))
+                        if (TCPConnection.ExistingLocalListenEndPointApplicationLayerProtocolStatus(endPoint) == ApplicationLayerProtocolStatus.Enabled)
                             sw.WriteLine("T-"+endPoint.Address.ToString() + "-" + endPoint.Port);
                         else
                             sw.WriteLine("F-" + endPoint.Address.ToString() + "-" + endPoint.Port);
@@ -108,7 +110,7 @@ namespace DebugTests
                     List<IPEndPoint> localListenEndPoints = UDPConnection.ExistingLocalListenEndPoints();
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
-                        if ((bool)UDPConnection.ExistingLocalListenEndPointApplicationLayerProtocolEnabled(endPoint))
+                        if (UDPConnection.ExistingLocalListenEndPointApplicationLayerProtocolStatus(endPoint) == ApplicationLayerProtocolStatus.Enabled)
                             sw.WriteLine("T-" + endPoint.Address.ToString() + "-" + endPoint.Port);
                         else
                             sw.WriteLine("F-" + endPoint.Address.ToString() + "-" + endPoint.Port);
@@ -123,18 +125,20 @@ namespace DebugTests
             }
             else
             {
+                NetworkComms.DisableLogging();
+
                 //Load server port list
                 string[] tcpServerPortList = File.ReadAllLines("TCPServerPorts.txt");
-                TCPServerEndPoints = new Dictionary<IPEndPoint, bool>();
+                TCPServerEndPoints = new Dictionary<IPEndPoint, ApplicationLayerProtocolStatus>();
                 foreach (string current in tcpServerPortList)
-                    TCPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? true : false));
+                    TCPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? ApplicationLayerProtocolStatus.Enabled : ApplicationLayerProtocolStatus.Disabled));
 
                 TCPServerEndPointsKeys = TCPServerEndPoints.Keys.ToList();
 
                 string[] udpServerPortList = File.ReadAllLines("UDPServerPorts.txt");
-                UDPServerEndPoints = new Dictionary<IPEndPoint, bool>();
+                UDPServerEndPoints = new Dictionary<IPEndPoint, ApplicationLayerProtocolStatus>();
                 foreach (string current in udpServerPortList)
-                    UDPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? true : false));
+                    UDPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? ApplicationLayerProtocolStatus.Enabled : ApplicationLayerProtocolStatus.Disabled));
 
                 UDPServerEndPointsKeys = UDPServerEndPoints.Keys.ToList();
 
@@ -208,7 +212,7 @@ namespace DebugTests
                 catch (CommsException ex)
                 {
                     Interlocked.Increment(ref exceptionCount);
-                    NetworkComms.AppendStringToLogFile("ClientExceptions.txt", ex.ToString());
+                    NetworkComms.AppendStringToLogFile("ClientExceptions", ex.ToString());
                 }
             }
         }

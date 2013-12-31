@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
-                    if (ConnectionInfo.ApplicationLayerProtocolEnabled && packetBuilder.FirstByte() == 0)
+                    if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && packetBuilder.FirstByte() == 0)
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from " + ConnectionInfo + ", loop index - " + loopCounter.ToString());
 
@@ -97,7 +97,7 @@ namespace NetworkCommsDotNet
                         int packetHeaderSize = 0;
                         PacketHeader topPacketHeader;
 
-                        if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                        if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                         {
                             //First determine the expected size of a header packet
                             packetHeaderSize = packetBuilder.FirstByte() + 1;
@@ -143,7 +143,7 @@ namespace NetworkCommsDotNet
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.PayloadPacketSize.ToString() + " payload bytes.");
 
                             bool isReservedType = false;
-                            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                             {
                                 //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
                                 foreach (var tName in NetworkComms.reservedPacketTypeNames)

@@ -54,14 +54,14 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocolEnabled)
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 return GetConnection(connectionInfo, null, null, establishIfRequired);
             else
             {
@@ -78,7 +78,7 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection()"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
@@ -86,7 +86,7 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
-            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                 throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
 
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
@@ -106,7 +106,7 @@ namespace NetworkCommsDotNet
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
 #endif
         {
-            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                 throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
 
             connectionInfo.ConnectionType = ConnectionType.TCP;
@@ -124,13 +124,13 @@ namespace NetworkCommsDotNet
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
-                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
+                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
                 {
                     if (NetworkComms.LoggingEnabled)
                         NetworkComms.Logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
 
                     establishIfRequired = false;
-                    connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType);
+                    connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol)[0];
                 }
                 else
                 {
@@ -244,7 +244,7 @@ namespace NetworkCommsDotNet
                 if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
 
                 //If ApplicationLayerProtocolEnabled then we wait for the client to forward it's information
-                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
@@ -263,7 +263,7 @@ namespace NetworkCommsDotNet
                 base.EstablishConnectionSpecific();
 
                 //If ApplicationLayerProtocolEnabled we forward our information once we have the clients
-                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 {
                     //Once we have the clients id we send our own
                     SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
@@ -273,7 +273,7 @@ namespace NetworkCommsDotNet
             {
                 //If ApplicationLayerProtocolEnabled we forward our information and then wait for the servers
                 //During this exchange we may note an update local listen port
-                if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
 
@@ -386,7 +386,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void StartIncomingDataListen()
         {
-            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP))
+            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
             {
                 CloseConnection(true, 18);
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");

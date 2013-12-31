@@ -45,7 +45,7 @@ namespace NetworkCommsDotNet
         static Thread newIncomingConnectionWorker;
         static Dictionary<IPEndPoint, TcpListener> tcpListenerDict = new Dictionary<IPEndPoint, TcpListener>();
 #endif
-        static Dictionary<IPEndPoint, bool> tcpListenerAppLayProtocolEnabledDict = new Dictionary<IPEndPoint, bool>();
+        static Dictionary<IPEndPoint, ApplicationLayerProtocolStatus> tcpListenerAppLayProtocolEnabledDict = new Dictionary<IPEndPoint, ApplicationLayerProtocolStatus>();
 
         /// <summary>
         /// By default usage of <see href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's algorithm</see> during TCP exchanges is disabled for performance reasons. If you wish it to be used for newly established connections set this property to true.
@@ -68,7 +68,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), true, useRandomPortFailOver);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), ApplicationLayerProtocolStatus.Enabled, useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -84,18 +84,18 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), true, useRandomPortFailOver);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), ApplicationLayerProtocolStatus.Enabled, useRandomPortFailOver);
         }
 
         /// <summary>
         /// Accept new incoming TCP connections on all allowed IP's and Port's
         /// </summary>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="useRandomPortFailOver">If true and the default local port is not available will select one at random. If false and a port is unavailable listening will not be enabled on that adaptor</param>
-        public static void StartListening(bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = false)
+        public static void StartListening(ApplicationLayerProtocolStatus applicationLayerProtocol, bool useRandomPortFailOver = false)
         {
             List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
@@ -107,7 +107,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), applicationLayerProtocolEnabled, useRandomPortFailOver);
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), applicationLayerProtocol, useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -123,7 +123,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), applicationLayerProtocolEnabled, useRandomPortFailOver);
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), applicationLayerProtocol, useRandomPortFailOver);
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace NetworkCommsDotNet
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    StartListening(endPoint, true, useRandomPortFailOver);
+                    StartListening(endPoint, ApplicationLayerProtocolStatus.Enabled, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -152,19 +152,19 @@ namespace NetworkCommsDotNet
         /// Accept new TCP connections on specified list of <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening(List<IPEndPoint> localEndPoints, bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = true)
+        public static void StartListening(List<IPEndPoint> localEndPoints, ApplicationLayerProtocolStatus applicationLayerProtocol, bool useRandomPortFailOver = true)
         {
             if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
 
             try
             {
                 foreach (var endPoint in localEndPoints)
-                    StartListening(endPoint, applicationLayerProtocolEnabled, useRandomPortFailOver);
+                    StartListening(endPoint, applicationLayerProtocol, useRandomPortFailOver);
             }
             catch (Exception)
             {
@@ -181,19 +181,19 @@ namespace NetworkCommsDotNet
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
         {
-            StartListening(newLocalEndPoint, true, useRandomPortFailOver);
+            StartListening(newLocalEndPoint, ApplicationLayerProtocolStatus.Enabled, useRandomPortFailOver);
         }
 
         /// <summary>
         /// Accept new incoming TCP connections on specified <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening(IPEndPoint newLocalEndPoint, bool applicationLayerProtocolEnabled, bool useRandomPortFailOver = true)
+        public static void StartListening(IPEndPoint newLocalEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol, bool useRandomPortFailOver = true)
         {
             lock (staticTCPConnectionLocker)
             {
@@ -256,8 +256,8 @@ namespace NetworkCommsDotNet
                 {
                     //If we were succesfull we can add the new localEndPoint to our dict
                     tcpListenerDict.Add(ipEndPointUsed, newListenerInstance);
-                    tcpListenerAppLayProtocolEnabledDict.Add(ipEndPointUsed, applicationLayerProtocolEnabled);
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint with " + (applicationLayerProtocolEnabled? "application layer protocol enabled" : "no application layer protocol") + " on " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port.ToString());
+                    tcpListenerAppLayProtocolEnabledDict.Add(ipEndPointUsed, applicationLayerProtocol);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added new TCP localEndPoint with " + (applicationLayerProtocol==ApplicationLayerProtocolStatus.Enabled? "application layer protocol enabled" : "no application layer protocol") + " on " + ipEndPointUsed.Address + ":" + ipEndPointUsed.Port.ToString());
                 }
             }
 
@@ -301,20 +301,19 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If the provided <see cref="IPEndPoint"/> matches an existing local listener returns true if the listener has
-        /// the NetworkComms.Net application layer protocol enabled. If the <see cref="IPEndPoint"/> does not match
-        /// an existing local listener returns null.
+        /// If the provided <see cref="IPEndPoint"/> matches an existing local listener returns the requested status.
+        /// If the <see cref="IPEndPoint"/> does not match an existing local listener returns ApplicationLayerProtocolStatus.Undefined.
         /// </summary>
         /// <param name="ipEndPoint">The <see cref="IPEndPoint"/> of an existing local listener.</param>
-        /// <returns>True if the listener has the NetworkComms.Net application layer protocol enabled.</returns>
-        public static bool? ExistingLocalListenEndPointApplicationLayerProtocolEnabled(IPEndPoint ipEndPoint)
+        /// <returns>The status of the listeners application layer protocol usage.</returns>
+        public static ApplicationLayerProtocolStatus ExistingLocalListenEndPointApplicationLayerProtocolStatus(IPEndPoint ipEndPoint)
         {
             lock (staticTCPConnectionLocker)
             {
                 if (tcpListenerAppLayProtocolEnabledDict.ContainsKey(ipEndPoint))
                     return tcpListenerAppLayProtocolEnabledDict[ipEndPoint];
                 else
-                    return null;
+                    return ApplicationLayerProtocolStatus.Undefined;
             }
         }
 
@@ -334,11 +333,11 @@ namespace NetworkCommsDotNet
             try
             {
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(args.Socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.LocalPort));
-                bool? existingLocalListenEndPointApplicationLayerProtocolEnabled = ExistingLocalListenEndPointApplicationLayerProtocolEnabled(localEndPoint);
+                ApplicationLayerProtocolStatus applicationLayerProtocolStatus = ExistingLocalListenEndPointApplicationLayerProtocolStatus(localEndPoint);
 
                 ConnectionInfo newConnectionInfo;
-                if (existingLocalListenEndPointApplicationLayerProtocolEnabled != null)
-                    newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)), (bool)existingLocalListenEndPointApplicationLayerProtocolEnabled);
+                if (applicationLayerProtocolStatus != ApplicationLayerProtocolStatus.Undefined)
+                    newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)), applicationLayerProtocolStatus);
                 else
                     newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)));
                 
@@ -346,7 +345,7 @@ namespace NetworkCommsDotNet
                 SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
 
                 //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                if (!newConnectionInfo.ApplicationLayerProtocolEnabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                if (newConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     optionsToUse = new SendReceiveOptions<NullSerializer>();
 
                 TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
@@ -414,20 +413,20 @@ namespace NetworkCommsDotNet
 
                         //Create copies of the relevant dictionaries
                         List<TcpListener> currentTCPListeners = new List<TcpListener>();
-                        List<bool> currentTCPListenerAppLayProtocolEnabled = new List<bool>();
+                        List<ApplicationLayerProtocolStatus> currentTCPListenerAppLayProtocol = new List<ApplicationLayerProtocolStatus>();
                         lock (staticTCPConnectionLocker)
                         {
                             foreach (var pair in tcpListenerDict)
                             {
                                 currentTCPListeners.Add(pair.Value);
-                                currentTCPListenerAppLayProtocolEnabled.Add(tcpListenerAppLayProtocolEnabledDict[pair.Key]);
+                                currentTCPListenerAppLayProtocol.Add(tcpListenerAppLayProtocolEnabledDict[pair.Key]);
                             }
                         }
 
                         for(int i=0; i<currentTCPListeners.Count; i++)
                         {
                             TcpListener listener = currentTCPListeners[i];
-                            bool applicationLayerProtocolEnabled = currentTCPListenerAppLayProtocolEnabled[i];
+                            ApplicationLayerProtocolStatus applicationLayerProtocol = currentTCPListenerAppLayProtocol[i];
 
                             if (listener.Pending() && !shutdownIncomingConnectionWorkerThread)
                             {
@@ -446,10 +445,10 @@ namespace NetworkCommsDotNet
                                         SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
 
                                         //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                                        if (!applicationLayerProtocolEnabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                                        if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                                             optionsToUse = new SendReceiveOptions<NullSerializer>();
 
-                                        GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint, applicationLayerProtocolEnabled), optionsToUse, newClient, true);
+                                        GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint, applicationLayerProtocol), optionsToUse, newClient, true);
                                     }
                                     catch (ConfirmationTimeoutException)
                                     {
@@ -603,7 +602,7 @@ namespace NetworkCommsDotNet
                     tcpListenerDict = new Dictionary<IPEndPoint,StreamSocketListener>();
 #else
                     tcpListenerDict = new Dictionary<IPEndPoint, TcpListener>();
-                    tcpListenerAppLayProtocolEnabledDict = new Dictionary<IPEndPoint, bool>();
+                    tcpListenerAppLayProtocolEnabledDict = new Dictionary<IPEndPoint, ApplicationLayerProtocolStatus>();
 #endif
                 }
             }

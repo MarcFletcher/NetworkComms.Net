@@ -64,7 +64,7 @@ namespace NetworkCommsDotNet
         {
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
-            if (!connectionInfo.ApplicationLayerProtocolEnabled && level != UDPOptions.None)
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && level != UDPOptions.None)
                 throw new ArgumentException("If the application layer protocol has been disabled the provided UDPOptions can only be UDPOptions.None.");
 
             UDPOptions = level;
@@ -210,7 +210,7 @@ namespace NetworkCommsDotNet
                 throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
 
             byte[] headerBytes = new byte[0];
-            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
             else
             {
@@ -229,7 +229,7 @@ namespace NetworkCommsDotNet
 
             //Prepare the single byte array to send
             byte[] udpDatagram;
-            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
             {
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
@@ -270,7 +270,7 @@ namespace NetworkCommsDotNet
 #endif
 
             byte[] headerBytes = new byte[0];
-            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
             else
             {
@@ -289,7 +289,7 @@ namespace NetworkCommsDotNet
 
             //Prepare the single byte array to send
             byte[] udpDatagram;
-            if (ConnectionInfo.ApplicationLayerProtocolEnabled)
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
             {
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
 
@@ -322,7 +322,7 @@ namespace NetworkCommsDotNet
             //We cant send a null packet to the IPAddress.Any address
             if (!ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
             {
-                if (!ConnectionInfo.ApplicationLayerProtocolEnabled)
+                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Ignoring null packet send to " + ConnectionInfo + " as the application layer protocol is disabled.");
                     return;
@@ -395,6 +395,9 @@ namespace NetworkCommsDotNet
                 using (MemoryStream mem = new MemoryStream(receivedBytes))
                     stream.CopyTo(mem);
 
+                //Received data after comms shutdown initiated. We should just close the connection
+                if (NetworkComms.commsShutdown) CloseConnection(false, -15);
+
                 stream = null;
                
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + args.RemoteAddress + ":" + args.RemotePort + ".");
@@ -416,7 +419,7 @@ namespace NetworkCommsDotNet
 
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -461,6 +464,12 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 29);
             }
+            catch (ConnectionSetupException)
+            {
+                //Can occur if data is received as comms is being shutdown. 
+                //Method will attempt to create new connection which will throw ConnectionSetupException.
+                CloseConnection(true, 50);
+            }
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
@@ -480,6 +489,9 @@ namespace NetworkCommsDotNet
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                 byte[] receivedBytes = client.EndReceive(ar, ref endPoint);
 
+                //Received data after comms shutdown initiated. We should just close the connection
+                if (NetworkComms.commsShutdown) CloseConnection(false, -13);
+
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
                 if (isIsolatedUDPConnection)
@@ -496,7 +508,7 @@ namespace NetworkCommsDotNet
                 {
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
@@ -543,6 +555,12 @@ namespace NetworkCommsDotNet
             {
                 CloseConnection(true, 29);
             }
+            catch (ConnectionSetupException)
+            {
+                //Can occur if data is received as comms is being shutdown. 
+                //Method will attempt to create new connection which will throw ConnectionSetupException.
+                CloseConnection(true, 50);
+            }
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
@@ -565,6 +583,9 @@ namespace NetworkCommsDotNet
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.None, 0);
                     byte[] receivedBytes = udpClientThreadSafe.Receive(ref endPoint);
 
+                    //Received data after comms shutdown initiated. We should just close the connection
+                    if (NetworkComms.commsShutdown) CloseConnection(false, -14);
+
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
                     if (isIsolatedUDPConnection)
@@ -581,7 +602,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocolEnabled), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
 
                         //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                         lock (connection.packetBuilder.Locker)
@@ -626,6 +647,12 @@ namespace NetworkCommsDotNet
             catch (InvalidOperationException)
             {
                 CloseConnection(true, 24);
+            }
+            catch (ConnectionSetupException)
+            {
+                //Can occur if data is received as comms is being shutdown. 
+                //Method will attempt to create new connection which will throw ConnectionSetupException.
+                CloseConnection(true, 50);
             }
             catch (Exception ex)
             {

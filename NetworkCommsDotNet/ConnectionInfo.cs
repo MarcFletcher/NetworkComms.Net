@@ -146,12 +146,12 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If true NetworkComms.Net uses a custom application layer protocol to provide 
+        /// If enabled NetworkComms.Net uses a custom application layer protocol to provide 
         /// usefull features such as inline serialisation, transparent packet tranmission, 
-        /// remote peer information etc. Default: True
+        /// remote peer information etc. Default: ApplicationLayerProtocolStatus.Enabled
         /// </summary>
         [ProtoMember(6)]
-        public bool ApplicationLayerProtocolEnabled { get; private set; }
+        public ApplicationLayerProtocolStatus ApplicationLayerProtocol { get; private set; }
 
         /// <summary>
         /// Private constructor required for deserialisation.
@@ -171,22 +171,25 @@ namespace NetworkCommsDotNet
         {
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = true;
+            this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
 
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>
         /// </summary>
         /// <param name="remoteEndPoint">The end point corresponding with the remote target</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        public ConnectionInfo(IPEndPoint remoteEndPoint, bool applicationLayerProtocolEnabled)
+        public ConnectionInfo(IPEndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
+                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+            this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
 
         /// <summary>
@@ -205,7 +208,7 @@ namespace NetworkCommsDotNet
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = true;
+            this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
 
         /// <summary>
@@ -215,19 +218,22 @@ namespace NetworkCommsDotNet
         /// <param name="remoteIPAddress">IP address of the remote target in string format, e.g. "192.168.0.1"</param>
         /// <param name="remotePort">The available port of the remote target. 
         /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        public ConnectionInfo(string remoteIPAddress, int remotePort, bool applicationLayerProtocolEnabled)
+        public ConnectionInfo(string remoteIPAddress, int remotePort, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
+                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+
             IPAddress ipAddress;
             if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
                 throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+            this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
 
         /// <summary>
@@ -244,7 +250,7 @@ namespace NetworkCommsDotNet
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
-            this.ApplicationLayerProtocolEnabled = true;
+            this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
 
         /// <summary>
@@ -254,17 +260,20 @@ namespace NetworkCommsDotNet
         /// <param name="localNetworkIdentifier">The local network identifier</param>
         /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
         /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable, bool applicationLayerProtocolEnabled)
+        public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
+                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
-            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+            this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
 
         /// <summary>
@@ -273,17 +282,20 @@ namespace NetworkCommsDotNet
         /// <param name="serverSide">True if this connection is being created serverSide</param>
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, bool applicationLayerProtocolEnabled = true)
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
+                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+            this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
 
         /// <summary>
@@ -293,18 +305,21 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         /// <param name="localEndPoint">The localEndpoint of this connection</param>
-        /// <param name="applicationLayerProtocolEnabled">If true NetworkComms.Net uses a custom 
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
         /// application layer protocol to provide usefull features such as inline serialisation, 
         /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, bool applicationLayerProtocolEnabled = true)
+        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
+                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
             this.LocalEndPoint = localEndPoint;
             this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocolEnabled = applicationLayerProtocolEnabled;
+            this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
 
         [ProtoBeforeSerialization]
@@ -358,7 +373,7 @@ namespace NetworkCommsDotNet
                 ConnectionEstablishedTime = DateTime.Now;
 
                 //We only expect a remote network identifier for managed connections
-                if (ApplicationLayerProtocolEnabled && NetworkIdentifier == ShortGuid.Empty)
+                if (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && NetworkIdentifier == ShortGuid.Empty)
                     throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
             }
         }
@@ -472,11 +487,11 @@ namespace NetworkCommsDotNet
             else
             {
                 if (left.RemoteEndPoint != null && right.RemoteEndPoint != null)
-                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint));
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint) && left.ApplicationLayerProtocol == right.ApplicationLayerProtocol);
                 else if (left.LocalEndPoint != null && right.LocalEndPoint != null)
-                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.LocalEndPoint.Equals(right.LocalEndPoint));
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.LocalEndPoint.Equals(right.LocalEndPoint) && left.ApplicationLayerProtocol == right.ApplicationLayerProtocol);
                 else
-                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString());
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.ApplicationLayerProtocol==right.ApplicationLayerProtocol);
             }
         }
 
@@ -501,10 +516,14 @@ namespace NetworkCommsDotNet
             {
                 if (!hashCodeCacheSet)
                 {
+                    if (RemoteEndPoint != null & LocalEndPoint != null)
+                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ LocalEndPoint.GetHashCode() ^ RemoteEndPoint.GetHashCode() ^ (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? 1 << 31 : 0);
                     if (RemoteEndPoint != null)
-                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode();
+                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ RemoteEndPoint.GetHashCode() ^ (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? 1 << 31 : 0);
+                    else if (LocalEndPoint != null)
+                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ LocalEndPoint.GetHashCode() ^ (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? 1 << 31 : 0);
                     else
-                        hashCodeCache = NetworkIdentifier.GetHashCode();
+                        hashCodeCache = NetworkIdentifier.GetHashCode() ^ (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? 1 << 31 : 0);
 
                     hashCodeCacheSet = true;
                 }
@@ -519,7 +538,7 @@ namespace NetworkCommsDotNet
         /// <returns>A string containing suitable information about this connection</returns>
         public override string ToString()
         {
-            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocolEnabled?"M":"U") +"] ";
+            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + "] ";
 
             if (ConnectionState == ConnectionState.Established)
                 returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString() + " (" + NetworkIdentifier + ")";

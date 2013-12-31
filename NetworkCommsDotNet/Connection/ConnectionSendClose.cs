@@ -365,36 +365,42 @@ namespace NetworkCommsDotNet
             System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
             responseTimeMS = long.MaxValue;
 
-            if (!(ConnectionInfo.ConnectionState == ConnectionState.Established))
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
             {
-                if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
+                //We wait for TCP connections to be established
+                if (ConnectionInfo.ConnectionType == ConnectionType.TCP && ConnectionInfo.ConnectionState != ConnectionState.Established)
                 {
-                    CloseConnection(false, -11);
-                    return false;
+                    if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
+                    {
+                        CloseConnection(false, -11);
+                        return false;
+                    }
+                    else
+                        return true;
                 }
                 else
-                    return true;
+                {
+                    try
+                    {
+                        timer.Start();
+                        byte[] returnValue = SendReceiveObject<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, new byte[1] { 0 }, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
+                        timer.Stop();
+
+                        responseTimeMS = timer.ElapsedMilliseconds;
+
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds.ToString() + "ms.");
+
+                        return returnValue[0] == 1;
+                    }
+                    catch (Exception)
+                    {
+                        CloseConnection(true, 46);
+                        return false;
+                    }
+                }
             }
             else
-            {
-                try
-                {
-                    timer.Start();
-                    byte[] returnValue = SendReceiveObject<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, new byte[1] { 0 }, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
-                    timer.Stop();
-
-                    responseTimeMS = timer.ElapsedMilliseconds;
-
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds.ToString() + "ms.");
-
-                    return returnValue[0] == 1;
-                }
-                catch (Exception)
-                {
-                    CloseConnection(true, 46);
-                    return false;
-                }
-            }   
+                return false;
         }
 
         /// <summary>

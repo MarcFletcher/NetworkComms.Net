@@ -77,9 +77,9 @@ namespace ExamplesConsole
             //Start listening for incoming connections
             //The first parameter disables the application layer protocol for all incoming connections.
             if (connectionTypeToUse == ConnectionType.TCP)
-                TCPConnection.StartListening(false, true);
+                TCPConnection.StartListening(ApplicationLayerProtocolStatus.Disabled, true);
             else
-                UDPConnection.StartListening(false, true);
+                UDPConnection.StartListening(ApplicationLayerProtocolStatus.Disabled, true);
 
             //***************************************************************//
             //                End of interesting stuff                       //
@@ -107,7 +107,7 @@ namespace ExamplesConsole
                 //Expecting user to enter ip address as 192.168.0.1:4000
                 //IMPORTANT: The false provided here disables the application layer protocol
                 //for outgoing connections which is what we want for this example.
-                ConnectionInfo connectionInfo = ExampleHelper.GetServerDetails(false);
+                ConnectionInfo connectionInfo = ExampleHelper.GetServerDetails(ApplicationLayerProtocolStatus.Disabled);
 
                 //***************************************************************//
                 //              Start of interesting stuff                       //

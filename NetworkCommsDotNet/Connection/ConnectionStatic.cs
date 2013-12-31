@@ -145,7 +145,7 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Starting AllConnectionsSendNullPacketKeepAlive");
 
             //Loop through all connections and test the alive state
-            List<Connection> allConnections = NetworkComms.GetExistingConnection();
+            List<Connection> allConnections = NetworkComms.GetExistingConnection(ApplicationLayerProtocolStatus.Enabled);
             int remainingConnectionCount = allConnections.Count;
 
 #if WINDOWS_PHONE

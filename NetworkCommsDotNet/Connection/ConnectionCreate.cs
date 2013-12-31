@@ -59,8 +59,12 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
-            if (!connectionInfo.ApplicationLayerProtocolEnabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ConnectionSetupException("Attempted to create new connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
+            //If the application layer protocol is disabled the serializer must be NullSerializer
+            //and no data processors are allowed.
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && 
+                (defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>() ||
+                defaultSendReceiveOptions.DataProcessors.Count > 0))
+                throw new ConnectionSetupException("Attempted to create new connection where ApplicationLayerProtocol is disabled and the provided serializer is not NullSerializer or data processors were specified.");
 
             SendTimesMSPerKBCache = new CommsMath();
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
@@ -83,11 +87,11 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("ConnectionType and RemoteEndPoint must be defined within provided ConnectionInfo.");
 
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
-            if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType))
+            if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
                 throw new ConnectionSetupException("A " + connectionInfo.ConnectionType + " connection already exists with " + connectionInfo.RemoteEndPoint);
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
-            NetworkComms.AddConnectionByReferenceEndPoint(this);
+            NetworkComms.AddConnectionReferenceByRemoteEndPoint(this);
         }
 
         /// <summary>
@@ -268,10 +272,10 @@ namespace NetworkCommsDotNet
         {
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
-                Connection connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType);
+                List<Connection> connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType, ConnectionInfo.ApplicationLayerProtocol);
 
                 //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
-                if (connectionByEndPoint == null)
+                if (connectionByEndPoint.Count == 0)
                 {
                     connectionSetupException = true;
                     connectionSetupExceptionStr = "Connection setup received after connection closure with " + ConnectionInfo;
@@ -286,10 +290,10 @@ namespace NetworkCommsDotNet
                         connectionSetupException = true;
                         connectionSetupExceptionStr = "Remote peer has same network idendifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
                     }
-                    else if (connectionByEndPoint != this)
+                    else if (connectionByEndPoint[0] != this)
                     {
                         possibleClashConnectionWithPeer_ByEndPoint = true;
-                        existingConnection = connectionByEndPoint;
+                        existingConnection = connectionByEndPoint[0];
                     }
                     else
                     {
