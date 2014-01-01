@@ -158,9 +158,90 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Any connection type specific establish tasks. Base should be called to trigger connection establish delegates
+        /// Any connection type specific establish tasks. Should call atleast ConnectionHandshake() or TriggerConnectionEstablishDelegates();
         /// </summary>
-        protected virtual void EstablishConnectionSpecific()
+        protected abstract void EstablishConnectionSpecific();
+
+        /// <summary>
+        /// Performs a connection handshake with the remote end of the connection.
+        /// Exchanges network identifier and any listener whose IPAddress matches the connection localEndPoint IPAddress.
+        /// During the handshake 
+        /// </summary>
+        protected virtual void ConnectionHandshake()
+        {
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
+                throw new CommunicationException("Attempted to perform handshake on connection where the application protocol has been disabled.");
+
+            //Get a list of existing listeners
+            List<IPEndPoint> existingLocalListeners;
+            if (ConnectionInfo.ConnectionType == ConnectionType.TCP)
+                existingLocalListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+            else if (ConnectionInfo.ConnectionType == ConnectionType.UDP)
+                existingLocalListeners = UDPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+            else
+                throw new NotImplementedException("ConnectionHandshake has only been implemented for TCP and UDP connections.");
+
+            //Check to see if we have a local listener for matching the local endpoint address
+            //If we are client side we use this local listener in our reply to the server
+            IPEndPoint selectedExistingListener = null;
+            if (existingLocalListeners.Count > 0)
+                selectedExistingListener = (existingLocalListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingLocalListeners[0]);
+
+            //If we are server side and we have just received an incoming connection we need to return a conneciton id
+            //This id will be used in all future connections from this machine
+            if (ConnectionInfo.ServerSide)
+            {
+                if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
+
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
+
+                //Wait for the client to send its identification
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+                    throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+
+                if (connectionSetupException)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ServerSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
+                    throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
+                }
+
+                //Trigger the connection establish delegates before replying to the connection establish 
+                TriggerConnectionEstablishDelegates();
+
+                //Once we have the clients id we send our own
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
+            }
+            else
+            {
+                //During this exchange we may note an update local listen port
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
+
+                //As the client we initiated the connection we now forward our local node identifier to the server
+                //If we are listening we include our local listen port as well
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+
+                //Wait here for the server end to return its own identifier
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+                    throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
+
+                //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
+                if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
+
+                if (connectionSetupException)
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
+                    throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
+                }
+
+                //Trigger the connection establish delegates once the server has replied to the connection establish
+                TriggerConnectionEstablishDelegates();
+            }
+        }
+
+        /// <summary>
+        /// Trigger connection establish delegates.
+        /// </summary>
+        protected void TriggerConnectionEstablishDelegates()
         {
             //Call asynchronous connection establish delegates here
             if (NetworkComms.globalConnectionEstablishDelegatesAsync != null)

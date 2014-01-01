@@ -228,76 +228,12 @@ namespace NetworkCommsDotNet
             //Start listening for incoming data
             StartIncomingDataListen();
 
-            //Get a list of existing listeners
-            List<IPEndPoint> existingListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
-
-            //Check to see if we have a local listener for matching the local endpoint address
-            //If we are client side we use this local listener in our reply to the server
-            IPEndPoint selectedExistingListener = null;
-            if (existingListeners.Count > 0)
-                selectedExistingListener = (existingListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingListeners[0]);
-
-            //If we are server side and we have just received an incoming connection we need to return a conneciton id
-            //This id will be used in all future connections from this machine
-            if (ConnectionInfo.ServerSide)
-            {
-                if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
-
-                //If ApplicationLayerProtocolEnabled then we wait for the client to forward it's information
-                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
-
-                    //Wait for the client to send its identification
-                    if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
-                        throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
-                }
-
-                if (connectionSetupException)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ServerSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
-                    throw new ConnectionSetupException("ServerSide. " + connectionSetupExceptionStr);
-                }
-
-                //Trigger the connection establish delegates before replying to the connection establish 
-                base.EstablishConnectionSpecific();
-
-                //If ApplicationLayerProtocolEnabled we forward our information once we have the clients
-                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                {
-                    //Once we have the clients id we send our own
-                    SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
-                }
-            }
+            //If the application layer protocol is enabled we handshake the connection
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
+                ConnectionHandshake();
             else
-            {
-                //If ApplicationLayerProtocolEnabled we forward our information and then wait for the servers
-                //During this exchange we may note an update local listen port
-                if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
-
-                    //As the client we initiated the connection we now forward our local node identifier to the server
-                    //If we are listening we include our local listen port as well
-                    SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
-
-                    //Wait here for the server end to return its own identifier
-                    if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
-                        throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
-
-                    //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
-                    if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
-                }
-
-                if (connectionSetupException)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Connection setup exception. ClientSide with " + ConnectionInfo + ", " + connectionSetupExceptionStr);
-                    throw new ConnectionSetupException("ClientSide. " + connectionSetupExceptionStr);
-                }
-
-                //Trigger the connection establish delegates once the server has replied to the connection establish
-                base.EstablishConnectionSpecific();
-            }
+                //If there is no handshake we can now consider the connection established
+                TriggerConnectionEstablishDelegates();
 
 #if !WINDOWS_PHONE
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).

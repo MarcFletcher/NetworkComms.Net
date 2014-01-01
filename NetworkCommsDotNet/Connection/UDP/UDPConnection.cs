@@ -44,7 +44,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Options associated with this UDPConnection
         /// </summary>
-        public UDPOptions UDPOptions { get; private set; }
+        public UDPOptions ConnectionUDPOptions { get; private set; }
 
         /// <summary>
         /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
@@ -67,7 +67,7 @@ namespace NetworkCommsDotNet
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && level != UDPOptions.None)
                 throw new ArgumentException("If the application layer protocol has been disabled the provided UDPOptions can only be UDPOptions.None.");
 
-            UDPOptions = level;
+            ConnectionUDPOptions = level;
 
             if (listenForIncomingPackets && existingConnection != null)
                 throw new Exception("Unable to listen for incoming packets if an existing client has been provided. This is to prevent possible multiple accidently listens on the same client.");
@@ -169,12 +169,13 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void EstablishConnectionSpecific()
         {
-            //Trigger the connection establish delegates before replying to the connection establish 
-            base.EstablishConnectionSpecific();
-
-            //There is generally no establish for a UDP connection
-            if (UDPOptions > 0)
-                throw new NotImplementedException("A future version of networkComms.Net will support additional udp levels.");
+            //If the application layer protocol is enabled and the udp option is set
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled &&
+                (ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
+                ConnectionHandshake();
+            else
+                //If there is no handshake we can now consider the connection established
+                TriggerConnectionEstablishDelegates();
         }
 
         /// <summary>
@@ -402,25 +403,23 @@ namespace NetworkCommsDotNet
                
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + args.RemoteAddress + ":" + args.RemotePort + ".");
 
+                UDPConnection connection;
+                HandshakeUDPDatagram possibleHandshakeUDPDatagram = new HandshakeUDPDatagram(receivedBytes);
                 if (isIsolatedUDPConnection)
-                {
                     //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
-                    lock (packetBuilder.Locker)
-                    {
-                        packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                        if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
-                    }
-                }
+                    connection = this;
                 else
                 {
-                    var remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.DisplayName.ToString()), int.Parse(args.RemotePort));
-                    var localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.DisplayName.ToString()), int.Parse(sender.Information.LocalPort));
-
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.DisplayName.ToString()), int.Parse(args.RemotePort));
+                    IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.DisplayName.ToString()), int.Parse(sender.Information.LocalPort));
 
+                    connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
+                }
+
+                if (!possibleHandshakeUDPDatagram.DatagramHandled)
+                {
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                     lock (connection.packetBuilder.Locker)
@@ -429,13 +428,9 @@ namespace NetworkCommsDotNet
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                        {
-                            connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
-                            //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
                             NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
-                        }
-                    }
-                }                
+                    }   
+                }
             }
             //On any error here we close the connection
             catch (NullReferenceException)
@@ -494,22 +489,18 @@ namespace NetworkCommsDotNet
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
+                UDPConnection connection;
+                HandshakeUDPDatagram possibleHandshakeUDPDatagram = new HandshakeUDPDatagram(receivedBytes);
                 if (isIsolatedUDPConnection)
-                {
                     //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
-                    lock (packetBuilder.Locker)
-                    {
-                        packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                        if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
-                    }
-                }
+                    connection = this;
                 else
-                {
                     //Look for an existing connection, if one does not exist we will create it
                     //This ensures that all further processing knows about the correct endPoint
-                    UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                    connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
 
+                if (!possibleHandshakeUDPDatagram.DatagramHandled)
+                {
                     //We pass the data off to the specific connection
                     //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                     lock (connection.packetBuilder.Locker)
@@ -518,11 +509,7 @@ namespace NetworkCommsDotNet
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                        {
-                            connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
-                            //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
                             NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
-                        }
                     }
                 }
 
@@ -588,35 +575,27 @@ namespace NetworkCommsDotNet
 
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length.ToString() + " bytes via UDP from " + endPoint.Address + ":" + endPoint.Port.ToString() + ".");
 
+                    UDPConnection connection;
+                    HandshakeUDPDatagram possibleHandshakeUDPDatagram = new HandshakeUDPDatagram(receivedBytes);
                     if (isIsolatedUDPConnection)
-                    {
                         //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                        //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
-                        lock (packetBuilder.Locker)
-                        {
-                            packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                            if (packetBuilder.TotalBytesCached > 0) IncomingPacketHandleHandOff(packetBuilder);
-                        }
-                    }
+                        connection = this;
                     else
-                    {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        UDPConnection connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, UDPOptions, false, this);
+                        connection = GetConnection(new ConnectionInfo(true, ConnectionType.UDP, endPoint, udpClientThreadSafe.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol), ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
 
+                    if (!possibleHandshakeUDPDatagram.DatagramHandled)
+                    {
+                        //We pass the data off to the specific connection
                         //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
                         lock (connection.packetBuilder.Locker)
                         {
-                            //We pass the data off to the specific connection
                             connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
                             if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                             if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            {
-                                connection.packetBuilder.ClearNTopBytes(connection.packetBuilder.TotalBytesCached);
-                                //We cant close the connection here because it may be one of the shared udp listeners. For now we will just log.
                                 NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
-                            }
                         }
                     }
                 }

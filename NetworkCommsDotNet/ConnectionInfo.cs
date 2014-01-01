@@ -372,9 +372,10 @@ namespace NetworkCommsDotNet
                 ConnectionState = ConnectionState.Established;
                 ConnectionEstablishedTime = DateTime.Now;
 
+                //The below only really applied to TCP connections
                 //We only expect a remote network identifier for managed connections
-                if (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && NetworkIdentifier == ShortGuid.Empty)
-                    throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
+                //if (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && NetworkIdentifier == ShortGuid.Empty)
+                //    throw new ConnectionSetupException("Remote network identifier should have been set by this point.");
             }
         }
 
@@ -540,17 +541,15 @@ namespace NetworkCommsDotNet
         {
             string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + "] ";
 
-            if (ConnectionState == ConnectionState.Established)
-                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString() + " (" + NetworkIdentifier + ")";
-            else
-            {
-                if (RemoteEndPoint != null && LocalEndPoint != null)
-                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
-                else if (RemoteEndPoint != null)
-                    returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
-                else if (LocalEndPoint != null)
-                    returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " " + (IsConnectable ? "Connectable" : "NotConnectable");
-            }
+            if (RemoteEndPoint != null && LocalEndPoint != null)
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
+            else if (RemoteEndPoint != null)
+                returnString += "Local -> " + RemoteEndPoint.Address + ":" + RemoteEndPoint.Port.ToString();
+            else if (LocalEndPoint != null)
+                returnString += LocalEndPoint.Address + ":" + LocalEndPoint.Port.ToString() + " " + (IsConnectable ? "Connectable" : "NotConnectable");
+
+            if (NetworkIdentifier != ShortGuid.Empty)
+                returnString += " (" + NetworkIdentifier + ")";
 
             return returnString.Trim();
         }

@@ -36,12 +36,30 @@ namespace NetworkCommsDotNet
         /// </summary>
         None = 0x0,
 
-        //The following UDP options are on the roadmap for implementation.
+        /// <summary>
+        /// Performs a connection handshake, which ensures the remote end is alive at the time of the connection
+        /// establish. Also exchanges network identifier and possible remote listening port.
+        /// </summary>
+        Handshake = 0x1,
 
-        //Handshake the connection before sending user data. Ensures the remote end is actually listening.
-        //Handshake = 0x1,
+        //The following UDP options are on the roadmap for future implementation.
 
         //Ensures packets can only be received in the order they were sent. e.g. Prevents old messages arriving late from being handled.
         //Sequenced = 0x2,
+    }
+
+    /// <summary>
+    /// A small wrapper class which allows an initialising UDP datagram
+    /// to be handled within a connection instantiation if required.
+    /// </summary>
+    internal class HandshakeUDPDatagram
+    {
+        public bool DatagramHandled { get; set; }
+        public byte[] DatagramBytes { get; private set; }
+
+        public HandshakeUDPDatagram(byte[] datagramBytes)
+        {
+            DatagramBytes = datagramBytes;
+        }
     }
 }

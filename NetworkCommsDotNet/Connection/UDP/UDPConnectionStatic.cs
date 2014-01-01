@@ -37,6 +37,22 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static bool IgnoreICMPDestinationUnreachable { get; set; }
 
+        private static UDPOptions _defaultUDPOptions = UDPOptions.None;
+        /// <summary>
+        /// The default UDPOptions to use where none are otherwise specified.
+        /// </summary>
+        public static UDPOptions DefaultUDPOptions 
+        { 
+            get { return _defaultUDPOptions; } 
+            set 
+            {
+                if (Listening())
+                    throw new InvalidOperationException("Attempted to change DefaultUDPOptions while existing connections remaing. Please close all UDP connections first and then try again.");
+                else
+                    _defaultUDPOptions = value;
+            } 
+        }
+
         /// <summary>
         /// The local udp connection listeners
         /// </summary>
@@ -70,11 +86,12 @@ namespace NetworkCommsDotNet
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null);
+                return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
             else
             {
                 //For unmanaged connections we need to make sure that the NullSerializer is being used.
@@ -84,7 +101,7 @@ namespace NetworkCommsDotNet
                 if (optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     optionsToUse = new SendReceiveOptions<NullSerializer>();
 
-                return GetConnection(connectionInfo, optionsToUse, level, listenForReturnPackets, null);
+                return GetConnection(connectionInfo, optionsToUse, level, listenForReturnPackets, null, null, establishIfRequired);
             }
         }
 
@@ -96,13 +113,14 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions to use as defaults for this connection</param>
         /// <param name="level">The UDP options to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets can be received</param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                 throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
 
-            return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null);
+            return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
         }
 
         /// <summary>
@@ -113,14 +131,17 @@ namespace NetworkCommsDotNet
         /// <param name="level"></param>
         /// <param name="listenForReturnPackets"></param>
         /// <param name="existingConnection"></param>
+        /// <param name="possibleHandshakeUDPDatagram"></param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
         /// <returns></returns>
-        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection)
+        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
         {
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                 throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
 
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
+            bool newConnection = false;
             UDPConnection connection = null;
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
@@ -137,10 +158,10 @@ namespace NetworkCommsDotNet
 
                             lock (udpClientListenerLocker)
                             {
-                                //For each existing local endPoint check if the application layer protocol status matches the desired one
                                 List<IPEndPoint> existingLocalEndPoints = ExistingLocalListenEndPoints(localEndPoint.Address);
                                 for(int i=0; i<existingLocalEndPoints.Count; i++)
                                 {
+                                    //For each existing local endPoint check if the application layer protocol status matches the desired one
                                     if (udpConnectionListeners[existingLocalEndPoints[i]].ConnectionInfo.ApplicationLayerProtocol == connectionInfo.ApplicationLayerProtocol)
                                     {
                                         existingConnection = udpConnectionListeners[existingLocalEndPoints[i]];
@@ -167,8 +188,40 @@ namespace NetworkCommsDotNet
                         connectionInfo.ResetConnectionInfo();
 
                     connection = new UDPConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, existingConnection);
+                    newConnection = true;
                 }
             }
+
+            //If we expect a UDP handshake we need to handle incoming datagrams here, if we have it available,
+            //  before trying to establish the connection.
+            //This is different for TCP connections because things happen in the reverse order
+            //UDP - Already listening, receive connectionsetup, configure connection
+            //TCP - Receive TCPClient, configure connection, start listening for connectionsetup, wait for connectionsetup
+            //
+            //possibleHandshakeUDPDatagram will only be set when GetConnection() is called from a listener
+            //If multiple threads try to create an outoing UDP connection to the same endPoint all but the originating 
+            //thread will be held on connection.WaitForConnectionEstablish();
+            if (possibleHandshakeUDPDatagram != null &&
+                (connection.ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
+            {
+                connection.packetBuilder.AddPartialPacket(possibleHandshakeUDPDatagram.DatagramBytes.Length, possibleHandshakeUDPDatagram.DatagramBytes);
+                if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+
+                if (connection.packetBuilder.TotalPartialPacketCount > 0)
+                    NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+
+                possibleHandshakeUDPDatagram.DatagramHandled = true;
+            }
+
+            //We must perform the establish outside the lock as for TCP connections
+            if (newConnection && establishIfRequired)
+            {
+                //Call establish on the connection if it is not a roguesender or listener
+                if (!connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) && !connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.IPv6Any))
+                    connection.EstablishConnection();
+            }
+            else if (!newConnection)
+                connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
 
             if (!NetworkComms.commsShutdown)
                 TriggerConnectionKeepAliveThread();
@@ -335,7 +388,7 @@ namespace NetworkCommsDotNet
 
                 try
                 {
-                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint, applicationLayerProtocol), optionsToUse, UDPOptions.None, true);
+                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint, applicationLayerProtocol), optionsToUse, UDPConnection.DefaultUDPOptions, true);
                 }
                 catch (SocketException)
                 {
@@ -343,7 +396,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0), applicationLayerProtocol), optionsToUse, UDPOptions.None, true);
+                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0), applicationLayerProtocol), optionsToUse, UDPConnection.DefaultUDPOptions, true);
                         }
                         catch (SocketException)
                         {
@@ -596,7 +649,7 @@ namespace NetworkCommsDotNet
 
                         if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily)) udpRogueSenders.Add(ipEndPoint.AddressFamily, new Dictionary<ApplicationLayerProtocolStatus, UDPConnection>());
 
-                        udpRogueSenders[ipEndPoint.AddressFamily][applicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), applicationLayerProtocol), sendReceiveOptions, UDPOptions.None, false);
+                        udpRogueSenders[ipEndPoint.AddressFamily][applicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
                     }
 
                     //Get the rouge sender here

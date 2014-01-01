@@ -159,7 +159,7 @@ namespace NetworkCommsDotNet
             {
                 //We don't send null packets to unconnected udp connections
                 UDPConnection asUDP = allConnections[i] as UDPConnection;
-                if (asUDP != null && asUDP.UDPOptions == UDPOptions.None)
+                if (asUDP != null && asUDP.ConnectionUDPOptions == UDPOptions.None)
                 {
                     if (Interlocked.Decrement(ref remainingConnectionCount) == 0)
                         allConnectionsComplete.Set();

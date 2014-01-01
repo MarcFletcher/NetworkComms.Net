@@ -30,7 +30,7 @@ namespace DebugTests
         static List<IPEndPoint> TCPServerEndPointsKeys;
         static List<IPEndPoint> UDPServerEndPointsKeys;
 
-        static int connectionsPerHammer = 25;
+        static int connectionsPerHammer = 100;
         static byte[] clientHammerData;
 
         static int testDataSize = 1024;
@@ -49,7 +49,7 @@ namespace DebugTests
 
             if (serverMode)
             {
-                TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
+                TestMode mode = TestMode.UDP_Managed;
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged;
                 //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed;
@@ -125,6 +125,7 @@ namespace DebugTests
             }
             else
             {
+                //The client side never wants logging
                 NetworkComms.DisableLogging();
 
                 //Load server port list
@@ -201,13 +202,19 @@ namespace DebugTests
                     Connection conn;
 
                     if (tcpSelected)
+                    {
                         conn = TCPConnection.GetConnection(connInfo);
+                        conn.SendObject("Unmanaged", clientHammerData);
+                        conn.CloseConnection(false);
+                    }
                     else
+                    {
                         conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
-
-                    conn.SendObject("Unmanaged", clientHammerData);
-
-                    //conn.CloseConnection(false);
+                        conn.SendObject("Unmanaged", clientHammerData);
+                        conn.CloseConnection(false);
+                        //SendReceiveOptions unmanagedOptions = new SendReceiveOptions<NullSerializer>();
+                        //UDPConnection.SendObject("Unmanaged", clientHammerData, connInfo.RemoteEndPoint, unmanagedOptions, connInfo.ApplicationLayerProtocol);
+                    }
                 }
                 catch (CommsException ex)
                 {
