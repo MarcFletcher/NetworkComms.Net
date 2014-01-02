@@ -174,8 +174,13 @@ namespace NetworkCommsDotNet
                 (ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
                 ConnectionHandshake();
             else
+            {
                 //If there is no handshake we can now consider the connection established
                 TriggerConnectionEstablishDelegates();
+
+                //Trigger any connection setup waits
+                connectionSetupWait.Set();
+            }
         }
 
         /// <summary>

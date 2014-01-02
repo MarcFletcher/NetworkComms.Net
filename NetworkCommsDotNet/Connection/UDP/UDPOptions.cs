@@ -46,6 +46,9 @@ namespace NetworkCommsDotNet
 
         //Ensures packets can only be received in the order they were sent. e.g. Prevents old messages arriving late from being handled.
         //Sequenced = 0x2,
+
+        //Notify the remote peer we are close/removing the connection
+        //ConnectionCloseNotify = 0x3,
     }
 
     /// <summary>

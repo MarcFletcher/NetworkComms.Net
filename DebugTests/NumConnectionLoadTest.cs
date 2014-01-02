@@ -47,13 +47,33 @@ namespace DebugTests
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
+            UDPConnection.DefaultUDPOptions = UDPOptions.None;
+
             if (serverMode)
             {
-                TestMode mode = TestMode.UDP_Managed;
-                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged;
-                //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
-                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed;
-                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged;
+                //No connection close
+                //Debug mode - MF laptop - Single run 50K connections
+                //TestMode mode = TestMode.TCP_Managed; // (0.10ms / connection)
+                //TestMode mode = TestMode.TCP_Unmanaged; // (0.05ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged; // (0.09ms / connection)
+                TestMode mode = TestMode.UDP_Managed; // (0.03ms / connection) (wHandshake - 0.04ms / connection)
+                //TestMode mode = TestMode.UDP_Unmanaged; // (0.03ms / connection)
+                //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.03ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (0.10ms / connecition) (wHandshake - 0.11ms / connection)
+                //TestMode mode = TestMode.TCP_Unmanaged ^ TestMode.UDP_Unmanaged; // (0.04ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.09ms / connection)
+
+                //With connection close
+                //Debug mode - MF laptop - Single run 5K connections
+                //TestMode mode = TestMode.TCP_Managed; // (6.73ms / connection)
+                //TestMode mode = TestMode.TCP_Unmanaged; // (0.40ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged; // (3.00ms / connection)
+                //TestMode mode = TestMode.UDP_Managed; // (0.64ms / connection) (wHandshake - 1.05ms / connection)
+                //TestMode mode = TestMode.UDP_Unmanaged; // (0.61ms / connection)
+                //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.64ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (6.31ms / connecition) (wHandshake - 6.74ms / connection)
+                //TestMode mode = TestMode.TCP_Unmanaged ^ TestMode.UDP_Unmanaged; // (0.58ms / connection)
+                //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (3.03ms / connection)
 
                 //Listen for connections
                 int totalNumberOfListenPorts = 500;
@@ -80,16 +100,44 @@ namespace DebugTests
                         UDPConnection.StartListening(new IPEndPoint(localIPAddress, 40000 + i), ApplicationLayerProtocolStatus.Disabled, true);
                 }
 
+                object locker = new object();
                 int messageCount = 0;
+                long totalBytesReceived = 0;
                 int tcpFragmentationConcatCount = 0;
+                int connectionEstablishCount = 0;
+                int connectionCloseCount = 0;
+
+                List<string> packetSequenceNumbers = new List<string>();
+
                 NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("Unmanaged", (header, connection, data) =>
                     {
-                        if (data.Length != testDataSize)
-                            Interlocked.Increment(ref tcpFragmentationConcatCount);
+                        lock (locker)
+                        {
+                            long seqNumber = header.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                            packetSequenceNumbers.Add(connection.ToString() + "," + seqNumber);
 
-                        //Increment a global counter
-                        Interlocked.Increment(ref messageCount);
+                            //Increment a global counter
+                            messageCount++;
+
+                            if (data.Length != testDataSize)
+                                tcpFragmentationConcatCount++;
+
+                            totalBytesReceived += data.Length;
+                        }
                     });
+
+                //Establish handler
+                NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
+                    { lock (locker)
+                        connectionEstablishCount++;
+                    });
+
+                //Close handler
+                NetworkComms.AppendGlobalConnectionCloseHandler((connection) =>
+                {
+                    lock (locker)
+                        connectionCloseCount++;
+                });
 
                 //Save the ports list out to disk
                 using (StreamWriter sw = new StreamWriter("TCPServerPorts.txt", false))
@@ -117,11 +165,25 @@ namespace DebugTests
                     }
                 }
 
-                Console.WriteLine("\nSelected mode = {0}", mode);
-                Console.WriteLine("\nListening for incoming connections on {0} ports. Press any key to see message count.", totalNumberOfListenPorts);
-                Console.ReadKey(true);
-                Console.WriteLine("Message count = {0}. TCPFragConcat count = {1}. Press any key to quit.", messageCount, tcpFragmentationConcatCount);
-                Console.ReadKey(true);
+                Console.WriteLine("\nSelected mode = {0}, UDPOptions = {1}", mode, UDPConnection.DefaultUDPOptions);
+                Console.WriteLine("\nListening for incoming connections on {0} ports. Press 'c' key to see message count.", totalNumberOfListenPorts);
+
+                while (true)
+                {
+                    ConsoleKeyInfo key = Console.ReadKey(true);
+                    if (key.KeyChar == 'c')
+                    {
+                        Console.WriteLine("#Handlers={0}, #Data={2}, #TCPFragConcat={1}, #Establish={3}, #Close={4}. Press 'c' to refresh message count, any other key to quit.", messageCount, tcpFragmentationConcatCount, totalBytesReceived / (double)testDataSize, connectionEstablishCount, connectionCloseCount);
+                        //using (StreamWriter sw = new StreamWriter("seqNumbers.txt", false))
+                        //{
+                        //    List<string> copy = packetSequenceNumbers.ToList();
+                        //    foreach (string line in copy)
+                        //        sw.WriteLine(line);
+                        //}
+                    }
+                    else
+                        break;
+                }
             }
             else
             {
@@ -153,7 +215,7 @@ namespace DebugTests
                 ParallelOptions options = new ParallelOptions();
                 options.MaxDegreeOfParallelism = 8;
 
-                int connectionHammerExecCount = 1000;
+                int connectionHammerExecCount = 500;
 
                 Stopwatch timer = new Stopwatch();
                 timer.Start();
@@ -184,6 +246,9 @@ namespace DebugTests
                 else if (TCPServerEndPointsKeys.Count > 0)
                     tcpSelected = true;
 
+                SendReceiveOptions options = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
+                //options.Options.Add("ReceiveConfirmationRequired", "");
+
                 IPEndPoint selectedEndPoint;
                 ConnectionInfo connInfo;
                 if (tcpSelected)
@@ -203,15 +268,15 @@ namespace DebugTests
 
                     if (tcpSelected)
                     {
-                        conn = TCPConnection.GetConnection(connInfo);
+                        conn = TCPConnection.GetConnection(connInfo, options);
                         conn.SendObject("Unmanaged", clientHammerData);
-                        conn.CloseConnection(false);
+                        //conn.CloseConnection(false);
                     }
                     else
                     {
-                        conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
+                        conn = UDPConnection.GetConnection(connInfo, options, UDPConnection.DefaultUDPOptions);
                         conn.SendObject("Unmanaged", clientHammerData);
-                        conn.CloseConnection(false);
+                        //conn.CloseConnection(false);
                         //SendReceiveOptions unmanagedOptions = new SendReceiveOptions<NullSerializer>();
                         //UDPConnection.SendObject("Unmanaged", clientHammerData, connInfo.RemoteEndPoint, unmanagedOptions, connInfo.ApplicationLayerProtocol);
                     }

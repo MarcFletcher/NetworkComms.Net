@@ -232,8 +232,13 @@ namespace NetworkCommsDotNet
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                 ConnectionHandshake();
             else
+            {
                 //If there is no handshake we can now consider the connection established
                 TriggerConnectionEstablishDelegates();
+
+                //Trigger any connection setup waits
+                connectionSetupWait.Set();
+            }
 
 #if !WINDOWS_PHONE
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).

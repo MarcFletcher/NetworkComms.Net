@@ -449,21 +449,15 @@ namespace NetworkCommsDotNet
                 //Specify a delegate we may use if we require receive confirmation
                 NetworkComms.PacketHandlerCallBackDelegate<string> confirmationDelegate = (packetHeader, connectionInfo, incomingString) =>
                 {
-                    //if (connectionInfo.NetworkIdentifier == this.ConnectionInfo.NetworkIdentifier && connectionInfo.RemoteEndPoint == this.ConnectionInfo.RemoteEndPoint)
-                    //{
                     confirmationCheckSum = incomingString;
                     confirmationWaitSignal.Set();
-                    //}
                 };
 
                 //We use the following delegate to quickly force a response timeout if the remote end disconnects during a send/wait
                 NetworkComms.ConnectionEstablishShutdownDelegate ConfirmationShutDownDelegate = (connectionInfo) =>
                 {
-                    //if (connectionInfo.NetworkIdentifier == this.ConnectionInfo.NetworkIdentifier && connectionInfo.RemoteEndPoint == this.ConnectionInfo.RemoteEndPoint)
-                    //{
                     remotePeerDisconnectedDuringWait = true;
                     confirmationWaitSignal.Set();
-                    //}
                 };
                 #endregion
 
