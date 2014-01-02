@@ -277,7 +277,19 @@ namespace NetworkCommsDotNet
 
             byte[] headerBytes = new byte[0];
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
+            {
+                long packetSequenceNumber;
+                lock (sendLocker)
+                {
+                    //Set packet sequence number inside sendLocker
+                    //Increment the global counter as well to ensure future connections with the same host can not create duplicates
+                    Interlocked.Increment(ref NetworkComms.totalPacketSendCount);
+                    packetSequenceNumber = packetSequenceCounter++;
+                    packet.PacketHeader.SetOption(PacketHeaderLongItems.PacketSequenceNumber, packetSequenceNumber);
+                }
+
                 headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            }
             else
             {
                 if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))

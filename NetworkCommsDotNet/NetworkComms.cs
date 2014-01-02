@@ -893,10 +893,23 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... sending requested receive confirmation packet.");
 
-                    var hash = item.PacketHeader.ContainsOption(PacketHeaderStringItems.CheckSumHash) ? item.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash) : "";
+                    long packetSequenceNumber;
+                    if (item.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
+                        packetSequenceNumber = item.PacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                    else
+                        throw new InvalidOperationException("Attempted to access packet header sequence number when non was set.");
 
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), hash, NetworkComms.InternalFixedSendReceiveOptions);
-                    item.Connection.SendPacket(returnPacket);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
+                    
+                    //Should an error occur while sending the confirmation it should not prevent the handling of this packet
+                    try
+                    {
+                        item.Connection.SendPacket(returnPacket);
+                    }
+                    catch (CommsException) 
+                    { 
+                        //Do nothing
+                    }
                 }
 
                 //We can now pass the data onto the correct delegate
@@ -2271,7 +2284,8 @@ namespace NetworkCommsDotNet
                     allConnectionsByIdentifier[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                     ||
                     (allConnectionsByRemoteIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) &&
-                    allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType)))
+                    allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                    allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.ConnectionType] == connection))
                 {
                     //Maintain a reference if this is our first connection close
                     returnValue = true;
@@ -2294,9 +2308,6 @@ namespace NetworkCommsDotNet
                 if (allConnectionsByIdentifier.ContainsKey(currentNetworkIdentifier) &&
                         allConnectionsByIdentifier[currentNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
                 {
-                    //if (!allConnectionsById[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
-                    //    throw new ConnectionShutdownException("A reference to the connection being closed was not found in the allConnectionsById dictionary.");
-                    //else
                     if (allConnectionsByIdentifier[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                         allConnectionsByIdentifier[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Remove(connection);
 
@@ -2314,14 +2325,17 @@ namespace NetworkCommsDotNet
                 //We can now remove this connection by end point as well
                 if (allConnectionsByRemoteIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
                 {
-                    if (allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                    if (allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                        allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.ConnectionType] == connection)
+                    {
                         allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Remove(connection.ConnectionInfo.ConnectionType);
+
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
+                    }
 
                     //If this was the last connection type for this endpoint we can remove the endpoint reference as well
                     if (allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
                         allConnectionsByRemoteIPEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
-
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
                 }
                 #endregion
             }
@@ -2400,6 +2414,9 @@ namespace NetworkCommsDotNet
                     }
                     else
                         allConnectionsByRemoteIPEndPoint.Add(remoteIPEndPointToUse, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
+
+                    if (NetworkComms.LoggingEnabled)
+                        NetworkComms.Logger.Trace("Completed adding connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'.");
                 }
             }
         }

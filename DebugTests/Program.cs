@@ -77,8 +77,8 @@ namespace DebugTests
             //DebugTest.GoStreamTest();
             //ThreadPoolTest.RunExample();
 
-            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\WALerrors\ExamplesConsoleLog_zibAIsn37EOb4XQ2iLEB_w.txt");
-            //log.LinesWithMatch(new string[] { "Received packet of type", "Sending a packet of type ", "Sending a UDP packet" }, "matchLog.txt");
+            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Documents\Visual Studio 2010\Projects\networkcomms.net\DebugTests\bin\Debug\DebugTests_9GvNYKHC1E-cDqu8qTneew.txt");
+            //log.LinesWithMatch(new string[] { "Completed adding connection reference by endPoint" }, "matchLog.txt");
             //log.LinesWithMatch(new string[] { "Completed ChunkAvailabilityReply using data", "Added ChunkAvailabilityReply to chunkDataCache"}, "matchLog.txt");
             //log.LinesWithMatch(new string[] { "written to TCP netstream at" }, "matchLog.txt");
             //log.ThreadPoolInfo("threadPool.csv");

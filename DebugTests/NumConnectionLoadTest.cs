@@ -47,16 +47,20 @@ namespace DebugTests
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
-            UDPConnection.DefaultUDPOptions = UDPOptions.None;
+            UDPConnection.DefaultUDPOptions = UDPOptions.Handshake;
+
+            IPAddress localIPAddress = IPAddress.Parse("::1");
 
             if (serverMode)
             {
+                //NetworkComms.DisableLogging();
+
                 //No connection close
                 //Debug mode - MF laptop - Single run 50K connections
                 //TestMode mode = TestMode.TCP_Managed; // (0.10ms / connection)
                 //TestMode mode = TestMode.TCP_Unmanaged; // (0.05ms / connection)
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged; // (0.09ms / connection)
-                TestMode mode = TestMode.UDP_Managed; // (0.03ms / connection) (wHandshake - 0.04ms / connection)
+                //TestMode mode = TestMode.UDP_Managed; // (0.03ms / connection) (wHandshake - 0.04ms / connection)
                 //TestMode mode = TestMode.UDP_Unmanaged; // (0.03ms / connection)
                 //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.03ms / connection)
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (0.10ms / connecition) (wHandshake - 0.11ms / connection)
@@ -68,7 +72,7 @@ namespace DebugTests
                 //TestMode mode = TestMode.TCP_Managed; // (6.73ms / connection)
                 //TestMode mode = TestMode.TCP_Unmanaged; // (0.40ms / connection)
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged; // (3.00ms / connection)
-                //TestMode mode = TestMode.UDP_Managed; // (0.64ms / connection) (wHandshake - 1.05ms / connection)
+                TestMode mode = TestMode.UDP_Managed; // (0.64ms / connection) (wHandshake - 1.05ms / connection)
                 //TestMode mode = TestMode.UDP_Unmanaged; // (0.61ms / connection)
                 //TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.64ms / connection)
                 //TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (6.31ms / connecition) (wHandshake - 6.74ms / connection)
@@ -77,7 +81,6 @@ namespace DebugTests
 
                 //Listen for connections
                 int totalNumberOfListenPorts = 500;
-                IPAddress localIPAddress = IPAddress.Parse("::1");
 
                 int portDivisor = 0;
                 if ((mode & TestMode.TCP_Managed) == TestMode.TCP_Managed) portDivisor++;
@@ -187,7 +190,6 @@ namespace DebugTests
             }
             else
             {
-                //The client side never wants logging
                 NetworkComms.DisableLogging();
 
                 //Load server port list
@@ -202,6 +204,11 @@ namespace DebugTests
                 UDPServerEndPoints = new Dictionary<IPEndPoint, ApplicationLayerProtocolStatus>();
                 foreach (string current in udpServerPortList)
                     UDPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? ApplicationLayerProtocolStatus.Enabled : ApplicationLayerProtocolStatus.Disabled));
+
+                UDPConnection.StartListening(new IPEndPoint(localIPAddress, 10010));
+                Console.WriteLine("Listening for connections on:");
+                foreach (System.Net.IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
+                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 UDPServerEndPointsKeys = UDPServerEndPoints.Keys.ToList();
 
@@ -270,13 +277,13 @@ namespace DebugTests
                     {
                         conn = TCPConnection.GetConnection(connInfo, options);
                         conn.SendObject("Unmanaged", clientHammerData);
-                        //conn.CloseConnection(false);
+                        conn.CloseConnection(false);
                     }
                     else
                     {
                         conn = UDPConnection.GetConnection(connInfo, options, UDPConnection.DefaultUDPOptions);
                         conn.SendObject("Unmanaged", clientHammerData);
-                        //conn.CloseConnection(false);
+                        conn.CloseConnection(false);
                         //SendReceiveOptions unmanagedOptions = new SendReceiveOptions<NullSerializer>();
                         //UDPConnection.SendObject("Unmanaged", clientHammerData, connInfo.RemoteEndPoint, unmanagedOptions, connInfo.ApplicationLayerProtocol);
                     }

@@ -441,16 +441,18 @@ namespace NetworkCommsDotNet
                 packetSequenceNumber = packetSequenceCounter++;
                 packet.PacketHeader.SetOption(PacketHeaderLongItems.PacketSequenceNumber, packetSequenceNumber);
 
-                string confirmationCheckSum = "";
+                //string confirmationCheckSum = "";
+                long expectedPacketSequenceConfirmationNumber = packetSequenceNumber;
                 AutoResetEvent confirmationWaitSignal = new AutoResetEvent(false);
                 bool remotePeerDisconnectedDuringWait = false;
 
                 #region Delegates
                 //Specify a delegate we may use if we require receive confirmation
-                NetworkComms.PacketHandlerCallBackDelegate<string> confirmationDelegate = (packetHeader, connectionInfo, incomingString) =>
+                NetworkComms.PacketHandlerCallBackDelegate<long> confirmationDelegate = (packetHeader, connectionInfo, incomingSequenceIdentifier) =>
                 {
-                    confirmationCheckSum = incomingString;
-                    confirmationWaitSignal.Set();
+                    //A better method for confiming packets is to use the sending sequence number
+                    if (incomingSequenceIdentifier == expectedPacketSequenceConfirmationNumber)
+                        confirmationWaitSignal.Set();
                 };
 
                 //We use the following delegate to quickly force a response timeout if the remote end disconnects during a send/wait
