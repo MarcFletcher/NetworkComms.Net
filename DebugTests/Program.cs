@@ -70,7 +70,7 @@ namespace DebugTests
 
             //BasicSend.RunExample();
             //AliveTest.RunExample();
-            //DebugTest.GoTCP();
+            //DebugTest.RunExample();
             //DFSTest.RunExample();
             //BandwidthLoadTest.RunExample();
             NumConnectionLoadTest.RunExample();

@@ -130,11 +130,11 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions"></param>
         /// <param name="level"></param>
         /// <param name="listenForReturnPackets"></param>
-        /// <param name="existingConnection"></param>
+        /// <param name="existingListenerConnection"></param>
         /// <param name="possibleHandshakeUDPDatagram"></param>
         /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
         /// <returns></returns>
-        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
+        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingListenerConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
         {
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                 throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
@@ -145,12 +145,13 @@ namespace NetworkCommsDotNet
             UDPConnection connection = null;
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
-                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, ConnectionType.UDP, connectionInfo.ApplicationLayerProtocol))
-                    connection = (UDPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, ConnectionType.UDP, connectionInfo.ApplicationLayerProtocol)[0];
+                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, ConnectionType.UDP, connectionInfo.ApplicationLayerProtocol);
+                if (existingConnections.Count > 0)
+                    connection = (UDPConnection)existingConnections[0];
                 else
                 {
                     //If we are listening on what will be the outgoing adaptor we send with that client to ensure if our connection info is handed off we are connectable by others
-                    if (existingConnection == null)
+                    if (existingListenerConnection == null)
                     {
                         try
                         {
@@ -164,7 +165,7 @@ namespace NetworkCommsDotNet
                                     //For each existing local endPoint check if the application layer protocol status matches the desired one
                                     if (udpConnectionListeners[existingLocalEndPoints[i]].ConnectionInfo.ApplicationLayerProtocol == connectionInfo.ApplicationLayerProtocol)
                                     {
-                                        existingConnection = udpConnectionListeners[existingLocalEndPoints[i]];
+                                        existingListenerConnection = udpConnectionListeners[existingLocalEndPoints[i]];
 
                                         //If we are using an existing listener there is no need to listen for packets
                                         listenForReturnPackets = false;
@@ -187,7 +188,7 @@ namespace NetworkCommsDotNet
                     if (connectionInfo.ConnectionState == ConnectionState.Established || connectionInfo.ConnectionState == ConnectionState.Shutdown)
                         connectionInfo.ResetConnectionInfo();
 
-                    connection = new UDPConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, existingConnection);
+                    connection = new UDPConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, existingListenerConnection);
                     newConnection = true;
                 }
             }
@@ -204,8 +205,11 @@ namespace NetworkCommsDotNet
             if (possibleHandshakeUDPDatagram != null &&
                 (connection.ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
             {
-                connection.packetBuilder.AddPartialPacket(possibleHandshakeUDPDatagram.DatagramBytes.Length, possibleHandshakeUDPDatagram.DatagramBytes);
-                if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+                lock (connection.packetBuilder.Locker)
+                {
+                    connection.packetBuilder.AddPartialPacket(possibleHandshakeUDPDatagram.DatagramBytes.Length, possibleHandshakeUDPDatagram.DatagramBytes);
+                    if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
+                }
 
                 if (connection.packetBuilder.TotalPartialPacketCount > 0)
                     NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
@@ -223,8 +227,9 @@ namespace NetworkCommsDotNet
             else if (!newConnection)
                 connection.WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS);
 
-            if (!NetworkComms.commsShutdown)
-                TriggerConnectionKeepAliveThread();
+            //UDP does not need keep alives
+            //if (!NetworkComms.commsShutdown)
+            //    TriggerConnectionKeepAliveThread();
 
             return connection;
         }
@@ -415,7 +420,7 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
                 IPEndPoint ipEndPointUsed = new IPEndPoint(IPAddress.Parse(newListeningConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(newListeningConnection.socket.Information.LocalPort)); 
 #else
-                IPEndPoint ipEndPointUsed = (IPEndPoint)newListeningConnection.udpClientThreadSafe.LocalEndPoint;
+                IPEndPoint ipEndPointUsed = (IPEndPoint)newListeningConnection.udpClient.LocalEndPoint;
 #endif
 
                 if (udpConnectionListeners.ContainsKey(ipEndPointUsed))

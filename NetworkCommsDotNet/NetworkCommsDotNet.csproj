@@ -69,7 +69,7 @@
     <Compile Include="Connection\ConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionType.cs" />
     <Compile Include="Connection\SentPacket.cs" />
-    <Compile Include="Connection\UDP\UDPClientThreadSafe.cs" />
+    <Compile Include="Connection\UDP\UDPClientWrapper.cs" />
     <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />
     <Compile Include="Connection\UDP\UDPOptions.cs" />
     <Compile Include="RuntimeEnvironment.cs" />

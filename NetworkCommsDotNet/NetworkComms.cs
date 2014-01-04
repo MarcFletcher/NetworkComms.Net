@@ -798,9 +798,9 @@ namespace NetworkCommsDotNet
         internal static Dictionary<ShortGuid, Dictionary<ConnectionType, List<Connection>>> allConnectionsByIdentifier = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<Connection>>>();
 
         /// <summary>
-        /// Secondary connection dictionary stored by ip end point. Allows for quick cross referencing.
+        /// Secondary connection dictionary stored by ip end point. First key is remote IPEndPoint, second key is local IPEndPoint, third key is connection type
         /// </summary>
-        internal static Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>> allConnectionsByRemoteIPEndPoint = new Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>>();
+        internal static Dictionary<IPEndPoint, Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>>> allConnectionsByIPEndPoint = new Dictionary<IPEndPoint, Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>>>();
 
         /// <summary>
         /// Old connection cache so that requests for connectionInfo can be returned even after a connection has been closed.
@@ -1851,15 +1851,10 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-                foreach (var connectionsByEndPoint in allConnectionsByRemoteIPEndPoint)
-                {
-                    foreach (var connection in connectionsByEndPoint.Value.Values)
-                    {
-                        if (connection.ConnectionInfo != null)
-                            returnList.Add(connection.ConnectionInfo);
-                    }
-                }
-                
+                List<Connection> currentConnections  = GetExistingConnection();
+                foreach (Connection conn in currentConnections)
+                    returnList.Add(conn.ConnectionInfo);
+
                 if (includeClosedConnections)
                 {
                     foreach (var pair in oldNetworkIdentifierToConnectionInfo)
@@ -1892,14 +1887,9 @@ namespace NetworkCommsDotNet
 
             lock (globalDictAndDelegateLocker)
             {
-                foreach (var pair in allConnectionsByRemoteIPEndPoint)
-                {
-                    foreach (var connection in pair.Value.Values)
-                    {
-                        if (connection.ConnectionInfo != null && connection.ConnectionInfo.NetworkIdentifier == networkIdentifier)
-                                returnList.Add(connection.ConnectionInfo);
-                    }
-                }
+                List<Connection> allCurrentConnections = GetExistingConnection(networkIdentifier, ConnectionType.Undefined);
+                foreach (Connection conn in allCurrentConnections)
+                    returnList.Add(conn.ConnectionInfo);
 
                 if (includeClosedConnections)
                 {
@@ -1932,33 +1922,24 @@ namespace NetworkCommsDotNet
         public static int TotalNumConnections()
         {
             lock (globalDictAndDelegateLocker)
-            {
-                int sum = 0;
-
-                foreach (var current in allConnectionsByRemoteIPEndPoint)
-                    sum += current.Value.Count;
-
-                return sum;
-            }
+                return GetExistingConnection().Count;
         }
 
         /// <summary>
         /// Returns the total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint"/> matches the provided <see cref="IPAddress"/>
         /// </summary>
-        /// <param name="matchIP">The <see cref="IPAddress"/> to match</param>
+        /// <param name="matchRemoteEndPointIP">The <see cref="IPAddress"/> to match</param>
         /// <returns>Total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint "/> matches the provided <see cref="IPAddress"/></returns>
-        public static int TotalNumConnections(IPAddress matchIP)
+        public static int TotalNumConnections(IPAddress matchRemoteEndPointIP)
         {
             lock (globalDictAndDelegateLocker)
             {
-                int sum = 0;
+                List<Connection> allCurrentConnections = GetExistingConnection(new IPEndPoint(matchRemoteEndPointIP, 0), 
+                    new IPEndPoint(IPAddress.Any, 0), 
+                    ConnectionType.Undefined, 
+                    ApplicationLayerProtocolStatus.Undefined);
 
-                foreach (var current in allConnectionsByRemoteIPEndPoint)
-                    foreach (var connection in current.Value)
-                        if (connection.Value.ConnectionInfo.RemoteEndPoint.Address.Equals(matchIP))
-                            sum++;
-
-                return sum;
+                return allCurrentConnections.Count;
             }
         }
 
@@ -1983,34 +1964,27 @@ namespace NetworkCommsDotNet
         /// Close all connections of the provided <see cref="ConnectionType"/> except to provided <see cref="IPEndPoint"/> array.
         /// </summary>
         /// <param name="connectionTypeToClose">The type of connections to be closed. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
-        /// <param name="closeAllExceptTheseEndPoints">Close all except those with provided <see cref="IPEndPoint"/> array</param>
-        public static void CloseAllConnections(ConnectionType connectionTypeToClose, IPEndPoint[] closeAllExceptTheseEndPoints)
+        /// <param name="closeAllExceptTheseRemoteIPEndPoints">Close all except those with remote IPEndPoint that is provided in <see cref="IPEndPoint"/> array</param>
+        public static void CloseAllConnections(ConnectionType connectionTypeToClose, IPEndPoint[] closeAllExceptTheseRemoteIPEndPoints)
         {
             List<Connection> connectionsToClose = new List<Connection>();
 
             lock (globalDictAndDelegateLocker)
             {
-                foreach (var pair in allConnectionsByRemoteIPEndPoint)
+                List<Connection> allConnectionsOfType = GetExistingConnection(connectionTypeToClose);
+                foreach (Connection conn in allConnectionsOfType)
                 {
-                    foreach (var innerPair in pair.Value)
+                    bool dontClose = false;
+                    foreach (IPEndPoint endPointToNotClose in closeAllExceptTheseRemoteIPEndPoints)
                     {
-                        if (innerPair.Value != null && (connectionTypeToClose == ConnectionType.Undefined || innerPair.Key == connectionTypeToClose))
+                        if (conn.ConnectionInfo.RemoteEndPoint.Equals(endPointToNotClose))
                         {
-                            bool dontClose = false;
-
-                            foreach (var endPointToNotClose in closeAllExceptTheseEndPoints)
-                            {
-                                if (endPointToNotClose == innerPair.Value.ConnectionInfo.RemoteEndPoint)
-                                {
-                                    dontClose = true;
-                                    break;
-                                }
-                            }
-
-                            if (!dontClose )
-                                connectionsToClose.Add(innerPair.Value);
+                            dontClose = true;
+                            break;
                         }
                     }
+
+                    if (!dontClose) connectionsToClose.Add(conn);
                 }                
             }
 
@@ -2026,7 +2000,7 @@ namespace NetworkCommsDotNet
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> GetExistingConnection(ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        public static List<Connection> GetExistingConnection(ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Undefined)
         {
             return GetExistingConnection(ConnectionType.Undefined, applicationLayerProtocol);
         }
@@ -2038,9 +2012,9 @@ namespace NetworkCommsDotNet
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> GetExistingConnection(ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        public static List<Connection> GetExistingConnection(ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Undefined)
         {
-            return GetExistingConnection(new IPEndPoint(IPAddress.Any, 0), connectionType, applicationLayerProtocol);
+            return GetExistingConnection(new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.Any, 0), connectionType, applicationLayerProtocol);
         }
 
         /// <summary>
@@ -2051,7 +2025,7 @@ namespace NetworkCommsDotNet
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of connections to the desired peer. If no matching connections exist returns empty list.</returns>
-        public static List<Connection> GetExistingConnection(ShortGuid networkIdentifier, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        public static List<Connection> GetExistingConnection(ShortGuid networkIdentifier, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Undefined)
         {
             List<Connection> resultList = new List<Connection>();
             lock (globalDictAndDelegateLocker)
@@ -2090,65 +2064,114 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a list of all connections matching the provided parameters.
         /// </summary>
-        /// <param name="remoteEndPoint">IPEndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="remoteEndPoint">Remote IPEndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="localEndPoint">Local IPEndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
         /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of connections to the desired peer. If no matching connections exists returns empty list.</returns>
-        public static List<Connection> GetExistingConnection(IPEndPoint remoteEndPoint, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        public static List<Connection> GetExistingConnection(IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Undefined)
         {
+            if (remoteEndPoint == null) throw new ArgumentNullException("remoteEndPoint", "remoteEndPoint may not be null.");
+            if (localEndPoint == null) throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null.");
+
             List<Connection> result = new List<Connection>();
 
-            List<IPEndPoint> matchedIPEndPoints = new List<IPEndPoint>();
+            //We create a list of matching IPEndPoints. [0] is remoteEndPoint, [1] will be localEndPoint
+            Dictionary<IPEndPoint, List<IPEndPoint>> matchedIPEndPoints = new Dictionary<IPEndPoint,List<IPEndPoint>>();
             lock (globalDictAndDelegateLocker)
             {
+                #region Match Remote IPEndPoint
+                //If the remoteEndPoint only has a port specified
                 if ((remoteEndPoint.Address == IPAddress.Any || remoteEndPoint.Address == IPAddress.IPv6Any) &&
                     remoteEndPoint.Port > 0)
                 {
                     //If the provided IP is match any then we look for matching ports
-                    foreach (IPEndPoint endPoint in allConnectionsByRemoteIPEndPoint.Keys)
+                    foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint.Keys)
                     {
                         if (endPoint.Port == remoteEndPoint.Port)
-                            matchedIPEndPoints.Add(endPoint);
+                            matchedIPEndPoints.Add(endPoint, new List<IPEndPoint>());
                     }
                 }
                 else if ((remoteEndPoint.Address == IPAddress.Any || remoteEndPoint.Address == IPAddress.IPv6Any) &&
                     remoteEndPoint.Port == 0)
                 {
-                    //If the IPAddress is match any and port is match any
-                    matchedIPEndPoints.AddRange(allConnectionsByRemoteIPEndPoint.Keys);
+                    foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint.Keys)
+                        matchedIPEndPoints.Add(endPoint, new List<IPEndPoint>());
                 }
                 else if ((remoteEndPoint.Address != IPAddress.Any && remoteEndPoint.Address != IPAddress.IPv6Any) &&
                     remoteEndPoint.Port == 0)
                 {
                     //If the provided IP is set but the port is 0 we aim to match the IPAddress
-                    foreach (IPEndPoint endPoint in allConnectionsByRemoteIPEndPoint.Keys)
+                    foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint.Keys)
                     {
                         if (endPoint.Address == remoteEndPoint.Address)
-                            matchedIPEndPoints.Add(endPoint);
+                            matchedIPEndPoints.Add(endPoint, new List<IPEndPoint>());
                     }
                 }
                 else
-                    matchedIPEndPoints.Add(remoteEndPoint);
+                {
+                    if (allConnectionsByIPEndPoint.ContainsKey(remoteEndPoint))
+                        matchedIPEndPoints.Add(remoteEndPoint, new List<IPEndPoint>());
+                }
+                #endregion
+
+                #region Match Local IPEndPoint
+                foreach (KeyValuePair<IPEndPoint, List<IPEndPoint>> keyPair in matchedIPEndPoints)
+                {
+                    //If the localEndPoint only has a port specified
+                    if ((localEndPoint.Address == IPAddress.Any || localEndPoint.Address == IPAddress.IPv6Any) &&
+                        localEndPoint.Port > 0)
+                    {
+                        //If the provided IP is match any then we look for matching ports
+                        foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint[keyPair.Key].Keys)
+                        {
+                            if (endPoint.Port == localEndPoint.Port)
+                                keyPair.Value.Add(endPoint);
+                        }
+                    }
+                    else if ((localEndPoint.Address == IPAddress.Any || localEndPoint.Address == IPAddress.IPv6Any) &&
+                        localEndPoint.Port == 0)
+                    {
+                        foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint[keyPair.Key].Keys)
+                            keyPair.Value.Add(endPoint);
+                    }
+                    else if ((localEndPoint.Address != IPAddress.Any && localEndPoint.Address != IPAddress.IPv6Any) &&
+                        localEndPoint.Port == 0)
+                    {
+                        //If the provided IP is set but the port is 0 we aim to match the IPAddress
+                        foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint[keyPair.Key].Keys)
+                        {
+                            if (endPoint.Address == localEndPoint.Address)
+                                keyPair.Value.Add(endPoint);
+                        }
+                    }
+                    else
+                    {
+                        if (allConnectionsByIPEndPoint[keyPair.Key].ContainsKey(localEndPoint))
+                            keyPair.Value.Add(localEndPoint);
+                    }
+                }
+                #endregion
 
                 //Now pick out all of the matched IPEndPoints and see if there are matched connections
-                foreach (IPEndPoint endPoint in matchedIPEndPoints)
+                foreach (IPEndPoint currentRemoteEndPoint in matchedIPEndPoints.Keys)
                 {
-                    if (allConnectionsByRemoteIPEndPoint.ContainsKey(endPoint))
+                    foreach (IPEndPoint currentLocalEndPoint in matchedIPEndPoints[currentRemoteEndPoint])
                     {
                         if (connectionType == ConnectionType.Undefined)
                         {
-                            foreach (ConnectionType connType in allConnectionsByRemoteIPEndPoint[endPoint].Keys)
+                            foreach (ConnectionType connType in allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint].Keys)
                             {
-                                if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined || allConnectionsByRemoteIPEndPoint[endPoint][connType].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)
-                                    result.Add(allConnectionsByRemoteIPEndPoint[endPoint][connType]);
+                                if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined || allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint][connType].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)
+                                    result.Add(allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint][connType]);
                             }
                         }
                         else
                         {
-                            if (allConnectionsByRemoteIPEndPoint[endPoint].ContainsKey(connectionType) &&
-                                (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined || allConnectionsByRemoteIPEndPoint[endPoint][connectionType].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol))
-                                result.Add(allConnectionsByRemoteIPEndPoint[endPoint][connectionType]);
+                            if (allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint].ContainsKey(connectionType) &&
+                                (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined || allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint][connectionType].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol))
+                                result.Add(allConnectionsByIPEndPoint[currentRemoteEndPoint][currentLocalEndPoint][connectionType]);
                         }
                     }
                 }
@@ -2157,9 +2180,9 @@ namespace NetworkCommsDotNet
             if (LoggingEnabled)
             { 
                 if (result.Count == 0)
-                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. No matching connections were found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "', localEndPoint='"+localEndPoint.Address+":"+localEndPoint.Port+"', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. No matching connections found.");
                 else
-                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. Matching connections were found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "', localEndPoint='" + localEndPoint.Address + ":" + localEndPoint.Port + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. " + result.Count+ " matching connections found.");
             }
 
             return result;
@@ -2177,34 +2200,29 @@ namespace NetworkCommsDotNet
             if (connectionInfo.ConnectionType == ConnectionType.Undefined) throw new ArgumentException("connectionInfo", "Provided ConnectionInfo does not specify a connection type.");
             if (connectionInfo.RemoteEndPoint == null && connectionInfo.LocalEndPoint == null) throw new ArgumentNullException("connectionInfo", "Provided ConnectionInfo must specify either RemoteEndPoint or LocalEndPoint.");
 
-            Connection result = null;
+            List<Connection> result;
             lock (globalDictAndDelegateLocker)
             {
-                //Quickest is to go by endPoint 
-                //We record connections by remoteIPEndPoint
-                IPEndPoint endPointToUse = connectionInfo.RemoteEndPoint;
-
-                //If this connectionInfo object has been instatiated locally the local endPoint may be set instead
-                if (endPointToUse == null) endPointToUse = connectionInfo.LocalEndPoint;
-
-                if (allConnectionsByRemoteIPEndPoint.ContainsKey(endPointToUse) && 
-                    allConnectionsByRemoteIPEndPoint[endPointToUse].ContainsKey(connectionInfo.ConnectionType) &&
-                    allConnectionsByRemoteIPEndPoint[endPointToUse][connectionInfo.ConnectionType].ConnectionInfo.NetworkIdentifier == connectionInfo.NetworkIdentifier &&
-                    allConnectionsByRemoteIPEndPoint[endPointToUse][connectionInfo.ConnectionType].ConnectionInfo.ApplicationLayerProtocol == connectionInfo.ApplicationLayerProtocol)
-                {
-                        result = allConnectionsByRemoteIPEndPoint[endPointToUse][connectionInfo.ConnectionType];
-                }
+                //If the remote end point has not yet been set for the provided info we use the localEndPoint value
+                //and match all localEndPoints
+                if (connectionInfo.RemoteEndPoint == null)
+                    result = GetExistingConnection(connectionInfo.LocalEndPoint, new IPEndPoint(IPAddress.Any, 0), connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
+                else
+                    result = GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
             }
 
             if (LoggingEnabled)
             {
-                if (result == null)
+                if (result.Count == 0)
                     logger.Trace("RetrieveConnection by connectionInfo='" + connectionInfo + "'. No matching connection was found.");
                 else
                     logger.Trace("RetrieveConnection by connectionInfo='" + connectionInfo + "'. Matching connection was found.");
             }
 
-            return result;
+            if (result.Count > 0 && result[0].ConnectionInfo.NetworkIdentifier == connectionInfo.NetworkIdentifier)
+                return result[0];
+            else
+                return null;
         }
 
         /// <summary>
@@ -2240,16 +2258,17 @@ namespace NetworkCommsDotNet
         /// Check if a connection exists with the provided parameters.
         /// </summary>
         /// <param name="remoteEndPoint">IPEndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="localEndPoint">Local IPEndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
         /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>True if a matching connection exists, otherwise false</returns>
-        public static bool ConnectionExists(IPEndPoint remoteEndPoint, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        public static bool ConnectionExists(IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
             if (LoggingEnabled)
                 logger.Trace("Checking for existing connection by endPoint='" + remoteEndPoint.Address + ":" + remoteEndPoint.Port.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'.");
 
-            return GetExistingConnection(remoteEndPoint, connectionType, applicationLayerProtocol).Count > 0;
+            return GetExistingConnection(remoteEndPoint, localEndPoint, connectionType, applicationLayerProtocol).Count > 0;
         }
 
         /// <summary>
@@ -2261,10 +2280,6 @@ namespace NetworkCommsDotNet
         internal static bool RemoveConnectionReference(Connection connection, bool maintainConnectionInfoHistory = true)
         {
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Entering RemoveConnectionReference for " + connection.ConnectionInfo);
-
-            //We don't have the connection identifier until the connection has been established.
-            //if (!connection.ConnectionInfo.ConnectionEstablished && !connection.ConnectionInfo.ConnectionShutdown)
-            //    return false;
 
             if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established && !(connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown))
                 throw new ConnectionShutdownException("A connection can only be removed once correctly shutdown.");
@@ -2283,9 +2298,10 @@ namespace NetworkCommsDotNet
                     allConnectionsByIdentifier[currentNetworkIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
                     allConnectionsByIdentifier[currentNetworkIdentifier][connection.ConnectionInfo.ConnectionType].Contains(connection))
                     ||
-                    (allConnectionsByRemoteIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) &&
-                    allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
-                    allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.ConnectionType] == connection))
+                    (allConnectionsByIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint) &&
+                    allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.LocalEndPoint) &&
+                    allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                    allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint][connection.ConnectionInfo.ConnectionType] == connection))
                 {
                     //Maintain a reference if this is our first connection close
                     returnValue = true;
@@ -2323,19 +2339,24 @@ namespace NetworkCommsDotNet
                 }
 
                 //We can now remove this connection by end point as well
-                if (allConnectionsByRemoteIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
+                if (allConnectionsByIPEndPoint.ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
                 {
-                    if (allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
-                        allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.ConnectionType] == connection)
+                    if (allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.LocalEndPoint) &&
+                        allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint].ContainsKey(connection.ConnectionInfo.ConnectionType) &&
+                        allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint][connection.ConnectionInfo.ConnectionType] == connection)
                     {
-                        allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Remove(connection.ConnectionInfo.ConnectionType);
+                        allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint].Remove(connection.ConnectionInfo.ConnectionType);
 
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removed connection reference by endPoint for " + connection.ConnectionInfo);
                     }
 
+                    if (allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].ContainsKey(connection.ConnectionInfo.LocalEndPoint) &&
+                        allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint][connection.ConnectionInfo.LocalEndPoint].Count == 0)
+                        allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Remove(connection.ConnectionInfo.LocalEndPoint);
+
                     //If this was the last connection type for this endpoint we can remove the endpoint reference as well
-                    if (allConnectionsByRemoteIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
-                        allConnectionsByRemoteIPEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                    if (allConnectionsByIPEndPoint[connection.ConnectionInfo.RemoteEndPoint].Count == 0)
+                        allConnectionsByIPEndPoint.Remove(connection.ConnectionInfo.RemoteEndPoint);
                 }
                 #endregion
             }
@@ -2347,25 +2368,35 @@ namespace NetworkCommsDotNet
         /// Adds a reference by IPEndPoint to the provided connection within networkComms.
         /// </summary>
         /// <param name="connection"></param>
-        /// <param name="remoteIPEndPointToUse">An optional override which forces a specific IPEndPoint</param>
-        internal static void AddConnectionReferenceByRemoteEndPoint(Connection connection, IPEndPoint remoteIPEndPointToUse = null)
+        /// <param name="remoteIPEndPointToUse">An optional override which forces a specific remote IPEndPoint</param>
+        /// <param name="localIPEndPointToUse">An optional override which forces a specific local IPEndPoint</param>
+        internal static void AddConnectionReferenceByRemoteEndPoint(Connection connection, IPEndPoint remoteIPEndPointToUse = null, IPEndPoint localIPEndPointToUse = null)
         {
             if (NetworkComms.LoggingEnabled)
                 NetworkComms.Logger.Trace("Adding connection reference by endPoint. Connection='"+connection.ConnectionInfo+"'." +
                     (remoteIPEndPointToUse != null ? " Provided override endPoint of " + remoteIPEndPointToUse.Address + ":" + remoteIPEndPointToUse.Port.ToString() : ""));
 
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
-            if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || (remoteIPEndPointToUse != null && remoteIPEndPointToUse.Address.Equals(IPAddress.Any)))
+            if (connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) ||
+                connection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.IPv6Any)|| 
+                (remoteIPEndPointToUse != null && remoteIPEndPointToUse.Address.Equals(IPAddress.Any)) ||
+                (remoteIPEndPointToUse != null && remoteIPEndPointToUse.Address.Equals(IPAddress.IPv6Any)))
                 return;
+
+            //A localEndPoint address of IPAddress.Any just means we have not established the connection yet
+            //if (connection.ConnectionInfo.LocalEndPoint.Address.Equals(IPAddress.Any) ||  
+            //    connection.ConnectionInfo.LocalEndPoint.Address.Equals(IPAddress.IPv6Any))
+            //    throw new ConnectionSetupException("Connection local endpoint cannot be IPAddress.Any or IPAddress.IPv6Any at this point.");
 
             if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
             if (remoteIPEndPointToUse == null) remoteIPEndPointToUse = connection.ConnectionInfo.RemoteEndPoint;
+            if (localIPEndPointToUse == null) localIPEndPointToUse = connection.ConnectionInfo.LocalEndPoint;
 
             //We can double check for an existing connection here first so that it occurs outside the lock
             //We look for a connection with either ApplicationProtocolStatus as the endPoint should not be in use
-            List<Connection> existingConnection = GetExistingConnection(remoteIPEndPointToUse, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
+            List<Connection> existingConnection = GetExistingConnection(remoteIPEndPointToUse, connection.ConnectionInfo.LocalEndPoint, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
             if (existingConnection.Count > 0 && connection != existingConnection[0] &&
                 ((existingConnection[0].ConnectionInfo.ConnectionType == ConnectionType.UDP && existingConnection[0].ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled) || 
                 existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Established)) 
@@ -2381,11 +2412,11 @@ namespace NetworkCommsDotNet
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)
             {
+                existingConnection = GetExistingConnection(remoteIPEndPointToUse, connection.ConnectionInfo.LocalEndPoint, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
                 //We now check for an existing connection again from within the lock
-                if (ConnectionExists(remoteIPEndPointToUse, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined))
+                if (existingConnection.Count > 0)
                 {
                     //If a connection still exist we don't assume it is the same as above
-                    existingConnection = GetExistingConnection(remoteIPEndPointToUse, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
                     if (existingConnection[0] != connection)
                     {
                         throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + remoteIPEndPointToUse.Address + ":" + remoteIPEndPointToUse.Port.ToString() + "). This can occur if the connections have different ApplicationProtocolLayer statuses or two peers try to connect to each other simultaneously. New connection is " + (existingConnection[0].ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
@@ -2405,15 +2436,20 @@ namespace NetworkCommsDotNet
 #endif
 
                     //Add reference to the endPoint dictionary
-                    if (allConnectionsByRemoteIPEndPoint.ContainsKey(remoteIPEndPointToUse))
+                    if (allConnectionsByIPEndPoint.ContainsKey(remoteIPEndPointToUse))
                     {
-                        if (allConnectionsByRemoteIPEndPoint[remoteIPEndPointToUse].ContainsKey(connection.ConnectionInfo.ConnectionType))
-                            throw new Exception("Idiot check fail. The method ConnectionExists should have prevented execution getting here!!");
+                        if (allConnectionsByIPEndPoint[remoteIPEndPointToUse].ContainsKey(localIPEndPointToUse))
+                        {
+                            if (allConnectionsByIPEndPoint[remoteIPEndPointToUse][localIPEndPointToUse].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                                throw new Exception("Idiot check fail. The method ConnectionExists should have prevented execution getting here!!");
+                            else
+                                allConnectionsByIPEndPoint[remoteIPEndPointToUse][localIPEndPointToUse].Add(connection.ConnectionInfo.ConnectionType, connection);
+                        }
                         else
-                            allConnectionsByRemoteIPEndPoint[remoteIPEndPointToUse].Add(connection.ConnectionInfo.ConnectionType, connection);
+                            allConnectionsByIPEndPoint[remoteIPEndPointToUse].Add(localIPEndPointToUse, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
                     }
                     else
-                        allConnectionsByRemoteIPEndPoint.Add(remoteIPEndPointToUse, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } });
+                        allConnectionsByIPEndPoint.Add(remoteIPEndPointToUse, new Dictionary<IPEndPoint, Dictionary<ConnectionType, Connection>>() { { localIPEndPointToUse, new Dictionary<ConnectionType, Connection>() { { connection.ConnectionInfo.ConnectionType, connection } } } });
 
                     if (NetworkComms.LoggingEnabled)
                         NetworkComms.Logger.Trace("Completed adding connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'.");
@@ -2426,17 +2462,18 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="newRemoteEndPoint"></param>
-        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newRemoteEndPoint)
+        /// <param name="newLocalEndPoint"></param>
+        internal static void UpdateConnectionReferenceByEndPoint(Connection connection, IPEndPoint newRemoteEndPoint, IPEndPoint newLocalEndPoint)
         {
             if (NetworkComms.LoggingEnabled)
                 NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.Address + ":" + newRemoteEndPoint.Port.ToString() : ""));
 
-            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint))
+            if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint) || !connection.ConnectionInfo.LocalEndPoint.Equals(newLocalEndPoint))
             {
                 lock (globalDictAndDelegateLocker)
                 {
                     RemoveConnectionReference(connection, false);
-                    AddConnectionReferenceByRemoteEndPoint(connection, newRemoteEndPoint);
+                    AddConnectionReferenceByRemoteEndPoint(connection, newRemoteEndPoint, newLocalEndPoint);
                 }
             }
         }
@@ -2459,7 +2496,7 @@ namespace NetworkCommsDotNet
             lock (globalDictAndDelegateLocker)
             {
                 //There should already be a reference to this connection in the endPoint dictionary
-                if (!ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType, connection.ConnectionInfo.ApplicationLayerProtocol))
+                if (!ConnectionExists(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.LocalEndPoint, connection.ConnectionInfo.ConnectionType, connection.ConnectionInfo.ApplicationLayerProtocol))
                     throw new ConnectionSetupException("A reference by identifier should only be added if a reference by endPoint already exists.");
 
                 //Check for an existing reference first, if there is one and it matches this connection then no worries
@@ -2471,9 +2508,13 @@ namespace NetworkCommsDotNet
                         {
                             foreach (var current in allConnectionsByIdentifier[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType])
                             {
-                                if (current.ConnectionInfo.RemoteEndPoint.Equals(connection.ConnectionInfo.RemoteEndPoint))
-                                    throw new ConnectionSetupException("A different connection to the same remoteEndPoint already exists. Duplicate connections should be prevented elsewhere. Existing connection " + current.ConnectionInfo + ", new connection " + connection.ConnectionInfo);
+                                if (current.ConnectionInfo.RemoteEndPoint.Equals(connection.ConnectionInfo.RemoteEndPoint) &&
+                                    current.ConnectionInfo.LocalEndPoint.Equals(connection.ConnectionInfo.LocalEndPoint))
+                                    throw new ConnectionSetupException("A different connection to the same remoteEndPoint and localEndPoint already exists. Duplicate connections should be prevented elsewhere. Existing connection " + current.ConnectionInfo + ", new connection " + connection.ConnectionInfo);
                             }
+
+                            //Only if we make it this far do we add another connection reference
+                            allConnectionsByIdentifier[connection.ConnectionInfo.NetworkIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection);
                         }
                         else
                         {

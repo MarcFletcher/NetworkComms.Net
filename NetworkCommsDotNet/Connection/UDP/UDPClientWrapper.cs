@@ -29,9 +29,9 @@ namespace NetworkCommsDotNet
     //UdpClientThreadSafe not yet required for WP8
 #else
     /// <summary>
-    /// Threadsafe wrapper around a udpClient object as it may be used by multiple UDP connections at any one time.
+    /// Wrapper around a udpClient object so that we can easily check usage.
     /// </summary>
-    class UdpClientThreadSafe
+    class UdpClientWrapper
     {
         UdpClient udpClient;
         bool isConnected;
@@ -42,7 +42,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         const int SIO_UDP_CONNRESET = -1744830452;
 
-        public UdpClientThreadSafe(UdpClient udpClient)
+        public UdpClientWrapper(UdpClient udpClient)
         {
             this.udpClient = udpClient;
 
@@ -56,8 +56,8 @@ namespace NetworkCommsDotNet
 
         public void Send(byte[] dgram, int bytes, IPEndPoint endPoint)
         {
-            lock (locker)
-            {
+            //lock (locker)
+            //{
                 if (isConnected)
                 {
                     if (!endPoint.Equals(udpClient.Client.RemoteEndPoint))
@@ -67,22 +67,22 @@ namespace NetworkCommsDotNet
                 }
                 else
                     udpClient.Send(dgram, bytes, endPoint);
-            }
+            //}
         }
 
         public void Connect(IPEndPoint endPoint)
         {
-            lock (locker)
-            {
+            //lock (locker)
+            //{
                 isConnected = true;
                 udpClient.Connect(endPoint);
-            }
+            //}
         }
 
         public void CloseClient()
         {
-            lock (locker)
-            {
+            //lock (locker)
+            //{
                 try
                 {
                     udpClient.Client.Disconnect(false);
@@ -100,7 +100,7 @@ namespace NetworkCommsDotNet
                 catch (Exception)
                 {
                 }
-            }
+            //}
         }
 
         public byte[] Receive(ref IPEndPoint remoteEP)
@@ -111,13 +111,13 @@ namespace NetworkCommsDotNet
 
         public IAsyncResult BeginReceive(AsyncCallback requestCallback, object state)
         {
-            lock (locker)
+            //lock (locker)
                 return udpClient.BeginReceive(requestCallback, state);
         }
 
         public byte[] EndReceive(IAsyncResult asyncResult, ref IPEndPoint remoteEP)
         {
-            lock (locker)
+            //lock (locker)
                 return udpClient.EndReceive(asyncResult, ref remoteEP);
         }
 
@@ -125,7 +125,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-                lock (locker)
+                //lock (locker)
                     return udpClient.Client.AddressFamily;
             }
         }
@@ -134,7 +134,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-                lock (locker)
+                //lock (locker)
                     return (IPEndPoint)udpClient.Client.RemoteEndPoint;
             }
         }
@@ -143,7 +143,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-                lock (locker)
+                //lock (locker)
                     return (IPEndPoint)udpClient.Client.LocalEndPoint;
             }
         }
@@ -152,7 +152,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-                lock (locker)
+                //lock (locker)
                     return udpClient.Available > 0;
             }
         }

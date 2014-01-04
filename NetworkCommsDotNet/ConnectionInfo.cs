@@ -22,6 +22,7 @@ using System.Text;
 using ProtoBuf;
 using System.Net;
 using DPSBase;
+using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
@@ -170,6 +171,7 @@ namespace NetworkCommsDotNet
         public ConnectionInfo(IPEndPoint remoteEndPoint)
         {
             this.RemoteEndPoint = remoteEndPoint;
+            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
@@ -188,6 +190,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
 
             this.RemoteEndPoint = remoteEndPoint;
+            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -207,6 +210,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
+            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
@@ -232,6 +236,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
+            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -246,8 +251,12 @@ namespace NetworkCommsDotNet
         /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
         public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable)
         {
+            if (localEndPoint == null)
+                throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
+
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
+            this.RemoteEndPoint = new IPEndPoint((localEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
@@ -266,12 +275,16 @@ namespace NetworkCommsDotNet
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, IPEndPoint localEndPoint, bool isConnectable, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            if (localEndPoint == null)
+                throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
+
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
 
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
+            this.RemoteEndPoint = new IPEndPoint((localEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.IsConnectable = isConnectable;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -294,6 +307,7 @@ namespace NetworkCommsDotNet
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
+            this.LocalEndPoint = new IPEndPoint((remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -311,6 +325,9 @@ namespace NetworkCommsDotNet
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, IPEndPoint localEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
+            if (localEndPoint == null)
+                throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
+
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
 
@@ -394,6 +411,9 @@ namespace NetworkCommsDotNet
         /// <param name="localEndPoint"></param>
         internal void UpdateLocalEndPointInfo(IPEndPoint localEndPoint)
         {
+            if (localEndPoint == null)
+                throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null.");
+
             lock (internalLocker)
             {
                 hashCodeCacheSet = false;
@@ -487,6 +507,8 @@ namespace NetworkCommsDotNet
             else if (((object)left) == null || ((object)right) == null) return false;
             else
             {
+                if (left.RemoteEndPoint != null && right.RemoteEndPoint != null && left.LocalEndPoint != null && right.LocalEndPoint != null)
+                    return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint) && left.LocalEndPoint.Equals(right.LocalEndPoint) && left.ApplicationLayerProtocol == right.ApplicationLayerProtocol);
                 if (left.RemoteEndPoint != null && right.RemoteEndPoint != null)
                     return (left.NetworkIdentifier.ToString() == right.NetworkIdentifier.ToString() && left.RemoteEndPoint.Equals(right.RemoteEndPoint) && left.ApplicationLayerProtocol == right.ApplicationLayerProtocol);
                 else if (left.LocalEndPoint != null && right.LocalEndPoint != null)

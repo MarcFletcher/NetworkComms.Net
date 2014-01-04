@@ -428,7 +428,7 @@ namespace NetworkCommsDotNet
                             TcpListener listener = currentTCPListeners[i];
                             ApplicationLayerProtocolStatus applicationLayerProtocol = currentTCPListenerAppLayProtocol[i];
 
-                            if (listener.Pending() && !shutdownIncomingConnectionWorkerThread)
+                            if (!shutdownIncomingConnectionWorkerThread && listener.Pending())
                             {
                                 pickedUpNewConnection = true;
 

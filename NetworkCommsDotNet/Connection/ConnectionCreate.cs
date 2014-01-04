@@ -87,8 +87,8 @@ namespace NetworkCommsDotNet
                 throw new ConnectionSetupException("ConnectionType and RemoteEndPoint must be defined within provided ConnectionInfo.");
 
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
-            if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
-                throw new ConnectionSetupException("A " + connectionInfo.ConnectionType + " connection already exists with " + connectionInfo.RemoteEndPoint);
+            if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
+                throw new ConnectionSetupException("A " + connectionInfo.ConnectionType + " connection already exists with info " + connectionInfo);
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
             NetworkComms.AddConnectionReferenceByRemoteEndPoint(this);
@@ -124,7 +124,7 @@ namespace NetworkCommsDotNet
 
                     EstablishConnectionSpecific();
 
-                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Connection was closed during establish handshake.");
+                    if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Connection was closed immediately after handshake. This can occur if a different thread used and subsequently closed this connection.");
 
                     //Once the above has been done the last step is to allow other threads to use the connection
                     ConnectionInfo.NoteCompleteConnectionEstablish();
@@ -172,27 +172,10 @@ namespace NetworkCommsDotNet
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
                 throw new CommunicationException("Attempted to perform handshake on connection where the application protocol has been disabled.");
 
-            //Get a list of existing listeners
-            List<IPEndPoint> existingLocalListeners;
-            if (ConnectionInfo.ConnectionType == ConnectionType.TCP)
-                existingLocalListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
-            else if (ConnectionInfo.ConnectionType == ConnectionType.UDP)
-                existingLocalListeners = UDPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
-            else
-                throw new NotImplementedException("ConnectionHandshake has only been implemented for TCP and UDP connections.");
-
-            //Check to see if we have a local listener for matching the local endpoint address
-            //If we are client side we use this local listener in our reply to the server
-            IPEndPoint selectedExistingListener = null;
-            if (existingLocalListeners.Count > 0)
-                selectedExistingListener = (existingLocalListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingLocalListeners[0]);
-
             //If we are server side and we have just received an incoming connection we need to return a conneciton id
             //This id will be used in all future connections from this machine
             if (ConnectionInfo.ServerSide)
             {
-                if (selectedExistingListener == null) throw new ConnectionSetupException("Detected a server side connection when an existing listener was not present.");
-
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
                 //Wait for the client to send its identification
@@ -207,25 +190,43 @@ namespace NetworkCommsDotNet
 
                 //Trigger the connection establish delegates before replying to the connection establish 
                 TriggerConnectionEstablishDelegates();
-
-                //Once we have the clients id we send our own
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, selectedExistingListener.Port), true), NetworkComms.InternalFixedSendReceiveOptions);
             }
             else
             {
+                //If we are client side part of the handshake is to inform the server of a potential local listener
+                //Get a list of existing listeners
+                List<IPEndPoint> existingLocalListeners;
+                if (ConnectionInfo.ConnectionType == ConnectionType.TCP)
+                    existingLocalListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+                else if (ConnectionInfo.ConnectionType == ConnectionType.UDP)
+                    existingLocalListeners = UDPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
+                else
+                    throw new NotImplementedException("ConnectionHandshake has only been implemented for TCP and UDP connections.");
+
+                //Check to see if we have a local listener for matching the local endpoint address
+                //If we are client side we use this local listener in our reply to the server
+                IPEndPoint selectedExistingLocalListenerIPEndPoint = null;
+                if (existingLocalListeners.Count > 0)
+                    selectedExistingLocalListenerIPEndPoint = (existingLocalListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingLocalListeners[0]);
+
                 //During this exchange we may note an update local listen port
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
 
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.RemoteEndPoint.Address, (selectedExistingListener != null ? selectedExistingListener.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingListener != null), NetworkComms.InternalFixedSendReceiveOptions);
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, (selectedExistingLocalListenerIPEndPoint != null ? selectedExistingLocalListenerIPEndPoint.Port : ConnectionInfo.LocalEndPoint.Port)), selectedExistingLocalListenerIPEndPoint != null), NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
-                if (selectedExistingListener != null) ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingListener);
+                if (selectedExistingLocalListenerIPEndPoint != null && selectedExistingLocalListenerIPEndPoint != ConnectionInfo.LocalEndPoint)
+                {
+                    //We should now be able to set the connectionInfo localEndPoint
+                    NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, selectedExistingLocalListenerIPEndPoint);
+                    ConnectionInfo.UpdateLocalEndPointInfo(selectedExistingLocalListenerIPEndPoint);
+                }
 
                 if (connectionSetupException)
                 {
@@ -297,19 +298,19 @@ namespace NetworkCommsDotNet
             else
             {
                 //We use the following bool to track a possible existing connection which needs closing
-                bool possibleClashConnectionWithPeer_ByEndPoint = false;
+                bool possibleClashWithExistingConnection = false;
                 Connection existingConnection = null;
 
                 //We first try to establish everything within this lock in one go
                 //If we can't quite complete the establish we have to come out of the lock at try to sort the problem
-                bool connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+                bool connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashWithExistingConnection, ref existingConnection);
 
                 //If we were not succesfull at establishing the connection we need to sort it out!
                 if (!connectionEstablishedSuccess && !connectionSetupException)
                 {
                     if (existingConnection == null) throw new Exception("Connection establish issues and existingConnection was left as null.");
 
-                    if (possibleClashConnectionWithPeer_ByEndPoint)
+                    if (possibleClashWithExistingConnection)
                     {
                         //If we have a clash by endPoint we test the existing connection
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Existing connection with " + ConnectionInfo + ". Testing existing connection.");
@@ -326,7 +327,7 @@ namespace NetworkCommsDotNet
                     if (!connectionSetupException)
                     {
                         //Once we have tried to sort the problem we can try to finish the establish one last time
-                        connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashConnectionWithPeer_ByEndPoint, ref existingConnection);
+                        connectionEstablishedSuccess = ConnectionSetupHandlerFinal(remoteConnectionInfo, ref possibleClashWithExistingConnection, ref existingConnection);
 
                         //If we still failed then that's it for this establish
                         if (!connectionEstablishedSuccess && !connectionSetupException)
@@ -336,6 +337,10 @@ namespace NetworkCommsDotNet
                         }
                     }
                 }
+
+                //If we are server side and we recieve a succesfull connection setup we can respond to here
+                if (connectionEstablishedSuccess && ConnectionInfo.ServerSide)
+                    SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, NetworkComms.NetworkIdentifier, ConnectionInfo.LocalEndPoint, true), NetworkComms.InternalFixedSendReceiveOptions);
             }
 
             //Trigger any setup waits
@@ -346,14 +351,14 @@ namespace NetworkCommsDotNet
         /// Attempts to complete the connection establish with a minimum of locking to prevent possible deadlocking
         /// </summary>
         /// <param name="remoteConnectionInfo"><see cref="ConnectionInfo"/> corresponding with remoteEndPoint</param>
-        /// <param name="possibleClashConnectionWithPeer_ByEndPoint">True if a connection already exists with provided remoteEndPoint</param>
+        /// <param name="possibleClashWithExistingConnection">True if a connection already exists with provided remoteEndPoint</param>
         /// <param name="existingConnection">A reference to an existing connection if it exists</param>
         /// <returns>True if connection is successfully setup, otherwise false</returns>
-        private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashConnectionWithPeer_ByEndPoint, ref Connection existingConnection)
+        private bool ConnectionSetupHandlerFinal(ConnectionInfo remoteConnectionInfo, ref bool possibleClashWithExistingConnection, ref Connection existingConnection)
         {
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
-                List<Connection> connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.ConnectionType, ConnectionInfo.ApplicationLayerProtocol);
+                List<Connection> connectionByEndPoint = NetworkComms.GetExistingConnection(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionInfo.ConnectionType, ConnectionInfo.ApplicationLayerProtocol);
 
                 //If we no longer have the original endPoint reference (set in the constructor) then the connection must have been closed already
                 if (connectionByEndPoint.Count == 0)
@@ -373,8 +378,58 @@ namespace NetworkCommsDotNet
                     }
                     else if (connectionByEndPoint[0] != this)
                     {
-                        possibleClashConnectionWithPeer_ByEndPoint = true;
+                        possibleClashWithExistingConnection = true;
                         existingConnection = connectionByEndPoint[0];
+                    }
+                    else if (connectionByEndPoint[0].ConnectionInfo.NetworkIdentifier != ShortGuid.Empty &&
+                        connectionByEndPoint[0].ConnectionInfo.NetworkIdentifier != remoteConnectionInfo.NetworkIdentifier)
+                    {
+                        //We are in the same connection, so don't need to throw and exception but the remote network identifier 
+                        //has changed.
+                        //This can happen for connection types where the local connection (this) may not have been closed
+                        //when the remote peer closed. We need to trigger the connection close delegates with the old info, update
+                        //the connection info and then call the establish delegates
+                        #region Reset Connection without closing
+                        //Call the connection close delegates
+                        try
+                        {
+                            //Almost there
+                            //Last thing is to call any connection specific shutdown delegates
+                            if (ConnectionSpecificShutdownDelegate != null)
+                            {
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Triggered connection specific shutdown delegates with " + ConnectionInfo);
+                                ConnectionSpecificShutdownDelegate(this);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                        }
+
+                        try
+                        {
+                            //Last but not least we call any global connection shutdown delegates
+                            if (NetworkComms.globalConnectionShutdownDelegates != null)
+                            {
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Triggered global shutdown delegates with " + ConnectionInfo);
+                                NetworkComms.globalConnectionShutdownDelegates(this);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            NetworkComms.LogError(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                        }
+
+                        IPEndPoint newRemoteIPEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteEndPoint.Address, remoteConnectionInfo.LocalEndPoint.Port);
+                        NetworkComms.UpdateConnectionReferenceByEndPoint(this, newRemoteIPEndPoint, this.ConnectionInfo.LocalEndPoint);
+
+                        ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo, newRemoteIPEndPoint);
+
+                        //Trigger the establish delegates
+                        TriggerConnectionEstablishDelegates();
+                        #endregion
+
+                        return true;
                     }
                     else
                     {
@@ -382,7 +437,7 @@ namespace NetworkCommsDotNet
                         //We never change the this.ConnectionInfo.RemoteEndPoint.Address as there might be NAT involved
                         //We may update the port however
                         IPEndPoint newRemoteIPEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteEndPoint.Address, remoteConnectionInfo.LocalEndPoint.Port);
-                        NetworkComms.UpdateConnectionReferenceByEndPoint(this, newRemoteIPEndPoint);
+                        NetworkComms.UpdateConnectionReferenceByEndPoint(this, newRemoteIPEndPoint, this.ConnectionInfo.LocalEndPoint);
 
                         ConnectionInfo.UpdateInfoAfterRemoteHandshake(remoteConnectionInfo, newRemoteIPEndPoint);
 

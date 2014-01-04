@@ -250,6 +250,9 @@ namespace DistributedFileSystem
 
         public PeerInfo(List<ConnectionInfo> peerConnectionInfo, ChunkFlags peerChunkFlags, bool superPeer)
         {
+            if (peerConnectionInfo.Count == 0)
+                throw new ArgumentException("Provided peerConnectionInfo list must contain atleast one element.");
+
             this.PeerNetworkIdentifier = peerConnectionInfo[0].NetworkIdentifier;
 
             if (this.PeerNetworkIdentifier == null || this.PeerNetworkIdentifier == ShortGuid.Empty)
@@ -840,7 +843,8 @@ namespace DistributedFileSystem
                 //Extract the correct endpoint from the provided connectionInfo
                 //If this is taken from a connection we are after the remoteEndPoint
                 IPEndPoint endPointToUse = null;
-                if (connectionInfo.RemoteEndPoint == null)
+                if (connectionInfo.RemoteEndPoint.Address == IPAddress.Any || 
+                    connectionInfo.RemoteEndPoint.Address == IPAddress.IPv6Any)
                     endPointToUse = connectionInfo.LocalEndPoint;
                 else
                     endPointToUse = connectionInfo.RemoteEndPoint;
@@ -874,6 +878,11 @@ namespace DistributedFileSystem
                         //We used comms to get any existing connections to the peer
                         //We have to create new ConnectionInfo in the select as we need to correctly set the "LOCAL IPEndPoint" when passing to new PeerInfo()
                         List<ConnectionInfo> peerConnectionInfos = (from current in NetworkComms.GetExistingConnection(connectionInfo.NetworkIdentifier, ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, current.ConnectionInfo.NetworkIdentifier, current.ConnectionInfo.RemoteEndPoint, true)).ToList();
+                        
+                        //Don't forget to add the originating info if it was not pulled out from above
+                        ConnectionInfo originatingConnectionInfo = new ConnectionInfo(ConnectionType.TCP, connectionInfo.NetworkIdentifier, endPointToUse, true);
+                        if (!peerConnectionInfos.Contains(originatingConnectionInfo)) peerConnectionInfos.Add(originatingConnectionInfo);
+                        
                         peerAvailabilityByNetworkIdentifierDict.Add(connectionInfo.NetworkIdentifier, new PeerInfo(peerConnectionInfos, latestChunkFlags, superPeer));
 
                         //We finish by adding the endPoint references

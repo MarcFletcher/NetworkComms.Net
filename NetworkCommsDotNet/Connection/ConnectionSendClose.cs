@@ -429,6 +429,11 @@ namespace NetworkCommsDotNet
                 NetworkComms.Logger.Trace("Entering packet send of '" + packet.PacketHeader.PacketType + "' packetType to " + ConnectionInfo + (packetDataMD5 == "" ? "" : ". PacketCheckSum="+packetDataMD5));
             }
 
+            if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired) &&
+                ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
+                throw new ArgumentException("Provided sendReceiveOptions specified ReceiveConfirmationRequired which is invalid for" +
+            "connections which do not enable the application protocol. Please check provided sendReceiveOptions including global defaults and try again.");
+
             //Multiple threads may try to send packets at the same time so wait one at a time here
             lock (sendLocker)
             {

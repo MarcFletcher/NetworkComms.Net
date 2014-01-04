@@ -123,14 +123,16 @@ namespace NetworkCommsDotNet
 
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
+                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
+
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
-                if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
+                if (existingConnections.Count > 0)
                 {
                     if (NetworkComms.LoggingEnabled)
                         NetworkComms.Logger.Trace("Attempted to create new TCPConnection to connectionInfo='" + connectionInfo + "' but there is an existing connection. Existing connection will be returned instead.");
 
                     establishIfRequired = false;
-                    connection = (TCPConnection)NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol)[0];
+                    connection = (TCPConnection)existingConnections[0];
                 }
                 else
                 {
@@ -194,6 +196,7 @@ namespace NetworkCommsDotNet
             var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.CanonicalName.ToString()), int.Parse(socket.Information.LocalPort));
 
             //We should now be able to set the connectionInfo localEndPoint
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
 
             //Set the outgoing buffer size
@@ -202,6 +205,7 @@ namespace NetworkCommsDotNet
             if (tcpClient == null) ConnectSocket();
 
             //We should now be able to set the connectionInfo localEndPoint
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, (IPEndPoint)tcpClient.Client.LocalEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
@@ -327,7 +331,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void StartIncomingDataListen()
         {
-            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
+            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
             {
                 CloseConnection(true, 18);
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");

@@ -117,8 +117,8 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
       <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientThreadSafe.cs">
-      <Link>Connection\UDP\UDPClientThreadSafe.cs</Link>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientWrapper.cs">
+      <Link>Connection\UDP\UDPClientWrapper.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnection.cs">
       <Link>Connection\UDP\UDPConnection.cs</Link>
