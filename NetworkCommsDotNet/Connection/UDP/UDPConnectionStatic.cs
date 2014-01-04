@@ -90,19 +90,7 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
-            else
-            {
-                //For unmanaged connections we need to make sure that the NullSerializer is being used.
-                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
-
-                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                if (optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                    optionsToUse = new SendReceiveOptions<NullSerializer>();
-
-                return GetConnection(connectionInfo, optionsToUse, level, listenForReturnPackets, null, null, establishIfRequired);
-            }
+            return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
         }
 
         /// <summary>
@@ -117,9 +105,6 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
-
             return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
         }
 
@@ -136,9 +121,6 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingListenerConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
-
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
             bool newConnection = false;
@@ -384,16 +366,11 @@ namespace NetworkCommsDotNet
                     udpConnectionListeners[newLocalEndPoint].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol) 
                     return;
 
-                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
-                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                    optionsToUse = new SendReceiveOptions<NullSerializer>();
-
                 UDPConnection newListeningConnection;
 
                 try
                 {
-                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint, applicationLayerProtocol), optionsToUse, UDPConnection.DefaultUDPOptions, true);
+                    newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), newLocalEndPoint, applicationLayerProtocol), NetworkComms.DefaultSendReceiveOptions, UDPConnection.DefaultUDPOptions, true);
                 }
                 catch (SocketException)
                 {
@@ -401,7 +378,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0), applicationLayerProtocol), optionsToUse, UDPConnection.DefaultUDPOptions, true);
+                            newListeningConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(newLocalEndPoint.Address, 0), applicationLayerProtocol), NetworkComms.DefaultSendReceiveOptions, UDPConnection.DefaultUDPOptions, true);
                         }
                         catch (SocketException)
                         {
@@ -596,13 +573,26 @@ namespace NetworkCommsDotNet
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.", "applicationLayerProtocol");
+
+            if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
+                throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
+                    " options specified the ReceiveConfirmationRequired option, which is unsupported. Please create a specific connection"+
+                    "instance to use this feature.", "defaultSendReceiveOptions");
 
             //Check the send recieve options
-            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && sendReceiveOptions == null)
-                sendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
-            else if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && sendReceiveOptions == null)
-                sendReceiveOptions = new SendReceiveOptions<NullSerializer>();
+            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
+            {
+                if (sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
+                        " options serializer was not NullSerializer. Please provide compatible send receive options in order to succesfully" +
+                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+
+                if (sendReceiveOptions.DataProcessors.Count > 0)
+                    throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
+                        " options contains data processors. Data processors may not be used with unmanaged connections." +
+                        " Please provide compatible send receive options in order to succesfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+            }
 
             UDPConnection connectionToUse = null;
 

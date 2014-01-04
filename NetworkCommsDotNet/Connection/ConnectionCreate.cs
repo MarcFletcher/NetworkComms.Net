@@ -61,10 +61,23 @@ namespace NetworkCommsDotNet
         {
             //If the application layer protocol is disabled the serializer must be NullSerializer
             //and no data processors are allowed.
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && 
-                (defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>() ||
-                defaultSendReceiveOptions.DataProcessors.Count > 0))
-                throw new ConnectionSetupException("Attempted to create new connection where ApplicationLayerProtocol is disabled and the provided serializer is not NullSerializer or data processors were specified.");
+            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
+            {
+                if (defaultSendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
+                    throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
+                        " options specified the ReceiveConfirmationRequired option. Please provide compatible send receive options in order to succesfully" +
+                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+
+                if (NetworkComms.DefaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
+                        " options serializer was not NullSerializer. Please provide compatible send receive options in order to succesfully" +
+                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+
+                if (NetworkComms.DefaultSendReceiveOptions.DataProcessors.Count > 0)
+                    throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
+                        " options contains data processors. Data processors may not be used with unmanaged connections." +
+                        " Please provide compatible send receive options in order to succesfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+            }
 
             SendTimesMSPerKBCache = new CommsMath();
             dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];

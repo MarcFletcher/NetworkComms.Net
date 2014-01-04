@@ -2251,8 +2251,8 @@ namespace NetworkCommsDotNet
         /// <returns>The desired connection. If no matching connection exists returns null.</returns>
         public static Connection GetExistingConnection(ConnectionInfo connectionInfo)
         {
-            if (connectionInfo == null) throw new ArgumentNullException("connectionInfo", "Provided ConnectionInfo cannot be null.");
-            if (connectionInfo.ConnectionType == ConnectionType.Undefined) throw new ArgumentException("connectionInfo", "Provided ConnectionInfo does not specify a connection type.");
+            if (connectionInfo == null) throw new ArgumentNullException("Provided ConnectionInfo cannot be null.", "connectionInfo");
+            if (connectionInfo.ConnectionType == ConnectionType.Undefined) throw new ArgumentException("Provided ConnectionInfo does not specify a connection type.", "connectionInfo");
             if (connectionInfo.RemoteEndPoint == null && connectionInfo.LocalEndPoint == null) throw new ArgumentNullException("connectionInfo", "Provided ConnectionInfo must specify either RemoteEndPoint or LocalEndPoint.");
 
             List<Connection> result;

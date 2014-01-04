@@ -61,19 +61,7 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                return GetConnection(connectionInfo, null, null, establishIfRequired);
-            else
-            {
-                //For unmanaged connections we need to make sure that the NullSerializer is being used.
-                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
-
-                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                if (optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                    optionsToUse = new SendReceiveOptions<NullSerializer>();
-
-                return GetConnection(connectionInfo, optionsToUse, null, establishIfRequired);
-            }
+            return GetConnection(connectionInfo, null, null, establishIfRequired);
         }
 
         /// <summary>
@@ -86,9 +74,6 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
-
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
         }
 
@@ -106,9 +91,6 @@ namespace NetworkCommsDotNet
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired = true)
 #endif
         {
-            if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ConnectionSetupException("Attempted to get connection where ApplicationLayerProtocolEnabled is false and the provided serializer is not NullSerializer.");
-
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
             //If we have a tcpClient at this stage we must be serverside

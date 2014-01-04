@@ -187,7 +187,7 @@ namespace NetworkCommsDotNet
         public ConnectionInfo(IPEndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             this.RemoteEndPoint = remoteEndPoint;
             this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
@@ -229,7 +229,7 @@ namespace NetworkCommsDotNet
         public ConnectionInfo(string remoteIPAddress, int remotePort, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             IPAddress ipAddress;
             if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
@@ -279,7 +279,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
 
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
@@ -302,7 +302,7 @@ namespace NetworkCommsDotNet
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, IPEndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
@@ -329,7 +329,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
 
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("applicationLayerProtocol", "A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.");
+                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;

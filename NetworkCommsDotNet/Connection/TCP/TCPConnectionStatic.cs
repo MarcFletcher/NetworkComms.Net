@@ -340,13 +340,6 @@ namespace NetworkCommsDotNet
                     newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)), applicationLayerProtocolStatus);
                 else
                     newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)));
-                
-                //For unmanaged connections we need to make sure that the NullSerializer is being used.
-                SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
-
-                //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                if (newConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                    optionsToUse = new SendReceiveOptions<NullSerializer>();
 
                 TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
             }
@@ -441,14 +434,7 @@ namespace NetworkCommsDotNet
                                     #region Pickup The New Connection
                                     try
                                     {
-                                        //For unmanaged connections we need to make sure that the NullSerializer is being used.
-                                        SendReceiveOptions optionsToUse = NetworkComms.DefaultSendReceiveOptions;
-
-                                        //If the default data serializer is not NullSerializer we create custom options for unmanaged connections.
-                                        if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                                            optionsToUse = new SendReceiveOptions<NullSerializer>();
-
-                                        GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint, applicationLayerProtocol), optionsToUse, newClient, true);
+                                        GetConnection(new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newClient.Client.RemoteEndPoint, applicationLayerProtocol), NetworkComms.DefaultSendReceiveOptions, newClient, true);
                                     }
                                     catch (ConfirmationTimeoutException)
                                     {
