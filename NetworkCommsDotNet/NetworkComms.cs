@@ -1058,14 +1058,17 @@ namespace NetworkCommsDotNet
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
         public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
         {
-            //Get the default sendRecieveOptions 
-            SendReceiveOptions optionsToUse = DefaultSendReceiveOptions;
+            //Checks for unmanaged packet types
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+            {
+                if (DefaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new InvalidOperationException("Attempted to add packet handler for an unmanaged packet type when the global send receive options serializer was not NullSerializer.");
 
-            //If the default data serializer is not NullSerializer we create custom options for unmanaged data types here.
-            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged) && optionsToUse.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                optionsToUse = new SendReceiveOptions<NullSerializer>();
-            
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, optionsToUse);
+                if (DefaultSendReceiveOptions.DataProcessors.Count > 0)
+                    throw new InvalidOperationException("Attempted to add packet handler for an unmanaged packet type when the global send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
+            }
+
+            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, DefaultSendReceiveOptions);
         }
 
         /// <summary>
@@ -1082,8 +1085,15 @@ namespace NetworkCommsDotNet
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions cannot be null.");
 
             //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
-            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged) && sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                throw new ArgumentException("sendReceiveOptions", "Provided SendReceiveOptions must use the NullSerializer for unmanaged packet types.");
+            //Checks for unmanaged packet types
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+            {
+                if (sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options serializer was not NullSerializer.");
+
+                if (sendReceiveOptions.DataProcessors.Count > 0)
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
+            }
 
             lock (globalDictAndDelegateLocker)
             {
@@ -1095,7 +1105,6 @@ namespace NetworkCommsDotNet
                 }
                 else
                     globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
-                
 
                 //Ad the handler to the list
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
@@ -1123,6 +1132,24 @@ namespace NetworkCommsDotNet
 
                 if (LoggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
             }
+        }
+
+        /// <summary>
+        /// Add an incoming packet handler for unmanaged packets. Multiple handlers will be executed in the order they are added.
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The delegate to be executed when an unmanaged packet is received</param>
+        public static void AppendGlobalIncomingUnmanagedPacketHandler(PacketHandlerCallBackDelegate<byte[]> packetHandlerDelgatePointer)
+        {
+            AppendGlobalIncomingPacketHandler<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer, new SendReceiveOptions<NullSerializer>());
+        }
+
+        /// <summary>
+        /// Removes the provided delegate for unmanaged packet types. If the provided delegate does not exist for this packet type just returns.
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The delegate to be removed</param>
+        public static void RemoveGlobalIncomingUnmanagedPacketHandler(Delegate packetHandlerDelgatePointer)
+        {
+            RemoveGlobalIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
         }
 
         /// <summary>
@@ -1182,6 +1209,14 @@ namespace NetworkCommsDotNet
                     if (LoggingEnabled) logger.Info("Removed all incoming packetHandlers for '" + packetTypeStr + "' packetType.");
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes all unmanaged packet handlers.
+        /// </summary>
+        public static void RemoveGlobalIncomingUnmanagedPacketHandler()
+        {
+            RemoveGlobalIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged));
         }
 
         /// <summary>
@@ -1325,6 +1360,16 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Returns true if a global unmanaged packet handler exists
+        /// </summary>
+        /// <returns>True if a global unmanaged packet handler exists</returns>
+        public static bool GlobalIncomingUnmanagedPacketHandlerExists()
+        {
+            lock (globalDictAndDelegateLocker)
+                return globalIncomingPacketHandlers.ContainsKey(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged));
+        }
+
+        /// <summary>
         /// Returns true if the provided global packet handler has been added for the provided packet type.
         /// </summary>
         /// <param name="packetTypeStr">The packet type within which to check packet handlers</param>
@@ -1345,6 +1390,16 @@ namespace NetworkCommsDotNet
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Returns true if the provided global unmanaged packet handler has been added.
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The packet handler to look for.</param>
+        /// <returns>True if a global unmanaged packet handler exists.</returns>
+        public static bool GlobalIncomingUnmanagedPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        {
+            return GlobalIncomingPacketHandlerExists(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
         }
         #endregion
 

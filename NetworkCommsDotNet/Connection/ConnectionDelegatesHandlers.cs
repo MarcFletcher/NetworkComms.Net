@@ -224,6 +224,17 @@ namespace NetworkCommsDotNet
             if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided NetworkComms.PacketHandlerCallBackDelegate<T> cannot be null.");
             if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
 
+            //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
+            //Checks for unmanaged packet types
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+            {
+                if (options.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options serializer was not NullSerializer.");
+
+                if (options.DataProcessors.Count > 0)
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
+            }
+
             lock (delegateLocker)
             {
                 if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
@@ -263,7 +274,16 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a packet handler exists for the provided packet type, on this connection
+        /// Append a connection specific unmanged packet handler
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The delegate to be executed when an unmanaged packet is received</param>
+        public void AppendIncomingUnmanagedPacketHandler(NetworkComms.PacketHandlerCallBackDelegate<byte[]> packetHandlerDelgatePointer)
+        {
+            AppendIncomingPacketHandler<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged),packetHandlerDelgatePointer,new SendReceiveOptions<NullSerializer>());
+        }
+
+        /// <summary>
+        /// Returns true if an unmanaged packet handler exists on this connection
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which to check incoming packet handlers</param>
         /// <returns>True if a packet handler exists</returns>
@@ -274,11 +294,21 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if the provided packet handler has been added for the provided packet type, on this connection.
+        /// Returns true if a connection specific unmanged packet handler exists , on this connection.
+        /// </summary>
+        /// <returns>True if an unmanaged packet handler exists</returns>
+        public bool IncomingUnmanagedPacketHandlerExists()
+        {
+            lock (delegateLocker)
+                return incomingPacketHandlers.ContainsKey(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged));
+        }
+
+        /// <summary>
+        /// Returns true if the provided connection specific packet handler has been added for the provided packet type, on this connection.
         /// </summary>
         /// <param name="packetTypeStr">The packet type within which to check packet handlers</param>
         /// <param name="packetHandlerDelgatePointer">The packet handler to look for</param>
-        /// <returns>True if a global packet handler exists for the provided packetType</returns>
+        /// <returns>True if a connection specific packet handler exists for the provided packetType</returns>
         public bool IncomingPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
             lock (delegateLocker)
@@ -295,7 +325,27 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Remove the provided delegate for the specified packet type
+        /// Returns true if the provided connection specific unmanaged packet handler has been added, on this connection.
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The packet handler to look for</param>
+        /// <returns>True if a connection specific unmanaged packet handler exists</returns>
+        public bool IncomingUnmanagedPacketHandlerExists(Delegate packetHandlerDelgatePointer)
+        {
+            lock (delegateLocker)
+            {
+                if (incomingPacketHandlers.ContainsKey(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged)))
+                {
+                    foreach (var handler in incomingPacketHandlers[Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged)])
+                        if (handler.EqualsDelegate(packetHandlerDelgatePointer))
+                            return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Remove the provided connection specific packet handler for the specified packet type, on this connection.
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which this delegate should be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
@@ -338,7 +388,16 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Removes all delegates for the provided packet type
+        /// Remove the provided connection specific unmanaged packet handler, on this connection.
+        /// </summary>
+        /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
+        public void RemoveIncomingUnmanagedPacketHandler(Delegate packetHandlerDelgatePointer)
+        {
+            RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
+        }
+
+        /// <summary>
+        /// Removes all connection specific packet handlers for the provided packet type, on this connection.
         /// </summary>
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
         public void RemoveIncomingPacketHandler(string packetTypeStr)
@@ -356,7 +415,15 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Removes all delegates for all packet types
+        /// Removes all unmanaged packet handlers, on this connection.
+        /// </summary>
+        public void RemoveIncomingUnmanagedPacketHandler()
+        {
+            RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged));
+        }
+
+        /// <summary>
+        /// Removes all packet handlers for all packet types, on this connection.
         /// </summary>
         public void RemoveIncomingPacketHandler()
         {
