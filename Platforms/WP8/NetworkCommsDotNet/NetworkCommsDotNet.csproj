@@ -114,14 +114,14 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
       <Link>Connection\SentPacket.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionCreate.cs">
-      <Link>Connection\TCP\TCPConnectionCreate.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionInstance.cs">
-      <Link>Connection\TCP\TCPConnectionInstance.cs</Link>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnection.cs">
+      <Link>Connection\TCP\TCPConnection.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionListener.cs">
       <Link>Connection\TCP\TCPConnectionListener.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
+      <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientWrapper.cs">
       <Link>Connection\UDP\UDPClientWrapper.cs</Link>
