@@ -36,16 +36,24 @@ namespace NetworkCommsDotNet
     public class TCPConnectionListener : ConnectionListenerBase
     {
 #if WINDOWS_PHONE
+        /// <summary>
+        /// The equivalent TCPListener class in windows phone
+        /// </summary>
         StreamSocketListener listenerInstance;
 #else
         /// <summary>
         /// The .net TCPListener class.
         /// </summary>
         TcpListener listenerInstance;
+
+        /// <summary>
+        /// SSL options that are associated with this listener
+        /// </summary>
+        SSLOptions sslOptions;
 #endif
 
         /// <summary>
-        /// 
+        /// Create a new instance of a TCP listener
         /// </summary>
         /// <param name="sendReceiveOptions"></param>
         /// <param name="applicationLayerProtocol"></param>
@@ -53,8 +61,25 @@ namespace NetworkCommsDotNet
             ApplicationLayerProtocolStatus applicationLayerProtocol)
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
-
+#if !WINDOWS_PHONE
+            sslOptions = new SSLOptions();
+#endif
         }
+
+#if !WINDOWS_PHONE
+        /// <summary>
+        /// Create a new instance of a TCP listener
+        /// </summary>
+        /// <param name="sendReceiveOptions"></param>
+        /// <param name="applicationLayerProtocol"></param>
+        /// <param name="sslOptions"></param>
+        public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
+            ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions)
+            : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
+        {
+            this.sslOptions = sslOptions;
+        }
+#endif
 
         /// <summary>
         /// 
@@ -193,7 +218,7 @@ namespace NetworkCommsDotNet
                     #region Pickup The New Connection
                     try
                     {
-                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true);
+                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, sslOptions);
                     }
                     catch (ConfirmationTimeoutException)
                     {

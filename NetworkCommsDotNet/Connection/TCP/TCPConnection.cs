@@ -30,17 +30,246 @@ using Windows.Networking.Sockets;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Storage.Streams;
+#else
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 #endif
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
+    /// </summary>
     public sealed partial class TCPConnection : Connection
     {
+#if WINDOWS_PHONE
+        /// <summary>
+        /// The windows phone socket corresponding to this connection.
+        /// </summary>
+        StreamSocket socket;
+#else
+        /// <summary>
+        /// The TcpClient corresponding to this connection.
+        /// </summary>
+        TcpClient tcpClient;
+
+        /// <summary>
+        /// The networkstream associated with the tcpClient.
+        /// </summary>
+        Stream connectionStream;
+
+        /// <summary>
+        /// The SSL options associated with this connection.
+        /// </summary>
+        SSLOptions sslOptions;
+#endif
+
+        /// <summary>
+        /// TCP connection constructor
+        /// </summary>
+#if WINDOWS_PHONE
+        private TCPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket)
+#else
+        private TCPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, SSLOptions sslOptions)
+#endif
+            : base(connectionInfo, defaultSendReceiveOptions)
+        {
+            //We don't guarantee that the tcpClient has been created yet
+#if WINDOWS_PHONE
+            if (socket != null) this.socket = socket;
+#else
+            if (tcpClient != null) this.tcpClient = tcpClient;
+            this.sslOptions = sslOptions;
+#endif
+        }
+
+        /// <summary>
+        /// Establish the connection
+        /// </summary>
+        protected override void EstablishConnectionSpecific()
+        {
+#if WINDOWS_PHONE
+            if (socket == null) ConnectSocket();
+
+            //For the local endpoint
+            var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.CanonicalName.ToString()), int.Parse(socket.Information.LocalPort));
+
+            //We should now be able to set the connectionInfo localEndPoint
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
+            ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
+
+            //Set the outgoing buffer size
+            socket.Control.OutboundBufferSizeInBytes = (uint)NetworkComms.SendBufferSizeBytes;
+#else
+            if (tcpClient == null) ConnectSocket();
+
+            //We should now be able to set the connectionInfo localEndPoint
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, (IPEndPoint)tcpClient.Client.LocalEndPoint);
+            ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
+
+            if (sslOptions.SSLEnabled)
+                ConfigureSSLStream();
+            else
+                //We are going to be using the networkStream quite a bit so we pull out a reference once here
+                connectionStream = tcpClient.GetStream();
+
+            //When we tell the socket/client to close we want it to do so immediately
+            //this.tcpClient.LingerState = new LingerOption(false, 0);
+
+            //We need to set the keep alive option otherwise the connection will just die at some random time should we not be using it
+            //NOTE: This did not seem to work reliably so was replaced with the keepAlive packet feature
+            //this.tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+            tcpClient.ReceiveBufferSize = NetworkComms.ReceiveBufferSizeBytes;
+            tcpClient.SendBufferSize = NetworkComms.SendBufferSizeBytes;
+
+            //This disables the 'nagle alogrithm'
+            //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
+            //Basically we may want to send lots of small packets (<200 bytes) and sometimes those are time critical (e.g. when establishing a connection)
+            //If we leave this enabled small packets may never be sent until a suitable send buffer length threshold is passed. i.e. BAD
+            tcpClient.NoDelay = true;
+            tcpClient.Client.NoDelay = true;
+#endif
+
+            //Start listening for incoming data
+            StartIncomingDataListen();
+
+            //If the application layer protocol is enabled we handshake the connection
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
+                ConnectionHandshake();
+            else
+            {
+                //If there is no handshake we can now consider the connection established
+                TriggerConnectionEstablishDelegates();
+
+                //Trigger any connection setup waits
+                connectionSetupWait.Set();
+            }
+
+#if !WINDOWS_PHONE
+            //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
+            //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
+            if (EnableNagleAlgorithmForNewConnections)
+            {
+                tcpClient.NoDelay = false;
+                tcpClient.Client.NoDelay = false;
+            }
+#endif
+        }
+
+        /// <summary>
+        /// If we were not provided with a tcpClient on creation we need to create one
+        /// </summary>
+        private void ConnectSocket()
+        {
+            try
+            {
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
+
+                bool connectSuccess = true;
+#if WINDOWS_PHONE
+                //We now connect to our target
+                socket = new StreamSocket();
+                socket.Control.NoDelay = EnableNagleAlgorithmForNewConnections;
+
+                CancellationTokenSource cancelAfterTimeoutToken = new CancellationTokenSource(NetworkComms.ConnectionEstablishTimeoutMS);
+
+                try
+                {
+                    if (ConnectionInfo.LocalEndPoint != null)
+                    {
+                        var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
+                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
+
+                        var task = socket.ConnectAsync(endpointPairForConnection).AsTask(cancelAfterTimeoutToken.Token);
+                        task.Wait();
+                    }
+                    else
+                    {
+                        var task = socket.ConnectAsync(new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask(cancelAfterTimeoutToken.Token);
+                        task.Wait();
+                    }
+                }
+                catch (Exception)
+                {
+                    socket.Dispose();
+                    connectSuccess = false;
+                }
+#else
+                //We now connect to our target
+                tcpClient = new TcpClient(ConnectionInfo.RemoteEndPoint.AddressFamily);
+
+                //Start the connection using the asyn version
+                //This allows us to choose our own connection establish timeout
+                IAsyncResult ar = tcpClient.BeginConnect(ConnectionInfo.RemoteEndPoint.Address, ConnectionInfo.RemoteEndPoint.Port, null, null);
+                WaitHandle connectionWait = ar.AsyncWaitHandle;
+                try
+                {
+                    if (!ar.AsyncWaitHandle.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
+                    {
+                        tcpClient.Close();
+                        connectSuccess = false;
+                    }
+
+                    tcpClient.EndConnect(ar);
+                }
+                finally
+                {
+                    connectionWait.Close();
+                }
+#endif
+
+                if (!connectSuccess) throw new ConnectionSetupException("Timeout waiting for remoteEndPoint to accept TCP connection.");
+            }
+            catch (Exception ex)
+            {
+                CloseConnection(true, 17);
+                throw new ConnectionSetupException("Error during TCP connection establish with destination (" + ConnectionInfo + "). Destination may not be listening or connect timed out. " + ex.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Starts listening for incoming data on this TCP connection
+        /// </summary>
+        protected override void StartIncomingDataListen()
+        {
+            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
+            {
+                CloseConnection(true, 18);
+                throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");
+            }
+
+#if WINDOWS_PHONE
+            var stream = socket.InputStream.AsStreamForRead();
+            stream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), stream);   
+#else
+            lock (delegateLocker)
+            {
+                if (NetworkComms.ConnectionListenModeUseSync)
+                {
+                    if (incomingDataListenThread == null)
+                    {
+                        incomingDataListenThread = new Thread(IncomingTCPDataSyncWorker);
+                        //Incoming data always gets handled in a time critical fashion
+                        incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
+                        incomingDataListenThread.Name = "IncomingDataListener";
+                        incomingDataListenThread.Start();
+                    }
+                }
+                else
+                    connectionStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), connectionStream);
+            }
+#endif
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Listening for incoming data from " + ConnectionInfo);
+        }
+
         /// <summary>
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar">The call back state object</param>
-        void IncomingTCPPacketHandler(IAsyncResult ar)
+        private void IncomingTCPPacketHandler(IAsyncResult ar)
         {
             //Initialised with true so that logic still works in WP8
             bool dataAvailable = true;
@@ -58,12 +287,22 @@ namespace NetworkCommsDotNet
                 var count = stream.EndRead(ar);
                 totalBytesRead = count + totalBytesRead;
 #else
-                NetworkStream netStream = (NetworkStream)ar.AsyncState;
+                Stream netStream;
+                if (sslOptions.SSLEnabled)
+                    netStream = (SslStream)ar.AsyncState;
+                else
+                    netStream = (NetworkStream)ar.AsyncState;
+
                 if (!netStream.CanRead)
                     throw new ObjectDisposedException("Unable to read from stream.");
 
                 totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
-                dataAvailable = netStream.DataAvailable;
+
+                if (sslOptions.SSLEnabled)
+                    //SSLstream does not have a DataAvailable property. We will just assume false.
+                    dataAvailable = false;
+                else
+                    dataAvailable = ((NetworkStream)netStream).DataAvailable;
 #endif
                 if (totalBytesRead > 0)
                 {
@@ -113,7 +352,12 @@ namespace NetworkCommsDotNet
                                 {
                                     //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
                                     packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
-                                    dataAvailable = netStream.DataAvailable;
+                                    
+                                    if (sslOptions.SSLEnabled)
+                                        //SSLstream does not have a DataAvailable property. We will just assume false.
+                                        dataAvailable = false;
+                                    else
+                                        dataAvailable = ((NetworkStream)netStream).DataAvailable;
                                 }
                             }
                             else
@@ -185,7 +429,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Synchronous incoming connection data worker
         /// </summary>
-        void IncomingTCPDataSyncWorker()
+        private void IncomingTCPDataSyncWorker()
         {
             bool dataAvailable = false;
 
@@ -208,10 +452,14 @@ namespace NetworkCommsDotNet
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length
-                    totalBytesRead = tcpClientNetworkStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
+                    totalBytesRead = connectionStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
                     //Check to see if there is more data ready to be read
-                    dataAvailable = tcpClientNetworkStream.DataAvailable;
+                    if (sslOptions.SSLEnabled)
+                        //SSLstream does not have a DataAvailable property. We will just assume false.
+                        dataAvailable = false;
+                    else
+                        dataAvailable = ((NetworkStream)connectionStream).DataAvailable;
 
                     //If we read any data it gets handed off to the packetBuilder
                     if (totalBytesRead > 0)
@@ -274,6 +522,64 @@ namespace NetworkCommsDotNet
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
+
+        /// <summary>
+        /// Configure the SSL stream from this connection
+        /// </summary>
+        private void ConfigureSSLStream()
+        {
+            if (ConnectionInfo.ServerSide)
+            {
+                connectionStream = new SslStream(tcpClient.GetStream());
+                ((SslStream)connectionStream).AuthenticateAsServer(sslOptions.Certificate, sslOptions.RequireMutualAuthentication, SslProtocols.Default, false);
+            }
+            else
+            {
+                try
+                {
+                    if (sslOptions.Certificate != null)
+                    {
+                        //If we have a certificate set we use that to authenticate
+                        connectionStream = new SslStream(tcpClient.GetStream(), false,
+                            new RemoteCertificateValidationCallback(CertificateValidationCallback),
+                            new LocalCertificateSelectionCallback(CertificateSelectionCallback));
+
+                        X509CertificateCollection certs = new X509CertificateCollection();
+                        certs.Add(sslOptions.Certificate);
+
+                        ((SslStream)connectionStream).AuthenticateAsClient(sslOptions.CertificateName, certs, SslProtocols.Default, false);
+                    }
+                    else
+                    {
+                        //If we do not have a certificate we can still try and use the certificate name
+                        connectionStream = new SslStream(tcpClient.GetStream());
+                        ((SslStream)connectionStream).AuthenticateAsClient(sslOptions.CertificateName);
+                    }
+                }
+                catch (AuthenticationException ex)
+                {
+                    throw new ConnectionSetupException("SSL authentication failed. Please check configuration and try again.", ex);
+                }
+
+                sslOptions.Authenticated = true;
+            }
+        }
+
+        private bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (sslPolicyErrors != SslPolicyErrors.None)
+                return false;
+            else if (certificate.Equals(sslOptions.Certificate))
+                return true;
+            else
+                return false;
+        }
+
+        private X509Certificate CertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, 
+            X509Certificate remoteCertificate, string[] acceptableIssuers)
+        {
+            return sslOptions.Certificate;
+        }
 #endif
 
         /// <summary>
@@ -297,14 +603,14 @@ namespace NetworkCommsDotNet
             //Try to close the networkStream first
             try
             {
-                if (tcpClientNetworkStream != null) tcpClientNetworkStream.Close();
+                if (connectionStream != null) connectionStream.Close();
             }
             catch (Exception)
             {
             }
             finally
             {
-                tcpClientNetworkStream = null;
+                connectionStream = null;
             }
 
             //Try to close the tcpClient
@@ -372,7 +678,7 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
             sendingStream = socket.OutputStream.AsStreamForWrite();
 #else
-            sendingStream = tcpClientNetworkStream;
+            sendingStream = connectionStream;
 #endif
 
             //We only need to write the header if we have prepared the necessary bytes
@@ -450,7 +756,7 @@ namespace NetworkCommsDotNet
                         StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
                         stream.Flush();
 #else
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, tcpClientNetworkStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
+                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, connectionStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
 #endif
 
                         //Update the traffic time after we have written to netStream

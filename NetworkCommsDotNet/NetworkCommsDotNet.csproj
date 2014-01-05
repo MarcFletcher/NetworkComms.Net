@@ -71,6 +71,7 @@
     <Compile Include="Connection\ConnectionType.cs" />
     <Compile Include="Connection\ConnectionListenerBase.cs" />
     <Compile Include="Connection\SentPacket.cs" />
+    <Compile Include="Connection\TCP\SSLOptions.cs" />
     <Compile Include="Connection\TCP\TCPConnectionListener.cs" />
     <Compile Include="Connection\UDP\UDPClientWrapper.cs" />
     <Compile Include="Connection\UDP\UDPConnectionListener.cs" />
@@ -99,6 +100,7 @@
     <Compile Include="Tools\QueueItemPriority.cs" />
     <Compile Include="Tools\ShortGUID.cs" />
     <Compile Include="Connection\UDP\UDPConnection.cs" />
+    <Compile Include="Tools\SSLTools.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">

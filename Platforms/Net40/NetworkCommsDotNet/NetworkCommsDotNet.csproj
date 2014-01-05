@@ -77,6 +77,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
       <Link>Connection\SentPacket.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\SSLOptions.cs">
+      <Link>Connection\TCP\SSLOptions.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnection.cs">
       <Link>Connection\TCP\TCPConnection.cs</Link>
     </Compile>
@@ -151,6 +154,9 @@
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
       <Link>Tools\ShortGUID.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\SSLTools.cs">
+      <Link>Tools\SSLTools.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

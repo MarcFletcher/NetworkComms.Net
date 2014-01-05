@@ -69,6 +69,7 @@
     <Compile Include="BandwidthLoadTest.cs" />
     <Compile Include="LogAnalyser.cs" />
     <Compile Include="NumConnectionLoadTest.cs" />
+    <Compile Include="SSLTest.cs" />
     <Compile Include="ThreadPoolTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
