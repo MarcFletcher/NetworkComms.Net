@@ -59,6 +59,12 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionIncomingData.cs">
       <Link>Connection\ConnectionIncomingData.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionListenerBase.cs">
+      <Link>Connection\ConnectionListenerBase.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionListeners.cs">
+      <Link>Connection\ConnectionListeners.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionSendClose.cs">
       <Link>Connection\ConnectionSendClose.cs</Link>
     </Compile>
@@ -77,14 +83,17 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionInstance.cs">
       <Link>Connection\TCP\TCPConnectionInstance.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
-      <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionListener.cs">
+      <Link>Connection\TCP\TCPConnectionListener.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientWrapper.cs">
       <Link>Connection\UDP\UDPClientWrapper.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnection.cs">
       <Link>Connection\UDP\UDPConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionListener.cs">
+      <Link>Connection\UDP\UDPConnectionListener.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionStatic.cs">
       <Link>Connection\UDP\UDPConnectionStatic.cs</Link>

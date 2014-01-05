@@ -63,13 +63,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection\ConnectionListeners.cs" />
     <Compile Include="Connection\ConnectionCreate.cs" />
     <Compile Include="Connection\ConnectionDelegatesHandlers.cs" />
     <Compile Include="Connection\ConnectionIncomingData.cs" />
     <Compile Include="Connection\ConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionType.cs" />
+    <Compile Include="Connection\ConnectionListenerBase.cs" />
     <Compile Include="Connection\SentPacket.cs" />
+    <Compile Include="Connection\TCP\TCPConnectionListener.cs" />
     <Compile Include="Connection\UDP\UDPClientWrapper.cs" />
+    <Compile Include="Connection\UDP\UDPConnectionListener.cs" />
     <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />
     <Compile Include="Connection\UDP\UDPOptions.cs" />
     <Compile Include="RuntimeEnvironment.cs" />
@@ -79,7 +83,6 @@
     <Compile Include="Tools\CommsThreadPool.cs" />
     <Compile Include="Tools\PacketBuilder.cs" />
     <Compile Include="Connection\TCP\TCPConnectionInstance.cs" />
-    <Compile Include="Connection\TCP\TCPConnectionStatic.cs" />
     <Compile Include="SendReceiveOptions.cs" />
     <Compile Include="Connection\TCP\TCPConnectionCreate.cs" />
     <Compile Include="ConnectionInfo.cs" />

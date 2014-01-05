@@ -53,6 +53,11 @@ namespace NetworkCommsDotNet
 #endif
 
         /// <summary>
+        /// By default usage of <see href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's algorithm</see> during TCP exchanges is disabled for performance reasons. If you wish it to be used for newly established connections set this property to true.
+        /// </summary>
+        public static bool EnableNagleAlgorithmForNewConnections { get; set; }
+
+        /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
         /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>

@@ -74,10 +74,10 @@ namespace ExamplesConsole
                 NetworkComms.AppendGlobalConnectionCloseHandler(clientShutdownDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("SpeedData", IncomingDataDelegate);
 
-                TCPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.TCP);
 
                 Console.WriteLine("\nListening for incoming connections on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);

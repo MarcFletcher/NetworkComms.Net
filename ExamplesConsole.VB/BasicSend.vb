@@ -16,13 +16,13 @@ Module BasicSend
 
         'Start listening for incoming 'TCP' connections. The true parameter means
         'try to use the default port and if that fails just choose a random port
-        'See also UDPConnection.StartListening()
-        TCPConnection.StartListening(True)
+        'See also Connection.StartListening(ConnectionType.UDP)
+        Connection.StartListening(ConnectionType.TCP)
 
         'Print the IP addresses and ports we are listening on to make sure everything
         'worked as expected.
         Console.WriteLine("Listening for messages on:")
-        For Each localEndPoint As System.Net.IPEndPoint In TCPConnection.ExistingLocalListenEndPoints()
+        For Each localEndPoint As System.Net.IPEndPoint In Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)
             Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port)
         Next
 

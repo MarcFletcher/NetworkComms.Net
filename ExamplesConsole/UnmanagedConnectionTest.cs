@@ -24,6 +24,7 @@ using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Collections.Specialized;
 using System.Net;
+using System.Linq;
 
 namespace ExamplesConsole
 {
@@ -74,12 +75,29 @@ namespace ExamplesConsole
                         Console.WriteLine(i.ToString() + " - " + array[i].ToString());
                 });
 
-            //Start listening for incoming connections
-            //The first parameter disables the application layer protocol for all incoming connections.
+            //Create suitable send receive options
+            SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
+
+            //Get the local IPEndPoints we intend to listen on
+            List<IPEndPoint> localIPEndPoints = (from current in NetworkComms.AllAllowedIPs() select
+                                                 new IPEndPoint(current, NetworkComms.DefaultListenPort)).ToList();
+
+            //Create suitable listeners
+            List<ConnectionListenerBase> listeners;
             if (connectionTypeToUse == ConnectionType.TCP)
-                TCPConnection.StartListening(ApplicationLayerProtocolStatus.Disabled, true);
+            {
+                //For each localIPEndPoint get a TCP listener
+                listeners = (from current in localIPEndPoints
+                             select (ConnectionListenerBase)new TCPConnectionListener(optionsToUse, ApplicationLayerProtocolStatus.Disabled)).ToList();
+            }
             else
-                UDPConnection.StartListening(ApplicationLayerProtocolStatus.Disabled, true);
+            {
+                listeners = (from current in localIPEndPoints
+                             select (ConnectionListenerBase)new UDPConnectionListener(optionsToUse, ApplicationLayerProtocolStatus.Disabled, UDPConnection.DefaultUDPOptions)).ToList();
+            }
+
+            //Start listening
+            Connection.StartListening(listeners, localIPEndPoints, true);
 
             //***************************************************************//
             //                End of interesting stuff                       //
@@ -87,7 +105,7 @@ namespace ExamplesConsole
 
             Console.WriteLine("Listening for incoming byte[] on:");
 
-            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? TCPConnection.ExistingLocalListenEndPoints() : UDPConnection.ExistingLocalListenEndPoints());
+            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
 
             foreach (IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);

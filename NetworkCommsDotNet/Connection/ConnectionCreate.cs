@@ -68,12 +68,12 @@ namespace NetworkCommsDotNet
                         " options specified the ReceiveConfirmationRequired option. Please provide compatible send receive options in order to succesfully" +
                         " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
 
-                if (NetworkComms.DefaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                if (defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
                         " options serializer was not NullSerializer. Please provide compatible send receive options in order to succesfully" +
                         " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
 
-                if (NetworkComms.DefaultSendReceiveOptions.DataProcessors.Count > 0)
+                if (defaultSendReceiveOptions.DataProcessors.Count > 0)
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
                         " options contains data processors. Data processors may not be used with unmanaged connections." +
                         " Please provide compatible send receive options in order to succesfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
@@ -208,13 +208,7 @@ namespace NetworkCommsDotNet
             {
                 //If we are client side part of the handshake is to inform the server of a potential local listener
                 //Get a list of existing listeners
-                List<IPEndPoint> existingLocalListeners;
-                if (ConnectionInfo.ConnectionType == ConnectionType.TCP)
-                    existingLocalListeners = TCPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
-                else if (ConnectionInfo.ConnectionType == ConnectionType.UDP)
-                    existingLocalListeners = UDPConnection.ExistingLocalListenEndPoints(ConnectionInfo.LocalEndPoint.Address);
-                else
-                    throw new NotImplementedException("ConnectionHandshake has only been implemented for TCP and UDP connections.");
+                List<IPEndPoint> existingLocalListeners = Connection.ExistingLocalListenEndPoints(ConnectionInfo.ConnectionType, new IPEndPoint(ConnectionInfo.LocalEndPoint.Address, 0));
 
                 //Check to see if we have a local listener for matching the local endpoint address
                 //If we are client side we use this local listener in our reply to the server

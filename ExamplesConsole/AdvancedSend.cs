@@ -110,17 +110,17 @@ namespace ExamplesConsole
             }
 
             if (connectionTypeToUse == ConnectionType.TCP)
-                TCPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.TCP);
             else
-                UDPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.UDP);
 
             //***************************************************************//
             //                End of interesting stuff                       //
             //***************************************************************//
 
             Console.WriteLine("Listening for incoming objects on:");
-            
-            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? TCPConnection.ExistingLocalListenEndPoints() : UDPConnection.ExistingLocalListenEndPoints());
+
+            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
             
             foreach(IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);

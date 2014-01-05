@@ -1397,7 +1397,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetHandlerDelgatePointer">The packet handler to look for.</param>
         /// <returns>True if a global unmanaged packet handler exists.</returns>
-        public static bool GlobalIncomingUnmanagedPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        public static bool GlobalIncomingUnmanagedPacketHandlerExists(Delegate packetHandlerDelgatePointer)
         {
             return GlobalIncomingPacketHandlerExists(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
         }
@@ -1532,9 +1532,7 @@ namespace NetworkCommsDotNet
             commsShutdown = true;
 
             CommsThreadPool.BeginShutdown();
-            Connection.ShutdownBase(threadShutdownTimeoutMS);
-            TCPConnection.Shutdown(threadShutdownTimeoutMS);
-            UDPConnection.Shutdown();
+            Connection.Shutdown(threadShutdownTimeoutMS);
 
             try
             {
@@ -2160,7 +2158,7 @@ namespace NetworkCommsDotNet
                     //If the provided IP is set but the port is 0 we aim to match the IPAddress
                     foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint.Keys)
                     {
-                        if (endPoint.Address == remoteEndPoint.Address)
+                        if (endPoint.Address.Equals(remoteEndPoint.Address))
                             matchedIPEndPoints.Add(endPoint, new List<IPEndPoint>());
                     }
                 }
@@ -2197,7 +2195,7 @@ namespace NetworkCommsDotNet
                         //If the provided IP is set but the port is 0 we aim to match the IPAddress
                         foreach (IPEndPoint endPoint in allConnectionsByIPEndPoint[keyPair.Key].Keys)
                         {
-                            if (endPoint.Address == localEndPoint.Address)
+                            if (endPoint.Address.Equals(localEndPoint.Address))
                                 keyPair.Value.Add(endPoint);
                         }
                     }

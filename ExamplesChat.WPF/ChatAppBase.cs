@@ -138,7 +138,7 @@ namespace ExamplesWPFChat
             if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !TCPConnection.Listening())
             {
                 //If we were previously listening for UDP we first shutdown comms.
-                if (UDPConnection.Listening())
+                if (Connection.Listening(ConnectionType.UDP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
@@ -151,11 +151,11 @@ namespace ExamplesWPFChat
 
                 //Start listening for new incoming TCP connections
                 //Parameter is true so that we listen on a random port if the default is not available
-                TCPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.TCP);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
-                foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
@@ -177,11 +177,11 @@ namespace ExamplesWPFChat
 
                 //Start listening for new incoming UDP connections
                 //Parameter is true so that we listen on a random port if the default is not available
-                UDPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.UDP);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
-                foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
+                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output

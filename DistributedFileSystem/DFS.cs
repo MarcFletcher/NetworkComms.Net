@@ -154,7 +154,7 @@ namespace DistributedFileSystem
                 if (initialPort > MaxTargetLocalPort || initialPort < MinTargetLocalPort)
                     throw new CommsSetupShutdownException("Provided initial DFS port must be within the MinTargetLocalPort and MaxTargetLocalPort range.");
 
-                if (TCPConnection.ExistingLocalListenEndPoints().Count > 0)
+                if (Connection.ExistingLocalListenEndPoints().Count > 0)
                     throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
                 DFSShutdownEvent = new ManualResetEvent(false);
@@ -200,13 +200,23 @@ namespace DistributedFileSystem
                 #region OpenIncomingPorts
                 List<IPAddress> availableIPAddresses = NetworkComms.AllAllowedIPs();
                 List<IPEndPoint> localEndPointAttempts;
+                List<ConnectionListenerBase> connectionListeners = new List<ConnectionListenerBase>();
 
                 try
                 {
                     NetworkComms.DefaultListenPort = initialPort;
+                    //We need a copy of each endPoint for each listener
                     localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
-                    TCPConnection.StartListening(localEndPointAttempts, false);
-                    UDPConnection.StartListening(localEndPointAttempts, false);
+                    localEndPointAttempts.AddRange(from current in availableIPAddresses select new IPEndPoint(current, initialPort));
+
+                    connectionListeners.AddRange(from current in availableIPAddresses
+                                                 select
+                                                     new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                    connectionListeners.AddRange(from current in availableIPAddresses
+                                                 select
+                                                     new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+
+                    Connection.StartListening(connectionListeners, localEndPointAttempts, false);
                 }
                 catch (Exception)
                 {
@@ -219,9 +229,20 @@ namespace DistributedFileSystem
                             try
                             {
                                 NetworkComms.DefaultListenPort = tryPort;
+                                connectionListeners = new List<ConnectionListenerBase>();
+
                                 localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
-                                TCPConnection.StartListening(localEndPointAttempts, false);
-                                UDPConnection.StartListening(localEndPointAttempts, false);
+                                localEndPointAttempts.AddRange(from current in availableIPAddresses select new IPEndPoint(current, tryPort));
+
+                                connectionListeners.AddRange(from current in availableIPAddresses
+                                                             select
+                                                                 new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                                connectionListeners.AddRange(from current in availableIPAddresses
+                                                             select
+                                                                 new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+
+                                Connection.StartListening(connectionListeners, localEndPointAttempts, false);
+
                                 break;
                             }
                             catch (Exception) { NetworkComms.Shutdown(); }
@@ -235,10 +256,10 @@ namespace DistributedFileSystem
                 }
 
                 //Do some validation
-                if (TCPConnection.ExistingLocalListenEndPoints().Except(UDPConnection.ExistingLocalListenEndPoints()).Count() > 0)
+                if (Connection.ExistingLocalListenEndPoints(ConnectionType.TCP).Except(Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)).Count() > 0)
                     throw new CommsSetupShutdownException("Port mismatch when comparing TCP and UDP local listen end points.");
 
-                if ((from current in TCPConnection.ExistingLocalListenEndPoints()
+                if ((from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)
                      where current.Port > MaxTargetLocalPort || current.Port < MinTargetLocalPort
                      select current).Count() > 0)
                      throw new CommsSetupShutdownException("Local port selected that is not within the valid range.");
@@ -1004,7 +1025,7 @@ namespace DistributedFileSystem
                         }
 
                         //Ensure all possible local listeners are added here
-                        List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
+                        List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
                         foreach (ConnectionInfo info in seedConnectionInfoList)
                             newItem.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(info, newItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier), newItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier), false);
 

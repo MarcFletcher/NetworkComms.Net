@@ -36,9 +36,9 @@ namespace NetworkCommsDotNet
     public sealed partial class UDPConnection : Connection
     {
 #if WINDOWS_PHONE
-        DatagramSocket socket;
+        internal DatagramSocket socket;
 #else
-        UdpClientWrapper udpClient;
+        internal UdpClientWrapper udpClient;
 #endif
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace NetworkCommsDotNet
         /// <param name="level"></param>
         /// <param name="listenForIncomingPackets"></param>
         /// <param name="existingConnection"></param>
-        private UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
+        internal UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
@@ -160,7 +160,7 @@ namespace NetworkCommsDotNet
 #endif
 
             //We can update the localEndPoint so that it is correct
-            if (ConnectionInfo.LocalEndPoint != localEndPoint)
+            if (!ConnectionInfo.LocalEndPoint.Equals(localEndPoint))
             {
                 //We should now be able to set the connectionInfo localEndPoint
                 NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);

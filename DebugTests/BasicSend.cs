@@ -72,12 +72,13 @@ namespace DebugTests
             //Start listening for incoming 'TCP' connections. The true parameter means
             //try to use the default port and if that fails just choose a random port
             //See also UDPConnection.StartListening()
-            TCPConnection.StartListening(true);
+            Connection.StartListening(ConnectionType.TCP);
 
             //Print the IP addresses and ports we are listening on to make sure everything
             //worked as expected.
             Console.WriteLine("Listening for messages on:");
-            foreach (System.Net.IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints()) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+            foreach (System.Net.IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)) 
+                Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
             //We loop here to allow any number of test messages to be sent and received
             while (true)

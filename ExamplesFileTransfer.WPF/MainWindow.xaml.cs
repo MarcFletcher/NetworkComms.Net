@@ -226,11 +226,11 @@ namespace ExamplesWPFFileTransfer
             NetworkComms.AppendGlobalConnectionCloseHandler(OnConnectionClose);
 
             //Start listening for TCP connections
-            TCPConnection.StartListening(true);
+            Connection.StartListening(ConnectionType.TCP);
 
             //Write out some usefull debugging information the log window
             AddLineToLog("Initialised WPF file transfer example. Accepting TCP connections on:");
-            foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+            foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                 AddLineToLog(listenEndPoint.Address + ":" + listenEndPoint.Port);
         }
 

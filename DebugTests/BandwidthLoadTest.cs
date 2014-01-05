@@ -78,9 +78,9 @@ namespace DebugTests
                     Console.WriteLine("{0} - Caught {1} bytes thrown by {2}.", DateTime.Now.ToLongTimeString(), data.Length, connection.ConnectionInfo);
                 });
 
-                TCPConnection.StartListening();
+                Connection.StartListening(ConnectionType.TCP);
 
-                Console.WriteLine("Let the catching begin, on port "+TCPConnection.ExistingLocalListenEndPoints().First().Port+"!\n");
+                Console.WriteLine("Let the catching begin, on port " + Connection.ExistingLocalListenEndPoints(ConnectionType.TCP).First().Port + "!\n");
                 while (true)
                 {
                     Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), NetworkComms.CurrentNetworkLoadIncoming.ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(5).ToString("0.000"), NetworkComms.AverageNetworkLoadIncoming(15).ToString("0.000"));

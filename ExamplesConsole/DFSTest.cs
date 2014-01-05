@@ -73,7 +73,7 @@ namespace ExamplesConsole
                 DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
 
                 //Create the item to be distributed
-                List<ConnectionInfo> seedConnectionInfoList = (from current in TCPConnection.ExistingLocalListenEndPoints() select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
+                List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
                 DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildTarget.Disk);
 
@@ -117,7 +117,7 @@ namespace ExamplesConsole
                 NetworkComms.AppendGlobalIncomingPacketHandler("ClientInfo", InfoDelegate);
 
                 Console.WriteLine("\nListening for incoming connections on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
@@ -231,7 +231,7 @@ namespace ExamplesConsole
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
                 Console.WriteLine("\nListening for incoming objects on:");
-                foreach (IPEndPoint localEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 startTime = DateTime.Now;

@@ -215,8 +215,17 @@ namespace NetworkCommsDotNet
         /// Shutdown any static connection components
         /// </summary>
         /// <param name="threadShutdownTimeoutMS"></param>
-        internal static void ShutdownBase(int threadShutdownTimeoutMS = 1000)
+        internal static void Shutdown(int threadShutdownTimeoutMS = 1000)
         {
+            try
+            {
+                StopListening();
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "CommsShutdownError");
+            }
+
             try
             {
                 shutdownWorkerThreads = true;

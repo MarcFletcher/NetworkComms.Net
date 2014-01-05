@@ -45,15 +45,13 @@ namespace DebugTests
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
-            UDPConnection.DefaultUDPOptions = UDPOptions.Handshake;
-
             IPAddress localIPAddress = IPAddress.Parse("::1");
 
             if (serverMode)
             {
                 NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("Data", (header, connection, data) =>
                 {
-                    Console.WriteLine("Received data ("+data.Length+") from " + connection.ToString());
+                    Console.WriteLine("Received data (" + data.Length + ") from " + connection.ToString());
                 });
 
                 //Establish handler
@@ -68,37 +66,37 @@ namespace DebugTests
                     Console.WriteLine("Connection closed - " + connection);
                 });
 
-                UDPConnection.StartListening(new IPEndPoint(localIPAddress, 10000));
+                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>() { 
+                    new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions,
+                        ApplicationLayerProtocolStatus.Enabled, UDPOptions.None),
+                    new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions,
+                        ApplicationLayerProtocolStatus.Enabled, UDPOptions.None)};
 
-                Console.WriteLine("\nUDPOptions = {0}", UDPConnection.DefaultUDPOptions);
-                Console.WriteLine("Listening for UDP messages on:");
-                foreach (IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                List<IPEndPoint> listeningEndPoints = new List<IPEndPoint>() { new IPEndPoint(localIPAddress, 10000), new IPEndPoint(localIPAddress, 10000) };
+
+                IPEndPoint endPointToUse = new IPEndPoint(localIPAddress, 0);
+
+                Connection.StartListening(listeners[0], endPointToUse, true);
+
+                //Console.WriteLine("Listening for UDP messages on:");
+                //foreach (IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
+                //    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nPress any key to quit.");
                 ConsoleKeyInfo key = Console.ReadKey(true);
             }
             else
             {
-                UDPConnection.StartListening(new IPEndPoint(localIPAddress, 10010));
-                Console.WriteLine("\nListening for UDP messages on:");
-                foreach (IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints())
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                ConnectionInfo connInfo = new ConnectionInfo(new IPEndPoint(localIPAddress, 10000));
 
-                Console.WriteLine("");
-                SendReceiveOptions options = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
-                //options.Options.Add("ReceiveConfirmationRequired", "");
-
-                ConnectionInfo connInfo = new ConnectionInfo(new IPEndPoint(localIPAddress, 10000), ApplicationLayerProtocolStatus.Enabled);
-
-                Connection conn = UDPConnection.GetConnection(connInfo, options, UDPConnection.DefaultUDPOptions);
+                Connection conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
                 conn.SendObject("Data", sendArray);
                 conn.CloseConnection(false);
 
                 Console.WriteLine("Send complete. Press any key to send again.");
                 Console.ReadKey(true);
 
-                conn = UDPConnection.GetConnection(connInfo, options, UDPConnection.DefaultUDPOptions);
+                conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
                 conn.SendObject("Data", sendArray);
                 conn.CloseConnection(false);
 

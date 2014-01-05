@@ -91,20 +91,36 @@ namespace DebugTests
                 if ((mode & TestMode.UDP_Managed) == TestMode.UDP_Managed) portDivisor++;
                 if ((mode & TestMode.UDP_Unmanaged) == TestMode.UDP_Unmanaged) portDivisor++;
 
+                List<IPEndPoint> localIPEndPoints = new List<IPEndPoint>();
+                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                 for (int i = 0; i < totalNumberOfListenPorts/portDivisor; i++)
                 {
                     if ((mode & TestMode.TCP_Managed) == TestMode.TCP_Managed)
-                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 10000 + i), ApplicationLayerProtocolStatus.Enabled, true);
+                    {
+                        localIPEndPoints.Add(new IPEndPoint(localIPAddress, 10000 + i));
+                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                    }
 
                     if ((mode & TestMode.TCP_Unmanaged) == TestMode.TCP_Unmanaged)
-                        TCPConnection.StartListening(new IPEndPoint(localIPAddress, 20000 + i), ApplicationLayerProtocolStatus.Disabled, true);
-                   
+                    {
+                        localIPEndPoints.Add(new IPEndPoint(localIPAddress, 20000 + i));
+                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Disabled));
+                    }
+
                     if ((mode & TestMode.UDP_Managed) == TestMode.UDP_Managed)
-                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 30000 + i), ApplicationLayerProtocolStatus.Enabled, true);
+                    {
+                        localIPEndPoints.Add(new IPEndPoint(localIPAddress, 30000 + i));
+                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+                    }
 
                     if ((mode & TestMode.UDP_Unmanaged) == TestMode.UDP_Unmanaged)
-                        UDPConnection.StartListening(new IPEndPoint(localIPAddress, 40000 + i), ApplicationLayerProtocolStatus.Disabled, true);
+                    {
+                        localIPEndPoints.Add(new IPEndPoint(localIPAddress, 40000 + i));
+                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Disabled, UDPConnection.DefaultUDPOptions));
+                    }
                 }
+
+                Connection.StartListening(listeners, localIPEndPoints, true);
 
                 object locker = new object();
                 int messageCount = 0;
@@ -148,10 +164,10 @@ namespace DebugTests
                 //Save the ports list out to disk
                 using (StreamWriter sw = new StreamWriter("TCPServerPorts.txt", false))
                 {
-                    List<IPEndPoint> localListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+                    List<IPEndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
-                        if (TCPConnection.ExistingLocalListenEndPointApplicationLayerProtocolStatus(endPoint) == ApplicationLayerProtocolStatus.Enabled)
+                        if (Connection.ExistingLocalListeners<TCPConnectionListener>(endPoint)[0].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                             sw.WriteLine("T-"+endPoint.Address.ToString() + "-" + endPoint.Port);
                         else
                             sw.WriteLine("F-" + endPoint.Address.ToString() + "-" + endPoint.Port);
@@ -161,10 +177,10 @@ namespace DebugTests
                 //Save the ports list out to disk
                 using (StreamWriter sw = new StreamWriter("UDPServerPorts.txt", false))
                 {
-                    List<IPEndPoint> localListenEndPoints = UDPConnection.ExistingLocalListenEndPoints();
+                    List<IPEndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.UDP);
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
-                        if (UDPConnection.ExistingLocalListenEndPointApplicationLayerProtocolStatus(endPoint) == ApplicationLayerProtocolStatus.Enabled)
+                        if (Connection.ExistingLocalListeners<UDPConnectionListener>(endPoint)[0].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                             sw.WriteLine("T-" + endPoint.Address.ToString() + "-" + endPoint.Port);
                         else
                             sw.WriteLine("F-" + endPoint.Address.ToString() + "-" + endPoint.Port);
@@ -209,13 +225,13 @@ namespace DebugTests
                 foreach (string current in udpServerPortList)
                     UDPServerEndPoints.Add(new IPEndPoint(IPAddress.Parse(current.Split('-')[1]), int.Parse(current.Split('-')[2])), (current.Substring(0, 1) == "T" ? ApplicationLayerProtocolStatus.Enabled : ApplicationLayerProtocolStatus.Disabled));
 
-                UDPConnection.StartListening(new IPEndPoint(localIPAddress, 10010), ApplicationLayerProtocolStatus.Enabled);
-
-                if ((UDPConnection.DefaultUDPOptions & UDPOptions.Handshake) != UDPOptions.Handshake)
-                    UDPConnection.StartListening(new IPEndPoint(localIPAddress, 10011), ApplicationLayerProtocolStatus.Disabled);
+                UDPConnectionListener udpListener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions,
+                    ((UDPConnection.DefaultUDPOptions & UDPOptions.Handshake) != UDPOptions.Handshake ? ApplicationLayerProtocolStatus.Disabled : ApplicationLayerProtocolStatus.Enabled), 
+                    UDPConnection.DefaultUDPOptions);
+                Connection.StartListening(udpListener, new IPEndPoint(localIPAddress, 10010), true);
 
                 Console.WriteLine("Listening for connections on:");
-                foreach (System.Net.IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
+                foreach (System.Net.IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)) 
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 UDPServerEndPointsKeys = UDPServerEndPoints.Keys.ToList();

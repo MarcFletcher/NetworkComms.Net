@@ -151,11 +151,11 @@ namespace ExamplesWP8Chat
 
                 //Start listening for new incoming TCP connections
                 //Parameter is true so that we listen on a random port if the default is not available
-                TCPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.TCP);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
-                foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
@@ -177,11 +177,11 @@ namespace ExamplesWP8Chat
 
                 //Start listening for new incoming UDP connections
                 //Parameter is true so that we listen on a random port if the default is not available
-                UDPConnection.StartListening(true);
+                Connection.StartListening(ConnectionType.UDP);
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
-                foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
+                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output

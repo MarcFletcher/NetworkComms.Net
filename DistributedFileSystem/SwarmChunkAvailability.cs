@@ -1218,7 +1218,7 @@ namespace DistributedFileSystem
             if (peerIdentifier == NetworkComms.NetworkIdentifier)
                 return false;
 
-            List<IPEndPoint> currentLocalListenEndPoints = TCPConnection.ExistingLocalListenEndPoints();
+            List<IPEndPoint> currentLocalListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
             if (currentLocalListenEndPoints.Contains(peerEndPoint))
                 return false;
 
