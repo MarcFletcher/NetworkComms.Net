@@ -47,8 +47,7 @@ namespace ExamplesConsole
             //the <string> bit means) and then write that string to the local console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
 
-            //Start listening for incoming 'TCP' connections. The true parameter means
-            //try to use the default port and if that fails just choose a random port
+            //Start listening for incoming 'TCP' connections.
             //See also Connection.StartListening(ConnectionType.UDP)
             Connection.StartListening(ConnectionType.TCP);
 

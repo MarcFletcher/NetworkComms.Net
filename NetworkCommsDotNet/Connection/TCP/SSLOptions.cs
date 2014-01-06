@@ -26,6 +26,12 @@ namespace NetworkCommsDotNet
         public X509Certificate Certificate { get; private set; }
 
         /// <summary>
+        /// If ture self signed certificates may be used succesfully. CAUTION: Allowing self signed certificates makes it 
+        /// significantly easier for a remote peer to impersonate someone.
+        /// </summary>
+        public bool AllowSelfSignedCertificate { get; private set; }
+
+        /// <summary>
         /// If true the client must set the correct certificate in its SSLOptions. If false
         /// all the client requires to succesfully connect is the certificate name.
         /// </summary>
@@ -50,11 +56,14 @@ namespace NetworkCommsDotNet
         /// requires either a copy of the provided certificate or the certificate name to succesfully connect.
         /// </summary>
         /// <param name="certificate">The certificate</param>
-        public SSLOptions(X509Certificate certificate)
+        /// <param name="allowSelfSignedCertificates">If ture self signed certificates may be used succesfully. CAUTION: Allowing self signed certificates makes it 
+        /// significantly easier for a remote peer to impersonate someone.</param>
+        public SSLOptions(X509Certificate certificate, bool allowSelfSignedCertificates)
         {
             SSLEnabled = true;
             Certificate = certificate;
             CertificateName = certificate.Issuer.Replace("CN=","");
+            AllowSelfSignedCertificate = allowSelfSignedCertificates;
         }
 
         /// <summary>
@@ -62,13 +71,16 @@ namespace NetworkCommsDotNet
         /// this SSLOptions is used server side, any client must have a copy of the certificate to succesfully connect.
         /// </summary>
         /// <param name="certificate">The certificate</param>
+        /// <param name="allowSelfSignedCertificates">If ture self signed certificates may be used succesfully. CAUTION: Allowing self signed certificates makes it 
+        /// significantly easier for a remote peer to impersonate someone.</param>
         /// <param name="requireMutualAuthentication">True if any client must also have a copy of the server certificate</param>
-        public SSLOptions(X509Certificate certificate, bool requireMutualAuthentication)
+        public SSLOptions(X509Certificate certificate, bool allowSelfSignedCertificates, bool requireMutualAuthentication)
         {
             SSLEnabled = true;
             RequireMutualAuthentication = requireMutualAuthentication;
             Certificate = certificate;
             CertificateName = certificate.Issuer.Replace("CN=", "");
+            AllowSelfSignedCertificate = allowSelfSignedCertificates;
         }
 
         /// <summary>
@@ -76,11 +88,14 @@ namespace NetworkCommsDotNet
         /// connect to a server with a matching certificateName. Server must not require MutualAuthentication.
         /// </summary>
         /// <param name="certificateName">The server certificate name</param>
-        public SSLOptions(string certificateName)
+        /// <param name="allowSelfSignedCertificates">If ture self signed certificates may be used succesfully. CAUTION: Allowing self signed certificates makes it 
+        /// significantly easier for a remote peer to impersonate someone.</param>
+        public SSLOptions(string certificateName, bool allowSelfSignedCertificates)
         {
             SSLEnabled = true;
             Certificate = null;
             CertificateName = certificateName;
+            AllowSelfSignedCertificate = allowSelfSignedCertificates;
         }
     }
 }

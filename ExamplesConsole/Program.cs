@@ -51,14 +51,15 @@ namespace ExamplesConsole
             Console.WriteLine("Please enter an example number:");
 
             //Print out the available examples
-            int totalNumberOfExamples = 6;
+            int totalNumberOfExamples = 7;
             Console.WriteLine("1 - Basic - Message Send (Only 11 lines!)");
             Console.WriteLine("2 - Advanced - Object Send");
             Console.WriteLine("3 - Advanced - Distributed File System");
             Console.WriteLine("4 - Advanced - Remote Procedure Call");
             Console.WriteLine("5 - Advanced - Unmanaged Connections");
+            Console.WriteLine("6 - Advanced - TCP (SSL) Connections");
             Console.WriteLine("");
-            Console.WriteLine("6 - Debug - Speed Test");
+            Console.WriteLine("7 - Debug - Speed Test");
 
             //Get the user choice
             Console.WriteLine("");
@@ -95,6 +96,9 @@ namespace ExamplesConsole
                         UnmanagedConnection.RunExample();
                         break;
                     case 6:
+                        SSLExample.RunExample();
+                        break;
+                    case 7:
                         SpeedTest.RunExample();
                         break;
                     default:

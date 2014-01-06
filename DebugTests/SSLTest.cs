@@ -31,11 +31,12 @@ namespace DebugTests
     {
         static byte[] sendArray = new byte[] { 3, 45, 200, 10, 9, 8, 7, 45, 96, 123 };
 
-        static X509Certificate cert;
         static bool serverMode;
 
         public static void RunExample()
         {
+            NetworkComms.ConnectionEstablishTimeoutMS = 600000;
+
             //Create a suitable certificate if it does not exist
             if (!File.Exists("testCertificate.pfx"))
             {
@@ -44,7 +45,7 @@ namespace DebugTests
             }
 
             //Load the certificate
-            cert = new X509Certificate2("testCertificate.pfx");
+            X509Certificate cert = new X509Certificate2("testCertificate.pfx");
 
             IPAddress localIPAddress = IPAddress.Parse("::1");
 
@@ -75,7 +76,7 @@ namespace DebugTests
                     Console.WriteLine("Connection closed - " + connection);
                 });
 
-                SSLOptions sslOptions = new SSLOptions(cert);
+                SSLOptions sslOptions = new SSLOptions(cert, true, true);
                 TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, 
                     ApplicationLayerProtocolStatus.Enabled, sslOptions);
                 Connection.StartListening(listener, new IPEndPoint(localIPAddress, 10000), true);
@@ -91,8 +92,8 @@ namespace DebugTests
             {
                 ConnectionInfo serverInfo = new ConnectionInfo(new IPEndPoint(localIPAddress, 10000));
 
-                SSLOptions sslOptions = new SSLOptions("networkcomms.net");
-                //SSLOptions sslOptions = new SSLOptions(true, cert);
+                SSLOptions sslOptions = new SSLOptions("networkcomms.net", true);
+                //SSLOptions sslOptions = new SSLOptions(cert, true);
 
                 TCPConnection conn = TCPConnection.GetConnection(serverInfo, NetworkComms.DefaultSendReceiveOptions, sslOptions);
                 conn.SendObject("Data", sendArray);

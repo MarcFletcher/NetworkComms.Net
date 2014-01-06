@@ -62,7 +62,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The SSL options associated with this connection.
         /// </summary>
-        SSLOptions sslOptions;
+        public SSLOptions SSLOptions { get; private set; }
 #endif
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
             if (socket != null) this.socket = socket;
 #else
             if (tcpClient != null) this.tcpClient = tcpClient;
-            this.sslOptions = sslOptions;
+            this.SSLOptions = sslOptions;
 #endif
         }
 
@@ -108,7 +108,7 @@ namespace NetworkCommsDotNet
             NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, (IPEndPoint)tcpClient.Client.LocalEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
-            if (sslOptions.SSLEnabled)
+            if (SSLOptions.SSLEnabled)
                 ConfigureSSLStream();
             else
                 //We are going to be using the networkStream quite a bit so we pull out a reference once here
@@ -288,7 +288,7 @@ namespace NetworkCommsDotNet
                 totalBytesRead = count + totalBytesRead;
 #else
                 Stream netStream;
-                if (sslOptions.SSLEnabled)
+                if (SSLOptions.SSLEnabled)
                     netStream = (SslStream)ar.AsyncState;
                 else
                     netStream = (NetworkStream)ar.AsyncState;
@@ -298,7 +298,7 @@ namespace NetworkCommsDotNet
 
                 totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
 
-                if (sslOptions.SSLEnabled)
+                if (SSLOptions.SSLEnabled)
                     //SSLstream does not have a DataAvailable property. We will just assume false.
                     dataAvailable = false;
                 else
@@ -353,7 +353,7 @@ namespace NetworkCommsDotNet
                                     //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
                                     packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                                     
-                                    if (sslOptions.SSLEnabled)
+                                    if (SSLOptions.SSLEnabled)
                                         //SSLstream does not have a DataAvailable property. We will just assume false.
                                         dataAvailable = false;
                                     else
@@ -455,7 +455,7 @@ namespace NetworkCommsDotNet
                     totalBytesRead = connectionStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
                     //Check to see if there is more data ready to be read
-                    if (sslOptions.SSLEnabled)
+                    if (SSLOptions.SSLEnabled)
                         //SSLstream does not have a DataAvailable property. We will just assume false.
                         dataAvailable = false;
                     else
@@ -528,49 +528,58 @@ namespace NetworkCommsDotNet
         /// </summary>
         private void ConfigureSSLStream()
         {
-            if (ConnectionInfo.ServerSide)
+            try
             {
-                connectionStream = new SslStream(tcpClient.GetStream());
-                ((SslStream)connectionStream).AuthenticateAsServer(sslOptions.Certificate, sslOptions.RequireMutualAuthentication, SslProtocols.Default, false);
+                if (ConnectionInfo.ServerSide)
+                {
+                    connectionStream = new SslStream(tcpClient.GetStream(), false,
+                        new RemoteCertificateValidationCallback(CertificateValidationCallback),
+                        new LocalCertificateSelectionCallback(CertificateSelectionCallback));
+
+                    ((SslStream)connectionStream).AuthenticateAsServer(SSLOptions.Certificate, SSLOptions.RequireMutualAuthentication, SslProtocols.Default, false);
+                }
+                else
+                {
+                    X509CertificateCollection certs = new X509CertificateCollection();
+
+                    if (SSLOptions.Certificate != null) certs.Add(SSLOptions.Certificate);
+
+                    //If we have a certificate set we use that to authenticate
+                    connectionStream = new SslStream(tcpClient.GetStream(), false,
+                        new RemoteCertificateValidationCallback(CertificateValidationCallback),
+                        new LocalCertificateSelectionCallback(CertificateSelectionCallback));
+
+                    ((SslStream)connectionStream).AuthenticateAsClient(SSLOptions.CertificateName, certs, SslProtocols.Default, false);
+
+                }
             }
-            else
+            catch (AuthenticationException ex)
             {
-                try
-                {
-                    if (sslOptions.Certificate != null)
-                    {
-                        //If we have a certificate set we use that to authenticate
-                        connectionStream = new SslStream(tcpClient.GetStream(), false,
-                            new RemoteCertificateValidationCallback(CertificateValidationCallback),
-                            new LocalCertificateSelectionCallback(CertificateSelectionCallback));
-
-                        X509CertificateCollection certs = new X509CertificateCollection();
-                        certs.Add(sslOptions.Certificate);
-
-                        ((SslStream)connectionStream).AuthenticateAsClient(sslOptions.CertificateName, certs, SslProtocols.Default, false);
-                    }
-                    else
-                    {
-                        //If we do not have a certificate we can still try and use the certificate name
-                        connectionStream = new SslStream(tcpClient.GetStream());
-                        ((SslStream)connectionStream).AuthenticateAsClient(sslOptions.CertificateName);
-                    }
-                }
-                catch (AuthenticationException ex)
-                {
-                    throw new ConnectionSetupException("SSL authentication failed. Please check configuration and try again.", ex);
-                }
-
-                sslOptions.Authenticated = true;
+                throw new ConnectionSetupException("SSL authentication failed. Please check configuration and try again.", ex);
             }
+
+            SSLOptions.Authenticated = true;
         }
 
         private bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            if (sslPolicyErrors != SslPolicyErrors.None)
-                return false;
-            else if (certificate.Equals(sslOptions.Certificate))
+            if (sslPolicyErrors == SslPolicyErrors.None)
                 return true;
+            else if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateNotAvailable && ConnectionInfo.ServerSide)
+                //If the client did not provide a remote certificate it may well be because
+                //we were not requesting one
+                return !SSLOptions.RequireMutualAuthentication;
+            else if (SSLOptions.AllowSelfSignedCertificate && //If we allows self signed certificates we make sure the errors are correct
+                chain.ChainStatus.Length == 1 && //Only a single chain error
+                sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
+                chain.ChainStatus[0].Status == X509ChainStatusFlags.UntrustedRoot)
+            {
+                //If we have a local certificate we compare them
+                if (SSLOptions.Certificate != null)
+                    return certificate.Equals(SSLOptions.Certificate);
+                else
+                    return true;
+            }
             else
                 return false;
         }
@@ -578,7 +587,7 @@ namespace NetworkCommsDotNet
         private X509Certificate CertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, 
             X509Certificate remoteCertificate, string[] acceptableIssuers)
         {
-            return sslOptions.Certificate;
+            return SSLOptions.Certificate;
         }
 #endif
 
