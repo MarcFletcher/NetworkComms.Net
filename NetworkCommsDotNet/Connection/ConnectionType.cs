@@ -41,6 +41,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         UDP,
 
+        /// <summary>
+        /// A Bluetooth RFCOMM connection. Used by <see cref="BluetoothConnection"/> 
+        /// </summary>
+        Bluetooth,
+
         //We may support others in future such as SSH, FTP, SCP etc.
     }
 
