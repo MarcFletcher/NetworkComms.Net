@@ -49,7 +49,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// SSL options that are associated with this listener
         /// </summary>
-        SSLOptions sslOptions;
+        public SSLOptions SSLOptions { get; private set; }
 #endif
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace NetworkCommsDotNet
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
 #if !WINDOWS_PHONE
-            sslOptions = new SSLOptions();
+            SSLOptions = new SSLOptions();
 #endif
         }
 
@@ -77,7 +77,7 @@ namespace NetworkCommsDotNet
             ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions)
             : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
-            this.sslOptions = sslOptions;
+            this.SSLOptions = sslOptions;
         }
 #endif
 
@@ -218,7 +218,7 @@ namespace NetworkCommsDotNet
                     #region Pickup The New Connection
                     try
                     {
-                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, sslOptions);
+                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, SSLOptions);
                     }
                     catch (ConfirmationTimeoutException)
                     {
