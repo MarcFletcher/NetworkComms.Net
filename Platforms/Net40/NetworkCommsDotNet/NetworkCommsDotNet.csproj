@@ -32,6 +32,9 @@
     <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="InTheHand.Net.Personal">
+      <HintPath>..\..\..\DLL\Net40\InTheHand.Net.Personal.dll</HintPath>
+    </Reference>
     <Reference Include="NLog">
       <HintPath>..\..\..\DLL\Net40\NLog.dll</HintPath>
     </Reference>
@@ -152,6 +155,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
       <Link>Tools\ShortGUID.cs</Link>
     </Compile>
+    <Compile Include="Connection\Bluetooth\BluetoothConnection.cs" />
+    <Compile Include="Connection\Bluetooth\BluetoothConnectionListenner.cs" />
+    <Compile Include="Connection\Bluetooth\BluetoothConnectionStatic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -164,6 +170,7 @@
       <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
