@@ -32,6 +32,9 @@
     <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="InTheHand.Net.Personal">
+      <HintPath>..\..\..\DLL\Net40\InTheHand.Net.Personal.dll</HintPath>
+    </Reference>
     <Reference Include="NLog">
       <HintPath>..\..\..\DLL\Net40\NLog.dll</HintPath>
     </Reference>
@@ -49,6 +52,15 @@
   <ItemGroup>
     <Compile Include="..\..\..\NetworkCommsDotNet\ConnectionInfo.cs">
       <Link>ConnectionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnection.cs">
+      <Link>Connection\Bluetooth\BluetoothConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionListenner.cs">
+      <Link>Connection\Bluetooth\BluetoothConnectionListenner.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionStatic.cs">
+      <Link>Connection\Bluetooth\BluetoothConnectionStatic.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionCreate.cs">
       <Link>Connection\ConnectionCreate.cs</Link>
@@ -170,6 +182,7 @@
       <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

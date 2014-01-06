@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if !NET2
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -237,3 +239,5 @@ namespace NetworkCommsDotNet
         }
     }
 }
+
+#endif

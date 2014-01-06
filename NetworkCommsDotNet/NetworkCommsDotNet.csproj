@@ -63,6 +63,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection\Bluetooth\BluetoothConnection.cs" />
+    <Compile Include="Connection\Bluetooth\BluetoothConnectionListenner.cs" />
+    <Compile Include="Connection\Bluetooth\BluetoothConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionListeners.cs" />
     <Compile Include="Connection\ConnectionCreate.cs" />
     <Compile Include="Connection\ConnectionDelegatesHandlers.cs" />
