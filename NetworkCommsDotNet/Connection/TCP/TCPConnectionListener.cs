@@ -84,7 +84,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="desiredLocalListenIPEndPoint"></param>
+        /// <param name="desiredLocalListenEndPoint"></param>
         /// <param name="useRandomPortFailOver"></param>
         internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
@@ -135,9 +135,9 @@ namespace NetworkCommsDotNet
             }
 
 #if WINDOWS_PHONE
-            this.LocalListenIPEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
+            this.LocalListenEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
 #else
-            this.LocalListenIPEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
+            this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
 #endif
 
             this.IsListening = true;

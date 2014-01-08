@@ -25,6 +25,7 @@ using System.Threading;
 using System.Net;
 using DPSBase;
 using System.IO;
+using InTheHand.Net;
 
 namespace DebugTests
 {
@@ -45,7 +46,7 @@ namespace DebugTests
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
-            IPAddress localIPAddress = IPAddress.Parse("::1");
+            //IPAddress localIPAddress = IPAddress.Parse("::1");
 
             if (serverMode)
             {
@@ -67,16 +68,12 @@ namespace DebugTests
                 });
 
                 List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>() { 
-                    new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions,
-                        ApplicationLayerProtocolStatus.Enabled, UDPOptions.None),
-                    new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions,
-                        ApplicationLayerProtocolStatus.Enabled, UDPOptions.None)};
+                    new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions,
+                        ApplicationLayerProtocolStatus.Enabled)};
 
-                List<IPEndPoint> listeningEndPoints = new List<IPEndPoint>() { new IPEndPoint(localIPAddress, 10000), new IPEndPoint(localIPAddress, 10000) };
+                List<EndPoint> listeningEndPoints = new List<EndPoint>() { new BluetoothEndPoint(BluetoothAddress.None, Guid.Empty, 0)};
 
-                IPEndPoint endPointToUse = new IPEndPoint(localIPAddress, 0);
-
-                Connection.StartListening(listeners[0], endPointToUse, true);
+                Connection.StartListening(listeners, listeningEndPoints, true);
 
                 //Console.WriteLine("Listening for UDP messages on:");
                 //foreach (IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
@@ -87,18 +84,7 @@ namespace DebugTests
             }
             else
             {
-                ConnectionInfo connInfo = new ConnectionInfo(new IPEndPoint(localIPAddress, 10000));
-
-                Connection conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
-                conn.SendObject("Data", sendArray);
-                conn.CloseConnection(false);
-
-                Console.WriteLine("Send complete. Press any key to send again.");
-                Console.ReadKey(true);
-
-                conn = UDPConnection.GetConnection(connInfo, UDPOptions.None);
-                conn.SendObject("Data", sendArray);
-                conn.CloseConnection(false);
+                
 
                 Console.WriteLine("\nClient complete. Press any key to quit.");
                 Console.ReadKey(true);

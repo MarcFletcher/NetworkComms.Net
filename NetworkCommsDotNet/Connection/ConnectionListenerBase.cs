@@ -53,7 +53,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The local IPEndPoint that this listener is associated with.
         /// </summary>
-        public IPEndPoint LocalListenIPEndPoint { get; protected set; }
+        public EndPoint LocalListenEndPoint { get; protected set; }
 
         /// <summary>
         /// 
@@ -102,8 +102,8 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public override string ToString()
         {
-            if (IsListening && LocalListenIPEndPoint != null)
-                return "Listening ("+LocalListenIPEndPoint.Address + ":" + LocalListenIPEndPoint.Port + ")";
+            if (IsListening && LocalListenEndPoint != null)
+                return "Listening ("+LocalListenEndPoint.ToString() + ")";
             else
                 return "Not Listening";
         }

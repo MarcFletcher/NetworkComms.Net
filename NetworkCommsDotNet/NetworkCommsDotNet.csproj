@@ -64,7 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connection\Bluetooth\BluetoothConnection.cs" />
-    <Compile Include="Connection\Bluetooth\BluetoothConnectionListenner.cs" />
+    <Compile Include="Connection\Bluetooth\BluetoothConnectionListener.cs" />
     <Compile Include="Connection\Bluetooth\BluetoothConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionListeners.cs" />
     <Compile Include="Connection\ConnectionCreate.cs" />

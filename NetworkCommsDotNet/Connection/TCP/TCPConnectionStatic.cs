@@ -98,7 +98,7 @@ namespace NetworkCommsDotNet
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
-            //If we have a tcpClient at this stage we must be serverside
+            //If we have a tcpClient at this stage we must be server side
 #if WINDOWS_PHONE
              if (socket != null) connectionInfo.ServerSide = true;
 #else

@@ -96,9 +96,9 @@ namespace NetworkCommsDotNet
             }
 
 #if WINDOWS_PHONE
-            this.LocalListenIPEndPoint = new IPEndPoint(IPAddress.Parse(UDPConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(UDPConnection.socket.Information.LocalPort)); 
+            this.LocalListenEndPoint = new IPEndPoint(IPAddress.Parse(UDPConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(UDPConnection.socket.Information.LocalPort)); 
 #else
-            this.LocalListenIPEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
+            this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
 #endif
 
             this.IsListening = true;

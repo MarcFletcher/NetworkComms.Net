@@ -56,8 +56,8 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnection.cs">
       <Link>Connection\Bluetooth\BluetoothConnection.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionListenner.cs">
-      <Link>Connection\Bluetooth\BluetoothConnectionListenner.cs</Link>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionListener.cs">
+      <Link>Connection\Bluetooth\BluetoothConnectionListener.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionStatic.cs">
       <Link>Connection\Bluetooth\BluetoothConnectionStatic.cs</Link>

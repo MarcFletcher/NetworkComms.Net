@@ -13,26 +13,34 @@ using System.Threading;
 
 namespace NetworkCommsDotNet
 {
-    public class BluetoothConnectionListenner : ConnectionListenerBase
+    /// <summary>
+    /// A Bluetooth connection listener
+    /// </summary>
+    public class BluetoothConnectionListener : ConnectionListenerBase
     {
         BluetoothListener listenerInstance;
 
-        public BluetoothConnectionListenner(SendReceiveOptions sendReceiveOptions,
+        /// <summary>
+        /// Create a new instance of BluetoothConnectionListener
+        /// </summary>
+        /// <param name="sendReceiveOptions"></param>
+        /// <param name="applicationLayerProtocol"></param>
+        public BluetoothConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol)
             : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol)
         {
 
         }
 
-        internal override void StartListening(System.Net.EndPoint desiredLocalListenIPEndPoint, bool useRandomPortFailOver)
+        internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
             if (IsListening) throw new InvalidOperationException("Attempted to call StartListening when already listening.");
-            if(!(desiredLocalListenIPEndPoint is BluetoothEndPoint)) throw new ArgumentException("Bluetooth connections can only be made from a local BluetoothEndPoint", "desiredLocalListenIPEndPoint");
+            if(!(desiredLocalListenEndPoint is BluetoothEndPoint)) throw new ArgumentException("Bluetooth connections can only be made from a local BluetoothEndPoint", "desiredLocalListenIPEndPoint");
 
             try
             {
 
-                listenerInstance = new BluetoothListener(desiredLocalListenIPEndPoint as BluetoothEndPoint);
+                listenerInstance = new BluetoothListener(desiredLocalListenEndPoint as BluetoothEndPoint);
                 listenerInstance.Start();
                 listenerInstance.BeginAcceptBluetoothClient(BluetoothConnectionReceivedAsync, null);
             }
@@ -52,18 +60,18 @@ namespace NetworkCommsDotNet
                     catch (SocketException)
                     {
                         //If we get another socket exception this appears to be a bad IP. We will just ignore this IP
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open a random port on " + desiredLocalListenIPEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
-                        throw new CommsSetupShutdownException("It was not possible to open a random port on " + desiredLocalListenIPEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open a random port on " + desiredLocalListenEndPoint + ". This endPoint may not support listening or possibly try again using a different port.");
+                        throw new CommsSetupShutdownException("It was not possible to open a random port on " + desiredLocalListenEndPoint + ". This endPoint may not support listening or possibly try again using a different port.");
                     }
                 }
                 else
                 {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to open port #" + desiredLocalListenIPEndPoint.Port.ToString() + " on " + desiredLocalListenIPEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
-                    throw new CommsSetupShutdownException("It was not possible to open port #" + desiredLocalListenIPEndPoint.Port.ToString() + " on " + desiredLocalListenIPEndPoint.Address + ". This endPoint may not support listening or possibly try again using a different port.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("It was not possible to listen on " + desiredLocalListenEndPoint.ToString() + ". This endPoint may not support listening or possibly try again using a different port.");
+                    throw new CommsSetupShutdownException("It was not possible to listen on " + desiredLocalListenEndPoint.ToString() + ". This endPoint may not support listening or possibly try again using a different port.");
                 }
             }
 
-            this.LocalListenIPEndPoint = listenerInstance.LocalEndPoint;
+            this.LocalListenEndPoint = listenerInstance.LocalEndPoint;
 
             this.IsListening = true;
         }

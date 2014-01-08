@@ -71,6 +71,10 @@ namespace NetworkCommsDotNet
                         listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
                     else if (connectionType == ConnectionType.UDP)
                         listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+#if !NET2 && !WINDOWS_PHONE
+                    else if (connectionType == ConnectionType.Bluetooth)
+                        listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+#endif
                     else
                         throw new NotImplementedException("This method has not been implemented for the provided connection type.");
                 }
@@ -92,7 +96,7 @@ namespace NetworkCommsDotNet
                     for (int i = 0; i < listeners.Count; i++)
                     {
                         if (listeners[i].IsListening)
-                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenIPEndPoint);
+                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
                     }
 
                     throw;
@@ -105,6 +109,10 @@ namespace NetworkCommsDotNet
                     listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
                 else if (connectionType == ConnectionType.UDP)
                     listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions);
+#if !NET2 && !WINDOWS_PHONE
+                else if (connectionType == ConnectionType.Bluetooth)
+                    listener = new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+#endif
                 else
                     throw new NotImplementedException("This method has not been implemented for the provided connection type.");
 
@@ -140,7 +148,7 @@ namespace NetworkCommsDotNet
                     for (int i = 0; i < listeners.Count; i++)
                     {
                         if (listeners[i].IsListening)
-                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenIPEndPoint);
+                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
                     }
 
                     throw;
@@ -182,23 +190,23 @@ namespace NetworkCommsDotNet
 
                 //Idiot check
                 if (listenersDict.ContainsKey(listener.ConnectionType) &&
-                    listenersDict[listener.ConnectionType].ContainsKey(listener.LocalListenIPEndPoint))
+                    listenersDict[listener.ConnectionType].ContainsKey(listener.LocalListenEndPoint))
                 {
                     listener.StopListening();
                     throw new InvalidOperationException("According to the listener dictionary there is already a listener for " + listener.ConnectionType.ToString() +
-                        " connections with a local IPEndPoint " + listener.LocalListenIPEndPoint.ToString() + ". This should not be possible.");
+                        " connections with a local IPEndPoint " + listener.LocalListenEndPoint.ToString() + ". This should not be possible.");
                 }
 
                 //Add the listener to the global dict                
                 if (listenersDict.ContainsKey(listener.ConnectionType))
                 {
-                    if (listenersDict[listener.ConnectionType].ContainsKey(listener.LocalListenIPEndPoint))
+                    if (listenersDict[listener.ConnectionType].ContainsKey(listener.LocalListenEndPoint))
                         throw new CommsSetupShutdownException("A listener already exists with an IPEndPoint that matches the new listener. This should not be possible.");
                     else
-                        listenersDict[listener.ConnectionType].Add(listener.LocalListenIPEndPoint, listener);
+                        listenersDict[listener.ConnectionType].Add(listener.LocalListenEndPoint, listener);
                 }
                 else
-                    listenersDict.Add(listener.ConnectionType, new Dictionary<EndPoint, ConnectionListenerBase>() { { listener.LocalListenIPEndPoint, listener } });
+                    listenersDict.Add(listener.ConnectionType, new Dictionary<EndPoint, ConnectionListenerBase>() { { listener.LocalListenEndPoint, listener } });
             }
         }
 
@@ -271,7 +279,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if atleast one local listener exists.
+        /// Returns true if at least one local listener exists.
         /// </summary>
         /// <returns></returns>
         public static bool Listening()
@@ -280,7 +288,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if atleast one local listener of the provided <see cref="ConnectionType"/> exists.
+        /// Returns true if at least one local listener of the provided <see cref="ConnectionType"/> exists.
         /// </summary>
         /// <param name="connectionType">The <see cref="ConnectionType"/> to check.</param>
         /// <returns></returns>
