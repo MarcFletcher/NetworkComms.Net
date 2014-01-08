@@ -66,7 +66,11 @@ namespace LZMA.RangeCoder
 
 		internal void CloseStream()
 		{
+#if NETFX_CORE
+            Stream.Dispose();
+#else
 			Stream.Close();
+#endif
 		}
 
 		internal void Encode(uint start, uint size, uint total)
@@ -164,7 +168,11 @@ namespace LZMA.RangeCoder
 
 		internal void CloseStream()
 		{
+#if NETFX_CORE
+            Stream.Dispose();
+#else
 			Stream.Close();
+#endif
 		}
 
 		internal void Normalize()

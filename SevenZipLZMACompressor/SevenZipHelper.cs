@@ -19,6 +19,9 @@
 using System;
 using System.IO;
 
+#if NETFX_CORE
+using ApplicationException = System.Exception;
+#endif
 
 namespace LZMA
 {

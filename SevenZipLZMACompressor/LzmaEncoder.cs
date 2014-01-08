@@ -22,7 +22,6 @@ using System;
 using LZMA.RangeCoder;
 using LZ;
 
-
 namespace LZMA
 {   
 
