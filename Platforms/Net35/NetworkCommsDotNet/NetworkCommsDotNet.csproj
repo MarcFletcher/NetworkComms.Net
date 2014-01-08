@@ -33,6 +33,9 @@
     <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="InTheHand.Net.Personal">
+      <HintPath>..\..\..\DLL\Net35\InTheHand.Net.Personal.dll</HintPath>
+    </Reference>
     <Reference Include="NLog">
       <HintPath>..\..\..\DLL\Net35\NLog.dll</HintPath>
     </Reference>
@@ -49,6 +52,15 @@
   <ItemGroup>
     <Compile Include="..\..\..\NetworkCommsDotNet\ConnectionInfo.cs">
       <Link>ConnectionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnection.cs">
+      <Link>Connection\Bluetooth\BluetoothConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionListenner.cs">
+      <Link>Connection\Bluetooth\BluetoothConnectionListenner.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\Bluetooth\BluetoothConnectionStatic.cs">
+      <Link>Connection\Bluetooth\BluetoothConnectionStatic.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionCreate.cs">
       <Link>Connection\ConnectionCreate.cs</Link>
