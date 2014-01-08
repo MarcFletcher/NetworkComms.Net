@@ -333,12 +333,12 @@ namespace DistributedFileSystem
             #region Connection Close Handler
             NetworkComms.ConnectionEstablishShutdownDelegate connectionShutdownDuringBuild = new NetworkComms.ConnectionEstablishShutdownDelegate((Connection connection) =>
             {
-                //On a closed conneciton we make sure we have no outstanding requests with that client
+                //On a closed connection we make sure we have no outstanding requests with that client
                 if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
                 {
                     lock (itemLocker)
                     {
-                        SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
+                        SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
                         itemBuildTrackerDict = (from current in itemBuildTrackerDict where current.Value.PeerConnectionInfo.NetworkIdentifier != connection.ConnectionInfo.NetworkIdentifier select current).ToDictionary(dict => dict.Key, dict => dict.Value);
                         itemBuildWait.Set();
                     }
@@ -384,13 +384,13 @@ namespace DistributedFileSystem
                             (DateTime.Now - itemBuildTrackerDict[currentTrackerKeys[i]].RequestCreationTime).TotalMilliseconds > maxChunkTimeoutMS)
                         {
                             //We are going to consider this request potentially timed out
-                            if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier, itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.LocalEndPoint) > DFS.PeerMaxNumTimeouts)
+                            if (SwarmChunkAvailability.GetNewTimeoutCount(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier, (IPEndPoint)itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.LocalEndPoint) > DFS.PeerMaxNumTimeouts)
                             {
                                 if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
                                 {
                                     if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " peer from AssembleItem due to potential timeout.");
                                     AddBuildLogLine("Removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " from AssembleItem due to potential timeout.");
-                                    SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier, itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.LocalEndPoint);
+                                    SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier, (IPEndPoint)itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.LocalEndPoint);
                                     timedOutPeers.Add(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
                                 }
                                 else
@@ -428,7 +428,7 @@ namespace DistributedFileSystem
                         AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count(entry=> entry.HasAtleastOneOnlineIPEndPoint()) + " unique online peers.");
 
                         //We will want to know how many unique peers we can potentially contact
-                        int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.IsPeerIPEndPointBusy(entry.Key.NetworkIdentifier, entry.Key.LocalEndPoint) && entry.Value.IsPeerIPEndPointOnline(entry.Key.NetworkIdentifier, entry.Key.LocalEndPoint))).Max();
+                        int maxPeers = (from current in nonLocalChunkExistence select current.Value.Count(entry => !entry.Value.IsPeerIPEndPointBusy(entry.Key.NetworkIdentifier, (IPEndPoint)entry.Key.LocalEndPoint) && entry.Value.IsPeerIPEndPointOnline(entry.Key.NetworkIdentifier, (IPEndPoint)entry.Key.LocalEndPoint))).Max();
 
                         //We will want to know how many chunks we have left to request
                         int numChunksLeft = TotalNumChunks - itemBuildTrackerDict.Count;
@@ -469,14 +469,14 @@ namespace DistributedFileSystem
                                     //We can now determine which peers we could contact for this chunk
                                     ConnectionInfo[] possibleChunkPeers = (from current in nonLocalChunkExistence[chunkRarity[i]]
                                                                            //We don't want to contact busy peers
-                                                                           where !current.Value.IsPeerIPEndPointBusy(current.Key.NetworkIdentifier, current.Key.LocalEndPoint) && current.Value.IsPeerIPEndPointOnline(current.Key.NetworkIdentifier, current.Key.LocalEndPoint)
+                                                                           where !current.Value.IsPeerIPEndPointBusy(current.Key.NetworkIdentifier, (IPEndPoint)current.Key.LocalEndPoint) && current.Value.IsPeerIPEndPointOnline(current.Key.NetworkIdentifier, (IPEndPoint)current.Key.LocalEndPoint)
                                                                            //If we have nonSuperPeers then we only include the non super peers
                                                                            where (containsNonSuperPeers ? !current.Value.SuperPeer : true)
                                                                            //We don't want a peer from whom we currently await a response
                                                                            where !currentRequestIdentifiers.Contains(current.Key.NetworkIdentifier)
                                                                            //See comments within /**/ below for ordering notes
                                                                            orderby
-                                                                               current.Value.GetCurrentTimeoutCount(current.Key.NetworkIdentifier, current.Key.LocalEndPoint) ascending,
+                                                                               current.Value.GetCurrentTimeoutCount(current.Key.NetworkIdentifier, (IPEndPoint)current.Key.LocalEndPoint) ascending,
                                                                                (useCompletedPeers ? 0 : current.Value.PeerChunkFlags.NumCompletedChunks()) ascending,
                                                                                (useCompletedPeers ? current.Value.PeerChunkFlags.NumCompletedChunks() : 0) descending,
                                                                                randGen.NextDouble() ascending
@@ -504,13 +504,13 @@ namespace DistributedFileSystem
                                         ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[i], possibleChunkPeers[0]);
 
                                         if (newRequests.ContainsKey(possibleChunkPeers[0]))
-                                            throw new Exception("We should not be choosing a peer we have already choosen in step 1");
+                                            throw new Exception("We should not be choosing a peer we have already chosen in step 1");
                                         else
                                             newRequests.Add(possibleChunkPeers[0], new List<ChunkAvailabilityRequest> { newChunkRequest });
 
                                         newRequestCount++;
 
-                                        AddBuildLogLine("NewChunkRequest S1 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                        AddBuildLogLine("NewChunkRequest S1 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.ToString() + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                         itemBuildTrackerDict.Add(chunkRarity[i], newChunkRequest);
 
@@ -561,8 +561,8 @@ namespace DistributedFileSystem
                                     //Its possible we have pulled out a peer for whom we no longer have availability info for
                                     if (SwarmChunkAvailability.PeerExistsInSwarm(currentRequestConnectionInfo[i].NetworkIdentifier) && 
                                         nonLocalPeerAvailability.ContainsKey(currentRequestConnectionInfo[i]) &&
-                                        !SwarmChunkAvailability.IPEndPointBusy(currentRequestConnectionInfo[i].NetworkIdentifier, currentRequestConnectionInfo[i].LocalEndPoint) &&
-                                        SwarmChunkAvailability.IPEndPointOnline(currentRequestConnectionInfo[i].NetworkIdentifier, currentRequestConnectionInfo[i].LocalEndPoint))
+                                        !SwarmChunkAvailability.IPEndPointBusy(currentRequestConnectionInfo[i].NetworkIdentifier, (IPEndPoint)currentRequestConnectionInfo[i].LocalEndPoint) &&
+                                        SwarmChunkAvailability.IPEndPointOnline(currentRequestConnectionInfo[i].NetworkIdentifier, (IPEndPoint)currentRequestConnectionInfo[i].LocalEndPoint))
                                     {
                                         //which chunks does this peer have that we could use?
                                         ChunkFlags peerAvailability = nonLocalPeerAvailability[currentRequestConnectionInfo[i]].PeerChunkFlags;
@@ -576,7 +576,7 @@ namespace DistributedFileSystem
                                                 //We can now add the new request to the build dictionaries
                                                 ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i]);
 
-                                                AddBuildLogLine("NewChunkRequest S2 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Address.ToString() + ":" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.Port + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
+                                                AddBuildLogLine("NewChunkRequest S2 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.ToString() + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
                                                 if (newRequests.ContainsKey(currentRequestConnectionInfo[i]))
                                                     newRequests[currentRequestConnectionInfo[i]].Add(newChunkRequest);
@@ -625,7 +625,7 @@ namespace DistributedFileSystem
                 {
                     foreach (KeyValuePair<ConnectionInfo, List<ChunkAvailabilityRequest>> request in newRequests)
                     {
-                        //We can contact every peer seperately so that no single peer can hold up the build
+                        //We can contact every peer separately so that no single peer can hold up the build
                         try
                         {
                             if (request.Value.Count > DFS.MaxConcurrentPeerRequests)
@@ -633,14 +633,14 @@ namespace DistributedFileSystem
 
                             for (int i = 0; i < request.Value.Count; i++)
                             {
-                                UDPConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i], request.Key.LocalEndPoint, DFS.nullCompressionSRO);
+                                UDPConnection.SendObject("DFS_ChunkAvailabilityInterestRequest", request.Value[i], (IPEndPoint)request.Key.LocalEndPoint, DFS.nullCompressionSRO);
                                 //Console.WriteLine("   ...({0}) chunk {1} requested from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), request.Value[i].ChunkIndex, request.Key.NetworkIdentifier);
                             }
                         }
                         catch (CommsException)
                         {
                             //If we can't connect to a peer we assume it's dead and don't try again
-                            SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(request.Key.NetworkIdentifier, request.Key.LocalEndPoint);
+                            SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(request.Key.NetworkIdentifier, (IPEndPoint)request.Key.LocalEndPoint);
 
                             AddBuildLogLine("Removed " + request.Key.NetworkIdentifier + " from swarm due to CommsException while requesting a chunk.");
                             //Console.WriteLine("CommsException {0} - Removing requests for peer " + request.Key.NetworkIdentifier, DateTime.Now.ToString("HH:mm:ss.fff"));
@@ -892,7 +892,7 @@ namespace DistributedFileSystem
                             if (incomingReply.ReplyState == ChunkReplyState.ItemOrChunkNotAvailable)
                             {
                                 //Delete any old references at the same time
-                                SwarmChunkAvailability.RemoveOldPeerAtEndPoint(incomingReply.SourceConnectionInfo.NetworkIdentifier, incomingReply.SourceConnectionInfo.RemoteEndPoint);
+                                SwarmChunkAvailability.RemoveOldPeerAtEndPoint(incomingReply.SourceConnectionInfo.NetworkIdentifier, (IPEndPoint)incomingReply.SourceConnectionInfo.RemoteEndPoint);
 
                                 //If no data was included it probably means our availability for this peer is wrong
                                 //If we remove the peer here it prevents us from nailing it
@@ -901,7 +901,7 @@ namespace DistributedFileSystem
                             }
                             else if (incomingReply.ReplyState == ChunkReplyState.PeerBusy)
                             {
-                                SwarmChunkAvailability.SetIPEndPointBusy(incomingReply.SourceConnectionInfo.NetworkIdentifier, incomingReply.SourceConnectionInfo.RemoteEndPoint);
+                                SwarmChunkAvailability.SetIPEndPointBusy(incomingReply.SourceConnectionInfo.NetworkIdentifier, (IPEndPoint)incomingReply.SourceConnectionInfo.RemoteEndPoint);
                                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... set peer " + incomingReply.SourceConnectionInfo + " as busy.");
                             }
 

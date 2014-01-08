@@ -110,7 +110,7 @@ namespace NetworkCommsDotNet
             UDPConnection connection = null;
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
-                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, ConnectionType.UDP, connectionInfo.ApplicationLayerProtocol);
+                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteIPEndPoint, connectionInfo.LocalIPEndPoint, ConnectionType.UDP, connectionInfo.ApplicationLayerProtocol);
                 if (existingConnections.Count > 0)
                     connection = (UDPConnection)existingConnections[0];
                 else
@@ -120,7 +120,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(connectionInfo.RemoteEndPoint);
+                            IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(connectionInfo.RemoteIPEndPoint);
                             //Set the port to 0 so that we match any listener
                             localEndPoint.Port = 0;
                             List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(localEndPoint);
@@ -141,7 +141,7 @@ namespace NetworkCommsDotNet
                         }
                         catch (Exception)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteEndPoint.Address + ":" + connectionInfo.RemoteEndPoint.Port.ToString() + ". Will create an isolated udp connection instead.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteIPEndPoint.Address + ":" + connectionInfo.RemoteIPEndPoint.Port.ToString() + ". Will create an isolated udp connection instead.");
                         }
                     }
 
@@ -184,7 +184,7 @@ namespace NetworkCommsDotNet
             if (newConnection && establishIfRequired)
             {
                 //Call establish on the connection if it is not a roguesender or listener
-                if (!connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) && !connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.IPv6Any))
+                if (!connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) && !connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))
                     connection.EstablishConnection();
             }
             else if (!newConnection)

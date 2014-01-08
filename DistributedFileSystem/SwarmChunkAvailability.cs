@@ -538,7 +538,7 @@ namespace DistributedFileSystem
             {
                 //A peer has a unique network identifier but many endpoints
                 if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(info.NetworkIdentifier))
-                    peerAvailabilityByNetworkIdentifierDict[info.NetworkIdentifier].AddPeerIPEndPoint(info.NetworkIdentifier, info.LocalEndPoint);
+                    peerAvailabilityByNetworkIdentifierDict[info.NetworkIdentifier].AddPeerIPEndPoint(info.NetworkIdentifier, (IPEndPoint)info.LocalEndPoint);
                 else
                     peerAvailabilityByNetworkIdentifierDict.Add(info.NetworkIdentifier, new PeerInfo(new List<ConnectionInfo>() { info }, new ChunkFlags(totalNumChunks), true));
 
@@ -585,7 +585,7 @@ namespace DistributedFileSystem
                             foreach (ConnectionInfo info in peerConnectionInfos)
                             {
                                 //We check every connectionInfo for allowed contact seperately
-                                if (PeerContactAllowed(peer.Key, info.LocalEndPoint, peer.Value.SuperPeer))
+                                if (PeerContactAllowed(peer.Key, (IPEndPoint)info.LocalEndPoint, peer.Value.SuperPeer))
                                 {
                                     chunkExistence[i].Add(info, peer.Value);
 
@@ -843,11 +843,11 @@ namespace DistributedFileSystem
                 //Extract the correct endpoint from the provided connectionInfo
                 //If this is taken from a connection we are after the remoteEndPoint
                 IPEndPoint endPointToUse = null;
-                if (connectionInfo.RemoteEndPoint.Address == IPAddress.Any || 
-                    connectionInfo.RemoteEndPoint.Address == IPAddress.IPv6Any)
-                    endPointToUse = connectionInfo.LocalEndPoint;
+                if (((IPEndPoint)connectionInfo.RemoteEndPoint).Address == IPAddress.Any ||
+                    ((IPEndPoint)connectionInfo.RemoteEndPoint).Address == IPAddress.IPv6Any)
+                    endPointToUse = (IPEndPoint)connectionInfo.LocalEndPoint;
                 else
-                    endPointToUse = connectionInfo.RemoteEndPoint;
+                    endPointToUse = (IPEndPoint)connectionInfo.RemoteEndPoint;
 
                 string endPointToUseString = endPointToUse.ToString();
                 //We can only add a peer if it is listening correctly
@@ -989,17 +989,17 @@ namespace DistributedFileSystem
                             try
                             {
                                 //We don't want to contact ourselves plus we check the possible exception lists
-                                if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
                                 {
                                     if (buildLog != null) buildLog("Contacting " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " for a DFS_KnownPeersRequest.");
 
-                                    UDPConnection.SendObject("DFS_KnownPeersRequest", itemCheckSum, connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                                    UDPConnection.SendObject("DFS_KnownPeersRequest", itemCheckSum, (IPEndPoint)connInfo.LocalEndPoint, DFS.nullCompressionSRO);
                                 }
                             }
                             catch (CommsException)
                             {
                                 //If a peer has disconnected or fails to respond we just remove them from the list
-                                RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                                RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
                                 if (buildLog != null) buildLog("Removing " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " from item swarm due to CommsException.");
                             }
                             catch (Exception ex)
@@ -1026,7 +1026,7 @@ namespace DistributedFileSystem
                 {
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
-                    //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                    //We could probably be a bit more careful with how we maintain these references but we either catch the
                     //exception here or networkcomms will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                     if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
@@ -1039,18 +1039,18 @@ namespace DistributedFileSystem
                         try
                         {
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                            if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
                             {
                                 if (buildLog != null) buildLog("Contacting " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
 
                                 //Request a chunk update
-                                UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", itemCheckSum, connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                                UDPConnection.SendObject("DFS_ChunkAvailabilityRequest", itemCheckSum, (IPEndPoint)connInfo.LocalEndPoint, DFS.nullCompressionSRO);
                             }
                         }
                         catch (CommsException)
                         {
                             //If a peer has disconnected or fails to respond we just remove them from the list
-                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                            RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
                             if (buildLog != null) buildLog("Removing " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " from item swarm due to CommsException.");
                         }
                         catch (Exception ex)
@@ -1148,7 +1148,7 @@ namespace DistributedFileSystem
                 {
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
-                    //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                    //We could probably be a bit more careful with how we maintain these references but we either catch the
                     //exception here or networkcomms will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                 }
@@ -1160,13 +1160,13 @@ namespace DistributedFileSystem
                         try
                         {
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
-                                UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                            if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), (IPEndPoint)connInfo.LocalEndPoint, DFS.nullCompressionSRO);
                         }
                         catch (Exception)
                         {
                             //If a peer has disconnected or fails to respond we just remove them from the list
-                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                            RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
 
                             if (DFS.loggingEnabled)
                                 DFS.Logger.Trace("Removed peer from swarm during BroadcastLocalAvailability due to exception - " + peer.Key + " - " + connInfo.LocalEndPoint.ToString());
@@ -1218,7 +1218,7 @@ namespace DistributedFileSystem
             if (peerIdentifier == NetworkComms.NetworkIdentifier)
                 return false;
 
-            List<IPEndPoint> currentLocalListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
+            List<EndPoint> currentLocalListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
             if (currentLocalListenEndPoints.Contains(peerEndPoint))
                 return false;
 
@@ -1283,7 +1283,7 @@ namespace DistributedFileSystem
                 {
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
-                    //We could probably be a bit more carefull with how we maintain these references but we either catch the
+                    //We could probably be a bit more careful with how we maintain these references but we either catch the
                     //exception here or networkcomms will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                 }
@@ -1295,17 +1295,17 @@ namespace DistributedFileSystem
                         try
                         {
                             //We don't want to contact ourselves and for now that includes anything having the same ip as us
-                            if (PeerContactAllowed(peer.Key, connInfo.LocalEndPoint, peerInfo.SuperPeer))
-                                UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), connInfo.LocalEndPoint, DFS.nullCompressionSRO);
+                            if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
+                                UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, removeSwarmWide), (IPEndPoint)connInfo.LocalEndPoint, DFS.nullCompressionSRO);
                         }
                         catch(CommsException)
                         {
-                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                            RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
                         }
                         catch (Exception ex)
                         {
                             //If a peer has disconnected or fails to respond we just remove them from the list
-                            RemovePeerIPEndPointFromSwarm(peer.Key, connInfo.LocalEndPoint);
+                            RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
 
                             NetworkComms.LogError(ex, "BroadcastItemRemovalError");
                         }
@@ -1347,7 +1347,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns an array containing all known peer endpoints inthe format locaIP:port
+        /// Returns an array containing all known peer endpoints in the format locaIP:port
         /// </summary>
         /// <returns></returns>
         public string[] AllPeerEndPoints()
@@ -1355,8 +1355,8 @@ namespace DistributedFileSystem
             lock (peerLocker)
                 return (from current in peerAvailabilityByNetworkIdentifierDict 
                     select current.Value.GetConnectionInfo().Select(info => 
-                    { 
-                        return info.LocalEndPoint.Address.ToString() + ":" + info.LocalEndPoint.Port.ToString();
+                    {
+                        return ((IPEndPoint)info.LocalEndPoint).Address.ToString() + ":" + ((IPEndPoint)info.LocalEndPoint).Port.ToString();
                     })).Aggregate(new List<string>(), (left, right) => { return left.Union(right).ToList(); }).ToArray();
         }
 

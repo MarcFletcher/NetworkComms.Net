@@ -75,6 +75,9 @@ namespace NetworkCommsDotNet
 #endif
             : base(connectionInfo, defaultSendReceiveOptions)
         {
+            if (connectionInfo.ConnectionType != ConnectionType.TCP)
+                throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
+
             //We don't guarantee that the tcpClient has been created yet
 #if WINDOWS_PHONE
             if (socket != null) this.socket = socket;
@@ -96,7 +99,7 @@ namespace NetworkCommsDotNet
             var localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.CanonicalName.ToString()), int.Parse(socket.Information.LocalPort));
 
             //We should now be able to set the connectionInfo localEndPoint
-            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteIPEndPoint, localEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
 
             //Set the outgoing buffer size
@@ -105,7 +108,7 @@ namespace NetworkCommsDotNet
             if (tcpClient == null) ConnectSocket();
 
             //We should now be able to set the connectionInfo localEndPoint
-            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, (IPEndPoint)tcpClient.Client.LocalEndPoint);
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteIPEndPoint, (IPEndPoint)tcpClient.Client.LocalEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
             if (SSLOptions.SSLEnabled)
@@ -179,15 +182,15 @@ namespace NetworkCommsDotNet
                 {
                     if (ConnectionInfo.LocalEndPoint != null)
                     {
-                        var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
-                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
+                        var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString(),
+                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString());
 
                         var task = socket.ConnectAsync(endpointPairForConnection).AsTask(cancelAfterTimeoutToken.Token);
                         task.Wait();
                     }
                     else
                     {
-                        var task = socket.ConnectAsync(new Windows.Networking.HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask(cancelAfterTimeoutToken.Token);
+                        var task = socket.ConnectAsync(new Windows.Networking.HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask(cancelAfterTimeoutToken.Token);
                         task.Wait();
                     }
                 }
@@ -202,7 +205,7 @@ namespace NetworkCommsDotNet
 
                 //Start the connection using the asyn version
                 //This allows us to choose our own connection establish timeout
-                IAsyncResult ar = tcpClient.BeginConnect(ConnectionInfo.RemoteEndPoint.Address, ConnectionInfo.RemoteEndPoint.Port, null, null);
+                IAsyncResult ar = tcpClient.BeginConnect(ConnectionInfo.RemoteIPEndPoint.Address, ConnectionInfo.RemoteIPEndPoint.Port, null, null);
                 WaitHandle connectionWait = ar.AsyncWaitHandle;
                 try
                 {
@@ -234,7 +237,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void StartIncomingDataListen()
         {
-            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
+            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteIPEndPoint, ConnectionInfo.LocalIPEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
             {
                 CloseConnection(true, 18);
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");

@@ -79,8 +79,8 @@ namespace ExamplesConsole
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
-            List<IPEndPoint> localIPEndPoints = (from current in NetworkComms.AllAllowedIPs() select
-                                                 new IPEndPoint(current, NetworkComms.DefaultListenPort)).ToList();
+            List<EndPoint> localIPEndPoints = (from current in NetworkComms.AllAllowedIPs() select
+                                                 ((EndPoint)new IPEndPoint(current, NetworkComms.DefaultListenPort))).ToList();
 
             //Create suitable listeners
             List<ConnectionListenerBase> listeners;
@@ -105,7 +105,7 @@ namespace ExamplesConsole
 
             Console.WriteLine("Listening for incoming byte[] on:");
 
-            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
+            List<EndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
 
             foreach (IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);

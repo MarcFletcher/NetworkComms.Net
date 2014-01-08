@@ -80,7 +80,7 @@ namespace ExamplesConsole
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {
                     lock (listLocker)
-                        connectedClients.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                        connectedClients.Remove((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
 
                     Console.WriteLine("Client " + connection.ConnectionInfo + " connected.");
                 };
@@ -88,7 +88,7 @@ namespace ExamplesConsole
                 NetworkComms.ConnectionEstablishShutdownDelegate clientShutdownDelegate = (connection) =>
                 {
                     lock (listLocker)
-                        connectedClients.Remove(connection.ConnectionInfo.RemoteEndPoint);
+                        connectedClients.Remove((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
 
                     Console.WriteLine("Client " + connection.ConnectionInfo + " disconnected.");
                 };
@@ -98,7 +98,7 @@ namespace ExamplesConsole
                     //Push the item into the swarm
                     lock (listLocker)
                         if (!connectedClients.Contains(connection.ConnectionInfo.RemoteEndPoint))
-                            connectedClients.Add(connection.ConnectionInfo.RemoteEndPoint);
+                            connectedClients.Add((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
 
                     DFS.PushItemToPeer(connection, newItem, "BigDataRequestResponse");
                     Console.WriteLine("Pushing item to " + connection.ConnectionInfo + " (" + connection.ConnectionInfo.NetworkIdentifier + "). {0} in swarm. P#={1}, S#={2}.", connectedClients.Count, newItem.PushCount, newItem.TotalChunkSupplyCount);

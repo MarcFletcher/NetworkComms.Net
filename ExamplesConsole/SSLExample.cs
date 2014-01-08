@@ -52,14 +52,14 @@ namespace ExamplesConsole
                 //Save the certificate to disk
                 SSLTools.CreateSelfSignedCertificatePFX(details, certName);
                 certificate = new X509Certificate2(certName);
-                Console.WriteLine("\t... certificate succesfully created.");
+                Console.WriteLine("\t... certificate successfully created.");
             }
             else
             {
                 //Load an existing certificate
                 Console.WriteLine("Loading existing certificate - " + certName);
                 certificate = new X509Certificate2(certName);
-                Console.WriteLine("\t... certificate succesfully loaded.");
+                Console.WriteLine("\t... certificate successfully loaded.");
             }
 
             //Add a global incoming packet handler for packets of type "Message"
@@ -74,8 +74,8 @@ namespace ExamplesConsole
             SelectSSLOptions();
 
             //Get a list of all local endPoints using the default port
-            List<IPEndPoint> desiredlocalEndPoints = (from current in NetworkComms.AllAllowedIPs() 
-                                                      select new IPEndPoint(current, NetworkComms.DefaultListenPort)).ToList();
+            List<EndPoint> desiredlocalEndPoints = (from current in NetworkComms.AllAllowedIPs() 
+                                                      select ((EndPoint)new IPEndPoint(current, NetworkComms.DefaultListenPort))).ToList();
 
             //Create a list of matching TCP listeners where we provide the listenerSSLOptions
             List<ConnectionListenerBase> listeners = (from current in desiredlocalEndPoints

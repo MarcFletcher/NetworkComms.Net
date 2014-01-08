@@ -130,7 +130,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public IPEndPoint RemoteEndPoint
+        public IPEndPoint RemoteIPEndPoint
         {
             get
             {
@@ -139,7 +139,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        public IPEndPoint LocalEndPoint
+        public IPEndPoint LocalIPEndPoint
         {
             get
             {

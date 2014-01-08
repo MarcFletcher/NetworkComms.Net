@@ -199,15 +199,15 @@ namespace DistributedFileSystem
 
                 #region OpenIncomingPorts
                 List<IPAddress> availableIPAddresses = NetworkComms.AllAllowedIPs();
-                List<IPEndPoint> localEndPointAttempts;
+                List<EndPoint> localEndPointAttempts;
                 List<ConnectionListenerBase> connectionListeners = new List<ConnectionListenerBase>();
 
                 try
                 {
                     NetworkComms.DefaultListenPort = initialPort;
                     //We need a copy of each endPoint for each listener
-                    localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, initialPort)).ToList();
-                    localEndPointAttempts.AddRange(from current in availableIPAddresses select new IPEndPoint(current, initialPort));
+                    localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort))).ToList();
+                    localEndPointAttempts.AddRange(from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort)));
 
                     connectionListeners.AddRange(from current in availableIPAddresses
                                                  select
@@ -231,8 +231,8 @@ namespace DistributedFileSystem
                                 NetworkComms.DefaultListenPort = tryPort;
                                 connectionListeners = new List<ConnectionListenerBase>();
 
-                                localEndPointAttempts = (from current in availableIPAddresses select new IPEndPoint(current, tryPort)).ToList();
-                                localEndPointAttempts.AddRange(from current in availableIPAddresses select new IPEndPoint(current, tryPort));
+                                localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, tryPort))).ToList();
+                                localEndPointAttempts.AddRange(from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, tryPort)));
 
                                 connectionListeners.AddRange(from current in availableIPAddresses
                                                              select
@@ -260,7 +260,7 @@ namespace DistributedFileSystem
                     throw new CommsSetupShutdownException("Port mismatch when comparing TCP and UDP local listen end points.");
 
                 if ((from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)
-                     where current.Port > MaxTargetLocalPort || current.Port < MinTargetLocalPort
+                     where ((IPEndPoint)current).Port > MaxTargetLocalPort || ((IPEndPoint)current).Port < MinTargetLocalPort
                      select current).Count() > 0)
                      throw new CommsSetupShutdownException("Local port selected that is not within the valid range.");
                 #endregion
@@ -870,7 +870,7 @@ namespace DistributedFileSystem
                             //Remove peer from any items
                             foreach (var item in swarmedItemsDict)
                             {
-                                item.Value.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
+                                item.Value.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
                             }
                         }
 
@@ -915,9 +915,9 @@ namespace DistributedFileSystem
 
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 else
-                    UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.ItemCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
+                    UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.ItemCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
             }
             catch (CommsException)
             {
@@ -1179,7 +1179,7 @@ namespace DistributedFileSystem
 
                     //Inform peer that we don't actually have the requested item
                     //connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                     if (DFS.loggingEnabled) DFS.logger.Trace(" ... item not available locally, sent DFS_ItemRemovalUpdate.");
                 }
@@ -1194,7 +1194,7 @@ namespace DistributedFileSystem
                         //If the peer thinks we have a chunk we dont we send them an update so that they are corrected
                         //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
                         //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
-                        UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                        UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                         if (DFS.loggingEnabled) DFS.logger.Trace(" ... requested chunk not available, sent DFS_PeerChunkAvailabilityUpdate.");
                     }
@@ -1436,7 +1436,7 @@ namespace DistributedFileSystem
                 else
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //connection.SendObject("DFS_ItemRemovalUpdate", updateDetails.ItemCheckSum);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, updateDetails.ItemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, updateDetails.ItemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
             }
             catch (CommsException)
             {
@@ -1469,10 +1469,10 @@ namespace DistributedFileSystem
                 if (selectedItem == null)
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     //connection.SendObject("DFS_ItemRemovalUpdate", itemCheckSum, nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 else
                     //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
-                    UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
+                    UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                 if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }
@@ -1512,10 +1512,10 @@ namespace DistributedFileSystem
                         else
                         {
                             //Delete any old references at the same time
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeerAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint);
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeerAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
 
                             //If this is not a swarm wide removal we just remove this peer from our local swarm copy
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
+                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, true);
                         }
                     }
                     else

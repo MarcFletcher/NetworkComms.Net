@@ -5,6 +5,7 @@ using System.Text;
 
 using NetworkCommsDotNet;
 using DPSBase;
+using System.Net;
 
 namespace ExamplesWPFChat
 {
@@ -39,14 +40,14 @@ namespace ExamplesWPFChat
         /// <summary>
         /// An optional encryption key to use should one be required.
         /// This can be changed freely but must obviously be the same
-        /// for both sender and reciever.
+        /// for both sender and receiver.
         /// </summary>
         string _encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
         #endregion
 
         #region Public Fields
         /// <summary>
-        /// The type of connection currently used to send and recieve messages. Default is TCP.
+        /// The type of connection currently used to send and receive messages. Default is TCP.
         /// </summary>
         public ConnectionType ConnectionType { get; set; }
 
@@ -106,7 +107,7 @@ namespace ExamplesWPFChat
                 FirstInitialisation = false;
 
                 //Configure NetworkComms.Net to handle any incoming packet of type 'ChatMessage'
-                //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
+                //e.g. If we receive a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
 
                 //Configure NetworkComms.Net to perform some action when a connection is closed
@@ -155,7 +156,7 @@ namespace ExamplesWPFChat
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
-                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
@@ -181,7 +182,7 @@ namespace ExamplesWPFChat
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
-                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output

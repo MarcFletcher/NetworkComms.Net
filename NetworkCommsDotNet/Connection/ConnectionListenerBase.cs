@@ -111,9 +111,9 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Start listening
         /// </summary>
-        /// <param name="desiredLocalListenIPEndPoint">Try to start listening on this IPEndPoint</param>
-        /// <param name="useRandomPortFailOver">If the request IPEndPoint.Port is unavailable fail over to a random port</param>
-        internal abstract void StartListening(IPEndPoint desiredLocalListenIPEndPoint, bool useRandomPortFailOver);
+        /// <param name="desiredLocalListenEndPoint">Try to start listening on this IPEndPoint</param>
+        /// <param name="useRandomPortFailOver">If the request EndPoint.Port is unavailable fail over to a random port</param>
+        internal abstract void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver);
 
         /// <summary>
         /// Stop listening

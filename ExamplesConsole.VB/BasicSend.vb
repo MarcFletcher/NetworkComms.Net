@@ -43,7 +43,10 @@ Module BasicSend
                 'There are loads of ways of sending data (see AdvancedSend example for more)
                 'but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                 'We pull these values out of the ConnectionInfo object we got above and voila!
-                NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, stringToSend)
+                NetworkComms.SendObject("Message",
+                                        CType(targetServerConnectionInfo.RemoteEndPoint, IPEndPoint).Address.ToString(),
+                                        CType(targetServerConnectionInfo.RemoteEndPoint, IPEndPoint).Port,
+                                        stringToSend)
             End If
         End While
 

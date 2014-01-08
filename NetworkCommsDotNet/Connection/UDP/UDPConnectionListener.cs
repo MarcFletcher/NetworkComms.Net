@@ -60,11 +60,14 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="desiredLocalListenIPEndPoint"></param>
+        /// <param name="desiredLocalListenEndPoint"></param>
         /// <param name="useRandomPortFailOver"></param>
-        internal override void StartListening(IPEndPoint desiredLocalListenIPEndPoint, bool useRandomPortFailOver)
+        internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
+            if (desiredLocalListenEndPoint.GetType() != typeof(IPEndPoint)) throw new ArgumentException("Invalid desiredLocalListenEndPoint type provided.", "desiredLocalListenEndPoint");
             if (IsListening) throw new InvalidOperationException("Attempted to call StartListening when already listening.");
+
+            IPEndPoint desiredLocalListenIPEndPoint = (IPEndPoint)desiredLocalListenEndPoint;
 
             try
             {
@@ -95,7 +98,7 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
             this.LocalListenIPEndPoint = new IPEndPoint(IPAddress.Parse(UDPConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(UDPConnection.socket.Information.LocalPort)); 
 #else
-            this.LocalListenIPEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalEndPoint;
+            this.LocalListenIPEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
 #endif
 
             this.IsListening = true;

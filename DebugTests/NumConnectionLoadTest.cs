@@ -126,7 +126,7 @@ namespace DebugTests
                 if ((mode & TestMode.UDP_Unmanaged) == TestMode.UDP_Unmanaged) portDivisor++;
                 if ((mode & TestMode.TCPSSL_Managed) == TestMode.TCPSSL_Managed) portDivisor++;
 
-                List<IPEndPoint> localIPEndPoints = new List<IPEndPoint>();
+                List<EndPoint> localIPEndPoints = new List<EndPoint>();
                 List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                 for (int i = 0; i < totalNumberOfListenPorts/portDivisor; i++)
                 {
@@ -205,7 +205,7 @@ namespace DebugTests
                 //Save the ports list out to disk
                 using (StreamWriter sw = new StreamWriter("TCPServerPorts.txt", false))
                 {
-                    List<IPEndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
+                    List<EndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.TCP);
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
                         if (Connection.ExistingLocalListeners<TCPConnectionListener>(endPoint)[0].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
@@ -218,7 +218,7 @@ namespace DebugTests
                 //Save the ports list out to disk
                 using (StreamWriter sw = new StreamWriter("UDPServerPorts.txt", false))
                 {
-                    List<IPEndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.UDP);
+                    List<EndPoint> localListenEndPoints = Connection.ExistingLocalListenEndPoints(ConnectionType.UDP);
                     foreach (IPEndPoint endPoint in localListenEndPoints)
                     {
                         if (Connection.ExistingLocalListeners<UDPConnectionListener>(endPoint)[0].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)

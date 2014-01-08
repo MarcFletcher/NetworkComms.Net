@@ -86,9 +86,12 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="desiredLocalListenIPEndPoint"></param>
         /// <param name="useRandomPortFailOver"></param>
-        internal override void StartListening(IPEndPoint desiredLocalListenIPEndPoint, bool useRandomPortFailOver)
+        internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
+            if (desiredLocalListenEndPoint.GetType() != typeof(IPEndPoint)) throw new ArgumentException("Invalid desiredLocalListenEndPoint type provided.", "desiredLocalListenEndPoint");
             if (IsListening) throw new InvalidOperationException("Attempted to call StartListening when already listening.");
+
+            IPEndPoint desiredLocalListenIPEndPoint = (IPEndPoint)desiredLocalListenEndPoint;
 
             try
             {
