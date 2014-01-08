@@ -1,7 +1,9 @@
+#if !NETFX_CORE
+
 //Copyright (c) Microsoft Corporation.  All rights reserved.
 using System;
-using System.Security.Cryptography;
 using System.Text;
+using System.Security.Cryptography;
 
 // **************************************************************
 // * Raw implementation of the MD5 hash algorithm
@@ -398,3 +400,5 @@ namespace DPSBase
         }
     }
 }
+
+#endif

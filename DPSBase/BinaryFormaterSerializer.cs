@@ -16,7 +16,7 @@
 //  A commercial license of this software can also be purchased. 
 //  Please see <http://www.networkcomms.net/licensing/> for details.
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
 #else
 
 using System;
@@ -61,7 +61,7 @@ namespace DPSBase
 #endif
         private BinaryFormaterSerializer() { }
 
-        #region ISerialize Members
+#region ISerialize Members
         
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)

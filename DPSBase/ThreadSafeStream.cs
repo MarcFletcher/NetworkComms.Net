@@ -20,7 +20,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+
+#if !NETFX_CORE
 using System.Security.Cryptography;
+#endif
 
 namespace DPSBase
 {
@@ -153,15 +156,23 @@ namespace DPSBase
         {
             streamToMD5.Seek(0, SeekOrigin.Begin);
 
+#if NETFX_CORE
+            var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
+            var buffer = (new Windows.Storage.Streams.DataReader(streamToMD5.AsInputStream())).ReadBuffer((uint)streamToMD5.Length);
+            var hashedData = alg.HashData(buffer);
+            return Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
+#else  
+
 #if WINDOWS_PHONE
-                using(var md5 = new DPSBase.MD5Managed())
-                {
+            using (var md5 = new DPSBase.MD5Managed())
+            {
 #else
             using (var md5 = System.Security.Cryptography.MD5.Create())
             {
 #endif
                 return BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
             }
+#endif
         }
 
         /// <summary>
@@ -210,7 +221,11 @@ namespace DPSBase
         /// </summary>
         public void Close()
         {
+#if NETFX_CORE
+            Dispose();
+#else
             lock (streamLocker) stream.Close();
+#endif
         }
     }
 }

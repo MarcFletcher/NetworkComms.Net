@@ -83,6 +83,12 @@ namespace DPSBase
             {
                 ThreadSafeStream.CopyTo(ms, Start, Length, 8000);
 
+#if NETFX_CORE
+                var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
+                var buffer = (new Windows.Storage.Streams.DataReader(ms.AsInputStream())).ReadBuffer((uint)ms.Length);
+                var hashedData = alg.HashData(buffer);
+                return Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
+#else
 #if WINDOWS_PHONE
                 using(var md5 = new DPSBase.MD5Managed())
                 {
@@ -92,6 +98,7 @@ namespace DPSBase
 #endif
                     return BitConverter.ToString(md5.ComputeHash(ms)).Replace("-", "");
                 }
+#endif
             }
         }
 

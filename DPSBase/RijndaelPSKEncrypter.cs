@@ -19,8 +19,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Security.Cryptography;
 using System.IO;
+
+#if NETFX_CORE
+using Windows.Security.Cryptography.Core;
+using Windows.Storage.Streams;
+using Windows.Security.Cryptography;
+#else
+using System.Security.Cryptography;
+#endif
 
 #if ANDROID
 using PreserveAttribute = Android.Runtime.PreserveAttribute;
@@ -42,7 +49,7 @@ namespace DPSBase
 
 #if WINDOWS_PHONE
         SymmetricAlgorithm encrypter = new AesManaged();
-#else
+#elif !NETFX_CORE
         SymmetricAlgorithm encrypter = new RijndaelManaged();
 #endif
 
@@ -51,7 +58,9 @@ namespace DPSBase
 #endif
         private RijndaelPSKEncrypter() 
         {
-            encrypter.BlockSize = 128; 
+#if !NETFX_CORE
+            encrypter.BlockSize = 128;            
+#endif
         }
         
         /// <inheritdoc />
@@ -62,9 +71,43 @@ namespace DPSBase
 
             if (outStream == null) throw new ArgumentNullException("outStream");
 
-            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
+#if NETFX_CORE
+            IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
+            IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
+            IBuffer plainBuffer = (new DataReader(inStream.AsInputStream())).ReadBuffer((uint)inStream.Length);
 
-            using (var transform = encrypter.CreateEncryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
+            // Derive key material for password size 32 bytes for AES256 algorithm
+            KeyDerivationAlgorithmProvider keyDerivationProvider = Windows.Security.Cryptography.Core.KeyDerivationAlgorithmProvider.OpenAlgorithm("PBKDF2_SHA1");
+            // using salt and 1000 iterations
+            KeyDerivationParameters pbkdf2Parms = KeyDerivationParameters.BuildForPbkdf2(saltBuffer, 1000);
+
+            // create a key based on original key and derivation parmaters
+            CryptographicKey keyOriginal = keyDerivationProvider.CreateKey(pwBuffer);
+            IBuffer keyMaterial = CryptographicEngine.DeriveKeyMaterial(keyOriginal, pbkdf2Parms, 32);
+            CryptographicKey derivedPwKey = keyDerivationProvider.CreateKey(pwBuffer);
+
+            // derive buffer to be used for encryption salt from derived password key 
+            IBuffer saltMaterial = CryptographicEngine.DeriveKeyMaterial(derivedPwKey, pbkdf2Parms, 16);
+
+            // display the buffers - because KeyDerivationProvider always gets cleared after each use, they are very similar unforunately
+            string keyMaterialString = CryptographicBuffer.EncodeToBase64String(keyMaterial);
+            string saltMaterialString = CryptographicBuffer.EncodeToBase64String(saltMaterial);
+
+            SymmetricKeyAlgorithmProvider symProvider = SymmetricKeyAlgorithmProvider.OpenAlgorithm("AES_CBC_PKCS7");
+            // create symmetric key from derived password key
+            CryptographicKey symmKey = symProvider.CreateSymmetricKey(keyMaterial);
+
+            // encrypt data buffer using symmetric key and derived salt material
+            IBuffer resultBuffer = CryptographicEngine.Encrypt(symmKey, plainBuffer, saltMaterial);
+            (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
+            writtenBytes = outStream.Position;
+#else
+            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
+            var key = pdb.GetBytes(32);
+            pdb.Reset();
+            var iv = pdb.GetBytes(16);
+
+            using (var transform = encrypter.CreateEncryptor(key, iv))
             {
                 using (MemoryStream internalStream = new MemoryStream())
                 {
@@ -80,6 +123,7 @@ namespace DPSBase
                     }                    
                 }
             }
+#endif
         }
 
         /// <inheritdoc />
@@ -90,9 +134,44 @@ namespace DPSBase
 
             if (outStream == null) throw new ArgumentNullException("outStream");
 
-            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
+            #if NETFX_CORE
+            IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
+            IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
+            IBuffer cryptBuffer = (new DataReader(inStream.AsInputStream())).ReadBuffer((uint)inStream.Length);
 
-            using (var transform = encrypter.CreateDecryptor(pdb.GetBytes(32), pdb.GetBytes(16)))
+            // Derive key material for password size 32 bytes for AES256 algorithm
+            KeyDerivationAlgorithmProvider keyDerivationProvider = Windows.Security.Cryptography.Core.KeyDerivationAlgorithmProvider.OpenAlgorithm("PBKDF2_SHA1");
+            // using salt and 1000 iterations
+            KeyDerivationParameters pbkdf2Parms = KeyDerivationParameters.BuildForPbkdf2(saltBuffer, 1000);
+
+            // create a key based on original key and derivation parmaters
+            CryptographicKey keyOriginal = keyDerivationProvider.CreateKey(pwBuffer);
+            IBuffer keyMaterial = CryptographicEngine.DeriveKeyMaterial(keyOriginal, pbkdf2Parms, 32);
+            CryptographicKey derivedPwKey = keyDerivationProvider.CreateKey(pwBuffer);
+
+            // derive buffer to be used for encryption salt from derived password key 
+            IBuffer saltMaterial = CryptographicEngine.DeriveKeyMaterial(derivedPwKey, pbkdf2Parms, 16);
+
+            // display the buffers - because KeyDerivationProvider always gets cleared after each use, they are very similar unforunately
+            string keyMaterialString = CryptographicBuffer.EncodeToBase64String(keyMaterial);
+            string saltMaterialString = CryptographicBuffer.EncodeToBase64String(saltMaterial);
+
+            SymmetricKeyAlgorithmProvider symProvider = SymmetricKeyAlgorithmProvider.OpenAlgorithm("AES_CBC_PKCS7");
+            // create symmetric key from derived password key
+            CryptographicKey symmKey = symProvider.CreateSymmetricKey(keyMaterial);
+
+            // encrypt data buffer using symmetric key and derived salt material
+            IBuffer resultBuffer = CryptographicEngine.Decrypt(symmKey, cryptBuffer, saltMaterial);
+            (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
+            writtenBytes = outStream.Position;
+#else
+
+            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
+            var key = pdb.GetBytes(32);
+            pdb.Reset();
+            var iv = pdb.GetBytes(16);
+
+            using (var transform = encrypter.CreateDecryptor(key, iv))
             {
                 using (MemoryStream internalStream = new MemoryStream())
                 {
@@ -108,6 +187,7 @@ namespace DPSBase
                     }
                 }
             }
+#endif
         }
         
         /// <summary>
@@ -127,8 +207,10 @@ namespace DPSBase
         /// </summary>
         public void Dispose()
         {
+#if !NETFX_CORE
             if (encrypter != null)
                 (encrypter as IDisposable).Dispose();
+#endif
         }
     }
 #endif

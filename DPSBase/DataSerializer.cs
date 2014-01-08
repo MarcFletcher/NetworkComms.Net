@@ -23,6 +23,10 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Reflection;
 
+#if NETFX_CORE
+using System.Linq;
+#endif
+
 namespace DPSBase
 {    
     /// <summary>
@@ -44,10 +48,15 @@ namespace DPSBase
             {
                 //if the instance is null the type was not added as part of composition
                 //create a new instance of T and add it to helper as a serializer
+#if NETFX_CORE
+                var construct = (from constructor in typeof(T).GetTypeInfo().DeclaredConstructors
+                                 where constructor.GetParameters().Length == 0
+                                 select constructor).FirstOrDefault();
+#else
                 var construct = typeof(T).GetConstructor(new Type[] { });
                 if (construct == null)
                     construct = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[0], null);
-
+#endif
                 if (construct == null)
                     throw new Exception();
 
@@ -178,8 +187,11 @@ namespace DPSBase
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
         {
             if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
-
+#if NETFX_CORE
+            using (var ms = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false))
+#else
             using (var ms = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true))
+#endif
                 return DeserialiseDataObject<T>(ms);
         }
 
@@ -207,8 +219,12 @@ namespace DPSBase
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
-
+            
+#if NETFX_CORE
+            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false), dataProcessors, options);
+#else
             return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true), dataProcessors, options);
+#endif
         }
 
         /// <summary>
@@ -316,8 +332,11 @@ namespace DPSBase
         {
             get
             {
+#if NETFX_CORE
+                var attributes = this.GetType().GetTypeInfo().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false).ToArray();
+#else
                 var attributes = this.GetType().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
-
+#endif
                 if (attributes.Length == 1)
                     return (attributes[0] as DataSerializerProcessorAttribute).Identifier;
                 else
@@ -348,8 +367,8 @@ namespace DPSBase
     /// </summary>
     static class ArraySerializer
     {
-#if WINDOWS_PHONE || iOS
-        
+#if WINDOWS_PHONE || iOS || NETFX_CORE
+
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
         /// to serialize other types
@@ -371,21 +390,29 @@ namespace DPSBase
                 {
                     byte[] bytesToSerialise = objectToSerialise as byte[];
                     //return objectToSerialise as byte[];
+#if NETFX_CORE
+                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false), true));
+#else
                     return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
+#endif
                 }
+#if NETFX_CORE
+                else if (elementType.GetTypeInfo().IsPrimitive)
+#else
                 else if (elementType.IsPrimitive)
+#endif
                 {
                     var asArray = objectToSerialise as Array;
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
 #else
                     GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
 #endif
-               
+
                     try
                     {
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
 #else
                         IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
 #endif
@@ -393,7 +420,7 @@ namespace DPSBase
                         long writtenBytes = 0;
 
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
                         var byteArray = new byte[asArray.Length * Marshal.SizeOf(elementType)];
                         Buffer.BlockCopy(asArray, 0, byteArray, 0, byteArray.Length);
                         MemoryStream tempStream1 = new MemoryStream();
@@ -462,7 +489,7 @@ namespace DPSBase
                     }
                     finally
                     {
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
 #else
                         arrayHandle.Free();
 #endif
@@ -578,7 +605,7 @@ namespace DPSBase
         }
 #endif
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
         /// <summary>
         /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
         /// </summary>        
@@ -598,7 +625,11 @@ namespace DPSBase
                 {
                     try
                     {
+#if NETFX_CORE
+                        return (object)inputStream.ToArray();
+#else
                         return (object)inputStream.GetBuffer();
+#endif
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -606,7 +637,11 @@ namespace DPSBase
                     }
                 }
 
+#if NETFX_CORE
+                if (elementType.GetTypeInfo().IsPrimitive)
+#else
                 if (elementType.IsPrimitive)
+#endif
                 {
                     int numElements;
 
@@ -622,7 +657,7 @@ namespace DPSBase
 
                     Array resultArray = Array.CreateInstance(elementType, numElements);
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
                     byte[] resultBytes = null;
 #else
                     GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
@@ -630,14 +665,14 @@ namespace DPSBase
 
                     try
                     {
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
 #else
                         IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(resultArray, 0);
 #endif
 
                         long writtenBytes = 0;
 
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
                         resultBytes = new byte[numElements * Marshal.SizeOf(elementType)];
                         using (System.IO.MemoryStream finalOutputStream = new MemoryStream(resultBytes))
                         {
@@ -649,8 +684,12 @@ namespace DPSBase
                             MemoryStream inputBytesStream = null;
                             try
                             {
+#if NETFX_CORE
+                                inputBytesStream = new MemoryStream(inputStream.ToArray(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+#else
                                 //We hope that the buffer is publicly accessible as otherwise it defeats the point of having a special serializer for arrays
-                                inputBytesStream = new MemoryStream(inputStream.GetBuffer(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
+                                inputBytesStream = new MemoryStream(inputStream.GetBuffer(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));                                
+#endif
                             }
                             catch (UnauthorizedAccessException)
                             {
@@ -714,7 +753,7 @@ namespace DPSBase
                     }
                     finally
                     {
-#if WINDOWS_PHONE || iOS
+#if WINDOWS_PHONE || iOS || NETFX_CORE
                         Buffer.BlockCopy(resultBytes, 0, resultArray, 0, resultBytes.Length);
 #else
                         arrayHandle.Free();

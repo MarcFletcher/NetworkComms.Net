@@ -23,8 +23,10 @@ using DPSBase;
 using System.IO;
 using System.Reflection;
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
+using System.Linq;
 using MarshalByRefObject = System.Object;
+using System.Threading.Tasks;
 #endif
 
 //Assembly marked as CLSCompliant
@@ -135,13 +137,18 @@ namespace DPSBase
             if (serializer == null)
             {
                 //var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+#if NETFX_CORE
+                var constructor = (from ctor in Type.GetType(t).GetTypeInfo().DeclaredConstructors
+                                   where ctor.GetParameters().Length == 0
+                                   select ctor).FirstOrDefault();
+#else
                 var typeToCreate = Type.GetType(t);
 
                 var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
                 if (constructor == null)
                     constructor = typeToCreate.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
-
+#endif
                 serializer = constructor.Invoke(null) as DataSerializer;
 
                 instance.SerializersByType[t] = serializer;
@@ -183,13 +190,18 @@ namespace DPSBase
             if (processor == null)
             {
                 //var assembly = System.Reflection.Assembly.Load(t.Assembly.GetName());
+#if NETFX_CORE
+                var constructor = (from ctor in Type.GetType(t).GetTypeInfo().DeclaredConstructors
+                                   where ctor.GetParameters().Length == 0
+                                   select ctor).FirstOrDefault();
+#else
                 var typeToCreate = Type.GetType(t);
 
                 var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
                 if (constructor == null)
                     constructor = typeToCreate.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
-
+#endif
                 processor = constructor.Invoke(null) as DataProcessor;
 
                 instance.DataProcessorsByType[t] = processor;
@@ -228,12 +240,16 @@ namespace DPSBase
 
             if (instance.DataProcessorsByType.ContainsKey(processorType.AssemblyQualifiedName))
                 return;
-
+#if NETFX_CORE
+            var constructor = (from ctor in processorType.GetTypeInfo().DeclaredConstructors
+                               where ctor.GetParameters().Length == 0
+                               select ctor).FirstOrDefault();
+#else
             var constructor = processorType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
             if (constructor == null)
                 constructor = processorType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
-
+#endif
             if (constructor == null)
                 throw new ArgumentException("Data processors should have a paramerterless constructor");
 
@@ -273,6 +289,11 @@ namespace DPSBase
             if (instance.SerializersByType.ContainsKey(serializerType.AssemblyQualifiedName))
                 return;
 
+#if NETFX_CORE
+            var constructor = (from ctor in serializerType.GetTypeInfo().DeclaredConstructors
+                               where ctor.GetParameters().Length == 0
+                               select ctor).FirstOrDefault();
+#else
             var constructor = serializerType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
             if (constructor == null)
@@ -280,7 +301,7 @@ namespace DPSBase
 
             if (constructor == null)
                 throw new ArgumentException("Data processors should have a paramerterless constructor");
-
+#endif
             DataSerializer res = constructor.Invoke(null) as DataSerializer;
 
             AddDataSerializer(res);
@@ -356,7 +377,7 @@ namespace DPSBase
 
             AssemblyLoader loader;
             ProcessArgument args;
-#if !WINDOWS_PHONE && !iOS && !ANDROID
+#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
 
             AppDomain tempDomain = null;
 
@@ -456,7 +477,7 @@ namespace DPSBase
 
         private class ProcessArgument : MarshalByRefObject
         {
-#if !WINDOWS_PHONE  && !iOS && !ANDROID
+#if !WINDOWS_PHONE  && !iOS && !ANDROID && !NETFX_CORE
             public List<string> loadedDomains;
 #endif
             public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
@@ -473,7 +494,7 @@ namespace DPSBase
                 try
                 {
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID
+#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
                     AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
 
                     if (args.loadedDomains != null)
@@ -496,10 +517,31 @@ namespace DPSBase
                     //We're now going to look through the assemly reference tree to look for more components
                     //This will be done by first checking whether a relefection only load of each assembly and checking 
                     //for reference to DPSBase.  We will therefore get a reference to DPSBase
-                    var dpsBaseAssembly = typeof(DPSManager).Assembly;
+                    var dpsBaseAssembly = typeof(DPSManager).GetTypeInfo().Assembly;
 
+#if NETFX_CORE
+                    var folder = Windows.ApplicationModel.Package.Current.InstalledLocation;
+
+                    List<Assembly> alreadyLoadedAssemblies = new List<Assembly>();
+
+                    Func<Task> getAssemblies = new Func<Task>(async ()=>
+                        {
+                            foreach (Windows.Storage.StorageFile file in await folder.GetFilesAsync())
+                            {
+                                if (file.FileType == ".dll" || file.FileType == ".exe")
+                                {
+                                    AssemblyName name = new AssemblyName() { Name = file.Name };
+                                    Assembly asm = Assembly.Load(name);
+                                    alreadyLoadedAssemblies.Add(asm);
+                                }
+                            }
+                        });
+
+                    getAssemblies().Wait();
+#else
                     //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
                     var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+#endif
 
                     //We are also going to keep a track of all assemblies with which we have considered types within
                     var dicOfSearchedAssemblies = new Dictionary<string, Assembly>();
@@ -509,6 +551,30 @@ namespace DPSBase
 
                     foreach (var ass in alreadyLoadedAssemblies)
                     {
+#if NETFX_CORE
+                        foreach (var type in ass.DefinedTypes)
+                        {
+                            byte id;
+                            var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
+
+                            if (attributes.Count() == 1)
+                            {
+                                id = (attributes.First() as DataSerializerProcessorAttribute).Identifier;
+                            }
+                            else
+                                continue;
+
+                            var constructor = (from ctor in type.DeclaredConstructors
+                                               where ctor.GetParameters().Length == 0
+                                               select ctor).FirstOrDefault();
+
+                            if (serializerType.GetTypeInfo().IsAssignableFrom(type) && !type.IsAbstract && constructor != null)
+                                serializerTypes.Add(id, type.AssemblyQualifiedName);
+
+                            if (processorType.GetTypeInfo().IsAssignableFrom(type) && !type.IsAbstract && constructor != null)
+                                processorTypes.Add(id, type.AssemblyQualifiedName);
+                        }
+#else
 #if WINDOWS_PHONE || iOS || ANDROID
 #else
                         foreach (var refAss in ass.GetReferencedAssemblies())
@@ -544,16 +610,17 @@ namespace DPSBase
                                         processorTypes.Add(id, type.AssemblyQualifiedName);
                                     }
                                 }
-#if WINDOWS_PHONE || iOS || ANDROID
+#endif
+#if WINDOWS_PHONE || iOS || ANDROID || NETFX_CORE
 #else
                                 break;
                             }
                         }
 #endif
-                        dicOfSearchedAssemblies.Add(ass.FullName, ass);
+                                dicOfSearchedAssemblies.Add(ass.FullName, ass);
                     }
 
-#if WINDOWS_PHONE || iOS || ANDROID
+#if WINDOWS_PHONE || iOS || ANDROID || NETFX_CORE
 #else
                 //Set an identifier to come back to as we load assemblies
                 AssemblySearchStart:
@@ -663,7 +730,7 @@ namespace DPSBase
                 }
             }
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID
+#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
             Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
             {
                 return Assembly.ReflectionOnlyLoad(args.Name); 

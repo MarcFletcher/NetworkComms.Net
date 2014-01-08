@@ -4,6 +4,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
+#if NETFX_CORE
+using Windows.Storage.Streams;
+using System.Threading.Tasks;
+using Windows.Storage;
+#endif
+
 namespace DPSBase
 {
     /// <summary>
@@ -39,6 +45,12 @@ namespace DPSBase
             {
                 int writeCountBytes = (bufferLength - totalBytesCompleted < writeBufferSize ? bufferLength - totalBytesCompleted : writeBufferSize);
 
+#if NETFX_CORE
+                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
+
+                if (!writeTask().Wait(writeWaitTimeMS))
+                {
+#else
                 destinationStream.BeginWrite(sendBuffer, totalBytesCompleted, writeCountBytes, new AsyncCallback((state)=>
                     {
                         try
@@ -54,10 +66,10 @@ namespace DPSBase
 
                     }), null);
 
-
                 if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
                 {
-//#if !WINDOWS_PHONE
+#endif
+                    //#if !WINDOWS_PHONE
 //                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
 //                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
 //#endif
@@ -127,6 +139,12 @@ namespace DPSBase
 
                 if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
 
+#if NETFX_CORE
+                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
+
+                if (!writeTask().Wait(writeWaitTimeMS))
+                {
+#else
                 destinationStream.BeginWrite(sendBuffer, 0, writeCountBytes, new AsyncCallback((state) =>
                 {
                     try
@@ -145,6 +163,7 @@ namespace DPSBase
 
                 if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
                 {
+#endif
 //#if !WINDOWS_PHONE
 //                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
 //                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
@@ -190,8 +209,22 @@ namespace DPSBase
             {
                 lock (errorLocker)
                 {
+
+#if NETFX_CORE
+                    string toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + Environment.CurrentManagedThreadId.ToString() + "] " + logString + Environment.NewLine;
+                    
+                    Func<Task> writeTask = new Func<Task>(async () =>
+                    {
+                        StorageFolder folder = ApplicationData.Current.LocalFolder;
+                        StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
+                        await FileIO.AppendTextAsync(file, toWrite);
+                    });
+
+                    writeTask().Wait();
+#else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
                         sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "] " + logString);
+#endif
                 }
             }
             catch (Exception)

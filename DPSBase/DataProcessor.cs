@@ -22,6 +22,10 @@ using System.Text;
 using System.IO;
 using System.Reflection;
 
+#if NETFX_CORE
+using System.Linq;
+#endif
+
 namespace DPSBase
 {
     /// <summary>
@@ -47,11 +51,15 @@ namespace DPSBase
             {
                 //if the instance is null the type was not added as part of composition
                 //create a new instance of T and add it to helper as a compressor
-
+#if NETFX_CORE
+                var construct = (from constructor in typeof(T).GetTypeInfo().DeclaredConstructors
+                                 where constructor.GetParameters().Length == 0
+                                 select constructor).FirstOrDefault();
+#else
                 var construct = typeof(T).GetConstructor(new Type[] { });
                 if (construct == null)
                     construct = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[0], null);
-
+#endif
                 if (construct == null)
                     throw new Exception();
 
@@ -70,8 +78,11 @@ namespace DPSBase
         {
             get
             {
+#if NETFX_CORE
+                var attributes = this.GetType().GetTypeInfo().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false).ToArray();
+#else
                 var attributes = this.GetType().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
-
+#endif
                 if (attributes.Length == 1)
                     return (attributes[0] as DataSerializerProcessorAttribute).Identifier;
                 else

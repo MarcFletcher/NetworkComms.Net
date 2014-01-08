@@ -11,12 +11,15 @@ namespace DPSBase
     /// </summary>
     public class AsyncStreamCopier
     {
+#if !NETFX_CORE
         /// <summary>
         /// Event raised when copy has completed
         /// </summary>
         public event EventHandler Completed;
 
-        private byte[] buffer = new byte[4096];
+        private byte[] bufferA = new byte[4096];
+        private byte[] bufferB = new byte[4096];
+        private AutoResetEvent signal = new AutoResetEvent(true);
 
         /// <summary>
         /// Initialise a new instance of the asyncStreamCopier
@@ -32,15 +35,9 @@ namespace DPSBase
         /// <param name="output">Output stream</param>
         public void Start(Stream input, Stream output)
         {
-            GetNextChunk(new Stream[] { input, output });
+            input.BeginRead(bufferA, 0, bufferA.Length, InputReadComplete, new Stream[] { input, output });
         }
-
-        private void GetNextChunk(Stream[] streams)
-        {
-            var input = streams[0];
-            input.BeginRead(buffer, 0, buffer.Length, InputReadComplete, streams);
-        }
-
+        
         private void InputReadComplete(IAsyncResult ar)
         {
             var streams = ar.AsyncState as Stream[];
@@ -55,12 +52,16 @@ namespace DPSBase
                 RaiseCompleted();
                 return;
             }
+            
+            signal.WaitOne();
+
+            var temp = bufferA;
+            bufferA = bufferB;
+            bufferB = temp;
 
             // write synchronously
-            output.Write(buffer, 0, bytesRead);
-
-            // get next
-            GetNextChunk(streams);
+            output.BeginWrite(bufferB, 0, bytesRead, (asyncRes) => { signal.Set(); }, streams);
+            input.BeginRead(bufferA, 0, bufferA.Length, InputReadComplete, streams);
         }
 
         private void RaiseCompleted()
@@ -70,7 +71,7 @@ namespace DPSBase
                 Completed(this, EventArgs.Empty);
             }
         }
-
+#endif
         /// <summary>
         /// Copy contents of source into destination
         /// </summary>
@@ -78,14 +79,19 @@ namespace DPSBase
         /// <param name="destination"></param>
         public static void CopyStreamTo(Stream source, Stream destination)
         {
+#if NETFX_CORE
+            var t = source.CopyToAsync(destination);
+            t.Wait();
+#else
             var completedEvent = new ManualResetEvent(false);
-
+            
             // copy as usual but listen for completion
             var copier = new AsyncStreamCopier();
             copier.Completed += (s, e) => completedEvent.Set();
             copier.Start(source, destination);
 
             completedEvent.WaitOne();
+#endif
         }
     }
 }

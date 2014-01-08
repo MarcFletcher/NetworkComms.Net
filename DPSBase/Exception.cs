@@ -26,7 +26,7 @@ namespace DPSBase
     /// <summary>
     /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public abstract class CommsException : Exception
@@ -59,7 +59,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -75,7 +75,7 @@ namespace DPSBase
     /// <summary>
     /// A checksum error has occured. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && ! NETFX_CORE
     [Serializable]
 #endif
     public class CheckSumException : CommsException
@@ -107,7 +107,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -123,7 +123,7 @@ namespace DPSBase
     /// <summary>
     /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class ConfirmationTimeoutException : CommsException
@@ -155,7 +155,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -171,7 +171,7 @@ namespace DPSBase
     /// <summary>
     /// A timeout has occured while waiting for an expected return object. Check for errors and or consider increasing the provided return timeout value.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class ExpectedReturnTimeoutException : CommsException
@@ -203,7 +203,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -219,7 +219,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured while trying to serialise/compress or deserialise/uncompress an object.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class SerialisationException : CommsException
@@ -251,7 +251,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -267,7 +267,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured while trying to establish a Connection
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class ConnectionSetupException : CommsException
@@ -299,7 +299,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -315,7 +315,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured while trying to establish a Connection
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class ConnectionShutdownException : CommsException
@@ -347,7 +347,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -363,7 +363,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured while trying to setup or shutdown NetworkCommsDotNet
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class CommsSetupShutdownException : CommsException
@@ -395,7 +395,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -411,7 +411,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured while during communication which does not fall under other exception cases.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class CommunicationException : CommsException
@@ -443,7 +443,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -459,7 +459,7 @@ namespace DPSBase
     /// <summary>
     /// An unexpected incoming packetType has been received. Consider setting NetworkComms.IgnoreUnknownPacketTypes to true to prevent this exception.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class UnexpectedPacketTypeException : CommsException
@@ -491,7 +491,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -507,7 +507,7 @@ namespace DPSBase
     /// <summary>
     /// An invalid network identifier has been provided.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class InvalidNetworkIdentifierException : CommsException
@@ -539,7 +539,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -555,7 +555,7 @@ namespace DPSBase
     /// <summary>
     /// A possible duplicate connection has been detected.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class DuplicateConnectionException : CommsException
@@ -587,7 +587,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -603,7 +603,7 @@ namespace DPSBase
     /// <summary>
     /// A connection send has timed out.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class ConnectionSendTimeoutException : CommsException
@@ -635,7 +635,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -651,7 +651,7 @@ namespace DPSBase
     /// <summary>
     /// An error occured during a packetType data handler execution.
     /// </summary>
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
 #endif
     public class PacketHandlerException : CommsException
@@ -683,7 +683,7 @@ namespace DPSBase
         {
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
