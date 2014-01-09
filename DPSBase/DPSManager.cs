@@ -517,7 +517,11 @@ namespace DPSBase
                     //We're now going to look through the assemly reference tree to look for more components
                     //This will be done by first checking whether a relefection only load of each assembly and checking 
                     //for reference to DPSBase.  We will therefore get a reference to DPSBase
+#if NETFX_CORE
                     var dpsBaseAssembly = typeof(DPSManager).GetTypeInfo().Assembly;
+#else
+                    var dpsBaseAssembly = typeof(DPSManager).Assembly;
+#endif
 
 #if NETFX_CORE
                     var folder = Windows.ApplicationModel.Package.Current.InstalledLocation;
