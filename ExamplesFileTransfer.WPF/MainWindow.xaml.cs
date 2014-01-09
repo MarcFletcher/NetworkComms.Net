@@ -19,6 +19,7 @@ using Microsoft.Win32;
 using DPSBase;
 using NetworkCommsDotNet;
 using SevenZipLZMACompressor;
+using System.Net;
 
 namespace ExamplesWPFFileTransfer
 {
@@ -228,9 +229,9 @@ namespace ExamplesWPFFileTransfer
             //Start listening for TCP connections
             Connection.StartListening(ConnectionType.TCP);
 
-            //Write out some usefull debugging information the log window
+            //Write out some useful debugging information the log window
             AddLineToLog("Initialised WPF file transfer example. Accepting TCP connections on:");
-            foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+            foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                 AddLineToLog(listenEndPoint.Address + ":" + listenEndPoint.Port);
         }
 

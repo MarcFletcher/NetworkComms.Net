@@ -5,6 +5,7 @@ using System.Text;
 
 using NetworkCommsDotNet;
 using DPSBase;
+using System.Net;
 
 namespace ExamplesWP8Chat
 {
@@ -155,7 +156,7 @@ namespace ExamplesWP8Chat
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
-                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
@@ -181,7 +182,7 @@ namespace ExamplesWP8Chat
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
-                foreach (var listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output

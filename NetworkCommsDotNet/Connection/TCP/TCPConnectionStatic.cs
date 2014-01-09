@@ -98,7 +98,7 @@ namespace NetworkCommsDotNet
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
-            //If we have a tcpClient at this stage we must be serverside
+            //If we have a tcpClient at this stage we must be server side
 #if WINDOWS_PHONE
              if (socket != null) connectionInfo.ServerSide = true;
 #else
@@ -111,7 +111,7 @@ namespace NetworkCommsDotNet
 
             lock (NetworkComms.globalDictAndDelegateLocker)
             {
-                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
+                List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteIPEndPoint, connectionInfo.LocalIPEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
 
                 //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
                 if (existingConnections.Count > 0)

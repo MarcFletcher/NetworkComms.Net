@@ -120,7 +120,7 @@ namespace ExamplesConsole
 
             Console.WriteLine("Listening for incoming objects on:");
 
-            List<IPEndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
+            List<EndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
             
             foreach(IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);

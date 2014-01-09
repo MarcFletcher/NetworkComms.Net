@@ -49,7 +49,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// SSL options that are associated with this listener
         /// </summary>
-        SSLOptions sslOptions;
+        public SSLOptions SSLOptions { get; private set; }
 #endif
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace NetworkCommsDotNet
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
 #if !WINDOWS_PHONE
-            sslOptions = new SSLOptions();
+            SSLOptions = new SSLOptions();
 #endif
         }
 
@@ -77,18 +77,21 @@ namespace NetworkCommsDotNet
             ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions)
             : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
-            this.sslOptions = sslOptions;
+            this.SSLOptions = sslOptions;
         }
 #endif
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="desiredLocalListenIPEndPoint"></param>
+        /// <param name="desiredLocalListenEndPoint"></param>
         /// <param name="useRandomPortFailOver"></param>
-        internal override void StartListening(IPEndPoint desiredLocalListenIPEndPoint, bool useRandomPortFailOver)
+        internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
+            if (desiredLocalListenEndPoint.GetType() != typeof(IPEndPoint)) throw new ArgumentException("Invalid desiredLocalListenEndPoint type provided.", "desiredLocalListenEndPoint");
             if (IsListening) throw new InvalidOperationException("Attempted to call StartListening when already listening.");
+
+            IPEndPoint desiredLocalListenIPEndPoint = (IPEndPoint)desiredLocalListenEndPoint;
 
             try
             {
@@ -132,9 +135,9 @@ namespace NetworkCommsDotNet
             }
 
 #if WINDOWS_PHONE
-            this.LocalListenIPEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
+            this.LocalListenEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
 #else
-            this.LocalListenIPEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
+            this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
 #endif
 
             this.IsListening = true;
@@ -218,7 +221,7 @@ namespace NetworkCommsDotNet
                     #region Pickup The New Connection
                     try
                     {
-                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, sslOptions);
+                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, SSLOptions);
                     }
                     catch (ConfirmationTimeoutException)
                     {

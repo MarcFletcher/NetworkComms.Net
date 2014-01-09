@@ -62,6 +62,9 @@ namespace NetworkCommsDotNet
         internal UDPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForIncomingPackets, UDPConnection existingConnection = null)
             : base(connectionInfo, defaultSendReceiveOptions)
         {
+            if (connectionInfo.ConnectionType != ConnectionType.UDP)
+                throw new ArgumentException("Provided connectionType must be UDP.", "connectionInfo");
+
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating new UDPConnection with " + connectionInfo);
 
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && level != UDPOptions.None)
@@ -74,7 +77,7 @@ namespace NetworkCommsDotNet
 
             if (existingConnection == null)
             {
-                if (connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any) || connectionInfo.RemoteEndPoint.Address.Equals(IPAddress.IPv6Any))
+                if (connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) || connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))
                 {
 #if WINDOWS_PHONE
                     //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
@@ -83,10 +86,10 @@ namespace NetworkCommsDotNet
                     if (listenForIncomingPackets)
                         socket.MessageReceived += socket_MessageReceived;
 
-                    socket.BindEndpointAsync(new HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString()).AsTask().Wait();
+                    socket.BindEndpointAsync(new HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString()).AsTask().Wait();
 #else
                     //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
-                    udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.LocalEndPoint));
+                    udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.LocalIPEndPoint));
 #endif
                 }
                 else
@@ -102,7 +105,7 @@ namespace NetworkCommsDotNet
                         if (listenForIncomingPackets)
                             socket.MessageReceived += socket_MessageReceived;
 
-                        socket.ConnectAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask().Wait();
+                        socket.ConnectAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask().Wait();
                     }
                     else
                     {
@@ -111,8 +114,8 @@ namespace NetworkCommsDotNet
                         if (listenForIncomingPackets)
                             socket.MessageReceived += socket_MessageReceived;
 
-                        EndpointPair pair = new EndpointPair(new HostName(ConnectionInfo.LocalEndPoint.Address.ToString()), ConnectionInfo.LocalEndPoint.Port.ToString(),
-                            new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString());
+                        EndpointPair pair = new EndpointPair(new HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString(),
+                            new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString());
 
                         socket.ConnectAsync(pair).AsTask().Wait();
                     }
@@ -120,10 +123,10 @@ namespace NetworkCommsDotNet
                     if (ConnectionInfo.LocalEndPoint == null)
                         udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.RemoteEndPoint.AddressFamily));
                     else
-                        udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.LocalEndPoint));
+                        udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.LocalIPEndPoint));
 
                     //By calling connect we discard packets from anything other then the provided remoteEndPoint on our localEndPoint
-                    udpClient.Connect(ConnectionInfo.RemoteEndPoint);
+                    udpClient.Connect(ConnectionInfo.RemoteIPEndPoint);
 #endif
                 }
 
@@ -140,7 +143,7 @@ namespace NetworkCommsDotNet
             }
             else
             {
-                if (!existingConnection.ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
+                if (!existingConnection.ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
                     throw new Exception("If an existing udpClient is provided it must be unbound to a specific remoteEndPoint");
 
 #if WINDOWS_PHONE
@@ -156,14 +159,14 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
             localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(socket.Information.LocalPort));
 #else
-            localEndPoint = udpClient.LocalEndPoint;
+            localEndPoint = udpClient.LocalIPEndPoint;
 #endif
 
             //We can update the localEndPoint so that it is correct
             if (!ConnectionInfo.LocalEndPoint.Equals(localEndPoint))
             {
                 //We should now be able to set the connectionInfo localEndPoint
-                NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
+                NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteIPEndPoint, localEndPoint);
                 ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
             }
         }
@@ -196,11 +199,11 @@ namespace NetworkCommsDotNet
         {
 #if WINDOWS_PHONE
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
-            if (socket != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))))
+            if (socket != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 socket.Dispose();
 #else
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
-            if (udpClient != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))))
+            if (udpClient != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 udpClient.CloseClient();
 #endif
         }
@@ -216,7 +219,7 @@ namespace NetworkCommsDotNet
                 throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
 #endif
 
-            if (ConnectionInfo.RemoteEndPoint.Address.Equals(IPAddress.Any))
+            if (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
                 throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
 
             byte[] headerBytes = new byte[0];
@@ -235,7 +238,7 @@ namespace NetworkCommsDotNet
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
                 throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteIPEndPoint.Address + ":" + ConnectionInfo.RemoteIPEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram;
@@ -250,7 +253,7 @@ namespace NetworkCommsDotNet
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
 #if WINDOWS_PHONE
-            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteEndPoint.Address.ToString()), ConnectionInfo.RemoteEndPoint.Port.ToString()).AsTask();
+            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask();
             getStreamTask.Wait();
 
             var outputStream = getStreamTask.Result;
@@ -258,13 +261,13 @@ namespace NetworkCommsDotNet
             outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
             outputStream.FlushAsync().AsTask().Wait();
 #else
-            udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteEndPoint);
+            udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteIPEndPoint);
 #endif
 
             if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
                 packet.PacketData.ThreadSafeStream.Close();
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteEndPoint.Address + ":" + ConnectionInfo.RemoteEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteIPEndPoint.Address + ":" + ConnectionInfo.RemoteIPEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
         }
 
         /// <summary>
@@ -307,7 +310,7 @@ namespace NetworkCommsDotNet
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
                 throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalIPEndPoint.Address + ":" + ConnectionInfo.LocalIPEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
             //Prepare the single byte array to send
             byte[] udpDatagram;
@@ -333,7 +336,7 @@ namespace NetworkCommsDotNet
             udpClient.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
 #endif
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalEndPoint.Address + ":" + ConnectionInfo.LocalEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + ".");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalIPEndPoint.Address + ":" + ConnectionInfo.LocalIPEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + ".");
         }
 
         /// <summary>
@@ -495,7 +498,7 @@ namespace NetworkCommsDotNet
                     connection = this;
                 else
                 {
-                    ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol);
+                    ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol);
                     try
                     {
                         //Look for an existing connection, if one does not exist we will create it
@@ -597,7 +600,7 @@ namespace NetworkCommsDotNet
                         connection = this;
                     else
                     {
-                        ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalEndPoint, ConnectionInfo.ApplicationLayerProtocol);
+                        ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol);
                         try
                         {
                             //Look for an existing connection, if one does not exist we will create it

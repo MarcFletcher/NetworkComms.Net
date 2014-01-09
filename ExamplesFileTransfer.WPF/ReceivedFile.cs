@@ -48,7 +48,7 @@ namespace ExamplesWPFFileTransfer
         /// </summary>
         public string SourceInfoStr
         {
-            get { return "[" + SourceInfo.RemoteEndPoint.Address + ":" + SourceInfo.RemoteEndPoint.Port + "]"; }
+            get { return "[" + SourceInfo.RemoteEndPoint.ToString() + "]"; }
         }
 
         /// <summary>

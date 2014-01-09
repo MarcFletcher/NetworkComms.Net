@@ -101,7 +101,7 @@ namespace DebugTests
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
-                    NetworkComms.SendObject("Message", targetServerConnectionInfo.RemoteEndPoint.Address.ToString(), targetServerConnectionInfo.RemoteEndPoint.Port, test);
+                    NetworkComms.SendObject("Message", ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Address.ToString(), ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Port, test);
                 }
             }
 
