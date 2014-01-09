@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace NetworkCommsDotNet
 {
@@ -51,7 +52,6 @@ namespace NetworkCommsDotNet
 
             return new IPEndPoint(ipAddress, serverPort);
         }
-
 
         /// <summary>
         /// Returns true if the provided address exists within the provided subnet.
@@ -89,6 +89,74 @@ namespace NetworkCommsDotNet
             bool equal = subnet.Equals(maskedAddress);
 
             return equal;
+        }
+
+        [DllImport("iphlpapi.dll", CharSet = CharSet.Auto)]
+        static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
+
+        /// <summary>
+        /// Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
+        /// the provided target <see cref="IPAddress"/>. using the Windows API, to provided targets. 
+        /// This method is only supported in a Windows environment.
+        /// </summary>
+        /// <param name="targetIPAddress">The target IP which should be used to determine the best 
+        /// local address. e.g. Either a local network or public IP address.</param>
+        /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
+        public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
+        {
+            if (targetIPAddress == null)
+                throw new ArgumentNullException("targetIPAddress", "Provided IPAddress cannot be null.");
+
+#if WINDOWS_PHONE
+            foreach (var name in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
+                if (name.IPInformation.NetworkAdapter == Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().NetworkAdapter)
+                    return IPAddress.Parse(name.DisplayName);
+
+            return null;
+#else
+
+            try
+            {
+                //We work out the best interface for connecting with the outside world using the provided target IP
+                UInt32 ipaddr = BitConverter.ToUInt32(targetIPAddress.GetAddressBytes(), 0);
+
+                UInt32 interfaceindex = 0;
+                IPExtAccess.GetBestInterface(ipaddr, out interfaceindex);
+
+                var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+
+                NetworkInterface bestInterface = null;
+
+                foreach (var iFace in interfaces)
+                {
+                    if (iFace.GetIPProperties().GetIPv4Properties().Index == interfaceindex)
+                    {
+                        bestInterface = iFace;
+                        break;
+                    }
+                }
+
+                IPAddress ipAddressBest = null;
+
+                foreach (var address in bestInterface.GetIPProperties().UnicastAddresses)
+                {
+                    if (address.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        ipAddressBest = address.Address;
+                        break;
+                    }
+                }
+
+                if (ipAddressBest != null)
+                    return ipAddressBest;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
+#endif
         }
     }
 
