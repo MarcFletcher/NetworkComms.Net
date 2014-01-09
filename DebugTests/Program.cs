@@ -69,6 +69,7 @@ namespace DebugTests
             }
 
             DebugTest.RunExample();
+            //DebugTest.Test();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();

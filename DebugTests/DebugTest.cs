@@ -92,5 +92,23 @@ namespace DebugTests
 
             NetworkComms.Shutdown();
         }
+
+        public static void Test()
+        {
+            IPRange range = new IPRange("192.168.1.0/24");
+
+            List<string> ipToTest = new List<string>();
+
+            for (int i = 0; i < 256; i++)
+                ipToTest.Add("192.168.1." + i.ToString());
+
+            foreach (string ip in ipToTest)
+            {
+                Console.WriteLine(ip + " - " + (range.Contains(ip) ? "YES" : "NO"));
+            }
+
+            Console.WriteLine("\nPress any key to quit.");
+            Console.ReadKey(true);
+        }
     }
 }
