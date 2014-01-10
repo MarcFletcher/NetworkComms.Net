@@ -134,7 +134,7 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Waiting for connection with " + ConnectionInfo + " to be established.");
                     if (!WaitForConnectionEstablish(NetworkComms.ConnectionEstablishTimeoutMS))
-                        throw new ConnectionSetupException("Timeout waiting for connection to be succesfully established.");
+                        throw new ConnectionSetupException("Timeout waiting for connection to be successfully established.");
                 }
                 else
                 {

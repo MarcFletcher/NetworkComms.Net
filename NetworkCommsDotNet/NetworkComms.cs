@@ -55,6 +55,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         static NetworkComms()
         {
+            DOSProtection = new NetworkCommsDotNet.DOSProtection();
+
             //Generally comms defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 2000;
@@ -692,6 +694,10 @@ namespace NetworkCommsDotNet
         #endregion
 
         #region Security
+        /// <summary>
+        /// The NetworkComms.Net DOS protection class. By default DOSProtection is disabled.
+        /// </summary>
+        public static DOSProtection DOSProtection { get; private set;}
 
         /// <summary>
         /// If set NetworkComms.Net will only accept incoming connections from the provided IP ranges. 
@@ -2412,14 +2418,17 @@ namespace NetworkCommsDotNet
                     (remoteEndPointToUse != null ? " Provided override endPoint of " + remoteEndPointToUse.ToString() : ""));
 
             //If the remoteEndPoint is IPAddress.Any we don't record it by endPoint
+            #region Unset remote endPoint
             if ((connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint) &&
                 (connection.ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) || connection.ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))) ||
                 (remoteEndPointToUse!=null && remoteEndPointToUse.GetType() == typeof(IPEndPoint) &&
                 (((IPEndPoint)remoteEndPointToUse).Address.Equals(IPAddress.Any) ||
                 ((IPEndPoint)remoteEndPointToUse).Address.Equals(IPAddress.IPv6Any))))
                 return;
+            #endregion
 
             //Validate incoming remote endPoint address if AllowedIncomingIPRanges is set
+            #region Check AllowedIncomingIPRanges
             if (AllowedIncomingIPRanges != null && connection.ConnectionInfo.ServerSide)
             {
                 //If remoteEndPointToUse != null validate using that
@@ -2428,9 +2437,37 @@ namespace NetworkCommsDotNet
                     throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
                 //Otherwise use connection.ConnectionInfo.RemoteEndPoint
                 else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint) &&
-                    !IPRange.Contains(AllowedIncomingIPRanges, ((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint).Address))
-                    throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
+                    !IPRange.Contains(AllowedIncomingIPRanges, connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                    throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
             }
+            #endregion
+
+            //Check for connection initialise in DOS protection
+            #region DOS Protection
+            if (NetworkComms.DOSProtection.Enabled)
+            {
+                //If remoteEndPointToUse != null validate using that
+                if (remoteEndPointToUse != null && remoteEndPointToUse.GetType() == typeof(IPEndPoint))
+                {
+                    IPEndPoint remoteIPEndPoint = (IPEndPoint)remoteEndPointToUse;
+
+                    //This may well be an updated endPoint. We only log the connection initialise if the endpoint addresses are different
+                    if (!remoteIPEndPoint.Address.Equals(connection.ConnectionInfo.RemoteIPEndPoint.Address) && 
+                        NetworkComms.DOSProtection.LogConnectionInitialise(remoteIPEndPoint.Address))
+                        throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") has been banned for " + NetworkComms.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                    else if (NetworkComms.DOSProtection.RemoteIPAddressBanned(remoteIPEndPoint.Address))
+                        throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
+                }
+                //Otherwise use connection.ConnectionInfo.RemoteEndPoint
+                else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
+                {
+                    if(NetworkComms.DOSProtection.LogConnectionInitialise(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                        throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") has been banned for " + NetworkComms.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                    else if (NetworkComms.DOSProtection.RemoteIPAddressBanned(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                        throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
+                }
+            }
+            #endregion
 
             if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");

@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -210,13 +214,13 @@ namespace NetworkCommsDotNet
                     if (DateTime.Now - _bannedAddresses[remoteIPAddress] > BanTimeout)
                     {
                         _bannedAddresses.Remove(remoteIPAddress);
-                        return true;
+                        return false;
                     }
                     else
-                        return false;
+                        return true;
                 }
                 else
-                    return true;
+                    return false;
             }
         }
     }

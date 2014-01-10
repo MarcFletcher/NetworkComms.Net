@@ -50,12 +50,12 @@ namespace DebugTests
         static List<IPEndPoint> TCPServerEndPointsKeys;
         static List<IPEndPoint> UDPServerEndPointsKeys;
 
-        static int connectionHammerExecCount = 500;
+        static int connectionHammerExecCount = 50;
         static int connectionsPerHammer = 100;
         static byte[] clientHammerData;
 
         static int testDataSize = 1024;
-        static bool closeConnectionAfterSend = false;
+        static bool closeConnectionAfterSend = true;
 
         //No connection close
         //Debug mode - MF laptop - Single run 50K connections
@@ -65,20 +65,20 @@ namespace DebugTests
         //static TestMode mode = TestMode.UDP_Managed; // (0.03ms / connection) (wHandshake - 0.07ms / connection) (slow receive & missing packets)
         //static TestMode mode = TestMode.UDP_Unmanaged; // (0.03ms / connection) (slow receive & missing packets)
         //static TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.03ms / connection) (missing packets)
-        //static TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (0.12ms / connecition) (wHandshake - 0.12ms / connection) (missing packets)
+        //static TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (0.12ms / connection) (wHandshake - 0.12ms / connection) (missing packets)
         //static TestMode mode = TestMode.TCP_Unmanaged ^ TestMode.UDP_Unmanaged; // (0.05ms / connection) (missing packets)
-        static TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.11ms / connection) (missing packets)
+        //static TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.11ms / connection) (missing packets)
         //static TestMode mode = TestMode.TCPSSL_Managed; //(0.15ms / connection)
         
         //With connection close
         //static Debug mode - MF laptop - Single run 5K connections
-        //static TestMode mode = TestMode.TCP_Managed; // (9.87ms / connection) (missing packets)
+        static TestMode mode = TestMode.TCP_Managed; // (9.87ms / connection) (missing packets)
         //static TestMode mode = TestMode.TCP_Unmanaged; // (0.47ms / connection) (missing packets)
         //static TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged; // (5.66ms / connection) (missing packets)
         //static TestMode mode = TestMode.UDP_Managed; // (0.29ms / connection) (wHandshake - 0.64ms / connection)
         //static TestMode mode = TestMode.UDP_Unmanaged; // (0.25ms / connection)
         //static TestMode mode = TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (0.30ms / connection)
-        //static TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (6.72ms / connecition) (wHandshake - 7.16ms / connection) (missing packets)
+        //static TestMode mode = TestMode.TCP_Managed ^ TestMode.UDP_Managed; // (6.72ms / connection) (wHandshake - 7.16ms / connection) (missing packets)
         //static TestMode mode = TestMode.TCP_Unmanaged ^ TestMode.UDP_Unmanaged; // (0.43ms / connection)
         //static TestMode mode = TestMode.TCP_Managed ^ TestMode.TCP_Unmanaged ^ TestMode.UDP_Managed ^ TestMode.UDP_Unmanaged; // (3.44ms / connection)
 
@@ -114,10 +114,12 @@ namespace DebugTests
 
             if (serverMode)
             {
+                NetworkComms.DOSProtection.Enabled = true;
+
                 //NetworkComms.DisableLogging();
 
                 //Listen for connections
-                int totalNumberOfListenPorts = 10;
+                int totalNumberOfListenPorts = 500;
 
                 int portDivisor = 0;
                 if ((mode & TestMode.TCP_Managed) == TestMode.TCP_Managed) portDivisor++;

@@ -68,14 +68,14 @@ namespace DebugTests
                 //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
-            DebugTest.RunExample();
+            //DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();
             //DFSTest.RunExample();
             //BandwidthLoadTest.RunExample();
-            //NumConnectionLoadTest.RunExample();
+            NumConnectionLoadTest.RunExample();
             //ThreadPoolTest.RunExample();
             //SSLTest.RunExample();
 

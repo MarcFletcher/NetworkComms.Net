@@ -140,14 +140,14 @@ namespace NetworkCommsDotNet
 #endif
 
         /// <summary>
-        /// Depreciated - Please use BestLocalEndPoint instead. Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
+        /// Depreciated - . Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
         /// the provided target <see cref="IPAddress"/>. using the Windows API, to provided targets. 
         /// This method is only supported in a Windows environment.
         /// </summary>
         /// <param name="targetIPAddress">The target IP which should be used to determine the best 
         /// local address. e.g. Either a local network or public IP address.</param>
         /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
-        [Obsolete]
+        [Obsolete("Method is depreciated, please use BestLocalEndPoint(IPEndPoint) instead")]
         public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
             if (targetIPAddress == null)
