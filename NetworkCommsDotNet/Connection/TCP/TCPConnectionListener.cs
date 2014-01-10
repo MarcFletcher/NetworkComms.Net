@@ -19,12 +19,17 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using DPSBase;
 
-#if WINDOWS_PHONE
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
+
+#if WINDOWS_PHONE || NETFX_CORE
 using Windows.Networking.Sockets;
 #endif
 
@@ -35,7 +40,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class TCPConnectionListener : ConnectionListenerBase
     {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         /// <summary>
         /// The equivalent TCPListener class in windows phone
         /// </summary>
@@ -61,12 +66,12 @@ namespace NetworkCommsDotNet
             ApplicationLayerProtocolStatus applicationLayerProtocol)
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
         {
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             SSLOptions = new SSLOptions();
 #endif
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Create a new instance of a TCP listener
         /// </summary>
@@ -95,7 +100,7 @@ namespace NetworkCommsDotNet
 
             try
             {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                 listenerInstance = new StreamSocketListener();
                 listenerInstance.ConnectionReceived += newListenerInstance_ConnectionReceived;
                 listenerInstance.BindEndpointAsync(new Windows.Networking.HostName(desiredLocalListenIPEndPoint.Address.ToString()), desiredLocalListenIPEndPoint.Port.ToString()).AsTask().Wait();
@@ -112,7 +117,7 @@ namespace NetworkCommsDotNet
                 {
                     try
                     {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                         listenerInstance.BindEndpointAsync(new Windows.Networking.HostName(desiredLocalListenIPEndPoint.Address.ToString()), "").AsTask().Wait(); 
 #else
                         listenerInstance = new TcpListener(desiredLocalListenIPEndPoint.Address, 0);
@@ -134,7 +139,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             this.LocalListenEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
 #else
             this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
@@ -152,7 +157,7 @@ namespace NetworkCommsDotNet
 
             try
             {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                 listenerInstance.Dispose();
 #else
                 listenerInstance.Stop();
@@ -161,7 +166,7 @@ namespace NetworkCommsDotNet
             catch (Exception) { }
         }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         private void newListenerInstance_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
             try

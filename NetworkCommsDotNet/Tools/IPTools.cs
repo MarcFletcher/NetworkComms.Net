@@ -20,9 +20,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
+
 
 namespace NetworkCommsDotNet
 {
@@ -92,8 +98,10 @@ namespace NetworkCommsDotNet
             return equal;
         }
 
+#if !WINDOWS_PHONE && !NETFX_CORE
         [DllImport("iphlpapi.dll", CharSet = CharSet.Auto)]
         static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
+#endif
 
         /// <summary>
         /// Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
@@ -108,7 +116,7 @@ namespace NetworkCommsDotNet
             if (targetIPAddress == null)
                 throw new ArgumentNullException("targetIPAddress", "Provided IPAddress cannot be null.");
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             foreach (var name in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
                 if (name.IPInformation.NetworkAdapter == Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().NetworkAdapter)
                     return IPAddress.Parse(name.DisplayName);

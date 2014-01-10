@@ -19,13 +19,18 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Net.Sockets;
 using System.Net;
 using System.IO;
 using System.Threading;
 using DPSBase;
 
-#if WINDOWS_PHONE
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
+
+#if WINDOWS_PHONE || NETFX_CORE
 using Windows.Networking.Sockets;
 using Windows.Networking;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -35,7 +40,7 @@ namespace NetworkCommsDotNet
 {
     public sealed partial class UDPConnection : Connection
     {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         internal DatagramSocket socket;
 #else
         internal UdpClientWrapper udpClient;
@@ -79,7 +84,7 @@ namespace NetworkCommsDotNet
             {
                 if (connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) || connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))
                 {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                     //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
                     socket = new DatagramSocket();
 
@@ -97,7 +102,7 @@ namespace NetworkCommsDotNet
                     //If this is a specific connection we link to a default end point here
                     isIsolatedUDPConnection = true;
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                     if (ConnectionInfo.LocalEndPoint == null)
                     {
                         socket = new DatagramSocket();
@@ -130,7 +135,7 @@ namespace NetworkCommsDotNet
 #endif
                 }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
                 //NAT traversal does not work in .net 2.0
                 //Mono does not seem to have implemented AllowNatTraversal method and attempting the below method call will throw an exception
                 //if (Type.GetType("Mono.Runtime") == null)
@@ -146,7 +151,7 @@ namespace NetworkCommsDotNet
                 if (!existingConnection.ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
                     throw new Exception("If an existing udpClient is provided it must be unbound to a specific remoteEndPoint");
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                 //Using an exiting client allows us to send from the same port as for the provided existing connection
                 this.socket = existingConnection.socket;
 #else
@@ -156,7 +161,7 @@ namespace NetworkCommsDotNet
             }
 
             IPEndPoint localEndPoint;
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(socket.Information.LocalPort));
 #else
             localEndPoint = udpClient.LocalIPEndPoint;
@@ -197,7 +202,7 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation">An optional debug parameter.</param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
             if (socket != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 socket.Dispose();
@@ -252,7 +257,7 @@ namespace NetworkCommsDotNet
             else
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask();
             getStreamTask.Wait();
 
@@ -324,7 +329,7 @@ namespace NetworkCommsDotNet
             else
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             var getStreamTask = socket.GetOutputStreamAsync(new HostName(ipEndPoint.Address.ToString()), ipEndPoint.Port.ToString()).AsTask();
             getStreamTask.Wait();
 
@@ -353,7 +358,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void StartIncomingDataListen()
         {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             throw new NotImplementedException("Not needed for UDP connections on Windows Phone 8");
 #else
 
@@ -372,7 +377,7 @@ namespace NetworkCommsDotNet
 #endif
         }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         void socket_MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
             try

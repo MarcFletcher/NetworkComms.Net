@@ -21,12 +21,19 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.Net.Sockets;
 using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
 using System.Diagnostics;
 using System.IO;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+using System.Threading.Tasks;
+using Windows.Storage;
+#else
+using System.Net.Sockets;
+#endif
 
 #if !NO_LOGGING
 using NLog;
@@ -64,7 +71,7 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-#if SILVERLIGHT || WINDOWS_PHONE
+#if SILVERLIGHT || WINDOWS_PHONE || NETFX_CORE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
             SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
 #elif iOS
@@ -112,7 +119,11 @@ namespace NetworkCommsDotNet
 #endif
 
             //We want to instantiate our own thread pool here
+#if NETFX_CORE
+            CommsThreadPool = new CommsThreadPool();
+#else
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount*2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
+#endif
 
             //Initialise the core extensions
             DPSManager.AddDataSerializer<ProtobufSerializer>();
@@ -125,7 +136,7 @@ namespace NetworkCommsDotNet
             DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
 #endif
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
 #endif
 
@@ -146,7 +157,7 @@ namespace NetworkCommsDotNet
         {
             get 
             {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                 return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
 #else
                 return Dns.GetHostName(); 
@@ -155,48 +166,39 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If set NetworkComms.Net will only accept incoming connections from the provided IP ranges. 
+        /// If set NetworkCommsDotNet will only operate on matching IP Addresses. Also see <see cref="AllowedAdaptorNames"/>.
+        /// Correct format is string[] { "192.168", "213.111.10" }. If multiple prefixes are provided the earlier prefix, if found, takes priority.
         /// </summary>
-        public static IPRange[] AllowedIncomingIPRanges { get; set; }
+        public static string[] AllowedIPPrefixes { get; set; }
 
         /// <summary>
-        /// Restricts the IPAdddresses that are returned by <see cref="AllAllowedIPs()"/>.
-        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
-        /// will only listen on IP Addresses within provided ranges. Also see <see cref="AllowedAdaptorNames"/>.
-        /// The order of provided ranges determines the order of IPAddresses returned by <see cref="AllAllowedIPs()"/>.
-        /// </summary>
-        public static IPRange[] AllowedListeningIPRanges { get; set; }
-
-        /// <summary>
-        /// Restricts the IPAdddresses that are returned by <see cref="AllAllowedIPs()"/>.
-        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
-        /// will only listen on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
+        ///  If set NetworkCommsDotNet will only operate on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
         /// </summary>
         public static string[] AllowedAdaptorNames { get; set; }
 
         /// <summary>
         /// Returns all allowed local IP addresses. 
         /// If <see cref="AllowedAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
-        /// If <see cref="AllowedListeningIPRanges"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preferred at [0].
+        /// If <see cref="AllowedIPPrefixes"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preffered at [0].
         /// </summary>
         /// <returns></returns>
         public static List<IPAddress> AllAllowedIPs()
         {
 
-#if WINDOWS_PHONE
-            //On windows phone we simply ignore IP addresses from the auto assigned range as well as those without a valid prefix
+#if WINDOWS_PHONE || NETFX_CORE
+            //On windows phone we simply ignore ip addresses from the autoassigned range as well as those without a valid prefix
             List<IPAddress> allowedIPs = new List<IPAddress>();
 
             foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
             {
                 if (!hName.DisplayName.StartsWith("169.254"))
                 {
-                    if (AllowedListeningIPRanges != null)
+                    if (AllowedIPPrefixes != null)
                     {
                         bool valid = false;
 
-                        for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
-                            valid |= AllowedListeningIPRanges[i].Contains(hName.DisplayName);
+                        for (int i = 0; i < AllowedIPPrefixes.Length; i++)
+                            valid |= hName.DisplayName.StartsWith(AllowedIPPrefixes[i]);
                                 
                         if(valid)
                             allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
@@ -209,13 +211,14 @@ namespace NetworkCommsDotNet
             return allowedIPs;
 #else
 
-            //We want to ignore IP's that have been auto assigned
+            //We want to ignore IP's that have been autoassigned
             //169.254.0.0
             IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
             //255.255.0.0
             IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
 
             List<IPAddress> validIPAddresses = new List<IPAddress>();
+            IPComparer comparer = new IPComparer();
 
 #if ANDROID
 
@@ -266,7 +269,7 @@ namespace NetworkCommsDotNet
                     {
                         if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
                         {
-                            if (!IPTools.IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                            if (!IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
                             {
                                 bool allowed = false;
 
@@ -289,10 +292,16 @@ namespace NetworkCommsDotNet
 
                                 allowed = false;
 
-                                if (AllowedListeningIPRanges != null)
+                                if (AllowedIPPrefixes != null)
                                 {
-                                    if (IPAddressInRanges(address))
-                                        allowed = true;
+                                    foreach (var ip in AllowedIPPrefixes)
+                                    {
+                                        if (comparer.Equals(address.ToString(), ip))
+                                        {
+                                            allowed = true;
+                                            break;
+                                        }
+                                    }
                                 }
                                 else
                                     allowed = true;
@@ -310,6 +319,7 @@ namespace NetworkCommsDotNet
 
 #else
 
+
             foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
             {
                 bool interfaceValid = false;
@@ -322,13 +332,11 @@ namespace NetworkCommsDotNet
                         if (AllowedAdaptorNames != null)
                         {
                             foreach (var id in AllowedAdaptorNames)
-                            {
                                 if (iFace.Id == id)
                                 {
                                     interfaceValid = true;
                                     break;
                                 }
-                            }
                         }
                         else
                             interfaceValid = true;
@@ -346,7 +354,7 @@ namespace NetworkCommsDotNet
                     var addressInformation = address.Address;
                     if (addressInformation.AddressFamily == AddressFamily.InterNetwork || addressInformation.AddressFamily == AddressFamily.InterNetworkV6)
                     {
-                        if (!IPTools.IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        if (!IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
                         {
                             bool allowed = false;
 
@@ -369,10 +377,16 @@ namespace NetworkCommsDotNet
 
                             allowed = false;
 
-                            if (AllowedListeningIPRanges != null)
+                            if (AllowedIPPrefixes != null)
                             {
-                                if (IPAddressInSetRanges(addressInformation))
-                                    allowed = true;
+                                foreach (var ip in AllowedIPPrefixes)
+                                {
+                                    if (comparer.Equals(addressInformation.ToString(), ip))
+                                    {
+                                        allowed = true;
+                                        break;
+                                    }
+                                }
                             }
                             else
                                 allowed = true;
@@ -388,20 +402,20 @@ namespace NetworkCommsDotNet
             }
 #endif
 
-            if (AllowedListeningIPRanges != null)
+            if (AllowedIPPrefixes != null)
             {
                 validIPAddresses.Sort((a, b) =>
                 {
-                    for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
+                    for (int i = 0; i < AllowedIPPrefixes.Length; i++)
                     {
-                        if (AllowedListeningIPRanges[i].Contains(a))
+                        if (a.ToString().StartsWith(AllowedIPPrefixes[i]))
                         {
-                            if (AllowedListeningIPRanges[i].Contains(b))
+                            if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
                                 return 0;
                             else
                                 return -1;
                         }
-                        else if (AllowedListeningIPRanges[i].Contains(b))
+                        else if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
                             return 1;
                     }
 
@@ -414,31 +428,67 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if the provided IPAddress is within AllowedListeningIPRanges
+        /// Custom comparer for IP addresses. Used by <see cref="AllAllowedIPs"/>
         /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <param name="useListenIPRanges">If true uses AllowedListeningIPRanges, otherwise AllowedIncomingIPRanges</param>
-        /// <returns></returns>
-        private static bool IPAddressInSetRanges(IPAddress ipAddress, bool useListenIPRanges = true)
+        class IPComparer : IEqualityComparer<string>
         {
-            if (useListenIPRanges)
+            // Products are equal if their names and product numbers are equal.
+            public bool Equals(string x, string y)
             {
-                foreach (IPRange range in AllowedListeningIPRanges)
-                {
-                    if (range.Contains(ipAddress))
-                        return true;
-                }
-            }
-            else
-            {
-                foreach (IPRange range in AllowedIncomingIPRanges)
-                {
-                    if (range.Contains(ipAddress))
-                        return true;
-                }
+                //Check whether the compared objects reference the same data.
+                if (Object.ReferenceEquals(x, y)) return true;
+
+                //Check whether any of the compared objects is null.
+                if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                    return false;
+
+                return (y.StartsWith(x) || x.StartsWith(y));
             }
 
-            return false;
+            // If Equals() returns true for a pair of objects 
+            // then GetHashCode() must return the same value for these objects.
+            public int GetHashCode(string ipAddress)
+            {
+                return ipAddress.GetHashCode();
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the provided address exists within the provided subnet.
+        /// </summary>
+        /// <param name="address">The address to check, i.e. 192.168.0.10</param>
+        /// <param name="subnet">The subnet, i.e. 192.168.0.0</param>
+        /// <param name="mask">The subnet mask, i.e. 255.255.255.0</param>
+        /// <returns>True if address is in the provided subnet</returns>
+        public static bool IsAddressInSubnet(IPAddress address, IPAddress subnet, IPAddress mask)
+        {
+            if (address == null) throw new ArgumentNullException("address", "Provided IPAddress cannot be null.");
+            if (subnet == null) throw new ArgumentNullException("subnet", "Provided IPAddress cannot be null.");
+            if (mask == null) throw new ArgumentNullException("mask", "Provided IPAddress cannot be null.");
+
+            //Catch for IPv6
+            if (subnet.AddressFamily == AddressFamily.InterNetworkV6 || 
+                mask.AddressFamily == AddressFamily.InterNetworkV6)
+                throw new NotImplementedException("This method does not yet support IPv6. Please contact NetworkComms.Net support if you would like this functionality.");
+            //If we have provided IPV4 subnets and masks and we have an ipv6 address then return false
+            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
+                return false;
+
+            byte[] addrBytes = address.GetAddressBytes();
+            byte[] maskBytes = mask.GetAddressBytes();
+            byte[] maskedAddressBytes = new byte[addrBytes.Length];
+
+            //Catch for IPv6
+            if (maskBytes.Length < maskedAddressBytes.Length)
+                return false;
+
+            for (int i = 0; i < maskedAddressBytes.Length; ++i)
+                maskedAddressBytes[i] = (byte)(addrBytes[i] & maskBytes[i]);
+
+            IPAddress maskedAddress = new IPAddress(maskedAddressBytes);
+            bool equal = subnet.Equals(maskedAddress);
+
+            return equal;
         }
 
         /// <summary>
@@ -452,7 +502,7 @@ namespace NetworkCommsDotNet
         public static ShortGuid NetworkIdentifier { get; private set; }
 
         /// <summary>
-        /// The current runtime environment. Detected automatically on startup. Performance may be adversely affected if this is changed.
+        /// The current runtime environment. Detected automatically on startup. Performance may be adversly affected if this is changed.
         /// </summary>
         public static RuntimeEnvironment CurrentRuntimeEnvironment { get; set; }
 
@@ -479,7 +529,7 @@ namespace NetworkCommsDotNet
 
         private static double currentNetworkLoadIncoming;
         private static double currentNetworkLoadOutgoing;
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
         private static Thread NetworkLoadThread = null;
         private static CommsMath currentNetworkLoadValuesIncoming;
         private static CommsMath currentNetworkLoadValuesOutgoing;
@@ -498,7 +548,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -529,7 +579,7 @@ namespace NetworkCommsDotNet
         {
             get
             {
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                 //We start the load thread when we first access the network load
                 //this helps cut down on uncessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
@@ -560,7 +610,7 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadIncoming(byte secondsToAverage)
         {
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
 
             if (!commsShutdown && NetworkLoadThread == null)
             {
@@ -591,7 +641,7 @@ namespace NetworkCommsDotNet
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
         {
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
             if (!commsShutdown && NetworkLoadThread == null)
             {
                 lock (globalDictAndDelegateLocker)
@@ -624,7 +674,7 @@ namespace NetworkCommsDotNet
         {
             if (remoteIPEndPoint == null) throw new ArgumentNullException("remoteIPEndPoint", "Provided IPEndPoint cannot be null.");
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
             if (t.Wait(20) && t.Result.Count > 0)
             {
@@ -649,7 +699,7 @@ namespace NetworkCommsDotNet
 #endif
         }
 
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID  && !NETFX_CORE
         /// <summary>
         /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
         /// </summary>
@@ -776,7 +826,7 @@ namespace NetworkCommsDotNet
         public static bool ConnectionListenModeUseSync { get; set; }
 
         /// <summary>
-        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedListeningIPRanges"/> and <see cref="AllowedAdaptorNames"/>
+        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedIPPrefixes"/> and <see cref="AllowedAdaptorNames"/>
         /// </summary>
         public static bool ListenOnAllAllowedInterfaces { get; set; }
 
@@ -794,7 +844,7 @@ namespace NetworkCommsDotNet
         /// The threadpool used by networkComms.Net to execute incoming packet handlers.
         /// </summary>
         public static CommsThreadPool CommsThreadPool { get; set; }
-
+        
         /// <summary>
         /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different priorities.
         /// </summary>
@@ -815,7 +865,7 @@ namespace NetworkCommsDotNet
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
                 if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
 #endif
 
@@ -937,9 +987,13 @@ namespace NetworkCommsDotNet
             finally
             {
                 //We need to dispose the data stream correctly
+#if NETFX_CORE
+                if (item != null) item.DataStream.Dispose();
+#else
                 if (item!=null) item.DataStream.Close();
+#endif
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
 #endif
@@ -947,11 +1001,7 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
-        #region Security
-
-        #endregion
-
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         #region High CPU Usage Tuning
         /// <summary>
         /// In times of high CPU usage we need to ensure that certain time critical functions, like connection handshaking do not timeout.
@@ -1512,7 +1562,7 @@ namespace NetworkCommsDotNet
                 LogError(ex, "CommsShutdownError");
             }
 
-#if !WINDOWS_PHONE && !ANDROID
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
             try
             {
                 if (NetworkLoadThread != null)
@@ -1545,7 +1595,7 @@ namespace NetworkCommsDotNet
             commsShutdown = false;
             if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");
 
-#if !WINDOWS_PHONE && !NO_LOGGING
+#if !WINDOWS_PHONE && !NO_LOGGING && !NETFX_CORE
             //Mono bug fix
             //Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
             if (Logger != null)
@@ -1684,8 +1734,19 @@ namespace NetworkCommsDotNet
             {
                 lock (errorLocker)
                 {
+#if NETFX_CORE
+                    Func<Task> writeTask = new Func<Task>(async () =>
+                        {
+                            StorageFolder folder = ApplicationData.Current.LocalFolder;
+                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
+                            await FileIO.AppendTextAsync(file, logString);
+                        });
+
+                    writeTask().Wait();
+#else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
                         sw.WriteLine(logString);
+#endif
                 }
             }
             catch (Exception)
@@ -1715,6 +1776,8 @@ namespace NetworkCommsDotNet
                 entireFileName = Path.Combine(global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));
 #elif WINDOWS_PHONE
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]");
+#elif NETFX_CORE
+                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Environment.CurrentManagedThreadId.ToString() + "]");
 #else
                 using (Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
                     entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
@@ -1724,6 +1787,36 @@ namespace NetworkCommsDotNet
 
                 try
                 {
+#if NETFX_CORE
+                    Func<Task> writeTask = new Func<Task>(async () =>
+                        {
+                            List<string> lines = new List<string>();
+
+                            if (optionalCommentStr != "")
+                            {
+                                lines.Add("Comment: " + optionalCommentStr);
+                                lines.Add("");
+                            }
+
+                            if (ex.GetBaseException() != null)
+                                lines.Add("Base Exception Type: " + ex.GetBaseException().ToString());
+
+                            if (ex.InnerException != null)
+                                lines.Add("Inner Exception Type: " + ex.InnerException.ToString());
+
+                            if (ex.StackTrace != null)
+                            {
+                                lines.Add("");
+                                lines.Add("Stack Trace: " + ex.StackTrace.ToString());
+                            }
+
+                            StorageFolder folder = ApplicationData.Current.LocalFolder;
+                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
+                            await FileIO.WriteLinesAsync(file, lines);
+                        });
+
+                    writeTask().Wait();
+#else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
                     {
                         if (optionalCommentStr != "")
@@ -1744,6 +1837,7 @@ namespace NetworkCommsDotNet
                             sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
                         }
                     }
+#endif
                 }
                 catch (Exception)
                 {
@@ -1812,9 +1906,15 @@ namespace NetworkCommsDotNet
 
             string resultStr;
 
+#if NETFX_CORE
+            var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
+            var buffer = (new Windows.Storage.Streams.DataReader(streamToMD5.AsInputStream())).ReadBuffer((uint)streamToMD5.Length);
+            var hashedData = alg.HashData(buffer);
+            resultStr = Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
+#else
             using (System.Security.Cryptography.HashAlgorithm md5 =
 #if WINDOWS_PHONE
-            new DPSBase.MD5Managed())
+                new DPSBase.MD5Managed())
 #else
             System.Security.Cryptography.MD5.Create())
 #endif
@@ -1823,7 +1923,7 @@ namespace NetworkCommsDotNet
                 streamToMD5.Seek(0, SeekOrigin.Begin);
                 resultStr = BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
             }
-
+#endif
             return resultStr;
         }
 
@@ -1854,7 +1954,7 @@ namespace NetworkCommsDotNet
         {
             if (bytesToMd5 == null) throw new ArgumentNullException("bytesToMd5", "Provided byte[] cannot be null.");
 
-            using(MemoryStream stream = new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false, true))
+            using(MemoryStream stream = new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false))
                 return MD5Bytes(stream);
         }
 
@@ -2417,19 +2517,6 @@ namespace NetworkCommsDotNet
                 ((IPEndPoint)remoteEndPointToUse).Address.Equals(IPAddress.IPv6Any))))
                 return;
 
-            //Validate incoming remote endPoint address if AllowedIncomingIPRanges is set
-            if (AllowedIncomingIPRanges != null && connection.ConnectionInfo.ServerSide)
-            {
-                //If remoteEndPointToUse != null validate using that
-                if (remoteEndPointToUse != null && remoteEndPointToUse.GetType() == typeof(IPEndPoint) &&
-                    !IPAddressInSetRanges(((IPEndPoint)remoteEndPointToUse).Address, false))
-                    throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
-                //Otherwise use connection.ConnectionInfo.RemoteEndPoint
-                else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint) &&
-                    !IPAddressInSetRanges(((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint).Address, false))
-                    throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
-            }
-
             if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
@@ -2572,55 +2659,4 @@ namespace NetworkCommsDotNet
         }
         #endregion
     }
-
-#if NO_LOGGING
-    /// <summary>
-    /// On some platforms NLog has issues so this class provides the most basic logging featyres.
-    /// </summary>
-    public class Logger
-    {
-        internal object locker = new object();
-        internal string LogFileLocation { get; set; }
-
-        public void Trace(string message) { log("Trace", message); }
-        public void Debug(string message) { log("Debug", message); }
-        public void Fatal(string message, Exception e = null) { log("Fatal", message); }
-        public void Info(string message) { log("Info", message); }
-        public void Warn(string message) { log("Warn", message); }
-        public void Error(string message) { log("Error", message); }
-
-        private void log(string level, string message)
-        {
-            if (LogFileLocation != null)
-            {
-                //Try to get the threadId which is very usefull when debugging
-                string threadId = null;
-                try
-                {
-                    threadId = Thread.CurrentThread.ManagedThreadId.ToString();
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    lock (locker)
-                    {
-                        using (var sw = new StreamWriter(LogFileLocation, true))
-                        {
-                            if (threadId != null)
-                                sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + threadId + " - " + level + "] - " + message);
-                            else
-                                sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + level + "] - " + message);
-                        }
-                    }
-                }
-                catch (Exception) { }
-            }
-        }
-
-        public Logger() { }
-
-        public void Shutdown() { }
-    }
-#endif
 }

@@ -158,7 +158,7 @@ namespace NetworkCommsDotNet
             //Try and get the process Id. May fail in some enviornments.
             int processId = 0;
             
-#if !iOS && !WINDOWS_PHONE
+#if !iOS && !WINDOWS_PHONE && !NETFX_CORE
             try 
             {
                 using(System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())

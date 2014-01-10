@@ -85,6 +85,9 @@
     <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
       <Link>ThreadSafeStream.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\Logger.cs">
+      <Link>XPlatformHelper\Logger.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

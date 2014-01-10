@@ -22,6 +22,10 @@ using System.Net;
 using System.Text;
 using DPSBase;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>

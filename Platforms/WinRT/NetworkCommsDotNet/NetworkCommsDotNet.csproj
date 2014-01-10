@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NETFX_CORE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETFX_CORE;NO_LOGGING</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -28,7 +28,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NETFX_CORE</DefineConstants>
+    <DefineConstants>TRACE;NETFX_CORE;NO_LOGGING</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -100,10 +100,130 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{c12bbc4c-371a-42d8-bea1-03ea64611f6c}</Project>
+      <Name>DPSBase %28WinRT\Core\DPSBase%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{91b8a67b-9b83-4cea-9607-1364db3d27ca}</Project>
+      <Name>SevenZipLZMACompressor %28WinRT\Core\SevenZipLZMACompressor%29</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="..\..\..\NetworkCommsDotNet\ConnectionInfo.cs">
+      <Link>ConnectionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionCreate.cs">
+      <Link>Connection\ConnectionCreate.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionDelegatesHandlers.cs">
+      <Link>Connection\ConnectionDelegatesHandlers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionIncomingData.cs">
+      <Link>Connection\ConnectionIncomingData.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionListenerBase.cs">
+      <Link>Connection\ConnectionListenerBase.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionListeners.cs">
+      <Link>Connection\ConnectionListeners.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionSendClose.cs">
+      <Link>Connection\ConnectionSendClose.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionStatic.cs">
+      <Link>Connection\ConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionType.cs">
+      <Link>Connection\ConnectionType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
+      <Link>Connection\SentPacket.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\SSLOptions.cs">
+      <Link>Connection\TCP\SSLOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnection.cs">
+      <Link>Connection\TCP\TCPConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionListener.cs">
+      <Link>Connection\TCP\TCPConnectionListener.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\TCP\TCPConnectionStatic.cs">
+      <Link>Connection\TCP\TCPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPClientWrapper.cs">
+      <Link>Connection\UDP\UDPClientWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnection.cs">
+      <Link>Connection\UDP\UDPConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionListener.cs">
+      <Link>Connection\UDP\UDPConnectionListener.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPConnectionStatic.cs">
+      <Link>Connection\UDP\UDPConnectionStatic.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPOptions.cs">
+      <Link>Connection\UDP\UDPOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\NetworkComms.cs">
+      <Link>NetworkComms.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Packet.cs">
+      <Link>Packet.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\PacketHeader.cs">
+      <Link>PacketHeader.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\ReservedPacketType.cs">
+      <Link>ReservedPacketType.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\RuntimeEnvironment.cs">
+      <Link>RuntimeEnvironment.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\SendReceiveOptions.cs">
+      <Link>SendReceiveOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\Adler32.cs">
+      <Link>Tools\Adler32.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsMath.cs">
+      <Link>Tools\CommsMath.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsThreadPool.cs">
+      <Link>Tools\CommsThreadPool.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
+      <Link>Tools\IPTools.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
+      <Link>Tools\PacketBuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketUnwrappers.cs">
+      <Link>Tools\PacketUnwrappers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueue.cs">
+      <Link>Tools\PriorityQueue.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueueItem.cs">
+      <Link>Tools\PriorityQueueItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\QueueItemPriority.cs">
+      <Link>Tools\QueueItemPriority.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ShortGUID.cs">
+      <Link>Tools\ShortGUID.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\SSLTools.cs">
+      <Link>Tools\SSLTools.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\DLL\WinRT\protobuf-net.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>

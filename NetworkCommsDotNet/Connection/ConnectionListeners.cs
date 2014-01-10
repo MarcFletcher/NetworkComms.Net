@@ -23,6 +23,10 @@ using System.Net;
 using System.Threading;
 using DPSBase;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -71,7 +75,7 @@ namespace NetworkCommsDotNet
                         listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
                     else if (connectionType == ConnectionType.UDP)
                         listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
-#if !NET2 && !WINDOWS_PHONE
+#if !NET2 && !WINDOWS_PHONE && !NETFX_CORE
                     else if (connectionType == ConnectionType.Bluetooth)
                         listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
 #endif
@@ -109,7 +113,7 @@ namespace NetworkCommsDotNet
                     listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
                 else if (connectionType == ConnectionType.UDP)
                     listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions);
-#if !NET2 && !WINDOWS_PHONE
+#if !NET2 && !WINDOWS_PHONE && !NETFX_CORE
                 else if (connectionType == ConnectionType.Bluetooth)
                     listener = new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
 #endif

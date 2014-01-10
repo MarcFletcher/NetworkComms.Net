@@ -19,9 +19,14 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using DPSBase;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {
@@ -95,7 +100,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             this.LocalListenEndPoint = new IPEndPoint(IPAddress.Parse(UDPConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(UDPConnection.socket.Information.LocalPort)); 
 #else
             this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;

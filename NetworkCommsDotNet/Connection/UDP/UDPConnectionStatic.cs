@@ -19,10 +19,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Net.Sockets;
 using System.Net;
 using System.Diagnostics;
 using DPSBase;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {
