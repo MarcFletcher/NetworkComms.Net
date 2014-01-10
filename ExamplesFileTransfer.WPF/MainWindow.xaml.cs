@@ -30,12 +30,12 @@ namespace ExamplesWPFFileTransfer
     {
         #region Private Fields
         /// <summary>
-        /// Datacontext for the GUI list box
+        /// Data context for the GUI list box
         /// </summary>
         ObservableCollection<ReceivedFile> receivedFiles = new ObservableCollection<ReceivedFile>();
 
         /// <summary>
-        /// References to recieved files by remote ConnectionInfo
+        /// References to received files by remote ConnectionInfo
         /// </summary>
         Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>> receivedFilesDict = new Dictionary<ConnectionInfo, Dictionary<string, ReceivedFile>>();
 
@@ -60,7 +60,7 @@ namespace ExamplesWPFFileTransfer
         object syncRoot = new object();
 
         /// <summary>
-        /// Boolean used for surpressing errors during GUI close
+        /// Boolean used for suppressing errors during GUI close
         /// </summary>
         static volatile bool windowClosing = false;
         #endregion
@@ -69,7 +69,7 @@ namespace ExamplesWPFFileTransfer
         {
             InitializeComponent();
 
-            //Set the listbox datacontext
+            //Set the listbox data context
             lbReceivedFiles.DataContext = receivedFiles;
 
             //Start listening for new TCP connections

@@ -114,7 +114,7 @@ namespace DebugTests
 
             if (serverMode)
             {
-                NetworkComms.DOSProtection.Enabled = true;
+                //NetworkComms.DOSProtection.Enabled = true;
 
                 //NetworkComms.DisableLogging();
 

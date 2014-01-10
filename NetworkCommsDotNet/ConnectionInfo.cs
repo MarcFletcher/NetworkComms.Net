@@ -479,10 +479,12 @@ namespace NetworkCommsDotNet
                 NetworkIdentifierStr = handshakeInfo.NetworkIdentifier.ToString();
                 RemoteEndPoint = remoteEndPoint;
 
-                if (LocalEndPoint.GetType() == typeof(IPEndPoint) && handshakeInfo.LocalEndPoint.GetType() == typeof(IPEndPoint))
-                    ((IPEndPoint)LocalEndPoint).Address = ((IPEndPoint)handshakeInfo.LocalEndPoint).Address;
-                else
-                    throw new NotImplementedException("UpdateInfoAfterRemoteHandshake not implemented for EndPoints of type " + LocalEndPoint.GetType());
+                //Not sure what this section was supposed to do
+                //It certainly creates a bug at the moment
+                //if (LocalEndPoint.GetType() == typeof(IPEndPoint) && handshakeInfo.LocalEndPoint.GetType() == typeof(IPEndPoint))
+                //    ((IPEndPoint)LocalEndPoint).Address = ((IPEndPoint)handshakeInfo.LocalEndPoint).Address;
+                //else
+                //    throw new NotImplementedException("UpdateInfoAfterRemoteHandshake not implemented for EndPoints of type " + LocalEndPoint.GetType());
 
                 IsConnectable = handshakeInfo.IsConnectable;
             }
