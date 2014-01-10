@@ -166,39 +166,43 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If set NetworkCommsDotNet will only operate on matching IP Addresses. Also see <see cref="AllowedAdaptorNames"/>.
-        /// Correct format is string[] { "192.168", "213.111.10" }. If multiple prefixes are provided the earlier prefix, if found, takes priority.
+        /// Restricts the IPAdddresses that are returned by <see cref="AllAllowedIPs()"/>.
+        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
+        /// will only listen on IP Addresses within provided ranges. Also see <see cref="AllowedAdaptorNames"/>.
+        /// The order of provided ranges determines the order of IPAddresses returned by <see cref="AllAllowedIPs()"/>.
         /// </summary>
-        public static string[] AllowedIPPrefixes { get; set; }
+        public static IPRange[] AllowedListeningIPRanges { get; set; }
 
         /// <summary>
-        ///  If set NetworkCommsDotNet will only operate on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
+        /// Restricts the IPAdddresses that are returned by <see cref="AllAllowedIPs()"/>.
+        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
+        /// will only listen on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
         /// </summary>
         public static string[] AllowedAdaptorNames { get; set; }
 
         /// <summary>
         /// Returns all allowed local IP addresses. 
         /// If <see cref="AllowedAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
-        /// If <see cref="AllowedIPPrefixes"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preffered at [0].
+        /// If <see cref="AllowedListeningIPRanges"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preferred at [0].
         /// </summary>
         /// <returns></returns>
         public static List<IPAddress> AllAllowedIPs()
         {
 
 #if WINDOWS_PHONE || NETFX_CORE
-            //On windows phone we simply ignore ip addresses from the autoassigned range as well as those without a valid prefix
+            //On windows phone we simply ignore IP addresses from the auto assigned range as well as those without a valid prefix
             List<IPAddress> allowedIPs = new List<IPAddress>();
 
             foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
             {
                 if (!hName.DisplayName.StartsWith("169.254"))
                 {
-                    if (AllowedIPPrefixes != null)
+                     if (AllowedListeningIPRanges != null)
                     {
                         bool valid = false;
 
-                        for (int i = 0; i < AllowedIPPrefixes.Length; i++)
-                            valid |= hName.DisplayName.StartsWith(AllowedIPPrefixes[i]);
+                        for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
+                            valid |= AllowedListeningIPRanges[i].Contains(hName.DisplayName);
                                 
                         if(valid)
                             allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
@@ -218,7 +222,6 @@ namespace NetworkCommsDotNet
             IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
 
             List<IPAddress> validIPAddresses = new List<IPAddress>();
-            IPComparer comparer = new IPComparer();
 
 #if ANDROID
 
@@ -269,7 +272,7 @@ namespace NetworkCommsDotNet
                     {
                         if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
                         {
-                            if (!IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                            if (!IPTools.IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
                             {
                                 bool allowed = false;
 
@@ -292,16 +295,10 @@ namespace NetworkCommsDotNet
 
                                 allowed = false;
 
-                                if (AllowedIPPrefixes != null)
+                                if (AllowedListeningIPRanges != null)
                                 {
-                                    foreach (var ip in AllowedIPPrefixes)
-                                    {
-                                        if (comparer.Equals(address.ToString(), ip))
-                                        {
-                                            allowed = true;
-                                            break;
-                                        }
-                                    }
+                                    if (IPTools.Contains(AllowedListeningIPRanges, address))
+                                        allowed = true;
                                 }
                                 else
                                     allowed = true;
@@ -332,11 +329,13 @@ namespace NetworkCommsDotNet
                         if (AllowedAdaptorNames != null)
                         {
                             foreach (var id in AllowedAdaptorNames)
+                            {
                                 if (iFace.Id == id)
                                 {
                                     interfaceValid = true;
                                     break;
                                 }
+                            }
                         }
                         else
                             interfaceValid = true;
@@ -354,7 +353,7 @@ namespace NetworkCommsDotNet
                     var addressInformation = address.Address;
                     if (addressInformation.AddressFamily == AddressFamily.InterNetwork || addressInformation.AddressFamily == AddressFamily.InterNetworkV6)
                     {
-                        if (!IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        if (!IPTools.IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
                         {
                             bool allowed = false;
 
@@ -377,16 +376,10 @@ namespace NetworkCommsDotNet
 
                             allowed = false;
 
-                            if (AllowedIPPrefixes != null)
+                            if (AllowedListeningIPRanges != null)
                             {
-                                foreach (var ip in AllowedIPPrefixes)
-                                {
-                                    if (comparer.Equals(addressInformation.ToString(), ip))
-                                    {
-                                        allowed = true;
-                                        break;
-                                    }
-                                }
+                                if (IPRange.Contains(AllowedListeningIPRanges, addressInformation))
+                                    allowed = true;
                             }
                             else
                                 allowed = true;
@@ -402,20 +395,20 @@ namespace NetworkCommsDotNet
             }
 #endif
 
-            if (AllowedIPPrefixes != null)
+            if (AllowedListeningIPRanges != null)
             {
                 validIPAddresses.Sort((a, b) =>
                 {
-                    for (int i = 0; i < AllowedIPPrefixes.Length; i++)
+                    for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
                     {
-                        if (a.ToString().StartsWith(AllowedIPPrefixes[i]))
+                        if (AllowedListeningIPRanges[i].Contains(a))
                         {
-                            if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
+                            if (AllowedListeningIPRanges[i].Contains(b))
                                 return 0;
                             else
                                 return -1;
                         }
-                        else if (b.ToString().StartsWith(AllowedIPPrefixes[i]))
+                        else if (AllowedListeningIPRanges[i].Contains(b))
                             return 1;
                     }
 
@@ -425,70 +418,6 @@ namespace NetworkCommsDotNet
 
             return validIPAddresses;
 #endif
-        }
-
-        /// <summary>
-        /// Custom comparer for IP addresses. Used by <see cref="AllAllowedIPs"/>
-        /// </summary>
-        class IPComparer : IEqualityComparer<string>
-        {
-            // Products are equal if their names and product numbers are equal.
-            public bool Equals(string x, string y)
-            {
-                //Check whether the compared objects reference the same data.
-                if (Object.ReferenceEquals(x, y)) return true;
-
-                //Check whether any of the compared objects is null.
-                if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
-                    return false;
-
-                return (y.StartsWith(x) || x.StartsWith(y));
-            }
-
-            // If Equals() returns true for a pair of objects 
-            // then GetHashCode() must return the same value for these objects.
-            public int GetHashCode(string ipAddress)
-            {
-                return ipAddress.GetHashCode();
-            }
-        }
-
-        /// <summary>
-        /// Returns true if the provided address exists within the provided subnet.
-        /// </summary>
-        /// <param name="address">The address to check, i.e. 192.168.0.10</param>
-        /// <param name="subnet">The subnet, i.e. 192.168.0.0</param>
-        /// <param name="mask">The subnet mask, i.e. 255.255.255.0</param>
-        /// <returns>True if address is in the provided subnet</returns>
-        public static bool IsAddressInSubnet(IPAddress address, IPAddress subnet, IPAddress mask)
-        {
-            if (address == null) throw new ArgumentNullException("address", "Provided IPAddress cannot be null.");
-            if (subnet == null) throw new ArgumentNullException("subnet", "Provided IPAddress cannot be null.");
-            if (mask == null) throw new ArgumentNullException("mask", "Provided IPAddress cannot be null.");
-
-            //Catch for IPv6
-            if (subnet.AddressFamily == AddressFamily.InterNetworkV6 || 
-                mask.AddressFamily == AddressFamily.InterNetworkV6)
-                throw new NotImplementedException("This method does not yet support IPv6. Please contact NetworkComms.Net support if you would like this functionality.");
-            //If we have provided IPV4 subnets and masks and we have an ipv6 address then return false
-            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
-                return false;
-
-            byte[] addrBytes = address.GetAddressBytes();
-            byte[] maskBytes = mask.GetAddressBytes();
-            byte[] maskedAddressBytes = new byte[addrBytes.Length];
-
-            //Catch for IPv6
-            if (maskBytes.Length < maskedAddressBytes.Length)
-                return false;
-
-            for (int i = 0; i < maskedAddressBytes.Length; ++i)
-                maskedAddressBytes[i] = (byte)(addrBytes[i] & maskBytes[i]);
-
-            IPAddress maskedAddress = new IPAddress(maskedAddressBytes);
-            bool equal = subnet.Equals(maskedAddress);
-
-            return equal;
         }
 
         /// <summary>
@@ -664,41 +593,6 @@ namespace NetworkCommsDotNet
 #endif
         }
 
-        /// <summary>
-        /// Determines the most appropriate local end point to contact the provided remote end point. 
-        /// Testing shows this method takes on average 1.6ms to return.
-        /// </summary>
-        /// <param name="remoteIPEndPoint">The remote end point</param>
-        /// <returns>The selected local end point</returns>
-        public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
-        {
-            if (remoteIPEndPoint == null) throw new ArgumentNullException("remoteIPEndPoint", "Provided IPEndPoint cannot be null.");
-
-#if WINDOWS_PHONE || NETFX_CORE
-            var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
-            if (t.Wait(20) && t.Result.Count > 0)
-            {
-                var enumerator = t.Result.GetEnumerator();
-                enumerator.MoveNext();
-
-                var endpointPair = enumerator.Current;                
-                return new IPEndPoint(IPAddress.Parse(endpointPair.LocalHostName.DisplayName.ToString()), int.Parse(endpointPair.LocalServiceName));
-            }
-            else
-                throw new ConnectionSetupException("Unable to determine correct local end point.");
-#else
-            //We use UDP as its connectionless hence faster
-            IPEndPoint result;
-            using (Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
-            {
-                testSocket.Connect(remoteIPEndPoint);
-                result = (IPEndPoint)testSocket.LocalEndPoint;
-            }
-
-            return result;
-#endif
-        }
-
 #if !WINDOWS_PHONE && !ANDROID  && !NETFX_CORE
         /// <summary>
         /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
@@ -797,6 +691,14 @@ namespace NetworkCommsDotNet
 #endif
         #endregion
 
+        #region Security
+
+        /// <summary>
+        /// If set NetworkComms.Net will only accept incoming connections from the provided IP ranges. 
+        /// </summary>
+        public static IPRange[] AllowedIncomingIPRanges { get; set; }
+        #endregion
+
         #region Established Connections
         /// <summary>
         /// Locker for connection dictionaries
@@ -826,7 +728,7 @@ namespace NetworkCommsDotNet
         public static bool ConnectionListenModeUseSync { get; set; }
 
         /// <summary>
-        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedIPPrefixes"/> and <see cref="AllowedAdaptorNames"/>
+        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedListeningIPRanges"/> and <see cref="AllowedAdaptorNames"/>
         /// </summary>
         public static bool ListenOnAllAllowedInterfaces { get; set; }
 
@@ -2516,6 +2418,19 @@ namespace NetworkCommsDotNet
                 (((IPEndPoint)remoteEndPointToUse).Address.Equals(IPAddress.Any) ||
                 ((IPEndPoint)remoteEndPointToUse).Address.Equals(IPAddress.IPv6Any))))
                 return;
+
+            //Validate incoming remote endPoint address if AllowedIncomingIPRanges is set
+            if (AllowedIncomingIPRanges != null && connection.ConnectionInfo.ServerSide)
+            {
+                //If remoteEndPointToUse != null validate using that
+                if (remoteEndPointToUse != null && remoteEndPointToUse.GetType() == typeof(IPEndPoint) &&
+                    !IPRange.Contains(AllowedIncomingIPRanges, ((IPEndPoint)remoteEndPointToUse).Address))
+                    throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
+                //Otherwise use connection.ConnectionInfo.RemoteEndPoint
+                else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint) &&
+                    !IPRange.Contains(AllowedIncomingIPRanges, ((IPEndPoint)connection.ConnectionInfo.RemoteEndPoint).Address))
+                    throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteEndPointToUse.ToString() + ") refused as it is not authorised based upon the AllowedIncomingIPRanges.");
+            }
 
             if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");

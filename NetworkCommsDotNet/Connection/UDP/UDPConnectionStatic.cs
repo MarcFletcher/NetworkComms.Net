@@ -125,7 +125,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(connectionInfo.RemoteIPEndPoint);
+                            IPEndPoint localEndPoint = IPTools.BestLocalEndPoint(connectionInfo.RemoteIPEndPoint);
                             //Set the port to 0 so that we match any listener
                             localEndPoint.Port = 0;
                             List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(localEndPoint);
@@ -281,7 +281,7 @@ namespace NetworkCommsDotNet
             //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
             try
             {
-                IPEndPoint localEndPoint = NetworkComms.BestLocalEndPoint(ipEndPoint);
+                IPEndPoint localEndPoint = IPTools.BestLocalEndPoint(ipEndPoint);
 
                 //Set the port to 0 to match all.
                 localEndPoint.Port = 0;

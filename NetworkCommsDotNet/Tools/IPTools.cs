@@ -22,6 +22,7 @@ using System.Text;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using DPSBase;
 
 #if NETFX_CORE
 using NetworkCommsDotNet.XPlatformHelper;
@@ -98,19 +99,55 @@ namespace NetworkCommsDotNet
             return equal;
         }
 
+        /// <summary>
+        /// Determines the most appropriate local end point to contact the provided remote end point. 
+        /// Testing shows this method takes on average 1.6ms to return.
+        /// </summary>
+        /// <param name="remoteIPEndPoint">The remote end point</param>
+        /// <returns>The selected local end point</returns>
+        public static IPEndPoint BestLocalEndPoint(IPEndPoint remoteIPEndPoint)
+        {
+            if (remoteIPEndPoint == null) throw new ArgumentNullException("remoteIPEndPoint", "Provided IPEndPoint cannot be null.");
+
+#if WINDOWS_PHONE || NETFX_CORE
+            var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
+            if (t.Wait(20) && t.Result.Count > 0)
+            {
+                var enumerator = t.Result.GetEnumerator();
+                enumerator.MoveNext();
+
+                var endpointPair = enumerator.Current;                
+                return new IPEndPoint(IPAddress.Parse(endpointPair.LocalHostName.DisplayName.ToString()), int.Parse(endpointPair.LocalServiceName));
+            }
+            else
+                throw new ConnectionSetupException("Unable to determine correct local end point.");
+#else
+            //We use UDP as its connectionless hence faster
+            IPEndPoint result;
+            using (Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            {
+                testSocket.Connect(remoteIPEndPoint);
+                result = (IPEndPoint)testSocket.LocalEndPoint;
+            }
+
+            return result;
+#endif
+        }
+
 #if !WINDOWS_PHONE && !NETFX_CORE
         [DllImport("iphlpapi.dll", CharSet = CharSet.Auto)]
         static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
 #endif
 
         /// <summary>
-        /// Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
+        /// Depreciated - Please use BestLocalEndPoint instead. Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
         /// the provided target <see cref="IPAddress"/>. using the Windows API, to provided targets. 
         /// This method is only supported in a Windows environment.
         /// </summary>
         /// <param name="targetIPAddress">The target IP which should be used to determine the best 
         /// local address. e.g. Either a local network or public IP address.</param>
         /// <returns>Local <see cref="IPAddress"/> which is best used to contact that provided target.</returns>
+        [Obsolete]
         public static IPAddress AttemptBestIPAddressGuess(IPAddress targetIPAddress)
         {
             if (targetIPAddress == null)
@@ -272,6 +309,23 @@ namespace NetworkCommsDotNet
 
             //If we have made it here the provided IPAddress in within this IPRange
             return true;
+        }
+
+        /// <summary>
+        /// Returns true if the provided IPAddress is within one of the provided IPRanges, otherwise false
+        /// </summary>
+        /// <param name="ranges"></param>
+        /// <param name="ipAddress"></param>
+        /// <returns></returns>
+        public static bool Contains(IEnumerable<IPRange> ranges, IPAddress ipAddress)
+        {
+            foreach (IPRange range in ranges)
+            {
+                if (range.Contains(ipAddress))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
