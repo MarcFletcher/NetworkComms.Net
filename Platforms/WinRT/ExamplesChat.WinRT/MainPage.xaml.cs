@@ -48,5 +48,10 @@ namespace ExamplesChat.WinRT
         protected override void SaveState(Dictionary<String, Object> pageState)
         {
         }
+
+        private void CurrentMessageInputBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+
+        }
     }
 }
