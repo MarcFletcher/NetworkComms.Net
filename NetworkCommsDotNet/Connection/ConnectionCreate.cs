@@ -176,7 +176,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Any connection type specific establish tasks. Should call atleast ConnectionHandshake() or TriggerConnectionEstablishDelegates();
+        /// Any connection type specific establish tasks. Should call at least ConnectionHandshake() or TriggerConnectionEstablishDelegates();
         /// </summary>
         protected abstract void EstablishConnectionSpecific();
 
