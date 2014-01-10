@@ -136,10 +136,10 @@ namespace ExamplesWP8Chat
             #endregion
 
             #region Local Server Mode and Connection Type Changes
-            if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !TCPConnection.Listening())
+            if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !Connection.Listening(ConnectionType.TCP))
             {
                 //If we were previously listening for UDP we first shutdown comms.
-                if (UDPConnection.Listening())
+                if (Connection.Listening(ConnectionType.UDP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
@@ -162,10 +162,10 @@ namespace ExamplesWP8Chat
                 //Add a blank line after the initialisation output
                 AppendLineToChatHistory(System.Environment.NewLine);
             }
-            else if (LocalServerEnabled && ConnectionType == ConnectionType.UDP && !UDPConnection.Listening())
+            else if (LocalServerEnabled && ConnectionType == ConnectionType.UDP && !Connection.Listening(ConnectionType.UDP))
             {
                 //If we were previously listening for TCP we first shutdown comms.
-                if (TCPConnection.Listening())
+                if (Connection.Listening(ConnectionType.TCP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
@@ -188,7 +188,7 @@ namespace ExamplesWP8Chat
                 //Add a blank line after the initialisation output
                 AppendLineToChatHistory(System.Environment.NewLine);
             }
-            else if (!LocalServerEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
+            else if (!LocalServerEnabled && (Connection.Listening(ConnectionType.TCP) || Connection.Listening(ConnectionType.UDP)))
             {
                 //If the local server mode has been disabled but we are still listening we need to stop accepting incoming connections
                 NetworkComms.Shutdown();

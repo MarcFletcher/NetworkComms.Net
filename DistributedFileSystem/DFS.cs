@@ -154,7 +154,7 @@ namespace DistributedFileSystem
                 if (initialPort > MaxTargetLocalPort || initialPort < MinTargetLocalPort)
                     throw new CommsSetupShutdownException("Provided initial DFS port must be within the MinTargetLocalPort and MaxTargetLocalPort range.");
 
-                if (Connection.ExistingLocalListenEndPoints().Count > 0)
+                if (Connection.AllExistingLocalListenEndPoints().Count > 0)
                     throw new CommsSetupShutdownException("Unable to initialise DFS if already listening for incoming connections.");
 
                 DFSShutdownEvent = new ManualResetEvent(false);
@@ -163,7 +163,7 @@ namespace DistributedFileSystem
                 elapsedTimerThread.Name = "DFSElapsedTimerThread";
                 elapsedTimerThread.Start();
 
-                //Load the allowed ip addresses
+                //Load the allowed IP addresses
                 LoadAllowedDisallowedPeerIPs();
 
                 NetworkComms.IgnoreUnknownPacketTypes = true;

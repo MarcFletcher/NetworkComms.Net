@@ -283,15 +283,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if at least one local listener exists.
-        /// </summary>
-        /// <returns></returns>
-        public static bool Listening()
-        {
-            return ExistingLocalListenEndPoints().Count > 0;
-        }
-
-        /// <summary>
         /// Returns true if at least one local listener of the provided <see cref="ConnectionType"/> exists.
         /// </summary>
         /// <param name="connectionType">The <see cref="ConnectionType"/> to check.</param>
@@ -305,7 +296,7 @@ namespace NetworkCommsDotNet
         /// Returns a dictionary corresponding to all current local listeners. Key is connection type, value is local IPEndPoint of listener.
         /// </summary>
         /// <returns></returns>
-        public static Dictionary<ConnectionType, List<EndPoint>> ExistingLocalListenEndPoints()
+        public static Dictionary<ConnectionType, List<EndPoint>> AllExistingLocalListenEndPoints()
         {
             Dictionary<ConnectionType, List<EndPoint>> result = new Dictionary<ConnectionType, List<EndPoint>>();
             lock (staticConnectionLocker)
@@ -338,19 +329,19 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of <see cref="IPEndPoint"/> corresponding to possible local listeners of the provided 
-        /// <see cref="ConnectionType"/> with a local IPEndPoint with matching <see cref="IPAddress"/>. 
+        /// Returns a list of <see cref="EndPoint"/> corresponding to possible local listeners of the provided 
+        /// <see cref="ConnectionType"/> with a local EndPoint with matching <see cref="IPAddress"/>. 
         /// If no matching listeners exist returns empty list.
         /// </summary>
         /// <param name="connectionType">Connection type to match. Use ConnectionType.Undefined to match all.</param>
-        /// <param name="endPointToMatch">The <see cref="IPEndPoint"/> to match to local listeners. Use IPAddress.Any to match all addresses. 
+        /// <param name="localEndPointToMatch">The <see cref="IPEndPoint"/> to match to local listeners. Use IPAddress.Any to match all addresses. 
         /// Use port 0 to match all ports.</param>
         /// <returns></returns>
-        public static List<EndPoint> ExistingLocalListenEndPoints(ConnectionType connectionType, EndPoint endPointToMatch)
+        public static List<EndPoint> ExistingLocalListenEndPoints(ConnectionType connectionType, EndPoint localEndPointToMatch)
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined may not be used with this override. Please see others.", "connectionType");
 
-            IPEndPoint ipEndPointToMatch = endPointToMatch as IPEndPoint;
+            IPEndPoint ipEndPointToMatch = localEndPointToMatch as IPEndPoint;
 
             List<EndPoint> result = new List<EndPoint>();
             lock (staticConnectionLocker)
@@ -380,7 +371,7 @@ namespace NetworkCommsDotNet
                                 listenersDict[connectionType][ipEndPoint].IsListening)
                                 result.Add(ipEndPoint);
                         }
-                        else if (endPoint.Equals(endPointToMatch) &&
+                        else if (endPoint.Equals(localEndPointToMatch) &&
                                 listenersDict[connectionType][endPoint].IsListening)
                         {
                             result.Add(endPoint);

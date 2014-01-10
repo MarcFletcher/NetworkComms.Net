@@ -30,7 +30,6 @@ using NetworkCommsDotNet.XPlatformHelper;
 using System.Net.Sockets;
 #endif
 
-
 #if WINDOWS_PHONE || NETFX_CORE
 using Windows.Networking.Sockets;
 using Windows.Storage.Streams;
@@ -162,8 +161,116 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
-        #region Depreciated StartListening
+        #region Depreciated
+        /// <summary>
+        /// Accept new incoming TCP connections on all allowed IP's and Port's
+        /// </summary>
+        /// <param name="useRandomPortFailOver">If true and the default local port is not available will select one at random. If false and a port is unavailable listening will not be enabled on that adaptor</param>
+        [Obsolete("Depreciated, please use Connection.StartListening.")]
+        public static void StartListening(bool useRandomPortFailOver = false)
+        {
+            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
 
+            if (NetworkComms.ListenOnAllAllowedInterfaces)
+            {
+                try
+                {
+                    foreach (IPAddress ip in localIPs)
+                    {
+                        try
+                        {
+                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                        }
+                        catch (CommsSetupShutdownException)
+                        {
+
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    //If there is an exception here we remove any added listeners and then rethrow
+                    Shutdown();
+                    throw;
+                }
+            }
+            else
+                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Accept new TCP connections on specified list of <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="localEndPoints">The localEndPoints to listen for connections on</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available on a given IPEndPoint will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        [Obsolete("Depreciated, please use Connection.StartListening.")]
+        public static void StartListening(List<IPEndPoint> localEndPoints, bool useRandomPortFailOver = true)
+        {
+            if (localEndPoints == null) throw new ArgumentNullException("localEndPoints", "Provided List<IPEndPoint> cannot be null.");
+
+            try
+            {
+                foreach (var endPoint in localEndPoints)
+                    StartListening(endPoint, useRandomPortFailOver);
+            }
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                Shutdown();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Accept new incoming TCP connections on specified <see cref="IPEndPoint"/>
+        /// </summary>
+        /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        [Obsolete("Depreciated, please use Connection.StartListening.")]
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        {
+            TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+            Connection.StartListening(listener, newLocalEndPoint, useRandomPortFailOver);
+        }
+
+        /// <summary>
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners
+        /// </summary>
+        /// <returns>List of <see cref="IPEndPoint"/> corresponding to all current TCP local listeners</returns>
+        [Obsolete("Depreciated, please use Connection.ExistingLocalListenEndPoints.")]
+        public static List<IPEndPoint> ExistingLocalListenEndPoints()
+        {
+            List<IPEndPoint> result = new List<IPEndPoint>();
+            foreach (IPEndPoint endPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                result.Add(endPoint);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns a list of <see cref="IPEndPoint"/> corresponding to a possible local listeners on the provided <see cref="IPAddress"/>. If not listening on provided <see cref="IPAddress"/> returns empty list.
+        /// </summary>
+        /// <param name="ipAddress">The <see cref="IPAddress"/> to match to a possible local listener</param>
+        /// <returns>If listener exists returns <see cref="IPAddress"/> otherwise null</returns>
+        [Obsolete("Depreciated, please use Connection.ExistingLocalListenEndPoints.")]
+        public static List<IPEndPoint> ExistingLocalListenEndPoints(IPAddress ipAddress)
+        {
+            List<IPEndPoint> result = new List<IPEndPoint>();
+            foreach (IPEndPoint endPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP, new IPEndPoint(ipAddress, 0)))
+                result.Add(endPoint);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns true if listening for new TCP connections.
+        /// </summary>
+        /// <returns>True if listening for new TCP connections.</returns>
+        [Obsolete("Depreciated, please use Connection.Listening.")]
+        public static bool Listening()
+        {
+            return Connection.Listening(ConnectionType.TCP);
+        }
         #endregion
     }
 }
