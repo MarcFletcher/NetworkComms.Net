@@ -19,7 +19,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
 using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {

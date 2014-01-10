@@ -77,6 +77,17 @@
     <Compile Include="StreamSendWrapper.cs" />
     <Compile Include="StreamWriteWithTimeout.cs" />
     <Compile Include="ThreadSafeStream.cs" />
+    <Compile Include="XPlatformHelper\AddressFamily.cs" />
+    <Compile Include="XPlatformHelper\DateTimeExtenensions.cs" />
+    <Compile Include="XPlatformHelper\EndPoint.cs" />
+    <Compile Include="XPlatformHelper\IPAddress.cs" />
+    <Compile Include="XPlatformHelper\IPEndPoint.cs" />
+    <Compile Include="XPlatformHelper\IPv6Address.cs" />
+    <Compile Include="XPlatformHelper\Logger.cs" />
+    <Compile Include="XPlatformHelper\SocketAddress.cs" />
+    <Compile Include="XPlatformHelper\SocketError.cs" />
+    <Compile Include="XPlatformHelper\SocketException.cs" />
+    <Compile Include="XPlatformHelper\WaitCallback.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

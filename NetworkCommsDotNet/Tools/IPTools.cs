@@ -21,6 +21,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>

@@ -19,13 +19,19 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Net.Sockets;
 using System.Threading;
 using System.Net;
 using System.IO;
 using DPSBase;
 
-#if WINDOWS_PHONE
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
+
+
+#if WINDOWS_PHONE || NETFX_CORE
 using Windows.Networking.Sockets;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -43,7 +49,7 @@ namespace NetworkCommsDotNet
     /// </summary>
     public sealed partial class TCPConnection : Connection
     {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         /// <summary>
         /// The windows phone socket corresponding to this connection.
         /// </summary>
@@ -68,7 +74,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// TCP connection constructor
         /// </summary>
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
         private TCPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket)
 #else
         private TCPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, SSLOptions sslOptions)
@@ -79,7 +85,7 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
 
             //We don't guarantee that the tcpClient has been created yet
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             if (socket != null) this.socket = socket;
 #else
             if (tcpClient != null) this.tcpClient = tcpClient;
@@ -92,7 +98,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         protected override void EstablishConnectionSpecific()
         {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             if (socket == null) ConnectSocket();
 
             //For the local endpoint
@@ -150,7 +156,7 @@ namespace NetworkCommsDotNet
                 connectionSetupWait.Set();
             }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
             //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
             if (EnableNagleAlgorithmForNewConnections)
@@ -171,7 +177,7 @@ namespace NetworkCommsDotNet
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
 
                 bool connectSuccess = true;
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                 //We now connect to our target
                 socket = new StreamSocket();
                 socket.Control.NoDelay = EnableNagleAlgorithmForNewConnections;
@@ -246,6 +252,16 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
             var stream = socket.InputStream.AsStreamForRead();
             stream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), stream);   
+#elif NETFX_CORE
+            var stream = socket.InputStream.AsStreamForRead();
+
+            Func<Task> tFunc = new Func<Task>(async () =>
+            {
+                var count = await stream.ReadAsync(dataBuffer, 0, dataBuffer.Length);
+                await IncomingTCPPacketHandler(stream, count);
+            });
+
+            tFunc().Start();
 #else
             lock (delegateLocker)
             {
@@ -272,12 +288,16 @@ namespace NetworkCommsDotNet
         /// Asynchronous incoming connection data delegate
         /// </summary>
         /// <param name="ar">The call back state object</param>
+#if NETFX_CORE
+        private async Task IncomingTCPPacketHandler(Stream stream, int count)
+#else
         private void IncomingTCPPacketHandler(IAsyncResult ar)
+#endif
         {
             //Initialised with true so that logic still works in WP8
             bool dataAvailable = true;
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             //Incoming data always gets handled in a timeCritical fashion at this point
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
             //int bytesRead;
@@ -288,6 +308,8 @@ namespace NetworkCommsDotNet
 #if WINDOWS_PHONE
                 var stream = ar.AsyncState as Stream;
                 var count = stream.EndRead(ar);
+                totalBytesRead = count + totalBytesRead;
+#elif NETFX_CORE
                 totalBytesRead = count + totalBytesRead;
 #else
                 Stream netStream;
@@ -324,7 +346,7 @@ namespace NetworkCommsDotNet
                         //If there is more data to get then add it to the packets lists;
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
                         //If we have more data we might as well continue reading syncronously
                         //In order to deal with data as soon as we think we have sufficient we will leave this loop
                         while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
@@ -395,6 +417,9 @@ namespace NetworkCommsDotNet
 
 #if WINDOWS_PHONE
                     stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
+#elif NETFX_CORE
+                    count = await stream.ReadAsync(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead);
+                    IncomingTCPPacketHandler(stream, count).RunSynchronously();
 #else
                     netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
 #endif
@@ -423,12 +448,12 @@ namespace NetworkCommsDotNet
                 CloseConnection(true, 31);
             }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             Thread.CurrentThread.Priority = ThreadPriority.Normal;
 #endif
         }
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Synchronous incoming connection data worker
         /// </summary>
@@ -601,7 +626,7 @@ namespace NetworkCommsDotNet
         /// <param name="logLocation">Optional debug parameter.</param>
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             //Try to close the socket
             try
             {
@@ -687,7 +712,7 @@ namespace NetworkCommsDotNet
             DateTime startTime = DateTime.Now;
 
             Stream sendingStream;
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             sendingStream = socket.OutputStream.AsStreamForWrite();
 #else
             sendingStream = connectionStream;
@@ -706,7 +731,7 @@ namespace NetworkCommsDotNet
             if (packet.PacketData.Length > 0)
                 dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
             sendingStream.Flush();
 #endif
 
@@ -721,7 +746,7 @@ namespace NetworkCommsDotNet
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + ((headerBytes.Length + packet.PacketData.Length)/1024.0).ToString("0.000") + "KB written to TCP netstream at average of " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + ((headerWriteTime + dataWriteTime)/2).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
 
-#if !WINDOWS_PHONE
+#if !WINDOWS_PHONE && !NETFX_CORE
             if (!tcpClient.Connected)
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
@@ -763,7 +788,7 @@ namespace NetworkCommsDotNet
                                 maxSendTimePerKB = DefaultMSPerKBSendTimeout;
                         }
 
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                         var stream = socket.OutputStream.AsStreamForWrite();
                         StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
                         stream.Flush();

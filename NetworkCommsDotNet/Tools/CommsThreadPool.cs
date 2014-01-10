@@ -22,8 +22,172 @@ using System.ComponentModel;
 using System.Text;
 using System.Threading;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+using System.Threading.Tasks;
+#endif
+
 namespace NetworkCommsDotNet
 {
+#if NETFX_CORE
+    /// <summary>
+    /// A compact thread pool used by NetworkComms.Net to run packet handlers
+    /// </summary>
+    public class CommsThreadPool
+    {
+        /// <summary>
+        /// A sync object to make things thread safe
+        /// </summary>
+        object SyncRoot = new object();
+
+        Dictionary<int, Task> scheduledTasks = new Dictionary<int, Task>();
+
+        Dictionary<int, CancellationTokenSource> taskCancellationTokens = new Dictionary<int, CancellationTokenSource>();
+
+        /// <summary>
+        /// Priority queue used to order call backs 
+        /// </summary>
+        PriorityQueue<WaitCallBackWrapper> jobQueue = new PriorityQueue<WaitCallBackWrapper>();
+
+        /// <summary>
+        /// Set to true to ensure correct shutdown of worker threads.
+        /// </summary>
+        bool shutdown = false;
+        
+        /// <summary>
+        /// The total number of items currently waiting to be collected by a thread
+        /// </summary>
+        public int QueueCount
+        {
+            get { return jobQueue.Count; }
+        }
+
+        /// <summary>
+        /// Create a new comms thread pool
+        /// </summary>
+        /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
+        /// <param name="maxActiveThreadsCount">The maximum number of active (i.e. not waiting for IO) threads</param>
+        /// <param name="maxTotalThreadsCount">Maximum number of threads to create in the pool</param>
+        /// <param name="threadIdleTimeoutClose">Timespan after which an idle thread will close</param>
+        public CommsThreadPool()
+        {            
+        }
+
+        /// <summary>
+        /// Prevent any additional threads from starting. Returns immediately.
+        /// </summary>
+        public void BeginShutdown()
+        {
+            lock (SyncRoot)
+                shutdown = true;
+        }
+
+        /// <summary>
+        /// Prevent any additional threads from starting and return once all existing workers have completed.
+        /// </summary>
+        /// <param name="threadShutdownTimeoutMS"></param>
+        public void EndShutdown(int threadShutdownTimeoutMS = 1000)
+        {
+#if NETFX_CORE     
+            foreach (var pair in scheduledTasks)
+            {
+                if (!pair.Value.Wait(threadShutdownTimeoutMS))
+                {
+                    taskCancellationTokens[pair.Key].Cancel();
+                    if (!pair.Value.Wait(threadShutdownTimeoutMS))
+                        NetworkComms.LogError(new DPSBase.CommsSetupShutdownException("Managed threadpool shutdown error"), "ManagedThreadPoolShutdownError");
+                }
+            }
+#else
+            List<Thread> allWorkerThreads = new List<Thread>();
+            lock (SyncRoot)
+            {
+                foreach (var thread in threadDict)
+                {
+                    workerInfoDict[thread.Key].ThreadSignal.Set();
+                    allWorkerThreads.Add(thread.Value);
+                }
+            }
+
+            //Wait for all threads to finish
+            foreach (Thread thread in allWorkerThreads)
+            {
+                try
+                {
+                    if (!thread.Join(threadShutdownTimeoutMS))
+                        thread.Abort();
+                }
+                catch (Exception ex)
+                {
+                    NetworkComms.LogError(ex, "ManagedThreadPoolShutdownError");
+                }
+            }
+#endif
+
+            lock (SyncRoot)
+            {
+                jobQueue.Clear();
+                taskCancellationTokens.Clear();
+                scheduledTasks.Clear();
+                shutdown = false;
+            }
+        }
+
+        /// <summary>
+        ///  Enqueue a callback to the thread pool.
+        /// </summary>
+        /// <param name="priority">The priority with which to enqueue the provided callback</param>
+        /// <param name="callback">The callback to execute</param>
+        /// <param name="state">The state parameter to pass to the callback when executed</param>
+        /// <returns>Returns the managed threadId running the callback if one was available, otherwise -1</returns>
+        public void EnqueueItem(QueueItemPriority priority, WaitCallback callback, object state)
+        {
+            lock (SyncRoot)
+                jobQueue.TryAdd(new KeyValuePair<QueueItemPriority, WaitCallBackWrapper>(priority, new WaitCallBackWrapper(callback, state)));
+            
+            Task t = null;
+            CancellationTokenSource cSource = new CancellationTokenSource();     
+       
+            t = new Task(() =>
+                {
+                    KeyValuePair<QueueItemPriority, WaitCallBackWrapper> toRun;
+
+                    lock (SyncRoot)
+                    {
+                        if (!jobQueue.TryTake(out toRun) || shutdown)
+                            return;
+                    }
+
+                    toRun.Value.WaitCallBack(toRun.Value.State);
+
+                    lock (SyncRoot)
+                    {
+                        scheduledTasks.Remove(t.Id);
+                        taskCancellationTokens.Remove(t.Id);
+                    }
+                }, cSource.Token);
+
+            lock (SyncRoot)
+            {
+                scheduledTasks.Add(t.Id, t);
+                taskCancellationTokens.Add(t.Id, cSource);
+                t.Start();
+            }
+        }
+        
+        /// <summary>
+        /// Provides a brief string summarisation the state of the thread pool
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            lock (SyncRoot)
+            {
+                return "Queue Length:" + QueueCount.ToString();
+            }
+        }
+    }
+#else    
     /// <summary>
     /// A compact thread pool used by NetworkComms.Net to run packet handlers
     /// </summary>
@@ -37,7 +201,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Dictionary of threads, index is ThreadId
         /// </summary>
-        Dictionary<int, Thread> threadDict = new Dictionary<int,Thread>();
+        Dictionary<int, Thread> threadDict = new Dictionary<int, Thread>();
 
         /// <summary>
         /// Dictionary of thread worker info, index is ThreadId
@@ -72,7 +236,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The maximum number of threads to create in the pool
         /// </summary>
-        public int MaxTotalThreadsCount {get; private set;}
+        public int MaxTotalThreadsCount { get; private set; }
 
         /// <summary>
         /// The maximum number of active threads in the pool. This can be less than MaxTotalThreadsCount, taking account of waiting threads.
@@ -82,7 +246,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The minimum number of idle threads to maintain in the pool
         /// </summary>
-        public int MinThreadsCount {get; private set;}
+        public int MinThreadsCount { get; private set; }
 
         /// <summary>
         /// The most recent count of pool threads which are waiting for IO
@@ -99,7 +263,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public int CurrentNumTotalThreads
         {
-            get { lock(SyncRoot) return threadDict.Count; }
+            get { lock (SyncRoot) return threadDict.Count; }
         }
 
         /// <summary>
@@ -109,7 +273,7 @@ namespace NetworkCommsDotNet
         {
             get { lock (SyncRoot) return requireJobThreadsCount; }
         }
-        
+
         /// <summary>
         /// The total number of items currently waiting to be collected by a thread
         /// </summary>
@@ -138,7 +302,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public void BeginShutdown()
         {
-            lock(SyncRoot)
+            lock (SyncRoot)
                 shutdown = true;
         }
 
@@ -149,7 +313,7 @@ namespace NetworkCommsDotNet
         public void EndShutdown(int threadShutdownTimeoutMS = 1000)
         {
             List<Thread> allWorkerThreads = new List<Thread>();
-            lock(SyncRoot)
+            lock (SyncRoot)
             {
                 foreach (var thread in threadDict)
                 {
@@ -157,7 +321,7 @@ namespace NetworkCommsDotNet
                     allWorkerThreads.Add(thread.Value);
                 }
             }
-
+            
             //Wait for all threads to finish
             foreach (Thread thread in allWorkerThreads)
             {
@@ -410,7 +574,7 @@ namespace NetworkCommsDotNet
         public int ThreadId { get; private set; }
         public AutoResetEvent ThreadSignal { get; private set; }
         public bool ThreadIdle { get; private set; }
-        public DateTime LastActiveTime {get; private set;}
+        public DateTime LastActiveTime { get; private set; }
         public WaitCallBackWrapper CurrentCallBackWrapper { get; private set; }
         public bool InsideCallBack { get; private set; }
 
@@ -470,7 +634,7 @@ namespace NetworkCommsDotNet
             this.ThreadIdle = false;
         }
     }
-
+#endif
     /// <summary>
     /// A private wrapper used by CommsThreadPool
     /// </summary>

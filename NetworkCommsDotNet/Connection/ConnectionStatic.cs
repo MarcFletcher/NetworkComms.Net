@@ -22,7 +22,13 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using DPSBase;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+using System.Threading.Tasks;
+#else
 using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {
@@ -34,7 +40,11 @@ namespace NetworkCommsDotNet
         static ManualResetEvent workedThreadSignal = new ManualResetEvent(false);
         static volatile bool shutdownWorkerThreads = false;
         static object staticConnectionLocker = new object();
+#if NETFX_CORE
+        static Task connectionKeepAliveWorker;
+#else
         static Thread connectionKeepAliveWorker;
+#endif
 
         /// <summary>
         /// Private static TCP constructor which sets any connection defaults
@@ -92,12 +102,20 @@ namespace NetworkCommsDotNet
         {
             lock (staticConnectionLocker)
             {
+#if NETFX_CORE
+                if (!shutdownWorkerThreads && (connectionKeepAliveWorker == null || connectionKeepAliveWorker.IsCompleted))
+                {
+                    connectionKeepAliveWorker = new Task(ConnectionKeepAliveWorker, TaskCreationOptions.LongRunning);
+                    connectionKeepAliveWorker.Start();
+                }
+#else
                 if (!shutdownWorkerThreads && (connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped))
                 {
                     connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
                     connectionKeepAliveWorker.Name = "ConnectionKeepAliveWorker";
                     connectionKeepAliveWorker.Start();
                 }
+#endif
             }
         }
 
@@ -148,12 +166,8 @@ namespace NetworkCommsDotNet
             List<Connection> allConnections = NetworkComms.GetExistingConnection(ApplicationLayerProtocolStatus.Enabled);
             int remainingConnectionCount = allConnections.Count;
 
-#if WINDOWS_PHONE
-            QueueItemPriority nullSendPriority = QueueItemPriority.High;
-#else
             QueueItemPriority nullSendPriority = QueueItemPriority.AboveNormal;
-#endif
-
+            
             ManualResetEvent allConnectionsComplete = new ManualResetEvent(false);
             for (int i = 0; i < allConnections.Count; i++)
             {
@@ -229,9 +243,13 @@ namespace NetworkCommsDotNet
             try
             {
                 shutdownWorkerThreads = true;
-
+#if NETFX_CORE
+                if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Wait(threadShutdownTimeoutMS))
+                    throw new DPSBase.CommsSetupShutdownException("Connection keep alive worker failed to shutdown");
+#else
                 if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Join(threadShutdownTimeoutMS))
                     connectionKeepAliveWorker.Abort();
+#endif
             }
             catch (Exception ex)
             {

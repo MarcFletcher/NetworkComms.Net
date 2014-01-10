@@ -22,8 +22,13 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using DPSBase;
-using System.Net.Sockets;
 using System.IO;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {

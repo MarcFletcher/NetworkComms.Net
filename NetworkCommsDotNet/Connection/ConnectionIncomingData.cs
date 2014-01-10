@@ -22,15 +22,13 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using DPSBase;
-using System.Net.Sockets;
 using System.IO;
 
-#if WINDOWS_PHONE
-using QueueItemPriority = Windows.System.Threading.WorkItemPriority;
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
 #else
-using QueueItemPriority = System.Threading.ThreadPriority;
+using System.Net.Sockets;
 #endif
-
 
 namespace NetworkCommsDotNet
 {
@@ -50,12 +48,12 @@ namespace NetworkCommsDotNet
         /// The total bytes read so far within dataBuffer
         /// </summary>
         protected int totalBytesRead;
-
+#if !NETFX_CORE
         /// <summary>
         /// The thread listening for incoming data should we be using synchronous methods.
         /// </summary>
         protected Thread incomingDataListenThread = null;
-
+#endif
         /// <summary>
         /// A connection specific method which triggers any requisites for accepting incoming data
         /// </summary>
@@ -166,12 +164,11 @@ namespace NetworkCommsDotNet
                             //Only reserved packet types get completed inline
                             if (isReservedType)
                             {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
                                 var priority = QueueItemPriority.Normal;
 #else
                                 var priority = (QueueItemPriority)Thread.CurrentThread.Priority;
 #endif
-
                                 PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter.ToString() + packetSeqNumStr);
                                 NetworkComms.CompleteIncomingItemTask(item);
@@ -182,7 +179,7 @@ namespace NetworkCommsDotNet
                                 PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
 
                                 //QueueItemPriority.Highest is the only priority that is executed inline
-#if !WINDOWS_PHONE
+
                                 if (itemPriority == QueueItemPriority.Highest)
                                 {
                                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' with priority HIGHEST inline. Loop index - " + loopCounter.ToString() + packetSeqNumStr);
@@ -190,15 +187,20 @@ namespace NetworkCommsDotNet
                                 }
                                 else
                                 {
-                                    int threadId = NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
-                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads.ToString() + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads.ToString() + ") with priority " + itemPriority.ToString() + (threadId > 0 ? ". Selected threadId=" + threadId.ToString() : "") + ". Loop index=" + loopCounter.ToString() + packetSeqNumStr);
-                                }
+#if NETFX_CORE
+                                    NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ") with priority " + itemPriority.ToString() + ". Loop index=" + loopCounter.ToString() + packetSeqNumStr);
 #else
-                                int threadId = NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads.ToString() + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads.ToString() + ") with priority " + itemPriority.ToString() + (threadId > 0 ? ". Selected threadId=" + threadId.ToString() : "") + ". Loop index=" + loopCounter.ToString() + packetSeqNumStr);
+                                    int threadId = NetworkComms.CommsThreadPool.EnqueueItem(item.Priority, NetworkComms.CompleteIncomingItemTask, item);                                    
+#if WINDOWS_PHONE
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads.ToString() + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads.ToString() + ") with priority " + itemPriority.ToString() + (threadId > 0 ? ". Selected threadId=" + threadId.ToString() : "") + ". Loop index=" + loopCounter.ToString() + packetSeqNumStr);
+#else
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added completed " + item.PacketHeader.PacketType + " packet to thread pool (Q:" + NetworkComms.CommsThreadPool.QueueCount.ToString() + ", T:" + NetworkComms.CommsThreadPool.CurrentNumTotalThreads.ToString() + ", I:" + NetworkComms.CommsThreadPool.CurrentNumIdleThreads.ToString() + ") with priority " + itemPriority.ToString() + (threadId > 0 ? ". Selected threadId=" + threadId.ToString() : "") + ". Loop index=" + loopCounter.ToString() + packetSeqNumStr);
 #endif
+#endif
+                                }
                             }
-
+                            
                             //We clear the bytes we have just handed off
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer from connection with " + ConnectionInfo +".");
                             packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);

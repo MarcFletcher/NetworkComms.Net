@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if !NETFX_CORE
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -519,3 +521,4 @@ namespace NetworkCommsDotNet
         #endregion
     }
 }
+#endif

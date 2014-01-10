@@ -19,13 +19,19 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Net.Sockets;
 using System.Net;
 using DPSBase;
 
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
+
+
 namespace NetworkCommsDotNet
 {
-#if WINDOWS_PHONE
+#if WINDOWS_PHONE || NETFX_CORE
     //UdpClientThreadSafe not yet required for WP8
 #else
     /// <summary>

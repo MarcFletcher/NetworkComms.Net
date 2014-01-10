@@ -22,7 +22,12 @@ using System.Text;
 using ProtoBuf;
 using System.Net;
 using DPSBase;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
 using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {

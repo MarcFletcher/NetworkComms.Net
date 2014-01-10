@@ -160,8 +160,8 @@ namespace NetworkCommsDotNet
                 {
                     stringItems = new Dictionary<PacketHeaderStringItems, string>();
                     foreach (var pair in tempObject.stringItems)
-                        stringItems.Add(pair.Key, String.Copy(pair.Value));
-
+                        stringItems.Add(pair.Key, pair.Value);
+                    
                     longItems = new Dictionary<PacketHeaderLongItems, long>();
                     foreach (var pair in tempObject.longItems)
                         longItems.Add(pair.Key, pair.Value);

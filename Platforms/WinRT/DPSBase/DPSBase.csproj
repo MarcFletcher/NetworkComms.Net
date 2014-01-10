@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NETFX_CORE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETFX_CORE;NO_LOGGING</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -28,7 +28,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NETFX_CORE</DefineConstants>
+    <DefineConstants>TRACE;NETFX_CORE;NO_LOGGING</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -140,6 +140,39 @@
     </Compile>
     <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
       <Link>ThreadSafeStream.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\AddressFamily.cs">
+      <Link>XPlatformHelper\AddressFamily.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\DateTimeExtenensions.cs">
+      <Link>XPlatformHelper\DateTimeExtenensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\EndPoint.cs">
+      <Link>XPlatformHelper\EndPoint.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\IPAddress.cs">
+      <Link>XPlatformHelper\IPAddress.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\IPEndPoint.cs">
+      <Link>XPlatformHelper\IPEndPoint.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\IPv6Address.cs">
+      <Link>XPlatformHelper\IPv6Address.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\Logger.cs">
+      <Link>XPlatformHelper\Logger.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\SocketAddress.cs">
+      <Link>XPlatformHelper\SocketAddress.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\SocketError.cs">
+      <Link>XPlatformHelper\SocketError.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\SocketException.cs">
+      <Link>XPlatformHelper\SocketException.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\DPSBase\XPlatformHelper\WaitCallback.cs">
+      <Link>XPlatformHelper\WaitCallback.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

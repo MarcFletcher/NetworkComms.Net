@@ -61,7 +61,15 @@ namespace NetworkCommsDotNet
             if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
 
             object packetDataObject = packetObject;
-            if (packetDataObject == null) packetDataObject = new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[0], 0, 0, false, true), true));
+            if (packetDataObject == null)
+            {
+#if NETFX_CORE
+                var emptyStream = new MemoryStream(new byte[0], 0, 0, false);
+#else
+                var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
+#endif
+                packetDataObject = new StreamSendWrapper(new ThreadSafeStream(emptyStream, true));
+            }
 
             if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
             this.packetData = options.DataSerializer.SerialiseDataObject(packetDataObject, options.DataProcessors, options.Options);

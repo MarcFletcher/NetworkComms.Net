@@ -22,8 +22,13 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using DPSBase;
-using System.Net.Sockets;
 using System.IO;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+#else
+using System.Net.Sockets;
+#endif
 
 namespace NetworkCommsDotNet
 {
@@ -319,7 +324,11 @@ namespace NetworkCommsDotNet
 
                 if (writeTotal != length) throw new Exception("Not enough data available in packetBuilder to complete request. Requested " + length.ToString() + " bytes but only " + writeTotal.ToString() + " bytes were copied.");
 
+#if NETFX_CORE
+                return new MemoryStream(returnArray, 0, returnArray.Length, false);
+#else
                 return new MemoryStream(returnArray, 0, returnArray.Length, false, true);
+#endif
             }
         }
     }

@@ -45,7 +45,14 @@ namespace NetworkCommsDotNet
 
         public override string ToString()
         {
-            return "[" + (SentPacketCreationTime).ToShortTimeString() + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length.ToString() + " bytes.";
+            string timeString;
+#if NETFX_CORE
+            timeString = NetworkCommsDotNet.XPlatformHelper.DateTimeExtensions.ToShortTimeString(SentPacketCreationTime);
+#else
+            timeString = (SentPacketCreationTime).ToShortTimeString();
+#endif
+
+            return "[" + timeString + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length.ToString() + " bytes.";
         }
     }
 }
