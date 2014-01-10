@@ -18,6 +18,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static bool EnableNagleAlgorithmForNewConnections { get; set; }
 
+        #region GetConnection
         /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
         /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
@@ -102,6 +103,7 @@ namespace NetworkCommsDotNet
 
             return connection;
         }
+        #endregion
     }
 }
 

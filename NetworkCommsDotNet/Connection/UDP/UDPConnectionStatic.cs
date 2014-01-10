@@ -48,33 +48,34 @@ namespace NetworkCommsDotNet
         public static UDPOptions DefaultUDPOptions { get; set; }
 
         /// <summary>
-        /// The rogue udp connection is used for sending ONLY if no available locally bound client is available.
+        /// The rogue UDP connection is used for sending ONLY if no available locally bound client is available.
         /// First key is address family of rogue sender, second key is value of ApplicationLayerProtocolEnabled.
         /// </summary>
         static Dictionary<AddressFamily, Dictionary<ApplicationLayerProtocolStatus, UDPConnection>> udpRogueSenders = new Dictionary<AddressFamily, Dictionary<ApplicationLayerProtocolStatus, UDPConnection>>();
         static object udpRogueSenderCreationLocker = new object();
 
         /// <summary>
-        /// The maximum datagram size limit for udp
+        /// The maximum datagram size limit for UDP
         /// </summary>
         const int maximumSingleDatagramSizeBytes = 65506;
 
         /// <summary>
-        /// Static construtor which creates the rogue sender
+        /// Static constructor which creates the rogue sender
         /// </summary>
         static UDPConnection()
         {
             IgnoreICMPDestinationUnreachable = true;
         }
 
+        #region GetConnection
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="level">The UDP level to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets are handled</param>
-        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new connection is returned</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
@@ -83,13 +84,13 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a UDP connection with the provided connectionInfo and and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/>.
+        /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/>.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions to use as defaults for this connection</param>
         /// <param name="level">The UDP options to use for this connection</param>
         /// <param name="listenForReturnPackets">If set to true will ensure that reply packets can be received</param>
-        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new connection is returned</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
@@ -105,7 +106,7 @@ namespace NetworkCommsDotNet
         /// <param name="listenForReturnPackets"></param>
         /// <param name="existingListenerConnection"></param>
         /// <param name="possibleHandshakeUDPDatagram"></param>
-        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new conneciton is returned</param>
+        /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new connection is returned</param>
         /// <returns></returns>
         internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingListenerConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
         {
@@ -168,7 +169,7 @@ namespace NetworkCommsDotNet
             //TCP - Receive TCPClient, configure connection, start listening for connectionsetup, wait for connectionsetup
             //
             //possibleHandshakeUDPDatagram will only be set when GetConnection() is called from a listener
-            //If multiple threads try to create an outoing UDP connection to the same endPoint all but the originating 
+            //If multiple threads try to create an outgoing UDP connection to the same endPoint all but the originating 
             //thread will be held on connection.WaitForConnectionEstablish();
             if (possibleHandshakeUDPDatagram != null &&
                 (connection.ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
@@ -188,7 +189,7 @@ namespace NetworkCommsDotNet
             //We must perform the establish outside the lock as for TCP connections
             if (newConnection && establishIfRequired)
             {
-                //Call establish on the connection if it is not a roguesender or listener
+                //Call establish on the connection if it is not a rogue sender or listener
                 if (!connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) && !connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))
                     connection.EstablishConnection();
             }
@@ -201,7 +202,9 @@ namespace NetworkCommsDotNet
 
             return connection;
         }
+        #endregion
 
+        #region Static SendObject
         /// <summary>
         /// Sends a single object to the provided IPAddress and Port. NOTE: Any possible reply will be ignored unless listening for incoming udp packets. 
         /// </summary>
@@ -249,8 +252,8 @@ namespace NetworkCommsDotNet
         /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
         /// <param name="sendReceiveOptions">The sendReceiveOptions to use for this send</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you use the NetworkComms.Net application layer protocol.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
@@ -258,22 +261,22 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.", "applicationLayerProtocol");
 
             if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
-                throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
+                throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
                     " options specified the ReceiveConfirmationRequired option, which is unsupported. Please create a specific connection"+
                     "instance to use this feature.", "defaultSendReceiveOptions");
 
-            //Check the send recieve options
+            //Check the send receive options
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
             {
                 if (sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
-                    throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
-                        " options serializer was not NullSerializer. Please provide compatible send receive options in order to succesfully" +
+                    throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
+                        " options serialiser was not NullSerializer. Please provide compatible send receive options in order to successfully" +
                         " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
 
                 if (sendReceiveOptions.DataProcessors.Count > 0)
-                    throw new ArgumentException("Attempted to use a roughe UDP sender when the provided send receive" +
+                    throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
                         " options contains data processors. Data processors may not be used with unmanaged connections." +
-                        " Please provide compatible send receive options in order to succesfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
             }
 
             UDPConnection connectionToUse = null;
@@ -336,5 +339,10 @@ namespace NetworkCommsDotNet
             using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
                 connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
+        #endregion
+
+        #region Depreciated StartListening
+
+        #endregion
     }
 }

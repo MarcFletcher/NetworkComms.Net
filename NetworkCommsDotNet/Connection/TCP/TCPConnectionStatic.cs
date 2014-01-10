@@ -46,9 +46,10 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static bool EnableNagleAlgorithmForNewConnections { get; set; }
 
+        #region GetConnection
         /// <summary>
         /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
@@ -60,7 +61,7 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
@@ -74,7 +75,7 @@ namespace NetworkCommsDotNet
 #if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
-        /// If a new connection is created it will be registered with NetworkComms and can be retreived using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
+        /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
@@ -119,7 +120,7 @@ namespace NetworkCommsDotNet
             {
                 List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteIPEndPoint, connectionInfo.LocalIPEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
 
-                //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
+                //Check to see if a connection already exists, if it does return that connection, if not return a new one
                 if (existingConnections.Count > 0)
                 {
                     if (NetworkComms.LoggingEnabled)
@@ -159,5 +160,10 @@ namespace NetworkCommsDotNet
 
             return connection;
         }
+        #endregion
+
+        #region Depreciated StartListening
+
+        #endregion
     }
 }
