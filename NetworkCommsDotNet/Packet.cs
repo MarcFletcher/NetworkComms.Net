@@ -59,6 +59,7 @@ namespace NetworkCommsDotNet
         {
             if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("sendingPacketTypeStr", "The provided string can not be null or zero length.");
             if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
+            if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
 
             object packetDataObject = packetObject;
             if (packetDataObject == null)
@@ -71,7 +72,7 @@ namespace NetworkCommsDotNet
                 packetDataObject = new StreamSendWrapper(new ThreadSafeStream(emptyStream, true));
             }
 
-            if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
+            //Set the packet data
             this.packetData = options.DataSerializer.SerialiseDataObject(packetDataObject, options.DataProcessors, options.Options);
 
             //We only calculate the checkSum if we are going to use it
@@ -79,12 +80,10 @@ namespace NetworkCommsDotNet
             if (NetworkComms.EnablePacketCheckSumValidation)
                 hashStr = NetworkComms.MD5Bytes(packetData.ThreadSafeStream.ToArray(packetData.Start, packetData.Length));
 
-            this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, requestReturnPacketTypeStr,  
-                options.Options.ContainsKey("ReceiveConfirmationRequired"),
-                hashStr,
-                options.Options.ContainsKey("IncludePacketConstructionTime"));
+            //Set the packet header
+            this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, options, requestReturnPacketTypeStr, hashStr);
 
-            //Add an identifier specifying the serializers and processors we have used
+            //Add an identifier specifying the serialisers and processors we have used
             this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length.ToString() + " bytes");
@@ -107,7 +106,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the serialisedbytes of the packet header appended by the serialised header size. This is required to rebuild the header on receive.
+        /// Returns the serialised bytes of the packet header appended by the serialised header size. This is required to rebuild the header on receive.
         /// </summary>
         /// <returns>The serialised header as byte[]</returns>
         public byte[] SerialiseHeader(SendReceiveOptions options)

@@ -794,7 +794,7 @@ namespace NetworkCommsDotNet
                         //We have corruption on a resend request, something is very wrong so we throw an exception.
                         if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend)) throw new CheckSumException("Corrupted md5CheckFailResend packet received.");
 
-                        if (item.PacketHeader.PayloadPacketSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
+                        if (item.PacketHeader.TotalPayloadSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
                         {
                             //Instead of throwing an exception we can request the packet to be resent
                             Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);

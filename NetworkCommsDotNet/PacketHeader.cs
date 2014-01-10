@@ -33,12 +33,19 @@ namespace NetworkCommsDotNet
     public enum PacketHeaderLongItems
     {
         /// <summary>
-        /// The size of the packet data payload in bytes. This is a compulsory option.
+        /// The total size of the packet data payload in bytes. This is a compulsory option.
         /// </summary>
-        PayloadPacketSize,
+        TotalPayloadSize,
 
         /// <summary>
-        /// The data serializer and data processor used to unwrap the payload. Used as flags.
+        /// The portion of TotalPayloadSize that is random pad data. Pad data is always appended 
+        /// after header and real payload bytes. Used with encrypted communication to reduce the 
+        /// risk of leaking real data volume via traffic analysis attacks.
+        /// </summary>
+        PartialPayloadPadSize,
+
+        /// <summary>
+        /// The data serialiser and data processor used to unwrap the payload. Used as flags.
         /// </summary>
         SerializerProcessors,
 
@@ -91,7 +98,7 @@ namespace NetworkCommsDotNet
 
     /// <summary>
     /// Contains information required to send, receive and correctly rebuild any objects sent via NetworkCommsDotNet.
-    /// Any data sent via NetworkCommsDotNet is always preceeded by a packetHeader.
+    /// Any data sent via NetworkCommsDotNet is always preceded by a packetHeader.
     /// </summary>
     [ProtoContract]
     public sealed class PacketHeader
@@ -109,23 +116,22 @@ namespace NetworkCommsDotNet
 #else
         private PacketHeader() { }
 #endif
-        
+
         /// <summary>
         /// Creates a new packetHeader
         /// </summary>
         /// <param name="packetTypeStr">The packet type to be used.</param>
         /// <param name="payloadPacketSize">The size on bytes of the payload</param>
+        /// <param name="sendReceiveOptions">Send receive options which may contain header relevant options.</param>
         /// <param name="requestedReturnPacketTypeStr">An optional field representing the expected return packet type</param>
-        /// <param name="receiveConfirmationRequired">An optional boolean stating that a receive confirmation is required for this packet</param>
         /// <param name="checkSumHash">An optional field representing the payload checksum</param>
-        /// <param name="includeConstructionTime">An optional boolean which if true will record the DateTime this packet was created</param>
-        public PacketHeader(string packetTypeStr, long payloadPacketSize, string requestedReturnPacketTypeStr = null, bool receiveConfirmationRequired = false, string checkSumHash = null, bool includeConstructionTime = false)
+        public PacketHeader(string packetTypeStr, long payloadPacketSize, SendReceiveOptions sendReceiveOptions = null, string requestedReturnPacketTypeStr = null, string checkSumHash = null)
         {
             longItems = new Dictionary<PacketHeaderLongItems, long>();
             stringItems = new Dictionary<PacketHeaderStringItems, string>();
 
             stringItems.Add(PacketHeaderStringItems.PacketType, packetTypeStr);
-            longItems.Add(PacketHeaderLongItems.PayloadPacketSize, payloadPacketSize);
+            longItems.Add(PacketHeaderLongItems.TotalPayloadSize, payloadPacketSize);
 
             if (payloadPacketSize < 0)
                 throw new Exception("payloadPacketSize can not be less than 0.");
@@ -133,14 +139,17 @@ namespace NetworkCommsDotNet
             if (requestedReturnPacketTypeStr != null)
                 stringItems.Add(PacketHeaderStringItems.RequestedReturnPacketType, requestedReturnPacketTypeStr);
 
-            if (receiveConfirmationRequired)
-                stringItems.Add(PacketHeaderStringItems.ReceiveConfirmationRequired, "");
-
             if (checkSumHash != null)
                 stringItems.Add(PacketHeaderStringItems.CheckSumHash, checkSumHash);
 
-            if (includeConstructionTime)
-                longItems.Add(PacketHeaderLongItems.PacketCreationTime, DateTime.Now.Ticks);
+            if (sendReceiveOptions != null)
+            {
+                if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
+                    stringItems.Add(PacketHeaderStringItems.ReceiveConfirmationRequired, "");
+
+                if (sendReceiveOptions.Options.ContainsKey("IncludePacketConstructionTime"))
+                    longItems.Add(PacketHeaderLongItems.PacketCreationTime, DateTime.Now.Ticks);
+            }
         }
 
         internal PacketHeader(MemoryStream packetData, SendReceiveOptions sendReceiveOptions)
@@ -154,7 +163,7 @@ namespace NetworkCommsDotNet
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 
                 PacketHeader tempObject = sendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetData, sendReceiveOptions.DataProcessors, sendReceiveOptions.Options);
-                if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.PayloadPacketSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
+                if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.TotalPayloadSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else
                 {
@@ -177,10 +186,25 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The total size in bytes of the payload.
         /// </summary>
-        public int PayloadPacketSize
+        public int TotalPayloadSize
         {
-            get { return (int)longItems[PacketHeaderLongItems.PayloadPacketSize]; }
-            //private set { longItems[PacketHeaderLongItems.PayloadPacketSize] = value; }
+            get { return (int)longItems[PacketHeaderLongItems.TotalPayloadSize]; }
+        }
+
+        /// <summary>
+        /// The portion of TotalPayloadSize that is random pad data. Pad data is always appended 
+        /// after header and real payload bytes. Used with encrypted communication to reduce the 
+        /// risk of leaking real data volume via traffic analysis attacks.
+        /// </summary>
+        public int PartialPayloadPadSize
+        {
+            get 
+            {
+                if (ContainsOption(PacketHeaderLongItems.PartialPayloadPadSize))
+                    return 0;
+                else
+                    return (int)longItems[PacketHeaderLongItems.PartialPayloadPadSize]; 
+            }
         }
 
         /// <summary>
@@ -189,7 +213,6 @@ namespace NetworkCommsDotNet
         public string PacketType
         {
             get { return stringItems[PacketHeaderStringItems.PacketType]; }
-            //private set { stringItems[PacketHeaderStringItems.PacketType] = value; }
         }
 
         /// <summary>

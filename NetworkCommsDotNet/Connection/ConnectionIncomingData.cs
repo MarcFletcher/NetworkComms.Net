@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
                 int loopCounter = 0;
                 while (true)
                 {
-                    //If we have ended up with a null packet at the front, probably due to some form of concatentation we can pull it off here
+                    //If we have ended up with a null packet at the front, probably due to some form of concatenation we can pull it off here
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && packetBuilder.FirstByte() == 0)
                     {
@@ -123,22 +123,22 @@ namespace NetworkCommsDotNet
 
                         //We can now use the header to establish if we have enough payload data
                         //First case is when we have not yet received enough data
-                        if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.TotalPayloadSize)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " total packet bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.TotalPayloadSize).ToString() + " total packet bytes.");
 
                             //Set the expected number of bytes and then return
-                            packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.PayloadPacketSize;
+                            packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.TotalPayloadSize;
                             return;
                         }
                         //Second case is we have enough data
-                        else if (packetBuilder.TotalBytesCached >= packetHeaderSize + topPacketHeader.PayloadPacketSize)
+                        else if (packetBuilder.TotalBytesCached >= packetHeaderSize + topPacketHeader.TotalPayloadSize)
                         {
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.PayloadPacketSize.ToString() + " payload bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.TotalPayloadSize.ToString() + " payload bytes.");
 
                             bool isReservedType = false;
                             if (topPacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged)
@@ -169,14 +169,14 @@ namespace NetworkCommsDotNet
 #else
                                 var priority = (QueueItemPriority)Thread.CurrentThread.Priority;
 #endif
-                                PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
+                                PriorityQueueItem item = new PriorityQueueItem(priority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.TotalPayloadSize), incomingPacketSendReceiveOptions);
                                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... handling packet type '" + topPacketHeader.PacketType + "' inline. Loop index - " + loopCounter.ToString() + packetSeqNumStr);
                                 NetworkComms.CompleteIncomingItemTask(item);
                             }
                             else
                             {
                                 QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
-                                PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.PayloadPacketSize), incomingPacketSendReceiveOptions);
+                                PriorityQueueItem item = new PriorityQueueItem(itemPriority, this, topPacketHeader, packetBuilder.ReadDataSection(packetHeaderSize, topPacketHeader.TotalPayloadSize), incomingPacketSendReceiveOptions);
 
                                 //QueueItemPriority.Highest is the only priority that is executed inline
 
@@ -202,8 +202,8 @@ namespace NetworkCommsDotNet
                             }
                             
                             //We clear the bytes we have just handed off
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.PayloadPacketSize).ToString() + " bytes from incoming packet buffer from connection with " + ConnectionInfo +".");
-                            packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.PayloadPacketSize);
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Removing " + (packetHeaderSize + topPacketHeader.TotalPayloadSize).ToString() + " bytes from incoming packet buffer from connection with " + ConnectionInfo +".");
+                            packetBuilder.ClearNTopBytes(packetHeaderSize + topPacketHeader.TotalPayloadSize);
 
                             //Reset the expected bytes to 0 so that the next check starts from scratch
                             packetBuilder.TotalBytesExpected = 0;
