@@ -8,7 +8,7 @@ using DPSBase;
 using System.Net;
 using NetworkCommsDotNet.XPlatformHelper;
 
-namespace ExamplesWP8Chat
+namespace ExamplesChat.WinRT
 {
     /// <summary>
     /// In an attempt to keep things as clear as possible all shared implementation across chat examples
