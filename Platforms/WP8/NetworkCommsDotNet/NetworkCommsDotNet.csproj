@@ -165,6 +165,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\CommsThreadPool.cs">
       <Link>Tools\CommsThreadPool.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\DOSProtection.cs">
+      <Link>Tools\DOSProtection.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
       <Link>Tools\IPTools.cs</Link>
     </Compile>

@@ -141,7 +141,7 @@ namespace NetworkCommsDotNet
         /// saves it to disk using provided certificateFileName
         /// </summary>
         /// <param name="certificateDetails">The certificate details to use.</param>
-        /// <param name="certificateFileName">The certificte file name, e.g. certFile.PFX</param>
+        /// <param name="certificateFileName">The certificate file name, e.g. certFile.PFX</param>
         public static void CreateSelfSignedCertificatePFX(CertificateDetails certificateDetails, string certificateFileName)
         {
             if (certificateDetails == null) throw new ArgumentNullException("certificateDetails");

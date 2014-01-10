@@ -22,6 +22,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Net.NetworkInformation;
 
 namespace NetworkCommsDotNet
 {
@@ -121,7 +122,7 @@ namespace NetworkCommsDotNet
                 UInt32 ipaddr = BitConverter.ToUInt32(targetIPAddress.GetAddressBytes(), 0);
 
                 UInt32 interfaceindex = 0;
-                IPExtAccess.GetBestInterface(ipaddr, out interfaceindex);
+                GetBestInterface(ipaddr, out interfaceindex);
 
                 var interfaces = NetworkInterface.GetAllNetworkInterfaces();
 

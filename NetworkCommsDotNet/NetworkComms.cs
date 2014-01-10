@@ -947,6 +947,10 @@ namespace NetworkCommsDotNet
         }
         #endregion
 
+        #region Security
+
+        #endregion
+
 #if !WINDOWS_PHONE
         #region High CPU Usage Tuning
         /// <summary>
