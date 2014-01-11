@@ -49,8 +49,8 @@ namespace NetworkCommsDotNet
             set
             {
                 //Validate the provided key length
-                if (value < 384) throw new ArgumentOutOfRangeException("Minimum key length is 384 Bits.");
-                if (value > 16384) throw new ArgumentOutOfRangeException("Maximum key length is 16384 Bits.");
+                if (value < 384) throw new ArgumentOutOfRangeException("Minimum key length is 384 Bits.", "KeyLength");
+                if (value > 16384) throw new ArgumentOutOfRangeException("Maximum key length is 16384 Bits.", "KeyLength");
 
                 _keyLength = value;
             }
@@ -170,6 +170,8 @@ namespace NetworkCommsDotNet
         /// <returns>PFX file data</returns>
         public static byte[] CreateSelfSignedCertificatePFX(CertificateDetails certificateDetails)
         {
+            if (certificateDetails == null) throw new ArgumentNullException("certificateDetails");
+
             byte[] pfxData;
 
             SystemTime startSystemTime = ToSystemTime(certificateDetails.StartTime);

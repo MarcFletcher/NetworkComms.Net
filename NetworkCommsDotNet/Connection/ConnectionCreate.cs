@@ -64,7 +64,7 @@ namespace NetworkCommsDotNet
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
-            //If the application layer protocol is disabled the serializer must be NullSerializer
+            //If the application layer protocol is disabled the serialiser must be NullSerializer
             //and no data processors are allowed.
             if (connectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
             {
@@ -75,7 +75,7 @@ namespace NetworkCommsDotNet
 
                 if (defaultSendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
-                        " options serializer was not NullSerializer. Please provide compatible send receive options in order to successfully" +
+                        " options serialiser was not NullSerializer. Please provide compatible send receive options in order to successfully" +
                         " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
 
                 if (defaultSendReceiveOptions.DataProcessors.Count > 0)
@@ -99,14 +99,14 @@ namespace NetworkCommsDotNet
             else
                 ConnectionDefaultSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
 
-            if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global comms shutdown has been initiated.");
+            if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global NetworkComms.Net shutdown has been initiated.");
 
             if (ConnectionInfo.ConnectionType == ConnectionType.Undefined || ConnectionInfo.RemoteEndPoint == null)
                 throw new ConnectionSetupException("ConnectionType and RemoteEndPoint must be defined within provided ConnectionInfo.");
 
             //If a connection already exists with this info then we can throw an exception here to prevent duplicates
             if (NetworkComms.ConnectionExists(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol))
-                throw new ConnectionSetupException("A " + connectionInfo.ConnectionType + " connection already exists with info " + connectionInfo);
+                throw new ConnectionSetupException("A " + connectionInfo.ConnectionType.ToString() + " connection already exists with info " + connectionInfo);
 
             //We add a reference in the constructor to ensure any duplicate connection problems are picked up here
             NetworkComms.AddConnectionReferenceByRemoteEndPoint(this);

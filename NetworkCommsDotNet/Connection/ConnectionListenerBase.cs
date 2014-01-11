@@ -65,8 +65,8 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The connection type to listen for.</param>
         /// <param name="sendReceiveOptions">The send receive options to use for this listener</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public ConnectionListenerBase(ConnectionType connectionType,
             SendReceiveOptions sendReceiveOptions,
@@ -81,18 +81,18 @@ namespace NetworkCommsDotNet
             {
                 if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
-                        " options specified the ReceiveConfirmationRequired option. Please provide compatible send receive options in order to succesfully" +
-                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " options specified the ReceiveConfirmationRequired option. Please provide compatible send receive options in order to successfully" +
+                        " instantiate this unmanaged connection.", "sendReceiveOptions");
 
                 if (sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
-                        " options serializer was not NullSerializer. Please provide compatible send receive options in order to succesfully" +
-                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " options serialiser was not NullSerializer. Please provide compatible send receive options in order to successfully" +
+                        " instantiate this unmanaged connection.", "sendReceiveOptions");
 
                 if (sendReceiveOptions.DataProcessors.Count > 0)
                     throw new ArgumentException("Attempted to create an unmanaged connection when the provided send receive" +
                         " options contains data processors. Data processors may not be used with unmanaged connections." +
-                        " Please provide compatible send receive options in order to succesfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "sendReceiveOptions");
             }
 
             this.ConnectionType = connectionType;

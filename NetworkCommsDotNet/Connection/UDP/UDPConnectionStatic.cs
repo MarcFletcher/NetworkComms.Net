@@ -257,13 +257,16 @@ namespace NetworkCommsDotNet
         /// recommend you use the NetworkComms.Net application layer protocol.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            if (ipEndPoint == null) throw new ArgumentNullException("ipEndPoint");
+            if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions");
+
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.", "applicationLayerProtocol");
 
             if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
                 throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
                     " options specified the ReceiveConfirmationRequired option, which is unsupported. Please create a specific connection"+
-                    "instance to use this feature.", "defaultSendReceiveOptions");
+                    "instance to use this feature.", "sendReceiveOptions");
 
             //Check the send receive options
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
@@ -271,12 +274,12 @@ namespace NetworkCommsDotNet
                 if (sendReceiveOptions.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
                     throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
                         " options serialiser was not NullSerializer. Please provide compatible send receive options in order to successfully" +
-                        " instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " instantiate this unmanaged connection.", "sendReceiveOptions");
 
                 if (sendReceiveOptions.DataProcessors.Count > 0)
                     throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
                         " options contains data processors. Data processors may not be used with unmanaged connections." +
-                        " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
+                        " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "sendReceiveOptions");
             }
 
             UDPConnection connectionToUse = null;
@@ -311,28 +314,29 @@ namespace NetworkCommsDotNet
             {
                 lock (udpRogueSenderCreationLocker)
                 {
+                    AddressFamily ipEndPointAddressFamily = ipEndPoint.AddressFamily;
                     if (NetworkComms.commsShutdown)
                         throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
-                    else if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily) || !udpRogueSenders[ipEndPoint.AddressFamily].ContainsKey(applicationLayerProtocol) || udpRogueSenders[ipEndPoint.AddressFamily][applicationLayerProtocol].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                    else if (!udpRogueSenders.ContainsKey(ipEndPointAddressFamily) || !udpRogueSenders[ipEndPointAddressFamily].ContainsKey(applicationLayerProtocol) || udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                     {
                         //Create a new rogue sender
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
 
                         IPAddress any;
-                        if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                        if (ipEndPointAddressFamily == AddressFamily.InterNetwork)
                             any = IPAddress.Any;
-                        else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+                        else if (ipEndPointAddressFamily == AddressFamily.InterNetworkV6)
                             any = IPAddress.IPv6Any;
                         else
-                            throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPoint.AddressFamily.ToString());
+                            throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPointAddressFamily.ToString());
 
-                        if (!udpRogueSenders.ContainsKey(ipEndPoint.AddressFamily)) udpRogueSenders.Add(ipEndPoint.AddressFamily, new Dictionary<ApplicationLayerProtocolStatus, UDPConnection>());
+                        if (!udpRogueSenders.ContainsKey(ipEndPointAddressFamily)) udpRogueSenders.Add(ipEndPointAddressFamily, new Dictionary<ApplicationLayerProtocolStatus, UDPConnection>());
 
-                        udpRogueSenders[ipEndPoint.AddressFamily][applicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                        udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
                     }
 
                     //Get the rouge sender here
-                    connectionToUse = udpRogueSenders[ipEndPoint.AddressFamily][applicationLayerProtocol];
+                    connectionToUse = udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol];
                 }
             }
 

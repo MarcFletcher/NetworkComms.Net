@@ -1491,7 +1491,12 @@ namespace NetworkCommsDotNet
 
             try
             {
-                if (OnCommsShutdown != null) OnCommsShutdown(null, new EventArgs());
+                if (OnCommsShutdown != null)
+                {
+                    //This copy is requested by Gendarme
+                    EventHandler<EventArgs> eventToRun = OnCommsShutdown;
+                    eventToRun(null, new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -2220,9 +2225,9 @@ namespace NetworkCommsDotNet
             if (LoggingEnabled)
             { 
                 if (result.Count == 0)
-                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.ToString() + "', localEndPoint='"+localEndPoint.ToString()+"', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. No matching connections found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.ToString() + "', localEndPoint='"+localEndPoint.ToString()+"', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol.ToString() + "'. No matching connections found.");
                 else
-                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.ToString() + "', localEndPoint='" + localEndPoint.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'. " + result.Count+ " matching connections found.");
+                    logger.Trace("RetrieveConnection by remoteEndPoint='" + remoteEndPoint.ToString() + "', localEndPoint='" + localEndPoint.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol.ToString() + "'. " + result.Count.ToString() + " matching connections found.");
             }
 
             return result;
@@ -2289,7 +2294,7 @@ namespace NetworkCommsDotNet
         public static bool ConnectionExists(ShortGuid networkIdentifier, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
             if (LoggingEnabled)
-                logger.Trace("Checking for existing connection by identifier='" + networkIdentifier + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'.");
+                logger.Trace("Checking for existing connection by identifier='" + networkIdentifier + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol.ToString() + "'.");
 
             return GetExistingConnection(networkIdentifier, connectionType, applicationLayerProtocol).Count > 0;
         }
@@ -2305,9 +2310,12 @@ namespace NetworkCommsDotNet
         /// <returns>True if a matching connection exists, otherwise false</returns>
         public static bool ConnectionExists(EndPoint remoteEndPoint, EndPoint localEndPoint, ConnectionType connectionType, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
+            if (remoteEndPoint == null) throw new ArgumentNullException("remoteEndPoint");
+            if (localEndPoint == null) throw new ArgumentNullException("localEndPoint");
+
             if (LoggingEnabled)
                 logger.Trace("Checking for existing connection by remoteEndPoint='" + remoteEndPoint.ToString() +
-                    "', localEndPoint='" + localEndPoint.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol + "'.");
+                    "', localEndPoint='" + localEndPoint.ToString() + "', connectionType='" + connectionType.ToString() + "' and ApplicationLayerProtocolStatus='" + applicationLayerProtocol.ToString() + "'.");
 
             return GetExistingConnection(remoteEndPoint, localEndPoint, connectionType, applicationLayerProtocol).Count > 0;
         }

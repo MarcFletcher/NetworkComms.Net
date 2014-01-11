@@ -136,9 +136,10 @@ namespace NetworkCommsDotNet
         /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening(List<ConnectionListenerBase> listeners, List<EndPoint> desiredLocalEndPoints, bool useRandomPortFailOver)
         {
-            if (listeners.Count != desiredLocalEndPoints.Count) throw new ArgumentException("The number of elements in listeners and desiredLocalIPEndPoints must be equal.");
+            if (listeners == null) throw new ArgumentNullException("listeners", "Provided listeners cannot be null.");
             if (desiredLocalEndPoints == null) throw new ArgumentNullException("desiredLocalIPEndPoints", "Provided List<IPEndPoint> cannot be null.");
-
+            if (listeners.Count != desiredLocalEndPoints.Count) throw new ArgumentException("The number of elements in listeners and desiredLocalIPEndPoints must be equal.");
+            
             lock (staticConnectionLocker)
             {
                 try

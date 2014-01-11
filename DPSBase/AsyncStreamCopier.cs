@@ -35,6 +35,9 @@ namespace DPSBase
         /// <param name="output">Output stream</param>
         public void Start(Stream input, Stream output)
         {
+            if (input == null) throw new ArgumentNullException("input");
+            if (output == null) throw new ArgumentNullException("output");
+
             input.BeginRead(bufferA, 0, bufferA.Length, InputReadComplete, new Stream[] { input, output });
         }
         

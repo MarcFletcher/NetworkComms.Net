@@ -253,17 +253,25 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public bool Contains(IPAddress ipAddress)
         {
+            if (ipAddress == null) throw new ArgumentNullException("ipAddress");
+
             return this.Contains(ipAddress.GetAddressBytes());
         }
 
         /// <summary>
         /// Returns true if this IPRange contains the provided IPAddress
         /// </summary>
-        /// <param name="ipAddress">The IPAddress to check</param>
+        /// <param name="ipAddressStr">The IPAddress to check</param>
         /// <returns></returns>
-        public bool Contains(string ipAddress)
+        public bool Contains(string ipAddressStr)
         {
-            return this.Contains(IPAddress.Parse(ipAddress).GetAddressBytes());
+            if (ipAddressStr == null) throw new ArgumentNullException("ipAddress");
+            
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(ipAddressStr, out ipAddress))
+                throw new FormatException("Failed to parse ipAddressStr to IPAddress");
+
+            return this.Contains(ipAddress.GetAddressBytes());
         }
 
         /// <summary>
@@ -319,6 +327,9 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static bool Contains(IEnumerable<IPRange> ranges, IPAddress ipAddress)
         {
+            if (ranges == null) throw new ArgumentNullException("ranges");
+            if (ipAddress == null) throw new ArgumentNullException("ipAddress");
+
             foreach (IPRange range in ranges)
             {
                 if (range.Contains(ipAddress))
@@ -334,7 +345,7 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public override string ToString()
         {
-            return new IPAddress(addressBytes) + "/" + numAddressBits;
+            return new IPAddress(addressBytes) + "/" + numAddressBits.ToString();
         }
     }
 }

@@ -332,6 +332,8 @@ namespace NetworkCommsDotNet
             udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteIPEndPoint);
 #endif
 
+            udpDatagramStream.Dispose();
+
             //Calculate timings based on fractional byte length
             double[] timings = new double[streamsToSend.Length];
             double elapsedMS = (DateTime.Now - startTime).TotalMilliseconds;

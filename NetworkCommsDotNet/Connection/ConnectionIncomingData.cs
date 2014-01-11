@@ -60,7 +60,7 @@ namespace NetworkCommsDotNet
         protected abstract void StartIncomingDataListen();
 
         /// <summary>
-        /// Attempts to use the data provided in packetBuilder to recreate something usefull. If we don't have enough data yet that value is set in packetBuilder.
+        /// Attempts to use the data provided in packetBuilder to recreate something useful. If we don't have enough data yet that value is set in packetBuilder.
         /// </summary>
         /// <param name="packetBuilder">The <see cref="PacketBuilder"/> containing incoming cached data</param>
         protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
@@ -80,6 +80,7 @@ namespace NetworkCommsDotNet
                     //It is possible we have concatenation of several null packets along with real data so we loop until the firstByte is greater than 0
                     if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled && packetBuilder.FirstByte() == 0)
                     {
+                        #region Ignore Null Packet
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... null packet removed in IncomingPacketHandleHandOff() from " + ConnectionInfo + ", loop index - " + loopCounter.ToString());
 
                         packetBuilder.ClearNTopBytes(1);
@@ -89,12 +90,14 @@ namespace NetworkCommsDotNet
 
                         //If we have run out of data completely then we can return immediately
                         if (packetBuilder.TotalBytesCached == 0) return;
+                        #endregion
                     }
                     else
                     {
                         int packetHeaderSize = 0;
                         PacketHeader topPacketHeader;
 
+                        #region Set topPacketHeader
                         if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
                         {
                             //First determine the expected size of a header packet
@@ -116,6 +119,7 @@ namespace NetworkCommsDotNet
                         }
                         else
                             topPacketHeader = new PacketHeader(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetBuilder.TotalBytesCached);
+                        #endregion
 
                         //Idiot test
                         if (topPacketHeader.PacketType == null)
@@ -134,6 +138,7 @@ namespace NetworkCommsDotNet
                         //Second case is we have enough data
                         else if (packetBuilder.TotalBytesCached >= packetHeaderSize + topPacketHeader.TotalPayloadSize)
                         {
+                            #region Handle Packet
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
                             //no problem!!
@@ -159,7 +164,7 @@ namespace NetworkCommsDotNet
                             //Add the packet sequence number if logging
                             string packetSeqNumStr = "";
                             if (NetworkComms.LoggingEnabled)
-                                packetSeqNumStr = (topPacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber) ? ". pSeq#-" + topPacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber) + "." : "");
+                                packetSeqNumStr = (topPacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber) ? ". pSeq#-" + topPacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber).ToString() + "." : "");
 
                             //Only reserved packet types get completed inline
                             if (isReservedType)
@@ -210,9 +215,10 @@ namespace NetworkCommsDotNet
 
                             //If we have run out of data completely then we can return immediately
                             if (packetBuilder.TotalBytesCached == 0) return;
+                            #endregion
                         }
                         else
-                            throw new CommunicationException("This should be impossible!");
+                            throw new CommunicationException("This should be impossible!");   
                     }
 
                     loopCounter++;
