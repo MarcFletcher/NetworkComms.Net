@@ -672,44 +672,16 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Sends the provided packet to the remote end point
+        /// Connection specific implementation for sending data on this connection type.
+        /// Each StreamSendWrapper[] represents a single packet.
         /// </summary>
-        /// <param name="packet">Packet to send</param>
-        protected override void SendPacketSpecific(Packet packet)
+        /// <param name="streamsToSend"></param>
+        /// <param name="maxSendTimePerKB"></param>
+        /// <param name="totalBytesToSend"></param>
+        /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
+        protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
-            byte[] headerBytes;
-
-            //If this connection does not use the applicationlayerprotocol we need to check a few things
-            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-            {
-                //Serialise the header
-                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
-            }
-            else
-            {
-                headerBytes = new byte[0];
-
-                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
-                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
-
-                if (packet.PacketData.Length == 0)
-                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
-            }
-
-            double maxSendTimePerKB = double.MaxValue;
-            if (!NetworkComms.DisableConnectionSendTimeouts)
-            {
-                if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
-                    maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
-                else
-                    maxSendTimePerKB = DefaultMSPerKBSendTimeout;
-            }
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " +
-                ConnectionInfo + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes. Allowing " +
-                maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
-            
-            DateTime startTime = DateTime.Now;
+            double[] timings = new double[streamsToSend.Length];
 
             Stream sendingStream;
 #if WINDOWS_PHONE || NETFX_CORE
@@ -718,96 +690,35 @@ namespace NetworkCommsDotNet
             sendingStream = connectionStream;
 #endif
 
-            //We only need to write the header if we have prepared the necessary bytes
-            double headerWriteTime = 0;
-            if (headerBytes.Length > 0)
+            for(int i=0; i<streamsToSend.Length; i++)
             {
-                headerWriteTime = StreamWriteWithTimeout.Write(headerBytes, headerBytes.Length, sendingStream, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-                SendTimesMSPerKBCache.AddValue(headerWriteTime, headerBytes.Length);
+                if (streamsToSend[i].Length > 0)
+                {
+                    //Write each stream
+                    timings[i] = streamsToSend[i].ThreadSafeStream.CopyTo(sendingStream, streamsToSend[i].Start, streamsToSend[i].Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+
+                    //Finish by checking if the stream needs closing
+                    if (streamsToSend[i].ThreadSafeStream.CloseStreamAfterSend)
+                        streamsToSend[i].ThreadSafeStream.Close();
+                }
+                else
+                    timings[i] = 0;
             }
-            
-            //We can now write the payload data
-            double dataWriteTime = 0;
-            if (packet.PacketData.Length > 0)
-                dataWriteTime = packet.PacketData.ThreadSafeStream.CopyTo(sendingStream, packet.PacketData.Start, packet.PacketData.Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
 
 #if WINDOWS_PHONE || NETFX_CORE
             sendingStream.Flush();
 #endif
 
-            //We record each send independantly as if one is considerably larger than 
-            //the other it will provide a much more reliable rate
-            SendTimesMSPerKBCache.AddValue(dataWriteTime, packet.PacketData.Length);
-            SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
-
-            //Correctly dispose the stream if we are finished with it
-            if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
-                packet.PacketData.ThreadSafeStream.Close();
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + ((headerBytes.Length + packet.PacketData.Length)/1024.0).ToString("0.000") + "KB written to TCP netstream at average of " + (((headerBytes.Length + packet.PacketData.Length) / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + ((headerWriteTime + dataWriteTime)/2).ToString("0.00") + " ms/KB, AVG:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00")+ " ms/KB.");
-
 #if !WINDOWS_PHONE && !NETFX_CORE
             if (!tcpClient.Connected)
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Error("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
+                
                 throw new CommunicationException("TCPClient is not marked as connected after write to networkStream. Possibly indicates a dropped connection.");
             }
 #endif
-        }
 
-        /// <summary>
-        /// Send a null packet (1 byte) to the remotEndPoint. Helps keep the TCP connection alive while ensuring the bandwidth usage is an absolute minimum. If an exception is thrown the connection will be closed.
-        /// </summary>
-        protected override void SendNullPacket()
-        {
-            //We can't send null packets if the application layer is disabled
-            //as we have no way to distinquish them on the receiving side
-            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
-            {
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Ignoring null packet send to " + ConnectionInfo + " as the application layer protocol is disabled.");
-                return;
-            }
-
-            try
-            {
-                //Only once the connection has been established do we send null packets
-                if (ConnectionInfo.ConnectionState == ConnectionState.Established)
-                {
-                    //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
-                    lock (sendLocker)
-                    {
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
-
-                        //Send a single 0 byte
-                        double maxSendTimePerKB = double.MaxValue;
-                        if (!NetworkComms.DisableConnectionSendTimeouts)
-                        {
-                            if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
-                                maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
-                            else
-                                maxSendTimePerKB = DefaultMSPerKBSendTimeout;
-                        }
-
-#if WINDOWS_PHONE || NETFX_CORE
-                        var stream = socket.OutputStream.AsStreamForWrite();
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, stream, 1, maxSendTimePerKB, MinSendTimeoutMS);
-                        stream.Flush();
-#else
-                        StreamWriteWithTimeout.Write(new byte[] { 0 }, 1, connectionStream, 1, maxSendTimePerKB, MinSendTimeoutMS);
-#endif
-
-                        //Update the traffic time after we have written to netStream
-                        ConnectionInfo.UpdateLastTrafficTime();
-                    }
-                }
-
-                //If the connection is shutdown we should call close
-                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -8);
-            }
-            catch (Exception)
-            {
-                CloseConnection(true, 19);
-            }
+            return timings;
         }
     }
 }

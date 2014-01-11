@@ -22,6 +22,7 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using DPSBase;
+using System.IO;
 
 #if NETFX_CORE
 using NetworkCommsDotNet.XPlatformHelper;
@@ -544,13 +545,13 @@ namespace NetworkCommsDotNet
                     }
                     #endregion
 
-                    //Update the traffic time as late as possible incase there is a problem
+                    //Update the traffic time as late as possible in case there is a problem
                     ConnectionInfo.UpdateLastTrafficTime();
                 }
                 catch (ConfirmationTimeoutException)
                 {
                     //Confirmation timeout there is no need to close the connection as this 
-                    //does not neccessarily mean there is a conneciton problem
+                    //does not necessarily mean there is a connection problem
                     throw;
                 }
                 catch (CommunicationException)
@@ -577,7 +578,7 @@ namespace NetworkCommsDotNet
                 {
                     if (packet.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
                     {
-                        //Cleanup our delegates
+                        //Clean-up our delegates
                         RemoveIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), confirmationDelegate);
                         RemoveShutdownHandler(ConfirmationShutDownDelegate);
                     }
@@ -588,15 +589,135 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Connection specific implementation for sending packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
+        /// Implementation for sending a null packets on this connection type. Used for ensuring a connection
+        /// is not terminated by an intermediary switch/router due to inactivity.
         /// </summary>
-        /// <param name="packet">The packet to send</param>
-        protected abstract void SendPacketSpecific(Packet packet);
+        private void SendNullPacket()
+        {
+            //We don't send null packets for UDP
+            if (ConnectionInfo.ConnectionType == ConnectionType.UDP)
+                return;
+
+            //We can't send null packets if the application layer is disabled
+            //as we have no way to distinguish them on the receiving side
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
+            {
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Ignoring null packet send to " + ConnectionInfo + " as the application layer protocol is disabled.");
+                return;
+            }
+
+            try
+            {
+                //Only once the connection has been established do we send null packets
+                if (ConnectionInfo.ConnectionState == ConnectionState.Established)
+                {
+                    //Multiple threads may try to send packets at the same time so we need this lock to prevent a thread cross talk
+                    lock (sendLocker)
+                    {
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Sending null packet to " + ConnectionInfo);
+
+                        //Send a single 0 byte
+                        double maxSendTimePerKB = double.MaxValue;
+                        if (!NetworkComms.DisableConnectionSendTimeouts)
+                        {
+                            if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                                maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                            else
+                                maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+                        }
+
+                        StreamSendWrapper[] streamsToSend = new StreamSendWrapper[] 
+                        { 
+                            new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[] { 0 }))) 
+                        }; 
+
+                        SendStreams(streamsToSend, maxSendTimePerKB, 1);
+
+                        //Update the traffic time after we have written to netStream
+                        ConnectionInfo.UpdateLastTrafficTime();
+                    }
+                }
+
+                //If the connection is shutdown we should call close
+                if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) CloseConnection(false, -8);
+            }
+            catch (Exception)
+            {
+                CloseConnection(true, 19);
+            }
+        }
 
         /// <summary>
-        /// Connection specific implementation for sending a null packets on this connection type. Will only be called from within a lock so method does not need to implement further thread safety.
+        /// Send the provided packet 
         /// </summary>
-        protected abstract void SendNullPacket();
+        /// <param name="packet"></param>
+        private void SendPacketSpecific(Packet packet)
+        {
+            byte[] headerBytes;
+
+            //Serialise the header
+            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
+                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
+            else
+            {
+                //If this connection does not use the application layer protocol we need to check a few things
+                headerBytes = new byte[0];
+
+                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
+
+                if (packet.PacketData.Length == 0)
+                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
+            }
+
+            double maxSendTimePerKB = double.MaxValue;
+            if (!NetworkComms.DisableConnectionSendTimeouts)
+            {
+                if (SendTimesMSPerKBCache.Count > MinNumSendsBeforeConnectionSpecificSendTimeout)
+                    maxSendTimePerKB = Math.Max(MinimumMSPerKBSendTimeout, SendTimesMSPerKBCache.CalculateMean() + NumberOfStDeviationsForWriteTimeout * SendTimesMSPerKBCache.CalculateStdDeviation());
+                else
+                    maxSendTimePerKB = DefaultMSPerKBSendTimeout;
+            }
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a packet of type '" + packet.PacketHeader.PacketType + "' to " +
+                ConnectionInfo + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes. Allowing " +
+                maxSendTimePerKB.ToString("0.0##") + " ms/KB for send.");
+
+            DateTime startTime = DateTime.Now;
+
+            StreamSendWrapper[] streamsToSend = new StreamSendWrapper[] 
+            { new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(headerBytes))),
+                packet.PacketData};
+
+            long totalBytesToSend = 0;
+            foreach (StreamSendWrapper stream in streamsToSend)
+                totalBytesToSend += stream.Length;
+
+            //Send the streams
+            double[] timings = SendStreams(streamsToSend, maxSendTimePerKB, totalBytesToSend);
+
+            //Record the timings
+            double timingsSum = 0;
+            for (int i = 0; i < timings.Length; i++)
+            {
+                timingsSum += timings[i];
+                SendTimesMSPerKBCache.AddValue(timings[i], streamsToSend[i].Length);
+            }
+
+            SendTimesMSPerKBCache.TrimList(MaxNumSendTimes);
+
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + (totalBytesToSend / 1024.0).ToString("0.000") + "KB sent at average of " + ((totalBytesToSend / 1024.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.000") + "KB/s. Current:" + (timingsSum / timings.Length).ToString("0.00") + " ms/KB, Connection Avg:" + SendTimesMSPerKBCache.CalculateMean().ToString("0.00") + " ms/KB.");
+        }
+
+        /// <summary>
+        /// Connection specific implementation for sending data on this connection type.
+        /// Each StreamSendWrapper[] represents a single expected packet.
+        /// </summary>
+        /// <param name="streamsToSend"></param>
+        /// <param name="maxSendTimePerKB"></param>
+        /// <param name="totalBytesToSend"></param>
+        /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
+        protected abstract double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend);
 
         /// <summary>
         /// Dispose of the connection. Recommended usage is to call CloseConnection instead.

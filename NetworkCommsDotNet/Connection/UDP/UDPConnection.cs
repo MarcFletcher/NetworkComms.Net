@@ -214,68 +214,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send a packet to the RemoteEndPoint specified in the ConnectionInfo
-        /// </summary>
-        /// <param name="packet">Packet to send</param>
-        protected override void SendPacketSpecific(Packet packet)
-        {
-#if FREETRIAL
-            if (this.ConnectionInfo.RemoteEndPoint.Address == IPAddress.Broadcast)
-                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
-#endif
-
-            if (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
-                throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
-
-            byte[] headerBytes = new byte[0];
-            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                headerBytes = packet.SerialiseHeader(NetworkComms.InternalFixedSendReceiveOptions);
-            else
-            {
-                if (packet.PacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
-                    throw new UnexpectedPacketTypeException("Only 'Unmanaged' packet types can be used if the NetworkComms.Net application layer protocol is disabled.");
-
-                if (packet.PacketData.Length == 0)
-                    throw new NotSupportedException("Sending a zero length array if the NetworkComms.Net application layer protocol is disabled is not supported.");
-            }
-
-            //We are limited in size for the isolated send
-            if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
-                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteIPEndPoint.Address + ":" + ConnectionInfo.RemoteIPEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
-
-            //Prepare the single byte array to send
-            byte[] udpDatagram;
-            if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-            {
-                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray(headerBytes.Length);
-
-                //Copy the header bytes into the datagram
-                Buffer.BlockCopy(headerBytes, 0, udpDatagram, 0, headerBytes.Length);
-            }
-            else
-                udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
-
-#if WINDOWS_PHONE || NETFX_CORE
-            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask();
-            getStreamTask.Wait();
-
-            var outputStream = getStreamTask.Result;
-
-            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
-            outputStream.FlushAsync().AsTask().Wait();
-#else
-            udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteIPEndPoint);
-#endif
-
-            if (packet.PacketData.ThreadSafeStream.CloseStreamAfterSend)
-                packet.PacketData.ThreadSafeStream.Close();
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' to " + ConnectionInfo.RemoteIPEndPoint.Address + ":" + ConnectionInfo.RemoteIPEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
-        }
-
-        /// <summary>
         /// Send a packet to the specified ipEndPoint. This feature is unique to UDP because of its connectionless structure.
         /// </summary>
         /// <param name="packet">Packet to send</param>
@@ -345,12 +283,62 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Sends a null packet using UDP
+        /// Connection specific implementation for sending data on this connection type.
+        /// Each StreamSendWrapper[] represents a single packet.
         /// </summary>
-        protected override void SendNullPacket()
+        /// <param name="streamsToSend"></param>
+        /// <param name="maxSendTimePerKB"></param>
+        /// <param name="totalBytesToSend"></param>
+        /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
+        protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
-            //UDP does not send null packets
-            //To check if a managed connection is alive use ConnectionAlive()
+#if FREETRIAL
+            if (this.ConnectionInfo.RemoteEndPoint.Address == IPAddress.Broadcast)
+                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commercial license from www.networkcomms.net which supports UDP broadcast datagrams.");
+#endif
+
+            if (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
+                throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
+
+            if (totalBytesToSend > maximumSingleDatagramSizeBytes)
+                throw new CommunicationException("Attempted to send a UDP packet whose length is " + totalBytesToSend.ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
+
+            byte[] udpDatagram = new byte[totalBytesToSend];
+            MemoryStream udpDatagramStream = new MemoryStream(udpDatagram, 0, udpDatagram.Length, true);
+            
+            for (int i = 0; i < streamsToSend.Length; i++)
+            {
+                if (streamsToSend[i].Length > 0)
+                {
+                    //Write each stream
+                    streamsToSend[i].ThreadSafeStream.CopyTo(udpDatagramStream, streamsToSend[i].Start, streamsToSend[i].Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
+
+                    //Finish by checking if the stream needs closing
+                    if (streamsToSend[i].ThreadSafeStream.CloseStreamAfterSend)
+                        streamsToSend[i].ThreadSafeStream.Close();
+                }
+            }
+
+            DateTime startTime = DateTime.Now;
+#if WINDOWS_PHONE || NETFX_CORE
+            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask();
+            getStreamTask.Wait();
+
+            var outputStream = getStreamTask.Result;
+
+            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
+            outputStream.FlushAsync().AsTask().Wait();
+#else
+            udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteIPEndPoint);
+#endif
+
+            //Calculate timings based on fractional byte length
+            double[] timings = new double[streamsToSend.Length];
+            double elapsedMS = (DateTime.Now - startTime).TotalMilliseconds;
+            for (int i = 0; i < streamsToSend.Length; i++)
+                timings[i] = elapsedMS * (streamsToSend[i].Length / (double)totalBytesToSend);
+
+            return timings;
         }
 
         /// <summary>
