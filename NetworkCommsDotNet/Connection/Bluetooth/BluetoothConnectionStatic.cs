@@ -49,14 +49,14 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">Connection default SendReceiveOptions</param>
-        /// <param name="tcpClient">If this is an incoming connection we will already have access to the tcpClient, otherwise use null</param>
+        /// <param name="btClient">If this is an incoming connection we will already have access to the btClient, otherwise use null</param>
         /// <param name="establishIfRequired">Establish during create if true</param>
         /// <returns>An existing connection or a new one</returns>
         internal static BluetoothConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, BluetoothClient btClient, bool establishIfRequired = true)
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
-            //If we have a tcpClient at this stage we must be serverside
+            //If we have a tcpClient at this stage we must be server side
             if (btClient != null) connectionInfo.ServerSide = true;
 
             bool newConnection = false;
@@ -66,7 +66,7 @@ namespace NetworkCommsDotNet
             {
                 List<Connection> existingConnections = NetworkComms.GetExistingConnection(connectionInfo.RemoteEndPoint, connectionInfo.LocalEndPoint, connectionInfo.ConnectionType, connectionInfo.ApplicationLayerProtocol);
 
-                //Check to see if a conneciton already exists, if it does return that connection, if not return a new one
+                //Check to see if a connection already exists, if it does return that connection, if not return a new one
                 if (existingConnections.Count > 0)
                 {
                     if (NetworkComms.LoggingEnabled)
@@ -84,7 +84,7 @@ namespace NetworkCommsDotNet
                         throw new ConnectionSetupException("Connection state for connection " + connectionInfo + " is marked as establishing. This should only be the case here due to a bug.");
 
                     //If an existing connection does not exist but the info we are using suggests it should we need to reset the info
-                    //so that it can be reused correctly. This case generally happens when using Comms in the format 
+                    //so that it can be reused correctly. This case generally happens when using NetworkComms.Net in the format 
                     //TCPConnection.GetConnection(info).SendObject(packetType, objToSend);
                     if (connectionInfo.ConnectionState == ConnectionState.Established || connectionInfo.ConnectionState == ConnectionState.Shutdown)
                         connectionInfo.ResetConnectionInfo();

@@ -30,20 +30,37 @@ using System.Net;
 namespace DistributedFileSystem
 {
     /// <summary>
-    /// Object passed around between peers when keeping everyone updated.
+    /// Object passed around peers to keep everyone updated.
     /// </summary>
     [ProtoContract]
     public class PeerChunkAvailabilityUpdate
     {
+        /// <summary>
+        /// The related DFS item checksum
+        /// </summary>
         [ProtoMember(1)]
         public string ItemCheckSum { get; private set; }
+
+        /// <summary>
+        /// The chunk availability flags 
+        /// </summary>
         [ProtoMember(2)]
         public ChunkFlags ChunkFlags { get; private set; }
+
+        /// <summary>
+        /// The source network identifier
+        /// </summary>
         [ProtoMember(3)]
         public string SourceNetworkIdentifier { get; private set; }
 
         private PeerChunkAvailabilityUpdate() { }
 
+        /// <summary>
+        /// Instantiate a new PeerChunkAvailabilityUpdate
+        /// </summary>
+        /// <param name="sourceNetworkIdentifier">The source network identifier</param>
+        /// <param name="itemCheckSum">The related DFS item checksum</param>
+        /// <param name="chunkFlags">The chunk availability flags </param>
         public PeerChunkAvailabilityUpdate(string sourceNetworkIdentifier, string itemCheckSum, ChunkFlags chunkFlags)
         {
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
@@ -52,12 +69,15 @@ namespace DistributedFileSystem
         }
     }
 
+    /// <summary>
+    /// Utility class used to count the number of set bits in a ulong
+    /// </summary>
     public static class LongBitCount
     {
         /// <summary>
         /// Returns the number of bits set to 1 in a ulong
         /// </summary>
-        /// <param name="longToCount"></param>
+        /// <param name="inputLong">The ulong to count</param>
         /// <returns></returns>
         public static byte CountBits(ulong inputLong)
         {
@@ -77,7 +97,7 @@ namespace DistributedFileSystem
     }
 
     /// <summary>
-    /// Provides 256 length bit flag 
+    /// Provides a 256 length bit flag 
     /// </summary>
     [ProtoContract]
     public class ChunkFlags
@@ -94,9 +114,9 @@ namespace DistributedFileSystem
         private ChunkFlags() { }
 
         /// <summary>
-        /// Initialises the chunkflags. The initial state is generally 0 or totalNumChunks
+        /// Initialises the ChunkFlags. The initial state is typically 0 or totalNumChunks
         /// </summary>
-        /// <param name="intialState"></param>
+        /// <param name="intialState">The initial state of the ChunkFlags</param>
         public ChunkFlags(byte intialState)
         {
             flags0 = 0;
@@ -111,7 +131,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Returns true if the provided chunk is available. Zero indexed from least significant bit.
         /// </summary>
-        /// <param name="chunkIndex"></param>
+        /// <param name="chunkIndex">The chunk index flag to check</param>
         /// <returns></returns>
         public bool FlagSet(byte chunkIndex)
         {
@@ -131,7 +151,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Sets the bit flag to 1 which corresponds with the provided chunk index. Zero indexed from least significant bit.
         /// </summary>
-        /// <param name="chunkIndex"></param>
+        /// <param name="chunkIndex">The chunk index to set</param>
+        /// <param name="state">The state of the flag</param>
         public void SetFlag(byte chunkIndex, bool state = true)
         {
             if (chunkIndex > 255 || chunkIndex < 0)
@@ -163,15 +184,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Updates local chunk flags with those provided by using an OR operator. This ensures we never disable chunks which are already set available.
+        /// Updates local chunk flags with those provided.
         /// </summary>
-        /// <param name="latestChunkFlags"></param>
+        /// <param name="latestChunkFlags">The new chunk flags</param>
         public void UpdateFlags(ChunkFlags latestChunkFlags)
         {
-            //flags0 |= latestChunkFlags.flags0;
-            //flags1 |= latestChunkFlags.flags1;
-            //flags2 |= latestChunkFlags.flags2;
-            //flags3 |= latestChunkFlags.flags3;
             flags0 = latestChunkFlags.flags0;
             flags1 = latestChunkFlags.flags1;
             flags2 = latestChunkFlags.flags2;
@@ -179,9 +196,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if all bit flags upto the provided uptoChunkIndexInclusive are set to true
+        /// Returns true if all bit flags up to the provided uptoChunkIndexInclusive are set to true
         /// </summary>
-        /// <param name="uptoChunkIndexInclusive"></param>
+        /// <param name="uptoChunkIndexInclusive">The chunk index up to which the flags should be checked</param>
         public bool AllFlagsSet(byte uptoChunkIndexInclusive)
         {
             for (byte i = 0; i < uptoChunkIndexInclusive; i++)
@@ -191,11 +208,18 @@ namespace DistributedFileSystem
             return true;
         }
 
+        /// <summary>
+        /// Returns the number of completed chunk
+        /// </summary>
+        /// <returns></returns>
         public byte NumCompletedChunks()
         {
             return (byte)(LongBitCount.CountBits(flags0) + LongBitCount.CountBits(flags1) + LongBitCount.CountBits(flags2) + LongBitCount.CountBits(flags3));
         }
 
+        /// <summary>
+        /// Sets all chunk flags to unset.
+        /// </summary>
         public void ClearAllFlags()
         {
             flags0 = 0;
@@ -233,7 +257,7 @@ namespace DistributedFileSystem
         public bool SuperPeer { get; private set; }
 
         /// <summary>
-        /// All connection infos corresponding with this peer
+        /// All ConnectionInfos corresponding with this peer
         /// </summary>
         [ProtoMember(4)]
         private List<ConnectionInfo> PeerConnectionInfo { get; set; }
@@ -248,10 +272,16 @@ namespace DistributedFileSystem
 
         private PeerInfo() { }
 
+        /// <summary>
+        /// Initialise a new PeerInfo
+        /// </summary>
+        /// <param name="peerConnectionInfo">All ConnectionInfos corresponding with this peer</param>
+        /// <param name="peerChunkFlags">The initial ChunkFlags for this peer</param>
+        /// <param name="superPeer">True if this is a SuperPeer</param>
         public PeerInfo(List<ConnectionInfo> peerConnectionInfo, ChunkFlags peerChunkFlags, bool superPeer)
         {
             if (peerConnectionInfo.Count == 0)
-                throw new ArgumentException("Provided peerConnectionInfo list must contain atleast one element.");
+                throw new ArgumentException("Provided peerConnectionInfo list must contain at least one element.");
 
             this.PeerNetworkIdentifier = peerConnectionInfo[0].NetworkIdentifier;
 
@@ -281,11 +311,17 @@ namespace DistributedFileSystem
         public int NumberOfConnectionInfos { get { return PeerConnectionInfo.Count; } }
 
         /// <summary>
-        /// Returns true if this peer has atleast one online ipEndPoint
+        /// Returns true if this peer has at least one on line ipEndPoint
         /// </summary>
         /// <returns></returns>
         public bool HasAtleastOneOnlineIPEndPoint() { return (from current in IPEndPointOnlineDict.Values where current select current).Count() > 0; }
 
+        /// <summary>
+        /// Returns true if the specified peer has the specified IPEndPoint online.
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the peer to check</param>
+        /// <param name="peerIPEndPoint">The IPEndPoint of the peer to check</param>
+        /// <returns></returns>
         public bool IsPeerIPEndPointOnline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
@@ -302,6 +338,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Update the provided peer IPEndPoint online status
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <param name="onlineStatus">The new online status</param>
         public void SetPeerIPEndPointOnlineStatus(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint, bool onlineStatus)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
@@ -312,6 +354,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Returns the current busy status of the requested peer IPEndPoint
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <returns></returns>
         public bool IsPeerIPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
@@ -326,6 +374,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Update the provided peer IPEndPoint busy status
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <param name="busyStatus">The new peer busy status</param>
         public void SetPeerIPEndPointBusyStatus(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint, bool busyStatus)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
@@ -341,6 +395,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Clear any busy flags set for the IPEndPoints of this peer if they are older than the provided MS
         /// </summary>
+        /// <param name="msSinceBusyToClear">Milliseconds since busy flag was set to clear</param>
         public void CheckAllIPEndPointBusyFlags(int msSinceBusyToClear)
         {
             lock (syncRoot)
@@ -361,7 +416,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Return the current timeout count value.
         /// </summary>
-        /// <param name="connectionInfo"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         /// <returns></returns>
         public int GetCurrentTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
@@ -380,6 +436,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Returns the new timeout count value after incrementing the timeout count.
         /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         /// <returns></returns>
         public int GetNewTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
@@ -399,7 +457,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns a new list containing all peer connection infos
+        /// Returns a new list containing all peer ConnectionInfos
         /// </summary>
         /// <returns></returns>
         public List<ConnectionInfo> GetConnectionInfo()
@@ -411,7 +469,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Removes the provided connectionInfo from all internal dictionaries. Returns true if connectionInfo exists, otherwise false
         /// </summary>
-        /// <param name="connectionInfo"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         /// <returns></returns>
         public bool RemovePeerIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
@@ -434,9 +493,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Add new connectionInfo for this peer. Returns true if succesfully added, otherwise false.
+        /// Add new IPEndPoint for a peer. Returns true if successfully added, otherwise false.
         /// </summary>
-        /// <param name="connectionInfo"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <returns></returns>
         public bool AddPeerIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
@@ -460,10 +521,10 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if the provided endPoint exists for this peer
+        /// Returns true if the provided IPEndPoint exists for this peer
         /// </summary>
-        /// <param name="networkIdentifier"></param>
-        /// <param name="peerIPEndPoint"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         /// <returns></returns>
         public bool PeerContainsIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
@@ -477,7 +538,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A private method which checks the provided network idenifier with that expected.
+        /// A private method which checks the provided network identifier with that expected.
         /// </summary>
         /// <param name="connectionInfo"></param>
         private void ValidateNetworkIdentifier(ConnectionInfo connectionInfo)
@@ -486,6 +547,10 @@ namespace DistributedFileSystem
                 throw new Exception("Attempted to modify PeerInfo for peer " + PeerNetworkIdentifier + " with data corresponding with peer " + connectionInfo.NetworkIdentifier);
         }
 
+        /// <summary>
+        /// Returns a clean descriptor for this PeerInfo
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
         {
             return "PeerInfo - " + PeerNetworkIdentifier + " ["+NumberOfConnectionInfos+"]";
@@ -516,10 +581,13 @@ namespace DistributedFileSystem
         /// </summary>
         ManualResetEvent alivePeersReceivedEvent = new ManualResetEvent(false);
 
+        /// <summary>
+        /// A thread sync root
+        /// </summary>
         object peerLocker = new object();
 
         /// <summary>
-        /// Blank constructor used for serailisation
+        /// Blank constructor used for serialisation
         /// </summary>
         private SwarmChunkAvailability() { }
 
@@ -527,10 +595,10 @@ namespace DistributedFileSystem
         /// Creates a new instance of SwarmChunkAvailability
         /// </summary>
         /// <param name="sourceConnectionInfoList">A list of sources. Possibly multiple peers each with multiple IPEndPoints.</param>
-        /// <param name="sourceConnectionInfo"></param>
+        /// <param name="totalNumChunks">The total number of chunks in the associated DFS item, used for initialising peer chunkflags</param>
         public SwarmChunkAvailability(List<ConnectionInfo> sourceConnectionInfoList, byte totalNumChunks)
         {
-            //When initialising the chunk availability we add the starting source in the intialisation
+            //When initialising the chunk availability we add the starting source in the initialisation
             peerAvailabilityByNetworkIdentifierDict = new Dictionary<string, PeerInfo>();
             peerEndPointToNetworkIdentifier = new Dictionary<string, string>();
 
@@ -554,7 +622,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Builds a dictionary of chunk availability throughout the current swarm for chunks we don't have locally. Keys are chunkIndex, peer network identifier, and peer total chunk count
         /// </summary>
-        /// <param name="chunksRequired"></param>
+        /// <param name="totalChunksInItem">The total number of chunks in this item</param>
+        /// <param name="nonLocalPeerAvailability">A quick reference dictionary for matching ConnectionInfo with PeerInfo</param>
         /// <returns></returns>
         public Dictionary<byte, Dictionary<ConnectionInfo, PeerInfo>> CachedNonLocalChunkExistences(byte totalChunksInItem, out Dictionary<ConnectionInfo, PeerInfo> nonLocalPeerAvailability)
         {
@@ -568,7 +637,7 @@ namespace DistributedFileSystem
                     if (!PeerHasChunk(NetworkComms.NetworkIdentifier, i))
                         chunkExistence.Add(i, new Dictionary<ConnectionInfo, PeerInfo>());
 
-                //Now for each peer we know about we add them to the list if they have a chunck of interest
+                //Now for each peer we know about we add them to the list if they have a chunk of interest
                 foreach (var peer in peerAvailabilityByNetworkIdentifierDict)
                 {
                     //This is the only place we clear a peers busy status
@@ -584,7 +653,7 @@ namespace DistributedFileSystem
                             List<ConnectionInfo> peerConnectionInfos = peer.Value.GetConnectionInfo();
                             foreach (ConnectionInfo info in peerConnectionInfos)
                             {
-                                //We check every connectionInfo for allowed contact seperately
+                                //We check every connectionInfo for allowed contact separately
                                 if (PeerContactAllowed(peer.Key, (IPEndPoint)info.LocalEndPoint, peer.Value.SuperPeer))
                                 {
                                     chunkExistence[i].Add(info, peer.Value);
@@ -601,6 +670,11 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Set the provided peer IPEndPoint busy status to busy
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         public void SetIPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             lock (peerLocker)
@@ -610,6 +684,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Get the provided peer IPEndPoint busy status
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <returns></returns>
         public bool IPEndPointBusy(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -623,6 +703,11 @@ namespace DistributedFileSystem
             return false;
         }
 
+        /// <summary>
+        /// Set the provided peer IPEndPoint as offline
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         public void SetIPEndPointOffline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -634,6 +719,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Get the provided peer IPEndPoint online status
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <returns></returns>
         public bool IPEndPointOnline(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -648,9 +739,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if a peer with the provided networkIdentifier exists in the swarm for this item
+        /// Returns true if a peer with the provided networkIdentifier exists in this SwarmChunkAvailability
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
         /// <returns></returns>
         public bool PeerExistsInSwarm(ShortGuid networkIdentifier)
         {
@@ -661,23 +752,23 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if a peer with the provided networkIdentifier exists in the swarm for this item
+        /// Returns true if a peer with the provided IPEndPoint exists in the swarm
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
         /// <returns></returns>
-        public bool PeerExistsInSwarm(IPEndPoint peerEndPoint)
+        public bool PeerExistsInSwarm(IPEndPoint peerIPEndPoint)
         {
             lock (peerLocker)
             {
-                return peerEndPointToNetworkIdentifier.ContainsKey(peerEndPoint.ToString());
+                return peerEndPointToNetworkIdentifier.ContainsKey(peerIPEndPoint.ToString());
             }
         }
 
         /// <summary>
-        /// Returns true if the specified peer has the provided chunkIndex.
+        /// Returns true if the specified peer has the specified chunkIndex.
         /// </summary>
-        /// <param name="networkIdentifier"></param>
-        /// <param name="chunkIndex"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="chunkIndex">The desired chunkIndex</param>
         /// <returns></returns>
         public bool PeerHasChunk(ShortGuid networkIdentifier, byte chunkIndex)
         {
@@ -693,9 +784,10 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if a peer has a complete copy of a file
+        /// Returns true if a peer has a complete copy of the DFS item
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="totalNumChunks">The total number of chunks in this item</param>
         /// <returns></returns>
         public bool PeerIsComplete(ShortGuid networkIdentifier, byte totalNumChunks)
         {
@@ -713,7 +805,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Returns true if the specified peer is a super peer
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
         /// <returns></returns>
         public bool PeerIsSuperPeer(ShortGuid networkIdentifier)
         {
@@ -728,6 +820,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Returns the new timeout count value after incrementing the timeout count for the provided peer IPEndPoint.
+        /// </summary>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerIPEndPoint">The relevant IPEndPoint</param>
+        /// <returns></returns>
         public int GetNewTimeoutCount(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             if (networkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -742,10 +840,12 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Deletes the knowledge of a peer IPEndPoint from our local swarm chunk availability. 
+        /// Deletes knowledge of a peer IPEndPoint from our local swarm chunk availability. 
         /// If peerEndPoint.Address is IPAddress.Any then the entire peer will be deleted. 
         /// </summary>
-        /// <param name="networkIdentifier"></param>
+        /// <param name="networkIdentifier">The network identifier of the relevant peer</param>
+        /// <param name="peerEndPoint">The relevant IPEndPoint</param>
+        /// <param name="forceRemoveWholePeer">If true every IPEndPoint is removed for the provided network identifier</param>
         public void RemovePeerIPEndPointFromSwarm(ShortGuid networkIdentifier, IPEndPoint peerEndPoint, bool forceRemoveWholePeer = false)
         {
             try
@@ -765,14 +865,14 @@ namespace DistributedFileSystem
                         //We can remove this peer if
                         //1. We have set force remove
                         //or
-                        //2. We have more than atleast 1 other peer AND if this is a super peer we need atleast 1 other super peer in order to remove
+                        //2. We have more than at least 1 other peer AND if this is a super peer we need at least 1 other super peer in order to remove
                         if (forceRemoveWholePeer ||
                             (peerAvailabilityByNetworkIdentifierDict.Count > 1 &&
                                 (!peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer ||
                                 (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count() > 1)))
                         {
                             //If we have set force remove for the whole peer
-                            //or this is the last ipendpoint for the peer
+                            //or this is the last IPEndPoint for the peer
                             if (forceRemoveWholePeer || peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1)
                             {
                                 //We need to remove all traces of this peer
@@ -803,7 +903,7 @@ namespace DistributedFileSystem
                                 }
                                 else
                                 {
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... attempted to removed peer IPEndPoint from swarm but it didnt exist - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
+                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... attempted to removed peer IPEndPoint from swarm but it didn't exist - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
                                 }
                             }
                         }
@@ -828,10 +928,12 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Adds or updates a peer to the local availability list. Usefull for when a peer informs us of an updated availability.
+        /// Adds or updates a peer to the local availability list. Useful for when a peer informs us of an updated availability.
         /// </summary>
-        /// <param name="peerNetworkIdentifier"></param>
-        /// <param name="latestChunkFlags"></param>
+        /// <param name="connectionInfo">The connectionInfo of the remote peer</param>
+        /// <param name="latestChunkFlags">The new chunk flags</param>
+        /// <param name="superPeer">True if this peer is a superPeer</param>
+        /// <param name="setIPEndPointOnline">Set the relevant IPEndPoint online as a result of updating chunk flags</param>
         public void AddOrUpdateCachedPeerChunkFlags(ConnectionInfo connectionInfo, ChunkFlags latestChunkFlags, bool superPeer = false, bool setIPEndPointOnline = true)
         {
             if (connectionInfo.NetworkIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -896,7 +998,7 @@ namespace DistributedFileSystem
                         //By updating cached peer chunk flags we set the peer as being online
                         peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].SetPeerIPEndPointOnlineStatus(connectionInfo.NetworkIdentifier, endPointToUse, true);
 
-                    //We will trigger the alive peers event when we have atleast a third of the existing peers
+                    //We will trigger the alive peers event when we have at least a third of the existing peers
                     if (!alivePeersReceivedEvent.WaitOne(0))
                     {
                         int numOnlinePeers = (from current in peerAvailabilityByNetworkIdentifierDict.Values where current.HasAtleastOneOnlineIPEndPoint() select current).Count();
@@ -905,7 +1007,7 @@ namespace DistributedFileSystem
                     }
                 }
                 else
-                    NetworkComms.LogError(new Exception("Attemped to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
+                    NetworkComms.LogError(new Exception("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
             }
         }
 
@@ -932,7 +1034,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Sets our local availability
         /// </summary>
-        /// <param name="chunkIndex"></param>
+        /// <param name="chunkIndex">The chunk index flag to update</param>
+        /// <param name="setAvailable">The availability of the provided chunk</param>
         public void SetLocalChunkFlag(byte chunkIndex, bool setAvailable)
         {
             lock (peerLocker)
@@ -945,9 +1048,15 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Update the chunk availability by contacting all existing peers. If a cascade depth greater than 1 is provided will also contact each peers peers.
+        /// Update the chunk availability by contacting all existing peers. If a cascade depth greater than 1 is 
+        /// provided will also contact each peers peers.
         /// </summary>
-        /// <param name="cascadeDepth"></param>
+        /// <param name="itemCheckSum">The checksum associated with this item. This will be used when contacting other peers
+        /// for an update.</param>
+        /// <param name="cascadeDepth">The depth of the update cascade. 0 - Contact only known peers for an update. 1 - Contact
+        /// known peers and retrieve their known peers as well. >1 - Not implemented.</param>
+        /// <param name="responseWaitMS">The maximum time to wait for the first update reply to be received before continuing.</param>
+        /// <param name="buildLog">An optional build log that can be updated with the progress of this method.</param>
         public void UpdatePeerAvailability(string itemCheckSum, int cascadeDepth, int responseWaitMS = 5000, Action<string> buildLog = null)
         {
             if (buildLog != null) buildLog("Starting UpdatePeerAvailability update.");
@@ -976,8 +1085,8 @@ namespace DistributedFileSystem
                     {
                         //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                         //but it has been removed since we accessed the peerKeys at the start of this method
-                        //We could probably be a bit more carefull with how we maintain these references but we either catch the
-                        //exception here or networkcomms will throw one when we try to connect to an old peer.
+                        //We could probably be a bit more careful with how we maintain these references but we either catch the
+                        //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                         RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                         if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                     }
@@ -1027,7 +1136,7 @@ namespace DistributedFileSystem
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
                     //We could probably be a bit more careful with how we maintain these references but we either catch the
-                    //exception here or networkcomms will throw one when we try to connect to an old peer.
+                    //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                     if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                 }
@@ -1038,7 +1147,7 @@ namespace DistributedFileSystem
                     {
                         try
                         {
-                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            //We don't want to contact ourselves and for now that includes anything having the same IP as us
                             if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
                             {
                                 if (buildLog != null) buildLog("Contacting " + peer.Key + " - " + connInfo.LocalEndPoint.ToString() + " for a DFS_ChunkAvailabilityRequest from within UpdatePeerAvailability.");
@@ -1062,13 +1171,12 @@ namespace DistributedFileSystem
             }
             #endregion
 
-            //Thread.Sleep(responseWaitMS);
             if (alivePeersReceivedEvent.WaitOne(responseWaitMS))
             {
                 if (buildLog != null)
-                    buildLog("Completed SwarmChunkAvailability update succesfully.");
+                    buildLog("Completed SwarmChunkAvailability update successfully.");
 
-                //If the event was succesfully triggered we wait an additional 100ms to give other responses a chance to be handled
+                //If the event was successfully triggered we wait an additional 250ms to give other responses a chance to be handled
                 Thread.Sleep(250);
             }
             else
@@ -1079,9 +1187,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Metric used to determine the health of a chunk and whether swarm will benefit from a broadcasted update. A value greater than 1 signifies a healthy chunk availability.
+        /// Metric used to determine the health of a chunk and whether swarm will benefit from a broadcasted update. A value 
+        /// greater than 1 signifies a healthy chunk availability.
         /// </summary>
-        /// <param name="chunkIndex"></param>
+        /// <param name="chunkIndex">The relevant chunk index</param>
+        /// <param name="totalNumChunks">The total number of chunks in this item</param>
         /// <returns></returns>
         public double ChunkHealthMetric(byte chunkIndex, byte totalNumChunks)
         {
@@ -1105,7 +1215,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Records a chunk as available for the local peer
         /// </summary>
-        /// <param name="chunkIndex"></param>
+        /// <param name="chunkIndex">The relevant chunkIndex</param>
         public void RecordLocalChunkCompletion(byte chunkIndex)
         {
             lock (peerLocker)
@@ -1120,8 +1230,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Updates all peers in the swarm that we have updated a chunk
         /// </summary>
-        /// <param name="itemCheckSum"></param>
-        /// <param name="chunkIndex"></param>
+        /// <param name="itemCheckSum">The checksum associated with this item</param>
         public void BroadcastLocalAvailability(string itemCheckSum)
         {
             Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
@@ -1149,7 +1258,7 @@ namespace DistributedFileSystem
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
                     //We could probably be a bit more careful with how we maintain these references but we either catch the
-                    //exception here or networkcomms will throw one when we try to connect to an old peer.
+                    //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                 }
 
@@ -1159,7 +1268,7 @@ namespace DistributedFileSystem
                     {
                         try
                         {
-                            //We don't want to contact ourselves and for now that includes anything having the same ip as us
+                            //We don't want to contact ourselves and for now that includes anything having the same IP as us
                             if (PeerContactAllowed(peer.Key, (IPEndPoint)connInfo.LocalEndPoint, peerInfo.SuperPeer))
                                 UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, localChunkFlags), (IPEndPoint)connInfo.LocalEndPoint, DFS.nullCompressionSRO);
                         }
@@ -1177,8 +1286,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Closes established connections with completed peers as they are now redundant
+        /// Closes established connections with completed peers as they are now redundant.
         /// </summary>
+        /// <param name="totalNumChunks">The total number of chunks in this item</param>
         public void CloseConnectionsToCompletedPeers(byte totalNumChunks)
         {
             Dictionary<string, PeerInfo> dictCopy;
@@ -1205,13 +1315,13 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Single method for determing if contact can be made with the request peer.
-        /// Prevents loopback contact via matching identifier and currentLocalListenEndPoints.
+        /// Single method for determining if contact can be made with the request peer.
+        /// Prevents loop back contact via matching identifier and currentLocalListenEndPoints.
         /// Finally uses the DFS.AllowedPeerIPS and DFS.DisallowedPeerIPS if set.
         /// </summary>
-        /// <param name="peerIdentifier"></param>
-        /// <param name="peerEndPoint"></param>
-        /// <param name="superPeer"></param>
+        /// <param name="peerIdentifier">The relevant network identifier</param>
+        /// <param name="peerEndPoint">The relevant IPEndPoint</param>
+        /// <param name="superPeer">True if this peer is a super peer</param>
         /// <returns></returns>
         public bool PeerContactAllowed(ShortGuid peerIdentifier, IPEndPoint peerEndPoint, bool superPeer)
         {
@@ -1238,6 +1348,11 @@ namespace DistributedFileSystem
             return peerAllowed;
         }
 
+        /// <summary>
+        /// Returns the chunk flag availability of the requested peer.
+        /// </summary>
+        /// <param name="peerIdentifier">The relevant network identifier</param>
+        /// <returns></returns>
         public ChunkFlags PeerChunkAvailability(ShortGuid peerIdentifier)
         {
             if (peerIdentifier == ShortGuid.Empty) throw new Exception("networkIdentifier should not be empty.");
@@ -1252,9 +1367,10 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Broadcast to all known peers that the local DFS is removing the specified item
+        /// Broadcast to all known peers that the local DFS is removing the specified item.
         /// </summary>
-        /// <param name="itemCheckSum"></param>
+        /// <param name="itemCheckSum">The checksum associated with this item</param>
+        /// <param name="removeSwarmWide">True if the item should be removed by all peers, swarm wide</param>
         public void BroadcastItemRemoval(string itemCheckSum, bool removeSwarmWide)
         {
             Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
@@ -1284,7 +1400,7 @@ namespace DistributedFileSystem
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
                     //We could probably be a bit more careful with how we maintain these references but we either catch the
-                    //exception here or networkcomms will throw one when we try to connect to an old peer.
+                    //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
                 }
 
@@ -1314,6 +1430,11 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// The number of peers in this swarm
+        /// </summary>
+        /// <param name="excludeSuperPeers">True if super peers should be excluded from the count.</param>
+        /// <returns></returns>
         public int NumPeersInSwarm(bool excludeSuperPeers = false)
         {
             lock (peerLocker)
@@ -1325,6 +1446,12 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// The number of complete peers in this swarm.
+        /// </summary>
+        /// <param name="totalItemChunks">The total number of chunks in this item</param>
+        /// <param name="excludeSuperPeers">True if super peers should be excluded from the count.</param>
+        /// <returns></returns>
         public int NumCompletePeersInSwarm(byte totalItemChunks, bool excludeSuperPeers = false)
         {
             lock (peerLocker)
@@ -1360,6 +1487,9 @@ namespace DistributedFileSystem
                     })).Aggregate(new List<string>(), (left, right) => { return left.Union(right).ToList(); }).ToArray();
         }
 
+        /// <summary>
+        /// Clear all chunk availability flags for the local peer
+        /// </summary>
         public void ClearAllLocalAvailabilityFlags()
         {
             lock (peerLocker)
@@ -1367,6 +1497,10 @@ namespace DistributedFileSystem
         }
 
         #region IThreadSafeSerialise Members
+        /// <summary>
+        /// Serialise this swarm chunk availability in a thread safe manner
+        /// </summary>
+        /// <returns></returns>
         public byte[] ThreadSafeSerialise()
         {
             try
@@ -1395,16 +1529,31 @@ namespace DistributedFileSystem
         #endregion
     }
 
+    /// <summary>
+    /// A wrapper classed used to inform remote peers of our known peers
+    /// </summary>
     [ProtoContract]
     public class KnownPeerEndPoints
     {
+        /// <summary>
+        /// The checksum identifier for the included peer end points.
+        /// </summary>
         [ProtoMember(1)]
         public string ItemChecksm { get; private set; }
+
+        /// <summary>
+        /// All known IPEndPoints for this item
+        /// </summary>
         [ProtoMember(2)]
         public string[] PeerEndPoints {get; private set;}
 
         private KnownPeerEndPoints() { }
 
+        /// <summary>
+        /// Initialise a new KnownPeerEndPoints
+        /// </summary>
+        /// <param name="itemCheckSum">The checksum identifier for the included peer end points.</param>
+        /// <param name="knownPeerEndPoints">All known IPEndPoints for this item</param>
         public KnownPeerEndPoints(string itemCheckSum, string[] knownPeerEndPoints)
         {
             this.ItemChecksm = itemCheckSum;

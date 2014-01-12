@@ -24,6 +24,9 @@ using ProtoBuf;
 
 namespace DistributedFileSystem
 {
+    /// <summary>
+    /// The link mode to use
+    /// </summary>
     public enum DFSLinkMode
     {
         /// <summary>
@@ -32,11 +35,14 @@ namespace DistributedFileSystem
         LinkOnly,
 
         /// <summary>
-        /// All items existing on the target peer are retrived and held locally. Any items already on local will be linked.
+        /// All items existing on the target peer are retrieved and held locally. Any items already on local will be linked.
         /// </summary>
         LinkAndRepeat,
     }
 
+    /// <summary>
+    /// A wrapper used when requesting link items
+    /// </summary>
     [ProtoContract]
     public class DFSLinkRequest
     {
@@ -60,8 +66,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Create an item link request
         /// </summary>
-        /// <param name="availableItemCheckSums"></param>
-        /// <param name="linkRequestReply"></param>
+        /// <param name="availableItems">The available DFS items. Key is itemCheckSum. Value is Item.ItemBuildCompleted</param>
+        /// <param name="linkRequestReply">True if this DFSLinkRequest is the originating or reply linkRequest</param>
         public DFSLinkRequest(Dictionary<string, DateTime> availableItems, bool linkRequestReply = false)
         {
             this.LinkRequestReply = linkRequestReply;

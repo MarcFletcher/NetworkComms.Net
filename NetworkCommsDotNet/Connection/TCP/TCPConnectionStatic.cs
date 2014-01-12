@@ -86,7 +86,18 @@ namespace NetworkCommsDotNet
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired, sslOptions);
         }
 #endif
-
+  
+#if WINDOWS_PHONE || NETFX_CORE
+        /// <summary>
+        /// Internal <see cref="TCPConnection"/> creation which hides the necessary internal calls
+        /// </summary>
+        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
+        /// <param name="defaultSendReceiveOptions">Connection default SendReceiveOptions</param>
+        /// <param name="socket">If this is an incoming connection we will already have access to the socket, otherwise use null</param>
+        /// <param name="establishIfRequired">Establish during create if true</param>
+        /// <returns>An existing connection or a new one</returns>
+        internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket, bool establishIfRequired)
+#else
         /// <summary>
         /// Internal <see cref="TCPConnection"/> creation which hides the necessary internal calls
         /// </summary>
@@ -96,9 +107,6 @@ namespace NetworkCommsDotNet
         /// <param name="establishIfRequired">Establish during create if true</param>
         /// <param name="sslOptions">SSL options that will be used with this connection.</param>
         /// <returns>An existing connection or a new one</returns>
-#if WINDOWS_PHONE || NETFX_CORE
-        internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket, bool establishIfRequired)
-#else
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired, SSLOptions sslOptions = null)
 #endif
         {

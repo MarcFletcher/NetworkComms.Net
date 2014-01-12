@@ -32,18 +32,43 @@ using NLog.Config;
 namespace DistributedFileSystem
 {
     /// <summary>
-    /// Provides functionality to distribute large files across a cluster and get from multiple sources at once.
+    /// Provides functionality to rapidly distribute large files across a cluster of peers.
     /// </summary>
     public static class DFS
     {
+        /// <summary>
+        /// The number of milliseconds after which a chunk request times out.
+        /// </summary>
         public const int ChunkRequestTimeoutMS = 20000;
+
+        /// <summary>
+        /// The minimum size of DFS item chunks
+        /// </summary>
         public const int MinChunkSizeInBytes = 2097152;
 
+        /// <summary>
+        /// The maximum number of concurrent chunk requests to make to the same peer
+        /// </summary>
         public const int MaxConcurrentPeerRequests = 2;
+
+        /// <summary>
+        /// The total number of simultaneous chunk requests for a given item
+        /// </summary>
         public const int MaxTotalItemRequests = 8;
+
+        /// <summary>
+        /// The maximum number of DFS items that can be built concurrently
+        /// </summary>
         public const int MaxConcurrentLocalItemBuild = 3;
+
+        /// <summary>
+        /// The maximum number of times a chunk request can timeout from a peer before it is removed from the swarm
+        /// </summary>
         public const int PeerMaxNumTimeouts = 2;
 
+        /// <summary>
+        /// The time in milliseconds after which a peer busy flag is removed
+        /// </summary>
         public const int PeerBusyTimeoutMS = 1000;
 
         /// <summary>
@@ -51,6 +76,9 @@ namespace DistributedFileSystem
         /// </summary>
         public const double PeerBusyNetworkLoadThreshold = 0.94;
 
+        /// <summary>
+        /// The number of seconds to allow per MB when building DFS items
+        /// </summary>
         public const int ItemBuildTimeoutSecsPerMB = 12;
 
         internal static object globalDFSLocker = new object();
@@ -72,10 +100,20 @@ namespace DistributedFileSystem
         internal static List<string> disallowedPeerIPs = new List<string>();
 
         internal static ManualResetEvent DFSShutdownEvent { get; private set; }
-        //internal static bool DFSShutdownRequested { get; private set; }
+
+        /// <summary>
+        /// True if the DFS has been initialised
+        /// </summary>
         public static bool DFSInitialised { get; private set; }
 
+        /// <summary>
+        /// The minimum port number that will be used when initialising the DFS
+        /// </summary>
         public static int MinTargetLocalPort { get; set; }
+
+        /// <summary>
+        /// The maximum port number that will be used when initialising the DFS
+        /// </summary>
         public static int MaxTargetLocalPort { get; set; }
 
         /// <summary>
@@ -89,8 +127,8 @@ namespace DistributedFileSystem
         static Thread elapsedTimerThread;
 
         /// <summary>
-        /// The number of seconds since the initialisation of the DFS. Primarily used to ensure builds do not time
-        /// out when a suspended process is restarted.
+        /// The number of seconds since the initialisation of the DFS. Used as an internal timer, rather than DateTime.Now, to 
+        /// ensure builds do not time out when a suspended process is restarted.
         /// </summary>
         public static long ElapsedExecutionSeconds { get; private set; }
 
@@ -111,7 +149,14 @@ namespace DistributedFileSystem
         /// </summary>
         static SendReceiveOptions highPrioReceiveSRO;
 
+        /// <summary>
+        /// True if this DFS is linked with another peer
+        /// </summary>
         public static bool IsLinked { get; private set; }
+
+        /// <summary>
+        /// The link mode being used
+        /// </summary>
         public static DFSLinkMode LinkMode { get; private set; }
         static int linkRequestTimeoutSecs = 10;
         static int linkRequestIntervalSecs = 5;
@@ -125,6 +170,9 @@ namespace DistributedFileSystem
         /// </summary>
         internal static TaskFactory BuildTaskFactory;
 
+        /// <summary>
+        /// The total number of completed chunk requests across all DFS items
+        /// </summary>
         public static int TotalNumCompletedChunkRequests { get; private set; }
         private static object TotalNumCompletedChunkRequestsLocker = new object();
 
@@ -145,8 +193,10 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Initialises the DFS to run on the current local IP and default comms port.
+        /// Initialises the DFS
         /// </summary>
+        /// <param name="initialPort">The local listen port to use</param>
+        /// <param name="rangeRandomPortFailover">True if a random port should be select if the initialPort is unavailable</param>
         public static void InitialiseDFS(int initialPort, bool rangeRandomPortFailover = true)
         {
             try
@@ -177,6 +227,8 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest);
 
                 NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("DFS_ChunkAvailabilityInterestReplyData", IncomingChunkInterestReplyData);
+             
+                //UDP & TCP
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
 
                 //UDP
@@ -276,10 +328,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Initialies this DFS peer to repeat all items made available by some other peer
+        /// Initialises this DFS peer to repeat all items available on the linkTargetIP
         /// </summary>
-        /// <param name="linkTargetIP"></param>
-        /// <param name="linkTargetPort"></param>
+        /// <param name="linkTargetIP">The IPAddress corresponding with the link seed</param>
+        /// <param name="linkTargetPort">The port corresponding with the link seed</param>
+        /// <param name="linkMode">The link mode to be used</param>
         public static void InitialiseDFSLink(string linkTargetIP, int linkTargetPort, DFSLinkMode linkMode)
         {
             if (!DFSInitialised)
@@ -403,6 +456,9 @@ namespace DistributedFileSystem
                 throw new Exception("Can not set both allowed and disallowed peers.");
         }
 
+        /// <summary>
+        /// Shutdown the DFS. All local DFS items are deleted.
+        /// </summary>
         public static void ShutdownDFS()
         {
             DFSShutdownEvent.Set();
@@ -503,7 +559,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// Returns true if the provided item is already present within the swarm
         /// </summary>
-        /// <param name="item"></param>
+        /// <param name="item">The relevant DFS item</param>
         /// <returns></returns>
         public static bool ItemAlreadyInLocalCache(DistributedItem item)
         {
@@ -522,9 +578,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns true if the provided itemCheckSum is present within the local cache
+        /// Returns true if an item with a matching itemCheckSum is present within the local cache
         /// </summary>
-        /// <param name="item"></param>
+        /// <param name="itemCheckSum">The relevant item MD5 checksum</param>
         /// <returns></returns>
         public static bool ItemAlreadyInLocalCache(string itemCheckSum)
         {
@@ -535,7 +591,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the most recently completed item from the swarmedItemsDict. Returns null if there are no DFS items.
+        /// Returns the most recently completed item in the DFS. Returns null if there are no DFS items.
         /// </summary>
         /// <returns></returns>
         public static DistributedItem MostRecentlyCompletedItem()
@@ -550,9 +606,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the distributed item with the provided itemCheckSum. Returns null if item is not found.
+        /// Returns the distributed item with a matching itemCheckSum. Returns null if item is not found.
         /// </summary>
-        /// <param name="itemCheckSum"></param>
+        /// <param name="itemCheckSum">The item MD5 checksum to match</param>
         /// <returns></returns>
         public static DistributedItem GetDistributedItemByChecksum(string itemCheckSum)
         {
@@ -566,9 +622,9 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Returns the distributed item with the provided identifier. Returns null if item is not found.
+        /// Returns the distributed item with a matching itemIdentifier. Returns null if item is not found.
         /// </summary>
-        /// <param name="itemIdentifier"></param>
+        /// <param name="itemIdentifier">The item identifier to match</param>
         /// <returns></returns>
         public static DistributedItem GetDistributedItemByIdentifier(string itemIdentifier)
         {
@@ -587,9 +643,9 @@ namespace DistributedFileSystem
         /// <summary>
         /// Remove an item from the DFS. Possibly swarmWide and with or without a removal broadcast
         /// </summary>
-        /// <param name="itemCheckSum"></param>
-        /// <param name="removeSwarmWide"></param>
-        /// <param name="broadcastRemoval"></param>
+        /// <param name="itemCheckSum">The checksum corresponding with the item to remove</param>
+        /// <param name="broadcastRemoval">If true all peers will be notified that we are removing this item.</param>
+        /// <param name="removeSwarmWide">True if this item should be removed swarm wide</param>
         public static void RemoveItem(string itemCheckSum, bool broadcastRemoval = true, bool removeSwarmWide = false)
         {
             try
@@ -631,6 +687,10 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Removes all items from local only
+        /// </summary>
+        /// <param name="broadcastRemoval">If true all peers will be notified that we are removing all items.</param>
         public static void RemoveAllItemsFromLocalOnly(bool broadcastRemoval = false)
         {
             string[] keysToRemove;
@@ -656,8 +716,8 @@ namespace DistributedFileSystem
         /// <summary>
         /// Remove any items from the DFS with a matching itemTypeStr
         /// </summary>
-        /// <param name="ItemTypeStr"></param>
-        /// <param name="broadcastRemoval"></param>
+        /// <param name="ItemTypeStr">The item type string to match</param>
+        /// <param name="broadcastRemoval">If true all peers will be notified that we are removing matching items.</param>
         public static void RemoveAllItemsFromLocalOnly(string ItemTypeStr, bool broadcastRemoval = false)
         {
             List<string> keysToRemove = new List<string>();
@@ -675,10 +735,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Introduces a new item into the swarm and sends a distribution command to the originating requester
+        /// Introduces a new item into the swarm and sends a build command to the originating requester
         /// </summary>
-        /// <param name="requestOriginNetworkIdentifier"></param>
-        /// <param name="itemToDistribute"></param>
+        /// <param name="peerConnection">The peer which requested the DFS item</param>
+        /// <param name="itemToDistribute">The item to be distributed</param>
+        /// <param name="completedPacketType">The packet type to use once the item has been fully assembled</param>
         public static void PushItemToPeer(Connection peerConnection, DistributedItem itemToDistribute, string completedPacketType)
         {
             try
@@ -722,8 +783,9 @@ namespace DistributedFileSystem
         /// <summary>
         /// Adds a distributed item to the local cache and informs any known peers of the item availability
         /// </summary>
-        /// <param name="itemToAdd"></param>
-        /// <returns>The item added to the local cache. May not be the provided itemToAdd if an item with the same checksum already existed.</returns>
+        /// <param name="itemToAdd">The item to add</param>
+        /// <returns>The actual item added to the local cache. May not be the provided itemToAdd if an item with the same 
+        /// checksum already existed.</returns>
         public static DistributedItem AddItem(DistributedItem itemToAdd)
         {
             try
@@ -763,15 +825,15 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Communicates with the provided peer to see if any item swarms can be linked. This is a single link event, possibly use InitialiseDFSLink() for a maintained link
+        /// Communicates with the provided peer to see if any item swarms can be linked. This is a single link event, 
+        /// possibly use InitialiseDFSLink() for a maintained link.
         /// </summary>
-        /// <param name="peerIP"></param>
-        /// <param name="peerPort"></param>
+        /// <param name="peerIP">The IPAddress of the peer</param>
+        /// <param name="peerPort">The port of the peer</param>
         public static void CheckForSharedItems(string peerIP, int peerPort)
         {
             try
             {
-                //NetworkComms.SendObject("DFS_ItemLinkRequest", peerIP, peerPort, false, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
                 TCPConnection.GetConnection(new ConnectionInfo(peerIP, peerPort)).SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false), nullCompressionSRO);
             }
             catch (CommsException)
@@ -780,19 +842,28 @@ namespace DistributedFileSystem
             }
         }
 
+        /// <summary>
+        /// Returns all item MD5 checksums for DFS items
+        /// </summary>
+        /// <param name="completeItemsOnly">If true only returns checksums for completed items</param>
+        /// <returns></returns>
         public static string[] AllLocalDFSItemKeys(bool completeItemsOnly = true)
         {
             string[] returnArray;
 
             lock (globalDFSLocker)
             {
-                //returnArray = swarmedItemsDict.Keys.ToArray();
                 returnArray = (from current in swarmedItemsDict where (completeItemsOnly ? current.Value.LocalItemComplete() : true) select current.Key).ToArray();
             }
 
             return returnArray;
         }
 
+        /// <summary>
+        /// Returns a dictionary of DFS items along with corresponding ItemBuildCompleted times
+        /// </summary>
+        /// <param name="completeItemsOnly">If true only returns information for completed items</param>
+        /// <returns></returns>
         public static Dictionary<string, DateTime> AllLocalDFSItemsWithBuildTime(bool completeItemsOnly = true)
         {
             string[] itemCheckSums = AllLocalDFSItemKeys(completeItemsOnly);
@@ -854,7 +925,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// If a connection is disconnected we want to make sure we handle it within the DFS
         /// </summary>
-        /// <param name="disconnectedConnectionIdentifier"></param>
+        /// <param name="connection"></param>
         private static void DFSConnectionShutdown(Connection connection)
         {
             //We want to run this as a task as we want the shutdown to return ASAP
@@ -894,11 +965,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Used by a client when requesting a list of known peers
+        /// UDP - Used by a client when requesting a list of known peers
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="itemCheckSum"></param>
         private static void KnownPeersRequest(PacketHeader packetHeader, Connection connection, string itemCheckSum)
         {
             try
@@ -930,7 +1001,7 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// The response to a DFS_KnownPeersRequest
+        /// UDP - The response to a DFS_KnownPeersRequest
         /// </summary>
         /// <param name="packetHeader"></param>
         /// <param name="connection"></param>
@@ -986,11 +1057,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Received by this DFS if a server is telling this instance to build a local file
+        /// TCP - Received by this DFS if a server is telling this instance to build a local file
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="assemblyConfig"></param>
         private static void IncomingLocalItemBuild(PacketHeader packetHeader, Connection connection, ItemAssemblyConfig assemblyConfig)
         {
             //We start the build in the DFS task factory as it will be a long lived task
@@ -1124,11 +1195,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A remote peer has request a push of the provided itemCheckSums. This method is used primiarly when in repeater mode
+        /// TCP - A remote peer has request a push of the provided itemCheckSums. This method is used primarily when in repeater mode
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="itemCheckSum"></param>
+        /// <param name="connection"></param>
+        /// <param name="itemCheckSums"></param>
         private static void RequestLocalItemBuilds(PacketHeader packetHeader, Connection connection, string[] itemCheckSums)
         {
             try
@@ -1152,11 +1223,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Received when a peer request a chunk
+        /// UDP - Received when a peer request a chunk
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="incomingRequest"></param>
         private static void IncomingChunkInterestRequest(PacketHeader packetHeader, Connection connection, ChunkAvailabilityRequest incomingRequest)
         {
             try
@@ -1178,7 +1249,6 @@ namespace DistributedFileSystem
                     connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
                     //Inform peer that we don't actually have the requested item
-                    //connection.SendObject("DFS_ItemRemovalUpdate", incomingRequest.ItemCheckSum, nullCompressionSRO);
                     UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                     if (DFS.loggingEnabled) DFS.logger.Trace(" ... item not available locally, sent DFS_ItemRemovalUpdate.");
@@ -1188,12 +1258,9 @@ namespace DistributedFileSystem
                     if (!selectedItem.ChunkAvailableLocally(incomingRequest.ChunkIndex))
                     {
                         //First reply and say the peer can't have the requested data. This prevents a request timing out
-                        //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), ProtobufSerializer.Instance, NullCompressor.Instance);
                         connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.ItemOrChunkNotAvailable), nullCompressionSRO);
 
-                        //If the peer thinks we have a chunk we dont we send them an update so that they are corrected
-                        //NetworkComms.SendObject("DFS_PeerChunkAvailabilityUpdate", sourceConnectionId, false, new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkNodeIdentifier)));
-                        //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
+                        //If the peer thinks we have a chunk we don't we send them an update so that they are corrected
                         UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
                         if (DFS.loggingEnabled) DFS.logger.Trace(" ... requested chunk not available, sent DFS_PeerChunkAvailabilityUpdate.");
@@ -1204,26 +1271,19 @@ namespace DistributedFileSystem
                         if (NetworkComms.AverageNetworkLoadOutgoing(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
                         {
                             //We can return a busy reply if we are currently experiencing high demand
-                            //NetworkComms.SendObject("DFS_ChunkAvailabilityInterestReply", sourceConnectionId, false, new ChunkAvailabilityReply(incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), ProtobufSerializer.Instance, NullCompressor.Instance);
                             connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer busy, sent busy response.");
                         }
                         else
                         {
-                            //try
-                            //{
-                            //We get the data here
                             StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
-
-                            //if (chunkData.Start + chunkData.Length > chunkData.ThreadSafeStream.Length)
-                            //    throw new ArgumentOutOfRangeException("The total stream length was " + chunkData.ThreadSafeStream.Length + " and the provided start was " + chunkData.Start + ", with a length of " + chunkData.Length + ". ChunkIndex=" + incomingRequest.ChunkIndex + ", ItemBytesLength="+selectedItem.ItemBytesLength);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
                             long packetSequenceNumber;
-                            //connection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
-                            //This is received via UDP but we want to reply using TCP to ensure delivery
+                            
+                            //This is received via UDP but we want to reply using TCP to ensure delivery of the data
                             var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
                             clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
 
@@ -1234,11 +1294,6 @@ namespace DistributedFileSystem
                             lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
 
                             if (DFS.loggingEnabled) DFS.logger.Trace(" ... IncomingChunkInterestRequest completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
-
-                            //If we have sent data there is a good chance we have used up alot of memory
-                            //This seems to be an efficient place for a garbage collection
-                            //try { GC.Collect(); }
-                            //catch (Exception) { }
                         }
                     }
                 }
@@ -1261,11 +1316,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Received when a peer sends us the data portion of a chunk possibly following a request
+        /// TCP - Received when a peer sends us the data portion of a chunk possibly following a request
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="incomingData"></param>
         private static void IncomingChunkInterestReplyData(PacketHeader packetHeader, Connection connection, byte[] incomingData)
         {
             try
@@ -1273,7 +1328,7 @@ namespace DistributedFileSystem
                 if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
 
                 if (connection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
-                    throw new Exception("IncomingChunkInterestReplyData should only be recieved using TCP.");
+                    throw new Exception("IncomingChunkInterestReplyData should only be received using TCP.");
 
                 ChunkAvailabilityReply existingChunkAvailabilityReply = null;
 
@@ -1343,11 +1398,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Received when a peer sends us a chunk data information possibly following a request
+        /// UDP and TCP - Received when a peer sends us a chunk data information possibly following a request
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="incomingReply"></param>
         private static void IncomingChunkInterestReplyInfo(PacketHeader packetHeader, Connection connection, ChunkAvailabilityReply incomingReply)
         {
             try
@@ -1409,11 +1464,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A remote peer is announcing that it has an updated availability of chunks
+        /// UDP - A remote peer is announcing that it has an updated availability of chunks
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="updateDetails"></param>
         private static void IncomingPeerChunkAvailabilityUpdate(PacketHeader packetHeader, Connection connection, PeerChunkAvailabilityUpdate updateDetails)
         {
             try
@@ -1449,11 +1504,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A remote peer is requesting chunk availability for this local peer
+        /// UDP - A remote peer is requesting chunk availability for this local peer
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="itemCheckSum"></param>
         private static void IncomingChunkAvailabilityRequest(PacketHeader packetHeader, Connection connection, string itemCheckSum)
         {
             try
@@ -1487,11 +1542,11 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A remote peer is informing us that they no longer have an item
+        /// UDP - A remote peer is informing us that they no longer have an item
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
-        /// <param name="incomingObjectBytes"></param>
+        /// <param name="connection"></param>
+        /// <param name="itemRemovalUpdate"></param>
         private static void IncomingItemRemovalUpdate(PacketHeader packetHeader, Connection connection, ItemRemovalUpdate itemRemovalUpdate)
         {
             try
@@ -1537,10 +1592,10 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// A remote peer is trying to link dfs items
+        /// TCP - A remote peer is trying to link DFS items
         /// </summary>
         /// <param name="packetHeader"></param>
-        /// <param name="sourceConnectionId"></param>
+        /// <param name="connection"></param>
         /// <param name="linkRequestData"></param>
         private static void IncomingRemoteItemLinkRequest(PacketHeader packetHeader, Connection connection, DFSLinkRequest linkRequestData)
         {

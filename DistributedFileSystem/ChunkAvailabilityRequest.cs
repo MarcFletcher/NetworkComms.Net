@@ -25,23 +25,53 @@ using ProtoBuf;
 
 namespace DistributedFileSystem
 {
+    /// <summary>
+    /// Used to classify the different types of ChunkAvailabilityReply in response to a ChunkAvailabilityRequest
+    /// </summary>
     public enum ChunkReplyState : byte
     {
+        /// <summary>
+        /// Specifies that data will be included.
+        /// </summary>
         DataIncluded,
+
+        /// <summary>
+        /// The item or requested chunk is not available
+        /// </summary>
         ItemOrChunkNotAvailable,
+
+        /// <summary>
+        /// The contacted peer is currently busy, please try again later.
+        /// </summary>
         PeerBusy
     }
 
+    /// <summary>
+    /// Wrapper used for requesting a chunk
+    /// </summary>
     [ProtoContract]
     public class ChunkAvailabilityRequest
     {
+        /// <summary>
+        /// The checksum of the item being requested
+        /// </summary>
         [ProtoMember(1)]
         public string ItemCheckSum { get; private set; }
+
+        /// <summary>
+        /// The index of the requested chunk
+        /// </summary>
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
 
+        /// <summary>
+        /// The time this request was created
+        /// </summary>
         public DateTime RequestCreationTime { get; private set; }
 
+        /// <summary>
+        /// The peer contacted for this request
+        /// </summary>
         public ConnectionInfo PeerConnectionInfo { get; private set; }
 
         /// <summary>
@@ -56,6 +86,12 @@ namespace DistributedFileSystem
 
         private ChunkAvailabilityRequest() { }
 
+        /// <summary>
+        /// Instantiate a new ChunkAvailabilityRequest
+        /// </summary>
+        /// <param name="itemCheckSum">The checksum of the DFS item</param>
+        /// <param name="chunkIndex">The index of the requested chunk</param>
+        /// <param name="peerConnectionInfo">The peer contacted for this request</param>
         public ChunkAvailabilityRequest(string itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
         {
             this.ItemCheckSum = itemCheckSum;
@@ -67,32 +103,66 @@ namespace DistributedFileSystem
         }
     }
 
+    /// <summary>
+    /// A wrapper used to reply to a ChunkAvailabilityRequest
+    /// </summary>
     [ProtoContract]
     public class ChunkAvailabilityReply
     {
+        /// <summary>
+        /// The checksum of the item being requested
+        /// </summary>
         [ProtoMember(1)]
         public string ItemCheckSum { get; private set; }
+
+        /// <summary>
+        /// The index of the requested chunk
+        /// </summary>
         [ProtoMember(2)]
         public byte ChunkIndex { get; private set; }
+
+        /// <summary>
+        /// The state of this reply
+        /// </summary>
         [ProtoMember(3)]
         public ChunkReplyState ReplyState { get; private set; }
+
+        /// <summary>
+        /// The sequence number used to send the chunk data
+        /// </summary>
         [ProtoMember(4)]
         public long DataSequenceNumber { get; private set; }
+
+        /// <summary>
+        /// The network identifier of the peer that generated this ChunkAvailabilityReply
+        /// </summary>
         [ProtoMember(5)]
         public string SourceNetworkIdentifier { get; private set; }
 
+        /// <summary>
+        /// The connectionInfo of the peer that generated this ChunkAvailabilityReply
+        /// </summary>
         public ConnectionInfo SourceConnectionInfo { get; private set; }
 
+        /// <summary>
+        /// The requested data
+        /// </summary>
         public byte[] ChunkData { get; private set; }
+
+        /// <summary>
+        /// True once ChunkData has been set
+        /// </summary>
         public bool ChunkDataSet { get; private set; }
 
         private ChunkAvailabilityReply() { }
 
         /// <summary>
-        /// Create an empty reply
+        /// Create an ChunkAvailabilityReply which will not contain the requested data.
         /// </summary>
-        /// <param name="itemCheckSum"></param>
-        /// <param name="chunkIndex"></param>
+        /// <param name="sourceNetworkIdentifier">The network identifier of the source of this ChunkAvailabilityReply</param>
+        /// <param name="itemCheckSum">The checksum of the DFS item</param>
+        /// <param name="chunkIndex">The chunkIndex of the requested item</param>
+        /// <param name="replyState">A suitable reply state</param>
         public ChunkAvailabilityReply(string sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, ChunkReplyState replyState)
         {
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
@@ -102,11 +172,12 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Create a reply with contains data
+        /// Create an ChunkAvailabilityReply which will contain the requested data.
         /// </summary>
-        /// <param name="itemMD5"></param>
-        /// <param name="chunkIndex"></param>
-        /// <param name="chunkData"></param>
+        /// <param name="sourceNetworkIdentifier">The network identifier of the source of this ChunkAvailabilityReply</param>
+        /// <param name="itemCheckSum">The checksum of the DFS item</param>
+        /// <param name="chunkIndex">The chunkIndex of the requested item</param>
+        /// <param name="dataSequenceNumber">The packet sequence number used to send the data</param>
         public ChunkAvailabilityReply(string sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
         {
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
@@ -119,13 +190,17 @@ namespace DistributedFileSystem
         /// <summary>
         /// Set the data for this ChunkAvailabilityReply
         /// </summary>
-        /// <param name="chunkData"></param>
+        /// <param name="chunkData">The chunk data</param>
         public void SetChunkData(byte[] chunkData)
         {
             this.ChunkData = chunkData;
             ChunkDataSet = true;
         }
 
+        /// <summary>
+        /// Set the connectionInfo associated with the source of this ChunkAvailabilityReply
+        /// </summary>
+        /// <param name="info">The ConnectionInfo associated with the source of this ChunkAvailabilityReply</param>
         public void SetSourceConnectionInfo(ConnectionInfo info)
         {
             this.SourceConnectionInfo = info;
@@ -133,15 +208,34 @@ namespace DistributedFileSystem
     }
 
     /// <summary>
-    /// Temporary sotrage for chunk data which is awaiting corresponding info
+    /// Temporary storage for chunk data which is awaiting corresponding ChunkAvailabilityReply
     /// </summary>
     class ChunkDataWrapper
     {
+        /// <summary>
+        /// The packet sequence number of the chunk data
+        /// </summary>
         public long IncomingSequenceNumber { get; private set; }
+
+        /// <summary>
+        /// The chunk data
+        /// </summary>
         public byte[] Data { get; private set; }
+
+        /// <summary>
+        /// The time this chunk data was received
+        /// </summary>
         public DateTime TimeCreated { get; private set; }
+
+        /// <summary>
+        /// The ChunkAvailabilityReply associated with this chunk data
+        /// </summary>
         public ChunkAvailabilityReply ChunkAvailabilityReply { get; private set; }
 
+        /// <summary>
+        /// Initialise a ChunkDataWrapper when the ChunkAvailabilityReply is received before associated data.
+        /// </summary>
+        /// <param name="chunkAvailabilityReply">The matching ChunkAvailabilityReply</param>
         public ChunkDataWrapper(ChunkAvailabilityReply chunkAvailabilityReply)
         {
             if (chunkAvailabilityReply == null)
@@ -151,6 +245,11 @@ namespace DistributedFileSystem
             this.TimeCreated = DateTime.Now;
         }
 
+        /// <summary>
+        /// Initialise a ChunkDataWrapper when the data is received before the associated ChunkAvailabilityReply.
+        /// </summary>
+        /// <param name="incomingSequenceNumber">The packet sequence number of the chunk data</param>
+        /// <param name="data">The chunk data</param>
         public ChunkDataWrapper(long incomingSequenceNumber, byte[] data)
         {
             this.IncomingSequenceNumber = incomingSequenceNumber;

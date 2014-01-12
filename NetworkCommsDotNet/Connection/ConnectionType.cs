@@ -41,7 +41,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         UDP,
 
-#if !NET2
+#if !NET2 && !WINDOWS_PHONE
         /// <summary>
         /// A Bluetooth RFCOMM connection. Used by <see cref="BluetoothConnection"/> 
         /// </summary>

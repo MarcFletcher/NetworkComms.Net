@@ -7,9 +7,9 @@ using System.Linq;
 
 namespace DistributedFileSystem
 {
-    ///<summary>
-    /// Provides a task scheduler that ensures a maximum concurrency level. Prevents thread thrashing if maintaining alot of connections.
-    ///</summary>
+    //<summary>
+    // Provides a task scheduler that ensures a maximum concurrency level. Prevents thread thrashing if maintaining alot of connections.
+    //</summary>
     //public class LimitedParallelismTaskScheduler : TaskScheduler
     //{
     //    ///<summary>Whether the current thread is processing work items.</summary>

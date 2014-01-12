@@ -32,10 +32,17 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
+    #if !NET2 && !WINDOWS_PHONE
     /// <summary>
     /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
     /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="BluetoothConnection"/>.
     /// </summary>
+    #else
+    /// <summary>
+    /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
+    /// Extended by <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
+    /// </summary>
+    #endif
     public abstract partial class Connection
     {
         static ManualResetEvent workedThreadSignal = new ManualResetEvent(false);

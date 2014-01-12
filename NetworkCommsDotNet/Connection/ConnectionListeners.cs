@@ -249,7 +249,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Stop listening for new incoming connections on specified <see cref="=EndPoint"/> and remove it from the local listeners dictionary.
+        /// Stop listening for new incoming connections on specified <see cref="EndPoint"/> and remove it from the local listeners dictionary.
         /// </summary>
         /// <param name="connectionType">The connection type to stop listening on.</param>
         /// <param name="localEndPointToClose">The local <see cref="EndPoint"/> to stop listening for connections on.</param>
