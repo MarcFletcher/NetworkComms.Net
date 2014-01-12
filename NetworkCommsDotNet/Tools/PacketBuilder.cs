@@ -33,7 +33,8 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Packet data is generally broken into multiple variable sized byte chunks or 'partial packets'. This class provides features to effortlessly rebuild whole packets.
+    /// Packet data is generally broken into multiple variable sized byte chunks or 'partial packets'. 
+    /// This class provides features to effortlessly rebuild whole packets.
     /// </summary>
     public class PacketBuilder
     {

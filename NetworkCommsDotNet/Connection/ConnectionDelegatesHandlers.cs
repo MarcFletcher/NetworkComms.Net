@@ -35,7 +35,8 @@ namespace NetworkCommsDotNet
     public abstract partial class Connection
     {
         /// <summary>
-        /// Thread safety locker which is used when accessing <see cref="incomingPacketHandlers"/>, <see cref="incomingPacketUnwrappers"/> and <see cref="ConnectionSpecificShutdownDelegate"/>.
+        /// Thread safety locker which is used when accessing <see cref="incomingPacketHandlers"/>, 
+        /// <see cref="incomingPacketUnwrappers"/> and <see cref="ConnectionSpecificShutdownDelegate"/>.
         /// </summary>
         protected object delegateLocker = new object();
 
@@ -61,7 +62,8 @@ namespace NetworkCommsDotNet
         private Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>> incomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
         /// <summary>
-        /// Returns the <see cref="SendReceiveOptions"/> to be used for the provided <see cref="PacketHeader"/>. Ensures there will not be a serializer / data processor clash for different delegate levels.
+        /// Returns the <see cref="SendReceiveOptions"/> to be used for the provided <see cref="PacketHeader"/>. Ensures there 
+        /// will not be a serializer or data processor clash for different delegate levels.
         /// </summary>
         /// <param name="header">The <see cref="PacketHeader"/> options are desired.</param>
         /// <returns>The requested <see cref="SendReceiveOptions"/></returns>
@@ -73,7 +75,7 @@ namespace NetworkCommsDotNet
 
             bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(header.PacketType);
 
-            //Get connection specific options for this packet type, if there arn't any use the connection default options
+            //Get connection specific options for this packet type, if there aren't any use the connection default options
             SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(header.PacketType);
             if (connectionSpecificOptions == null) connectionSpecificOptions = ConnectionDefaultSendReceiveOptions;
 
@@ -92,7 +94,7 @@ namespace NetworkCommsDotNet
                 foreach (var pair in connectionSpecificOptions.Options)
                     combinedOptions[pair.Key] = pair.Value;
 
-                //If the header specifies a serializer and data processors we will autodetect those
+                //If the header specifies a serializer and data processors we will auto detect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
                     DataSerializer serializer;
@@ -107,7 +109,7 @@ namespace NetworkCommsDotNet
             }
             else if (connectionSpecificHandlers)
             {
-                //If the header specifies a serializer and data processors we will autodetect those
+                //If the header specifies a serializer and data processors we will auto detect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
                     DataSerializer serializer;
@@ -121,7 +123,7 @@ namespace NetworkCommsDotNet
             }
             else
             {
-                //If the header specifies a serializer and data processors we will autodetect those
+                //If the header specifies a serializer and data processors we will auto detect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
                 {
                     DataSerializer serializer;
@@ -131,7 +133,7 @@ namespace NetworkCommsDotNet
                     return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
                 }
 
-                //If just globalHandlers is set (or indeed no handlers atall we just return the global options
+                //If just globalHandlers is set (or indeed no handlers at all we just return the global options
                 return globalOptions;
             }
         }
@@ -151,7 +153,7 @@ namespace NetworkCommsDotNet
                 if (incomingObjectBytes == null) throw new ArgumentNullException("incomingObjectBytes", "Provided MemoryStream cannot not be null for packetType " + packetHeader.PacketType);
                 if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot not be null for packetType " + packetHeader.PacketType);
 
-                //We take a copy of the handlers list incase it is modified outside of the lock
+                //We take a copy of the handlers list in case it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
                 lock (delegateLocker)
                     if (incomingPacketHandlers.ContainsKey(packetHeader.PacketType))
@@ -246,7 +248,7 @@ namespace NetworkCommsDotNet
                 {
                     //Make sure if we already have an existing entry that it matches with the provided
                     if (!incomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(options))
-                        throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
+                        throw new PacketHandlerException("The provided SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
                 }
                 else
                     incomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, options));             
@@ -279,7 +281,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Append a connection specific unmanged packet handler
+        /// Append a connection specific unmanaged packet handler
         /// </summary>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when an unmanaged packet is received</param>
         public void AppendIncomingUnmanagedPacketHandler(NetworkComms.PacketHandlerCallBackDelegate<byte[]> packetHandlerDelgatePointer)
@@ -299,7 +301,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns true if a connection specific unmanged packet handler exists , on this connection.
+        /// Returns true if a connection specific unmanaged packet handler exists , on this connection.
         /// </summary>
         /// <returns>True if an unmanaged packet handler exists</returns>
         public bool IncomingUnmanagedPacketHandlerExists()

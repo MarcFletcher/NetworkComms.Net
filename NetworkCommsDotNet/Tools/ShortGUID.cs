@@ -24,7 +24,7 @@ namespace NetworkCommsDotNet
 {
     /// <summary>
     /// Represents a shortform globally unique identifier (<see href="http://en.wikipedia.org/wiki/Globally_unique_identifier">GUID</see>) which is easier to handle than Guid.NewGuid(). 
-    /// This class is used to uniquely identify a peer/application using NetworkCommsDotNet.
+    /// This class is used to uniquely identify a peer/application using NetworkComms.Net.
     /// See <see href="http://www.singular.co.nz/blog/archive/2007/12/20/shortguid-a-shorter-and-url-friendly-guid-in-c-sharp.aspx">here</see> for original source.
     /// </summary>
     public struct ShortGuid

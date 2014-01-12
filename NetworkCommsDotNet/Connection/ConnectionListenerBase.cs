@@ -29,8 +29,8 @@ using NetworkCommsDotNet.XPlatformHelper;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A base class that the listener of each connection type inherts from.
-    /// This allows us to manage listeners at the general connection level.
+    /// A base class that the listener of each connection type inherits from.
+    /// This allows NetworkComms.Net to manage listeners at the general connection level.
     /// </summary>
     public abstract class ConnectionListenerBase
     {
@@ -68,7 +68,7 @@ namespace NetworkCommsDotNet
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        public ConnectionListenerBase(ConnectionType connectionType,
+        protected ConnectionListenerBase(ConnectionType connectionType,
             SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
@@ -101,7 +101,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// If listening returns the local listen IPEndPoint.
+        /// Returns a clean string containing the current listener state
         /// </summary>
         /// <returns></returns>
         public override string ToString()
@@ -113,14 +113,14 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Start listening
+        /// Start listening for incoming connections.
         /// </summary>
-        /// <param name="desiredLocalListenEndPoint">Try to start listening on this IPEndPoint</param>
-        /// <param name="useRandomPortFailOver">If the request EndPoint.Port is unavailable fail over to a random port</param>
+        /// <param name="desiredLocalListenEndPoint">Try to start listening on this EndPoint.</param>
+        /// <param name="useRandomPortFailOver">If the request EndPoint is unavailable fail over to a random port.</param>
         internal abstract void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver);
 
         /// <summary>
-        /// Stop listening
+        /// Stop listening for incoming connections.
         /// </summary>
         internal abstract void StopListening();
     }

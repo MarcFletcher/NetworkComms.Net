@@ -63,7 +63,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Create a new comms thread pool
+        /// Create a new NetworkComms.Net thread pool
         /// </summary>
         /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
         /// <param name="maxActiveThreadsCount">The maximum number of active (i.e. not waiting for IO) threads</param>
@@ -189,7 +189,7 @@ namespace NetworkCommsDotNet
     }
 #else    
     /// <summary>
-    /// A compact thread pool used by NetworkComms.Net to run packet handlers
+    /// A compact priority based thread pool used by NetworkComms.Net to run packet handlers
     /// </summary>
     public class CommsThreadPool
     {
@@ -283,7 +283,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Create a new comms thread pool
+        /// Create a new NetworkComms.Net thread pool
         /// </summary>
         /// <param name="minThreadsCount">Minimum number of idle threads to maintain in the pool</param>
         /// <param name="maxActiveThreadsCount">The maximum number of active (i.e. not waiting for IO) threads</param>
@@ -569,6 +569,9 @@ namespace NetworkCommsDotNet
         }
     }
 
+    /// <summary>
+    /// A private wrapper used by CommsThreadPool
+    /// </summary>
     class WorkerInfo
     {
         public int ThreadId { get; private set; }

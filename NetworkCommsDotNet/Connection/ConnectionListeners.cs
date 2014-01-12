@@ -29,9 +29,6 @@ using NetworkCommsDotNet.XPlatformHelper;
 
 namespace NetworkCommsDotNet
 {
-    /// <summary>
-    /// Global connection base class for NetworkCommsDotNet. Most user interactions happen using a connection object. Extended by <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
-    /// </summary>
     public abstract partial class Connection
     {
         /// <summary>
@@ -125,43 +122,6 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Start listening for new incoming connections on specified <see cref="IPEndPoint"/>s. Listener is matched
-        /// with desired localIPEndPoint based on List index. Inspect listener.LocalListenIPEndPoint 
-        /// when method returns to determine the <see cref="IPEndPoint"/>s used.
-        /// </summary>
-        /// <param name="listeners">The listeners to use.</param>
-        /// <param name="desiredLocalEndPoints">The desired local <see cref="IPEndPoint"/>s to use for listening. Use a port number 
-        /// of 0 to dynamically select a port.</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
-        /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening(List<ConnectionListenerBase> listeners, List<EndPoint> desiredLocalEndPoints, bool useRandomPortFailOver)
-        {
-            if (listeners == null) throw new ArgumentNullException("listeners", "Provided listeners cannot be null.");
-            if (desiredLocalEndPoints == null) throw new ArgumentNullException("desiredLocalIPEndPoints", "Provided List<IPEndPoint> cannot be null.");
-            if (listeners.Count != desiredLocalEndPoints.Count) throw new ArgumentException("The number of elements in listeners and desiredLocalIPEndPoints must be equal.");
-            
-            lock (staticConnectionLocker)
-            {
-                try
-                {
-                    for (int i = 0; i < listeners.Count; i++)
-                        StartListening(listeners[i], desiredLocalEndPoints[i], useRandomPortFailOver);
-                }
-                catch (Exception)
-                {
-                    //If there is an exception we ensure all listeners are stopped
-                    for (int i = 0; i < listeners.Count; i++)
-                    {
-                        if (listeners[i].IsListening)
-                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
-                    }
-
-                    throw;
-                }
-            }
-        }
-
-        /// <summary>
         /// Start listening for new incoming connections on specified <see cref="IPEndPoint"/>. Inspect listener.LocalListenIPEndPoint 
         /// when method returns to determine the <see cref="IPEndPoint"/> used.
         /// </summary>
@@ -216,6 +176,43 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Start listening for new incoming connections on specified <see cref="IPEndPoint"/>s. Listener is matched
+        /// with desired localIPEndPoint based on List index. Inspect listener.LocalListenIPEndPoint 
+        /// when method returns to determine the <see cref="IPEndPoint"/>s used.
+        /// </summary>
+        /// <param name="listeners">The listeners to use.</param>
+        /// <param name="desiredLocalEndPoints">The desired local <see cref="IPEndPoint"/>s to use for listening. Use a port number 
+        /// of 0 to dynamically select a port.</param>
+        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
+        /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
+        public static void StartListening(List<ConnectionListenerBase> listeners, List<EndPoint> desiredLocalEndPoints, bool useRandomPortFailOver)
+        {
+            if (listeners == null) throw new ArgumentNullException("listeners", "Provided listeners cannot be null.");
+            if (desiredLocalEndPoints == null) throw new ArgumentNullException("desiredLocalIPEndPoints", "Provided List<IPEndPoint> cannot be null.");
+            if (listeners.Count != desiredLocalEndPoints.Count) throw new ArgumentException("The number of elements in listeners and desiredLocalIPEndPoints must be equal.");
+
+            lock (staticConnectionLocker)
+            {
+                try
+                {
+                    for (int i = 0; i < listeners.Count; i++)
+                        StartListening(listeners[i], desiredLocalEndPoints[i], useRandomPortFailOver);
+                }
+                catch (Exception)
+                {
+                    //If there is an exception we ensure all listeners are stopped
+                    for (int i = 0; i < listeners.Count; i++)
+                    {
+                        if (listeners[i].IsListening)
+                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
+                    }
+
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
         /// Stops all local listeners
         /// </summary>
         public static void StopListening()
@@ -235,7 +232,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Stops all local listeners of the provided <see cref="ConnectionType"/>.
         /// </summary>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> to match.</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> to close.</param>
         public static void StopListening(ConnectionType connectionType)
         {
             lock (staticConnectionLocker)
@@ -252,10 +249,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Stop listening for new incoming connections on specified <see cref="IPEndPoint"/> and remove it from the local listeners dictionary.
+        /// Stop listening for new incoming connections on specified <see cref="=EndPoint"/> and remove it from the local listeners dictionary.
         /// </summary>
-        /// <param name="connectionType">The connection type to listen for.</param>
-        /// <param name="localEndPointToClose">The local <see cref="IPEndPoint"/> to stop listening for connections on.</param>
+        /// <param name="connectionType">The connection type to stop listening on.</param>
+        /// <param name="localEndPointToClose">The local <see cref="EndPoint"/> to stop listening for connections on.</param>
         public static void StopListening(ConnectionType connectionType, EndPoint localEndPointToClose)
         {
             #region Input Validation
@@ -294,7 +291,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a dictionary corresponding to all current local listeners. Key is connection type, value is local IPEndPoint of listener.
+        /// Returns a dictionary corresponding to all current local listeners. Key is connection type, value is local EndPoint of listener.
         /// </summary>
         /// <returns></returns>
         public static Dictionary<ConnectionType, List<EndPoint>> AllExistingLocalListenEndPoints()
@@ -319,7 +316,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a list of <see cref="IPEndPoint"/> corresponding to possible local listeners of the provided 
+        /// Returns a list of <see cref="EndPoint"/>s corresponding to possible local listeners of the provided 
         /// <see cref="ConnectionType"/>. If no listeners exist returns empty list.
         /// </summary>
         /// <param name="connectionType">The connection type to match. Use ConnectionType.Undefined to match all.</param>
@@ -335,8 +332,8 @@ namespace NetworkCommsDotNet
         /// If no matching listeners exist returns empty list.
         /// </summary>
         /// <param name="connectionType">Connection type to match. Use ConnectionType.Undefined to match all.</param>
-        /// <param name="localEndPointToMatch">The <see cref="IPEndPoint"/> to match to local listeners. Use IPAddress.Any to match all addresses. 
-        /// Use port 0 to match all ports.</param>
+        /// <param name="localEndPointToMatch">The <see cref="IPEndPoint"/> to match to local listeners. Use IPAddress.Any 
+        /// to match all addresses. Use port 0 to match all ports.</param>
         /// <returns></returns>
         public static List<EndPoint> ExistingLocalListenEndPoints(ConnectionType connectionType, EndPoint localEndPointToMatch)
         {
@@ -389,7 +386,7 @@ namespace NetworkCommsDotNet
         /// Returns a list of requested existing local listeners.
         /// </summary>
         /// <typeparam name="T">Type of listener to return.</typeparam>
-        /// <param name="endPointToMatch">The <see cref="IPEndPoint"/> to match to local listeners. Use IPAddress.Any to match all 
+        /// <param name="endPointToMatch">The <see cref="EndPoint"/> to match to local listeners. Use IPAddress.Any to match all 
         /// addresses. Use port 0 to match all ports.</param>
         /// <returns></returns>
         public static List<T> ExistingLocalListeners<T>(EndPoint endPointToMatch) where T : ConnectionListenerBase

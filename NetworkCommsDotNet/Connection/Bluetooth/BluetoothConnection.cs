@@ -38,9 +38,7 @@ namespace NetworkCommsDotNet
                 this.btClient = btClient;
         }
 
-        /// <summary>
-        /// Establish the connection
-        /// </summary>
+        /// <inheritdoc />
         protected override void EstablishConnectionSpecific()
         {
             if (btClient == null) ConnectSocket();
@@ -55,7 +53,7 @@ namespace NetworkCommsDotNet
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
             btClientNetworkStream = btClient.GetStream();
 
-            //This disables the 'nagle alogrithm'
+            //This disables the 'nagle algorithm'
             //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
             //Basically we may want to send lots of small packets (<200 bytes) and sometimes those are time critical (e.g. when establishing a connection)
             //If we leave this enabled small packets may never be sent until a suitable send buffer length threshold is passed. i.e. BAD
@@ -98,7 +96,7 @@ namespace NetworkCommsDotNet
                 //We now connect to our target
                 btClient = new BluetoothClient();
 
-                //Start the connection using the asyn version
+                //Start the connection using the async version
                 //This allows us to choose our own connection establish timeout
                 IAsyncResult ar = btClient.BeginConnect((ConnectionInfo.RemoteEndPoint as BluetoothEndPoint), null, null);
                 WaitHandle connectionWait = ar.AsyncWaitHandle;
@@ -126,9 +124,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        /// <summary>
-        /// Starts listening for incoming data on this Bluetooth connection
-        /// </summary>
+        /// <inheritdoc />
         protected override void StartIncomingDataListen()
         {
             if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
@@ -204,7 +200,7 @@ namespace NetworkCommsDotNet
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
 
 #if !WINDOWS_PHONE
-                        //If we have more data we might as well continue reading syncronously
+                        //If we have more data we might as well continue reading synchronously
                         //In order to deal with data as soon as we think we have sufficient we will leave this loop
                         while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
                         {
@@ -246,8 +242,8 @@ namespace NetworkCommsDotNet
 
                 if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
                 {
-                    //Once we think we might have enough data we call the incoming packet handle handoff
-                    //Should we have a complete packet this method will start the appriate task
+                    //Once we think we might have enough data we call the incoming packet handle hand off
+                    //Should we have a complete packet this method will start the appropriate task
                     //This method will now clear byes from the incoming packets if we have received something complete.
                     IncomingPacketHandleHandOff(packetBuilder);
                 }
@@ -357,7 +353,7 @@ namespace NetworkCommsDotNet
                         break;
                     }
 
-                    //If we have read some data and we have more or equal what was expected we attempt a data handoff
+                    //If we have read some data and we have more or equal what was expected we attempt a data hand off
                     if (packetBuilder.TotalBytesCached > 0 && packetBuilder.TotalBytesCached >= packetBuilder.TotalBytesExpected)
                         IncomingPacketHandleHandOff(packetBuilder);
                 }
@@ -395,6 +391,7 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
 
+        /// <inheritdoc />
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
             //The following attempts to correctly close the connection
@@ -432,14 +429,7 @@ namespace NetworkCommsDotNet
 
         }
 
-        /// <summary>
-        /// Connection specific implementation for sending data on this connection type.
-        /// Each StreamSendWrapper[] represents a single packet.
-        /// </summary>
-        /// <param name="streamsToSend"></param>
-        /// <param name="maxSendTimePerKB"></param>
-        /// <param name="totalBytesToSend"></param>
-        /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
+        /// <inheritdoc />
         protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
             double[] timings = new double[streamsToSend.Length];

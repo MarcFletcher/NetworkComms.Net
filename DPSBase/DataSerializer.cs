@@ -113,7 +113,7 @@ namespace DPSBase
             //Create the first memory stream that will be used 
             MemoryStream tempStream1 = new MemoryStream();
 
-            //Serialise the object using the overriden method
+            //Serialise the object using the overridden method
             SerialiseDataObjectInt(tempStream1, objectToSerialise, options);
 
             //If we have no data processing to do we can simply return the serialised bytes
@@ -126,7 +126,7 @@ namespace DPSBase
 
                 //variable will store the number of bytes in the output stream at each processing stage
                 long writtenBytes;
-                //Process the serialised data using the first data processer.  We do this seperately to avoid multiple seek/setLength calls for
+                //Process the serialised data using the first data processor.  We do this separately to avoid multiple seek/setLength calls for
                 //the most common usage case
                 dataProcessors[0].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
 
@@ -157,7 +157,7 @@ namespace DPSBase
                 //Depending on whether the number of processors is even or odd a different stream will hold the final data
                 if (dataProcessors.Count % 2 == 0)
                 {
-                    //Seek to the begining and truncate the output stream
+                    //Seek to the beginning and truncate the output stream
                     tempStream1.Seek(0, 0);
                     tempStream1.SetLength(writtenBytes);
                     //Return the resultant bytes
@@ -167,7 +167,7 @@ namespace DPSBase
                 }
                 else
                 {
-                    //Seek to the begining and truncate the output stream
+                    //Seek to the beginning and truncate the output stream
                     tempStream2.Seek(0, 0);
                     tempStream2.SetLength(writtenBytes);
                     //Return the resultant bytes
@@ -299,7 +299,7 @@ namespace DPSBase
                             //Depending on whether the number of processors is even or odd a different stream will hold the final data
                             if (dataProcessors.Count % 2 == 0)
                             {
-                                //Seek to the begining and truncate the output stream
+                                //Seek to the beginning and truncate the output stream
                                 tempStream2.Seek(0, 0);
                                 tempStream2.SetLength(writtenBytes);
                                 //Return the resultant bytes
@@ -307,7 +307,7 @@ namespace DPSBase
                             }
                             else
                             {
-                                //Seek to the begining and truncate the output stream
+                                //Seek to the beginning and truncate the output stream
                                 tempStream1.Seek(0, 0);
                                 tempStream1.SetLength(writtenBytes);
                                 //Return the resultant bytes
@@ -316,7 +316,7 @@ namespace DPSBase
                         }
                     }
 
-                    //Seek to the begining and truncate the output stream
+                    //Seek to the beginning and truncate the output stream
                     tempStream1.Seek(0, 0);
                     tempStream1.SetLength(writtenBytes);
                     //Return the resultant bytes
@@ -345,7 +345,7 @@ namespace DPSBase
         }
         
         /// <summary>
-        /// Serialises an object to a stream using any relavent options provided
+        /// Serialises an object to a stream using any relevant options provided
         /// </summary>
         /// <param name="ouputStream">The stream to serialise to</param>
         /// <param name="objectToSerialise">The object to serialise</param>
@@ -353,7 +353,7 @@ namespace DPSBase
         protected abstract void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options);
 
         /// <summary>
-        /// Deserialises the data in a stream to an object of the spcified type using any relavent provided options 
+        /// Deserialises the data in a stream to an object of the specified type using any relevant provided options 
         /// </summary>
         /// <param name="inputStream">The stream containing the serialised object</param>
         /// <param name="resultType">The return object Type</param>
@@ -936,7 +936,7 @@ namespace DPSBase
         /// <returns>The deserialized object if it is an array, otherwise null</returns>
         public static object DeserialiseStreamSendWrapper(byte[] receivedObjectBytes, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
-            throw new Exception("NetworkComms should never be expected a type of StreamSendWrapper. Any data sent using a StreamSendWrapper should be handled on receive as byte[].");
+            throw new Exception("NetworkComms.Net should not be expecting an incoming type of StreamSendWrapper. Any data sent using a StreamSendWrapper should be handled on receive as byte[].");
         }
     }
 }

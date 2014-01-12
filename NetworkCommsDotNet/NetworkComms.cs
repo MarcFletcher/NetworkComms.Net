@@ -46,7 +46,9 @@ using NLog.Config;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Top level interface for NetworkCommsDotNet library. Anything which is not connection specific generally happens within the NetworkComms class. e.g. Keeping track of all connections, global defaults and settings, serialisers and data processors etc.
+    /// Top level interface for NetworkComms.Net library. Anything which is not connection specific generally happens 
+    /// within the NetworkComms class. e.g. Keeping track of all connections, global defaults and settings, serialisers 
+    /// and data processors etc.
     /// </summary>
     public static class NetworkComms
     {
@@ -57,7 +59,7 @@ namespace NetworkCommsDotNet
         {
             DOSProtection = new NetworkCommsDotNet.DOSProtection();
 
-            //Generally comms defaults are defined here
+            //NetworkComms.Net base defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
             NetworkLoadUpdateWindowMS = 2000;
 
@@ -185,7 +187,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns all allowed local IP addresses. 
         /// If <see cref="AllowedAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
-        /// If <see cref="AllowedListeningIPRanges"/> has been set only returns matching addresses ordered in descending preference. i.e. Most preferred at [0].
+        /// If <see cref="AllowedListeningIPRanges"/> has been set only returns matching addresses ordered in descending 
+        /// preference. i.e. Most preferred at [0].
         /// </summary>
         /// <returns></returns>
         public static List<IPAddress> AllAllowedIPs()
@@ -217,7 +220,7 @@ namespace NetworkCommsDotNet
             return allowedIPs;
 #else
 
-            //We want to ignore IP's that have been autoassigned
+            //We want to ignore IP's that have been auto assigned
             //169.254.0.0
             IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
             //255.255.0.0
@@ -433,7 +436,7 @@ namespace NetworkCommsDotNet
         public static ShortGuid NetworkIdentifier { get; private set; }
 
         /// <summary>
-        /// The current runtime environment. Detected automatically on startup. Performance may be adversly affected if this is changed.
+        /// The current runtime environment. Detected automatically on start up. Performance may be adversely affected if this is changed.
         /// </summary>
         public static RuntimeEnvironment CurrentRuntimeEnvironment { get; set; }
 
@@ -448,13 +451,15 @@ namespace NetworkCommsDotNet
         internal static volatile bool commsShutdown;
 
         /// <summary>
-        /// A running total of the number of packets sent on all connections. Used to initialise packet sequence counters to ensure duplicates can not occur.
+        /// A running total of the number of packets sent on all connections. Used to initialise packet sequence counters to ensure 
+        /// duplicates can not occur.
         /// </summary>
         internal static long totalPacketSendCount;
 
         /// <summary>
-        /// The number of millisconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged values (AverageNetworkLoad). 
-        /// Default is 2000ms. Shorter values can be used but less than 200ms may cause significant errors in the value of returned value, especially in mono environments.
+        /// The number of milliseconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged 
+        /// values (AverageNetworkLoad). Default is 2000ms. Shorter values can be used but less than 200ms may cause significant 
+        /// errors in the value of returned value, especially in mono environments.
         /// </summary>
         public static int NetworkLoadUpdateWindowMS { get; set; }
 
@@ -473,7 +478,8 @@ namespace NetworkCommsDotNet
         public static long InterfaceLinkSpeed { get; set; }
 
         /// <summary>
-        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network adaptor. Triggers load analysis upon first call.
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available 
+        /// network adaptor. Triggers load analysis upon first call.
         /// </summary>
         public static double CurrentNetworkLoadIncoming
         {
@@ -481,7 +487,7 @@ namespace NetworkCommsDotNet
             {
 #if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                 //We start the load thread when we first access the network load
-                //this helps cut down on uncessary threads if unrequired
+                //this helps cut down on unnecessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
                 {
                     lock (globalDictAndDelegateLocker)
@@ -504,7 +510,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network adaptor. Triggers load analysis upon first call.
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network 
+        /// adaptor. Triggers load analysis upon first call.
         /// </summary>
         public static double CurrentNetworkLoadOutgoing
         {
@@ -512,7 +519,7 @@ namespace NetworkCommsDotNet
             {
 #if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                 //We start the load thread when we first access the network load
-                //this helps cut down on uncessary threads if unrequired
+                //this helps cut down on unnecessary threads if unrequired
                 if (!commsShutdown && NetworkLoadThread == null)
                 {
                     lock (globalDictAndDelegateLocker)
@@ -535,9 +542,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of up to 254 seconds. 
+        /// Triggers load analysis upon first call.
         /// </summary>
-        /// <param name="secondsToAverage">Number of seconds over which historial data should be used to arrive at an average</param>
+        /// <param name="secondsToAverage">Number of seconds over which historical data should be used to arrive at an average</param>
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadIncoming(byte secondsToAverage)
         {
@@ -566,9 +574,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of upto 254 seconds. Triggers load analysis upon first call.
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of up to 254 seconds.
+        /// Triggers load analysis upon first call.
         /// </summary>
-        /// <param name="secondsToAverage">Number of seconds over which historial data should be used to arrive at an average</param>
+        /// <param name="secondsToAverage">Number of seconds over which historical data should be used to arrive at an average</param>
         /// <returns>Average network load as a double between 0 and 1</returns>
         public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
         {
@@ -663,7 +672,7 @@ namespace NetworkCommsDotNet
                     }
                                         
                     //If either of the usage levels have gone above 2 it suggests we are most likely on a faster connection that we think
-                    //As such we will bump the interfacelinkspeed upto 1Gbps so that future load calcualtions more acurately reflect the 
+                    //As such we will bump the interface link speed up to 1Gbps so that future load calculations more accurately reflect the 
                     //actual load.
                     if (inMax > 2 || outMax > 2) InterfaceLinkSpeed = 950000000;
 
@@ -674,7 +683,7 @@ namespace NetworkCommsDotNet
                     currentNetworkLoadValuesIncoming.AddValue(CurrentNetworkLoadIncoming);
                     currentNetworkLoadValuesOutgoing.AddValue(CurrentNetworkLoadOutgoing);
 
-                    //We can only have upto 255 seconds worth of data in the average list
+                    //We can only have up to 255 seconds worth of data in the average list
                     int maxListSize = (int)(255000.0 / NetworkLoadUpdateWindowMS);
                     currentNetworkLoadValuesIncoming.TrimList(maxListSize);
                     currentNetworkLoadValuesOutgoing.TrimList(maxListSize);
@@ -685,7 +694,7 @@ namespace NetworkCommsDotNet
                     
                     //It may be the interfaces available to the OS have changed so we will reset them here
                     interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
-                    //If an error has happened we dont want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
+                    //If an error has happened we don't want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
                     Thread.Sleep(5000);
                 }
             }
@@ -712,12 +721,13 @@ namespace NetworkCommsDotNet
         internal static object globalDictAndDelegateLocker = new object();
 
         /// <summary>
-        /// Primary connection dictionary stored by network indentifier
+        /// Primary connection dictionary stored by network identifier
         /// </summary>
         internal static Dictionary<ShortGuid, Dictionary<ConnectionType, List<Connection>>> allConnectionsByIdentifier = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<Connection>>>();
 
         /// <summary>
-        /// Secondary connection dictionary stored by end point. First key is connection type, second key is remote IPEndPoint, third key is local IPEndPoint
+        /// Secondary connection dictionary stored by end point. First key is connection type, second key is remote IPEndPoint, third 
+        /// key is local IPEndPoint
         /// </summary>
         internal static Dictionary<ConnectionType, Dictionary<EndPoint, Dictionary<EndPoint, Connection>>> allConnectionsByEndPoint = new Dictionary<ConnectionType, Dictionary<EndPoint, Dictionary<EndPoint, Connection>>>();
 
@@ -729,32 +739,35 @@ namespace NetworkCommsDotNet
 
         #region Incoming Data and Connection Config
         /// <summary>
-        /// Used for switching between async and sync connectionListen modes. Default is false. No noticable performance difference between the two modes.
+        /// Used for switching between async and sync connectionListen modes. Default is false. No noticeable performance difference 
+        /// between the two modes.
         /// </summary>
         public static bool ConnectionListenModeUseSync { get; set; }
 
         /// <summary>
-        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See <see cref="AllowedListeningIPRanges"/> and <see cref="AllowedAdaptorNames"/>
+        /// Used for switching between listening on a single interface or multiple interfaces. Default is true. See 
+        /// <see cref="AllowedListeningIPRanges"/> and <see cref="AllowedAdaptorNames"/>
         /// </summary>
         public static bool ListenOnAllAllowedInterfaces { get; set; }
 
         /// <summary>
-        /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degredation.
+        /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.
         /// </summary>
         public static int ReceiveBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degredation.
+        /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.
         /// </summary>
         public static int SendBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// The threadpool used by networkComms.Net to execute incoming packet handlers.
+        /// The thread pool used by networkComms.Net to execute incoming packet handlers.
         /// </summary>
         public static CommsThreadPool CommsThreadPool { get; set; }
         
         /// <summary>
-        /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different priorities.
+        /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different 
+        /// priorities.
         /// </summary>
         /// <param name="itemAsObj">Possible PriorityQueueItem. If null is provided an item will be removed from the global item queue</param>
         internal static void CompleteIncomingItemTask(object itemAsObj)
@@ -869,7 +882,7 @@ namespace NetworkCommsDotNet
             {
                 if (item != null)
                 {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A communcation exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A communication exception occurred in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed.");
                     item.Connection.CloseConnection(true, 2);
                 }
             }
@@ -888,7 +901,7 @@ namespace NetworkCommsDotNet
                 if (item != null)
                 {
                     //If anything goes wrong here all we can really do is log the exception
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception occured in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed. See log file for more information.");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhanded exception occurred in CompleteIncomingPacketWorker(), connection with " + item.Connection.ConnectionInfo + " be closed. See log file for more information.");
                     item.Connection.CloseConnection(true, 3);
                 }
             }
@@ -921,9 +934,9 @@ namespace NetworkCommsDotNet
 
         #region Checksum Config
         /// <summary>
-        /// When enabled uses an MD5 checksum to validate all received packets. Default is false, relying on any possible connection checksum alone. 
-        /// Also when enabled any packets sent less than CheckSumMismatchSentPacketCacheMaxByteLimit will be cached for a duration to ensure successful delivery.
-        /// Default false.
+        /// When enabled uses an MD5 checksum to validate all received packets. Default is false, relying on any possible connection 
+        /// checksum alone. Also when enabled any packets sent less than CheckSumMismatchSentPacketCacheMaxByteLimit will be cached 
+        /// for a duration to ensure successful delivery. Default false.
         /// </summary>
         public static bool EnablePacketCheckSumValidation { get; set; }
 
@@ -933,12 +946,13 @@ namespace NetworkCommsDotNet
         public static int CheckSumMismatchSentPacketCacheMaxByteLimit { get; set; }
 
         /// <summary>
-        /// When a sent packet has been cached for a possible resend this is the minimum length of time it will be retained. Default is 1.0 minutes.
+        /// When a sent packet has been cached for a possible resend this is the minimum length of time it will be retained. 
+        /// Default is 1.0 minutes.
         /// </summary>
         public static double MinimumSentPacketCacheTimeMinutes { get; set; }
 
         /// <summary>
-        /// Records the last sent packet cache cleanup time. Prevents the sent packet cache from being checked too frequently.
+        /// Records the last sent packet cache clean up time. Prevents the sent packet cache from being checked too frequently.
         /// </summary>
         internal static DateTime LastSentPacketCacheCleanup { get; set; }
         #endregion
@@ -969,12 +983,14 @@ namespace NetworkCommsDotNet
         public delegate void PacketHandlerCallBackDelegate<T>(PacketHeader packetHeader, Connection connection, T incomingObject);
 
         /// <summary>
-        /// If true any unknown incoming packet types are ignored. Default is false and will result in an error file being created if an unknown packet type is received.
+        /// If true any unknown incoming packet types are ignored. Default is false and will result in an error file being created if 
+        /// an unknown packet type is received.
         /// </summary>
         public static bool IgnoreUnknownPacketTypes { get; set; }
 
         /// <summary>
-        /// Add an incoming packet handler using default SendReceiveOptions. Multiple handlers for the same packet type will be executed in the order they are added.
+        /// Add an incoming packet handler using default SendReceiveOptions. Multiple handlers for the same packet type will be 
+        /// executed in the order they are added.
         /// </summary>
         /// <typeparam name="T">The type of incoming object</typeparam>
         /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
@@ -1024,7 +1040,7 @@ namespace NetworkCommsDotNet
                 {
                     //Make sure if we already have an existing entry that it matches with the provided
                     if (!globalIncomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(sendReceiveOptions))
-                        throw new PacketHandlerException("The proivded SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
+                        throw new PacketHandlerException("The provided SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
                 }
                 else
                     globalIncomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, sendReceiveOptions));
@@ -1182,7 +1198,7 @@ namespace NetworkCommsDotNet
             {
                 if (options == null) throw new PacketHandlerException("Provided sendReceiveOptions should not be null for packetType " + packetHeader.PacketType);
 
-                //We take a copy of the handlers list incase it is modified outside of the lock
+                //We take a copy of the handlers list in case it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
                 lock (globalDictAndDelegateLocker)
                     if (globalIncomingPacketHandlers.ContainsKey(packetHeader.PacketType))
@@ -1205,8 +1221,8 @@ namespace NetworkCommsDotNet
                     if (!isReservedType)
                     {
                         //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
-                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and network comms is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
+                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                     }
 
                     return;
@@ -1226,7 +1242,7 @@ namespace NetworkCommsDotNet
                     //Pass the data onto the handler and move on.
                     if (LoggingEnabled) logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count.ToString() + " selected global handlers.");
 
-                    //Pass the object to all necessary delgates
+                    //Pass the object to all necessary delegates
                     //We need to use a copy because we may modify the original delegate list during processing
                     foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
                     {
@@ -1247,7 +1263,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 //If anything goes wrong here all we can really do is log the exception
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occurred in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
                 NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
             }
         }
@@ -1398,10 +1414,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a new connection establish delegate which will be called for every connection once it has been succesfully established.
+        /// Add a new connection establish delegate which will be called for every connection once it has been successfully established.
         /// </summary>
         /// <param name="connectionEstablishDelegate">The delegate to call after all connection establishments.</param>
-        /// <param name="runSynchronously">If true this ConnectionEstablishShutdownDelegate will be called synchronously during the connection establish. The connection will not be considered established until the ConnectionEstablishShutdownDelegate has completed.</param>
+        /// <param name="runSynchronously">If true this ConnectionEstablishShutdownDelegate will be called synchronously during the 
+        /// connection establish. The connection will not be considered established until the ConnectionEstablishShutdownDelegate has completed.</param>
         public static void AppendGlobalConnectionEstablishHandler(ConnectionEstablishShutdownDelegate connectionEstablishDelegate, bool runSynchronously = false)
         {
             lock (globalDictAndDelegateLocker)
@@ -1446,12 +1463,13 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Shutdown all connections, comms threads and execute OnCommsShutdown event. Any packet handlers are left unchanged. If any comms activity has taken place this should be called on application close.
+        /// Shutdown all connections, threads and execute OnCommsShutdown event. Any packet handlers are left unchanged. If any network
+        /// activity has taken place this should be called on application close.
         /// </summary>
         /// <param name="threadShutdownTimeoutMS">The time to wait for worker threads to close before attempting a thread abort.</param>
         public static void Shutdown(int threadShutdownTimeoutMS = 1000)
         {
-            if (LoggingEnabled) logger.Trace("NetworkCommsDotNet shutdown initiated.");
+            if (LoggingEnabled) logger.Trace("NetworkComms.Net shutdown initiated.");
             commsShutdown = true;
 
             CommsThreadPool.BeginShutdown();
@@ -1506,7 +1524,7 @@ namespace NetworkCommsDotNet
             CommsThreadPool.EndShutdown(threadShutdownTimeoutMS);
 
             commsShutdown = false;
-            if (LoggingEnabled) logger.Info("NetworkCommsDotNet has shutdown");
+            if (LoggingEnabled) logger.Info("NetworkComms.Net has shutdown");
 
 #if !WINDOWS_PHONE && !NO_LOGGING && !NETFX_CORE
             //Mono bug fix
@@ -1549,7 +1567,7 @@ namespace NetworkCommsDotNet
 
         #region Logging
         /// <summary>
-        /// Returns true if comms logging has been enabled.
+        /// Returns true if NetworkComms.Net logging has been enabled.
         /// </summary>
         public static bool LoggingEnabled { get; private set; }
 
@@ -1672,7 +1690,7 @@ namespace NetworkCommsDotNet
         /// Logs the provided exception to a file to assist troubleshooting.
         /// </summary>
         /// <param name="ex">The exception to be logged</param>
-        /// <param name="fileName">The filename to use. A timestamp and extension .txt will be appended automatically</param>
+        /// <param name="fileName">The filename to use. A time stamp and extension .txt will be appended automatically</param>
         /// <param name="optionalCommentStr">An optional string which will appear at the top of the error file</param>
         /// <returns>The entire fileName used.</returns>
         public static string LogError(Exception ex, string fileName, string optionalCommentStr = "")
@@ -1765,7 +1783,7 @@ namespace NetworkCommsDotNet
         #region Serializers and Compressors
         
         /// <summary>
-        /// The following are used for internal comms objects, packet headers, connection establishment etc. 
+        /// The following are used for internal NetworkComms.Net objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50 bytes)
         /// Given the typical header size is 40 bytes we might as well not compress these objects.
         /// </summary>
@@ -1779,12 +1797,13 @@ namespace NetworkCommsDotNet
 
         #region Connection Access
         /// <summary>
-        /// Send the provided object to the specified destination using TCP. Uses default sendReceiveOptions. For more control over options see connection specific methods.
+        /// Send the provided object to the specified destination using TCP. Uses default sendReceiveOptions. For more control over 
+        /// options see connection specific methods.
         /// </summary>
         /// <param name="packetTypeStr">Packet type to use for send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
+        /// <param name="destinationIPAddress">The destination IP address</param>
         /// <param name="destinationPort">The destination listen port</param>
-        /// <param name="sendObject">The obect to send</param>
+        /// <param name="sendObject">The object to send</param>
         public static void SendObject(string packetTypeStr, string destinationIPAddress, int destinationPort, object sendObject)
         {
             TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
@@ -1792,11 +1811,12 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Send the provided object to the specified destination and wait for a return object using TCP. Uses default sendReceiveOptions. For more control over options see connection specific methods.
+        /// Send the provided object to the specified destination and wait for a return object using TCP. Uses default sendReceiveOptions. 
+        /// For more control over options see connection specific methods.
         /// </summary>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
-        /// <param name="destinationIPAddress">The destination ip address</param>
+        /// <param name="destinationIPAddress">The destination IP address</param>
         /// <param name="destinationPort">The destination listen port</param>
         /// <param name="expectedReturnPacketTypeStr">Expected packet type used for return object</param>
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
@@ -1809,7 +1829,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on return, this ensures the MD5 is consistent.
+        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on 
+        /// return, this ensures the MD5 is consistent.
         /// </summary>
         /// <param name="streamToMD5">The bytes which will be checksummed</param>
         /// <returns>The MD5 checksum as a string</returns>
@@ -1841,7 +1862,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on return, this ensures the MD5 is consistent.
+        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on 
+        /// return, this ensures the MD5 is consistent.
         /// </summary>
         /// <param name="streamToMD5">The bytes which will be checksummed</param>
         /// <param name="start">The start position in the stream</param>
@@ -1907,10 +1929,12 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns a ConnectionInfo array containing information for all connections which have the provided networkIdentifier. It is also possible to include information for closed connections.
+        /// Returns a ConnectionInfo array containing information for all connections which have the provided networkIdentifier. 
+        /// It is also possible to include information for closed connections.
         /// </summary>
         /// <param name="networkIdentifier">The networkIdentifier corresponding to the desired connectionInfo information</param>
-        /// <param name="includeClosedConnections">If true will include information for connections which are closed. Otherwise only active connections will be included.</param>
+        /// <param name="includeClosedConnections">If true will include information for connections which are closed. Otherwise only 
+        /// active connections will be included.</param>
         /// <returns>List of ConnectionInfo containing information for matching connections</returns>
         public static List<ConnectionInfo> AllConnectionInfo(ShortGuid networkIdentifier, bool includeClosedConnections = false)
         {
@@ -1957,10 +1981,12 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint"/> matches the provided <see cref="IPAddress"/>
+        /// Returns the total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint"/> matches the provided 
+        /// <see cref="IPAddress"/>
         /// </summary>
         /// <param name="matchRemoteEndPointIP">The <see cref="IPAddress"/> to match</param>
-        /// <returns>Total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint "/> matches the provided <see cref="IPAddress"/></returns>
+        /// <returns>Total number of connections where the <see cref="ConnectionInfo.RemoteEndPoint "/> matches the provided 
+        /// <see cref="IPAddress"/></returns>
         public static int TotalNumConnections(IPAddress matchRemoteEndPointIP)
         {
             lock (globalDictAndDelegateLocker)
@@ -1979,7 +2005,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static void CloseAllConnections()
         {
-            CloseAllConnections(ConnectionType.Undefined, new IPEndPoint[0]);
+            CloseAllConnections(ConnectionType.Undefined, new EndPoint[0]);
         }
 
         /// <summary>
@@ -1988,15 +2014,15 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The type of connections to be closed</param>
         public static void CloseAllConnections(ConnectionType connectionType)
         {
-            CloseAllConnections(connectionType, new IPEndPoint[0]);
+            CloseAllConnections(connectionType, new EndPoint[0]);
         }
 
         /// <summary>
-        /// Close all connections of the provided <see cref="ConnectionType"/> except to provided <see cref="IPEndPoint"/> array.
+        /// Close all connections of the provided <see cref="ConnectionType"/> except to provided <see cref="EndPoint"/> array.
         /// </summary>
         /// <param name="connectionTypeToClose">The type of connections to be closed. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
-        /// <param name="closeAllExceptTheseRemoteIPEndPoints">Close all except those with remote IPEndPoint that is provided in <see cref="IPEndPoint"/> array</param>
-        public static void CloseAllConnections(ConnectionType connectionTypeToClose, IPEndPoint[] closeAllExceptTheseRemoteIPEndPoints)
+        /// <param name="closeAllExceptTheseRemoteEndPoints">Close all except those with remote EndPoint that is provided in <see cref="EndPoint"/> array</param>
+        public static void CloseAllConnections(ConnectionType connectionTypeToClose, EndPoint[] closeAllExceptTheseRemoteEndPoints)
         {
             List<Connection> connectionsToClose = new List<Connection>();
 
@@ -2006,7 +2032,7 @@ namespace NetworkCommsDotNet
                 foreach (Connection conn in allConnectionsOfType)
                 {
                     bool dontClose = false;
-                    foreach (IPEndPoint endPointToNotClose in closeAllExceptTheseRemoteIPEndPoints)
+                    foreach (IPEndPoint endPointToNotClose in closeAllExceptTheseRemoteEndPoints)
                     {
                         if (conn.ConnectionInfo.RemoteEndPoint.Equals(endPointToNotClose))
                         {
@@ -2039,7 +2065,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a list of all connections matching the provided parameters.
         /// </summary>
-        /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="connectionType">The type of connections to return. ConnectionType.<see cref="ConnectionType.Undefined"/> matches 
+        /// all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of requested connections. If no matching connections exist returns empty list.</returns>
@@ -2052,7 +2079,8 @@ namespace NetworkCommsDotNet
         /// Returns a list of all connections matching the provided parameters.
         /// </summary>
         /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> 
+        /// matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of connections to the desired peer. If no matching connections exist returns empty list.</returns>
@@ -2095,9 +2123,12 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a list of all connections matching the provided parameters.
         /// </summary>
-        /// <param name="remoteEndPoint">Remote EndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
-        /// <param name="localEndPoint">Local EndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="remoteEndPoint">Remote EndPoint corresponding with the desired connection. Use IPAddress.Any to match all 
+        /// IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="localEndPoint">Local EndPoint corresponding with the desired connection. Use IPAddress.Any to match all 
+        /// IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> 
+        /// matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>A list of connections to the desired peer. If no matching connections exists returns empty list.</returns>
@@ -2287,7 +2318,8 @@ namespace NetworkCommsDotNet
         /// Check if a connection exists with the provided parameters.
         /// </summary>
         /// <param name="networkIdentifier">The <see cref="ShortGuid"/> corresponding with the desired peer networkIdentifier</param>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> 
+        /// matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>True if a matching connection exists, otherwise false</returns>
@@ -2302,9 +2334,12 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Check if a connection exists with the provided parameters.
         /// </summary>
-        /// <param name="remoteEndPoint">Remote EndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
-        /// <param name="localEndPoint">Local EndPoint corresponding with the desired connection. Use IPAddress.Any to match all IPAddresses. Use port number 0 to match all port numbers.</param>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/> matches all types.</param>
+        /// <param name="remoteEndPoint">Remote EndPoint corresponding with the desired connection. Use IPAddress.Any to match all 
+        /// IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="localEndPoint">Local EndPoint corresponding with the desired connection. Use IPAddress.Any to match all 
+        /// IPAddresses. Use port number 0 to match all port numbers.</param>
+        /// <param name="connectionType">The <see cref="ConnectionType"/> desired. ConnectionType.<see cref="ConnectionType.Undefined"/>
+        /// matches all types.</param>
         /// <param name="applicationLayerProtocol">Connections with matching ApplicationLayerProtocolStatus.
         /// Use ApplicationLayerProtocolStatus.<see cref="ApplicationLayerProtocolStatus.Undefined"/> to match all status types.</param>
         /// <returns>True if a matching connection exists, otherwise false</returns>
@@ -2321,7 +2356,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Removes the reference to the provided connection from within networkComms. DOES NOT CLOSE THE CONNECTION. Returns true if the provided connection reference existed and was removed, false otherwise.
+        /// Removes the reference to the provided connection from within networkComms. DOES NOT CLOSE THE CONNECTION. Returns true if 
+        /// the provided connection reference existed and was removed, false otherwise.
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="maintainConnectionInfoHistory"></param>
@@ -2568,7 +2604,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Add a reference by networkIdentifier to the provided connection within NetworkComms. Requires a reference by IPEndPoint to already exist.
+        /// Add a reference by networkIdentifier to the provided connection within NetworkComms.Net. Requires a reference by 
+        /// EndPoint to already exist.
         /// </summary>
         /// <param name="connection"></param>
         internal static void AddConnectionReferenceByIdentifier(Connection connection)

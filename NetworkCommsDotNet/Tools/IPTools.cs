@@ -30,7 +30,6 @@ using NetworkCommsDotNet.XPlatformHelper;
 using System.Net.Sockets;
 #endif
 
-
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -322,8 +321,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns true if the provided IPAddress is within one of the provided IPRanges, otherwise false
         /// </summary>
-        /// <param name="ranges"></param>
-        /// <param name="ipAddress"></param>
+        /// <param name="ranges">The ranges to search</param>
+        /// <param name="ipAddress">The IPAddress to find in ranges</param>
         /// <returns></returns>
         public static bool Contains(IEnumerable<IPRange> ranges, IPAddress ipAddress)
         {

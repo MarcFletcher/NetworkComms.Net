@@ -60,7 +60,8 @@ namespace NetworkCommsDotNet
         protected abstract void StartIncomingDataListen();
 
         /// <summary>
-        /// Attempts to use the data provided in packetBuilder to recreate something useful. If we don't have enough data yet that value is set in packetBuilder.
+        /// Attempts to use the data provided in packetBuilder to recreate something useful. If we don't have enough data 
+        /// yet that value is set in packetBuilder.
         /// </summary>
         /// <param name="packetBuilder">The <see cref="PacketBuilder"/> containing incoming cached data</param>
         protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
@@ -258,7 +259,7 @@ namespace NetworkCommsDotNet
             }
 
             //If we have already tried resending the packet 10 times something has gone horribly wrong
-            if (packetToReSend.SendCount > 10) throw new CheckSumException("Packet sent resulted in a catastropic checksum check exception.");
+            if (packetToReSend.SendCount > 10) throw new CheckSumException("Packet sent resulted in a catastrophic checksum check exception.");
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(" ... resending packet due to MD5 mismatch.");
 

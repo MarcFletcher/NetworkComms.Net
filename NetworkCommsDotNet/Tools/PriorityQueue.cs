@@ -25,21 +25,31 @@ using System.Collections;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Custom queue which contains features to add and remove items using a basic priority model.
+    /// Queue which contains features to add and remove items using a simple priority model.
     /// </summary>
-    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TValue">The type of this queue</typeparam>
     public class PriorityQueue<TValue>
     {
-        //Each internal queue in the array represents a priority level.  
-        //We keep the priority associated with each item so that when eventually returned the priority can be easily included
+        /// <summary>
+        /// Each internal queue in the array represents a priority level.  
+        /// We keep the priority associated with each item so that when eventually returned the 
+        /// priority can be easily included.
+        /// </summary>
         private Dictionary<QueueItemPriority,Queue<KeyValuePair<QueueItemPriority, TValue>>> internalQueues = null;
 
+        /// <summary>
+        /// The list of priorities used to handle incoming packets.
+        /// </summary>
         private QueueItemPriority[] QueueItemPriorityVals;
 
-        //The number of queues we store internally. 
+        /// <summary>
+        /// The number of queues we store internally. 
+        /// </summary>
         private int numDistinctPriorities = 0;
 
-        //The total number of items currently in all queues
+        /// <summary>
+        /// The total number of items currently in all queues
+        /// </summary>
         private int totalNumberQueuedItems = 0;
 
         /// <summary>
@@ -66,7 +76,7 @@ namespace NetworkCommsDotNet
         /// Try adding an item to the priority queue.
         /// </summary>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
-        /// <returns>True if an item was succesfully added to the queue</returns>
+        /// <returns>True if an item was successfully added to the queue</returns>
         public bool TryAdd(KeyValuePair<QueueItemPriority, TValue> item)
         {            
             lock (internalQueues)
@@ -82,7 +92,7 @@ namespace NetworkCommsDotNet
         /// Try removing an item from the priority queue
         /// </summary>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
-        /// <returns>True if an item was succesfully removed from the queue</returns>
+        /// <returns>True if an item was successfully removed from the queue</returns>
         public bool TryTake(out KeyValuePair<QueueItemPriority, TValue> item)
         {
             // Loop through the queues in priority order. Higher priority first
@@ -109,11 +119,11 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Try removing an item from the priority queue which has a priority of atleast that provided.
+        /// Try removing an item from the priority queue which has a priority of at least that provided.
         /// </summary>
-        /// <param name="minimumPriority">The miniumum priority to consider</param>
+        /// <param name="minimumPriority">The minimum priority to consider</param>
         /// <param name="item">Key is priority, lower number is lower priority, and value is TValue</param>
-        /// <returns>True if an item was succesfully removed from the queue</returns>
+        /// <returns>True if an item was successfully removed from the queue</returns>
         public bool TryTake(QueueItemPriority minimumPriority, out KeyValuePair<QueueItemPriority, TValue> item)
         {
             // Loop through the queues in priority order. Higher priority first
@@ -148,7 +158,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Copies queued items into the provided destination array. Highest priority items first descending until destination is full or there are no remaining items.
+        /// Copies queued items into the provided destination array. Highest priority items first descending until 
+        /// destination is full or there are no remaining items.
         /// </summary>
         /// <param name="destination">The destination array</param>
         /// <param name="destStartingIndex">The position within destination to start copying to</param>
@@ -187,22 +198,6 @@ namespace NetworkCommsDotNet
             }
         }
 
-        //// <summary>
-        //// Returns an Enumerator for all items, highest priority first descending
-        //// </summary>
-        //// <returns></returns>
-        //public IEnumerator<KeyValuePair<QueueItemPriority, TValue>> GetEnumerator()
-        //{
-        //    lock (internalQueues)
-        //    {
-        //        for (int i = numDistinctPriorities - 1; i >= 0; i--)
-        //        {
-        //            foreach (var item in internalQueues[QueueItemPriorityVals[i]])
-        //                yield return item;
-        //        }
-        //    }
-        //}
-
         /// <summary>
         /// Gets a value indicating whether access to the PriorityQueue is synchronized (thread safe). Always returns true.
         /// </summary>
@@ -216,7 +211,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         public object SyncRoot
         {
-            get { throw new Exception("All access to PriorityQueue is thread safe so calling SyncRoot() is unncessary."); }
+            get { throw new Exception("All access to PriorityQueue is thread safe so calling SyncRoot() is unnecessary."); }
         }
 
         /// <summary>

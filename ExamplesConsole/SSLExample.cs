@@ -120,9 +120,9 @@ namespace ExamplesConsole
                     catch (CommsException)
                     {
                         //We catch all exceptions by using CommsException
-                        Console.WriteLine("\nERROR - Connection to "+targetServerConnectionInfo+" was unsuccesfull."+
+                        Console.WriteLine("\nERROR - Connection to "+targetServerConnectionInfo+" was unsuccessful."+
                             " Server is either not listening or the entered SSL configurations"+
-                            "are not compatibile. Please check setttings and try again.");
+                            "are not compatible. Please check settings and try again.");
                     }
                 }
             }
@@ -140,7 +140,7 @@ namespace ExamplesConsole
 
             //Configure the server options
             //These will be applied for incoming connections
-            Console.WriteLine("\nRequire connecting clients to provide certificate?\n1 - Yes (Connection will only be succesfull if client provides certificate.) \n2 - No (Client only requires certificate name to connect.)");
+            Console.WriteLine("\nRequire connecting clients to provide certificate?\n1 - Yes (Connection will only be successful if client provides certificate.) \n2 - No (Client only requires certificate name to connect.)");
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
@@ -163,7 +163,7 @@ namespace ExamplesConsole
 
             //Configure the connection options
             //These will be used when establishing outgoing connections
-            Console.WriteLine("\nProvide certificate for outgoing connections?\n1 - Yes (Connection will only be succesfull if client and server certificate match.)\n2 - No (Client will accept any certificate from server.)");
+            Console.WriteLine("\nProvide certificate for outgoing connections?\n1 - Yes (Connection will only be successful if client and server certificate match.)\n2 - No (Client will accept any certificate from server.)");
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);

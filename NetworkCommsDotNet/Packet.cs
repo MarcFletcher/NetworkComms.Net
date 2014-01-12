@@ -106,7 +106,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Returns the serialised bytes of the packet header appended by the serialised header size. This is required to rebuild the header on receive.
+        /// Returns the serialised bytes of the packet header appended by the serialised header size. This is required to 
+        /// rebuild the header on receive.
         /// </summary>
         /// <returns>The serialised header as byte[]</returns>
         public byte[] SerialiseHeader(SendReceiveOptions options)

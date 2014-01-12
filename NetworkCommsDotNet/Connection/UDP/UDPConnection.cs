@@ -38,6 +38,9 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace NetworkCommsDotNet
 {
+    /// <summary>
+    /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</see> to communicate between peers.
+    /// </summary>
     public sealed partial class UDPConnection : Connection
     {
 #if WINDOWS_PHONE || NETFX_CORE
@@ -52,7 +55,7 @@ namespace NetworkCommsDotNet
         public UDPOptions ConnectionUDPOptions { get; private set; }
 
         /// <summary>
-        /// An isolated udp connection will only accept incoming packets coming from a specific RemoteEndPoint.
+        /// An isolated UDP connection will only accept incoming packets coming from a specific RemoteEndPoint.
         /// </summary>
         bool isIsolatedUDPConnection = false;
 
@@ -176,12 +179,10 @@ namespace NetworkCommsDotNet
             }
         }
 
-        /// <summary>
-        /// Establish this UDP connection. This will become more relevant as additional udp levels are supported.
-        /// </summary>
+        /// <inheritdoc />
         protected override void EstablishConnectionSpecific()
         {
-            //If the application layer protocol is enabled and the udp option is set
+            //If the application layer protocol is enabled and the UDP option is set
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled &&
                 (ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
                 ConnectionHandshake();
@@ -195,19 +196,15 @@ namespace NetworkCommsDotNet
             }
         }
 
-        /// <summary>
-        /// Executes UDP specific shutdown tasks
-        /// </summary>
-        /// <param name="closeDueToError">True if closing connection due to error</param>
-        /// <param name="logLocation">An optional debug parameter.</param>
+        /// <inheritdoc />
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
 #if WINDOWS_PHONE || NETFX_CORE
-            //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
+            //We only call close on the udpClient if this is a specific UDP connection or we are calling close from the parent UDP connection
             if (socket != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 socket.Dispose();
 #else
-            //We only call close on the udpClient if this is a specific udp connection or we are calling close from the parent udp connection
+            //We only call close on the udpClient if this is a specific UDP connection or we are calling close from the parent UDP connection
             if (udpClient != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 udpClient.CloseClient();
 #endif
@@ -251,7 +248,7 @@ namespace NetworkCommsDotNet
 
             //We are limited in size for the isolated send
             if (headerBytes.Length + packet.PacketData.Length > maximumSingleDatagramSizeBytes)
-                throw new CommunicationException("Attempted to send a udp packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
+                throw new CommunicationException("Attempted to send a UDP packet whose serialised size was " + (headerBytes.Length + packet.PacketData.Length).ToString() + " bytes. The maximum size for a single UDP send is " + maximumSingleDatagramSizeBytes.ToString() + ". Consider using a TCP connection to send this object.");
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalIPEndPoint.Address + ":" + ConnectionInfo.LocalIPEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + " containing " + headerBytes.Length.ToString() + " header bytes and " + packet.PacketData.Length.ToString() + " payload bytes.");
 
@@ -282,14 +279,7 @@ namespace NetworkCommsDotNet
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalIPEndPoint.Address + ":" + ConnectionInfo.LocalIPEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + ".");
         }
 
-        /// <summary>
-        /// Connection specific implementation for sending data on this connection type.
-        /// Each StreamSendWrapper[] represents a single packet.
-        /// </summary>
-        /// <param name="streamsToSend"></param>
-        /// <param name="maxSendTimePerKB"></param>
-        /// <param name="totalBytesToSend"></param>
-        /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
+        /// <inheritdoc />
         protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
 #if FREETRIAL
@@ -343,9 +333,7 @@ namespace NetworkCommsDotNet
             return timings;
         }
 
-        /// <summary>
-        /// Start listening for incoming udp data
-        /// </summary>
+        /// <inheritdoc />
         protected override void StartIncomingDataListen()
         {
 #if WINDOWS_PHONE || NETFX_CORE

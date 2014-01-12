@@ -33,13 +33,22 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Wrapper used to track the sendReceiveOptions for different packet types.
+    /// Wrapper used to track the SendReceiveOptions for different packet types.
     /// </summary>
     class PacketTypeUnwrapper
     {
         string packetTypeStr;
+
+        /// <summary>
+        /// The SendReceiveOptions associated with this unwrapper.
+        /// </summary>
         public SendReceiveOptions Options { get; private set; }
 
+        /// <summary>
+        /// Initialise a new PacketTypeUnwrapper
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type of this unwrapper</param>
+        /// <param name="options">The SendReceiveOptions to use with this unwrapper</param>
         public PacketTypeUnwrapper(string packetTypeStr, SendReceiveOptions options)
         {
             this.packetTypeStr = packetTypeStr;

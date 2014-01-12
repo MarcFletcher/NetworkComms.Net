@@ -35,7 +35,9 @@ using System.Threading.Tasks;
 namespace DPSBase
 {
     /// <summary>
-    /// Automatically detects and manages the use of <see cref="DataSerializer"/> and <see cref="DataProcessor"/>s.  Any <see cref="DataSerializer"/> or <see cref="DataProcessor"/> in an assembly located in the working directory (including subdirectories) will be automatically detected
+    /// Automatically detects and manages the use of <see cref="DataSerializer"/> and <see cref="DataProcessor"/>s.  
+    /// Any <see cref="DataSerializer"/> or <see cref="DataProcessor"/> in an assembly located in the working 
+    /// directory (including subdirectories) will be automatically detected.
     /// </summary>
     public sealed class DPSManager
     {
@@ -211,10 +213,13 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// Allows the addition of <see cref="DataProcessor"/>s which are not auto detected.  Use only if the assembly 
+        /// in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) 
+        /// or if automatic detection is not supported on your platform.
         /// </summary>
         /// <param name="dataProcessor">The <see cref="DataProcessor"/> to make the <see cref="DPSManager"/> aware of</param>
-        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
+        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataProcessor"/> of the same 
+        /// <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataProcessor(DataProcessor dataProcessor)
         {
             if (dataProcessor == null) throw new ArgumentNullException("dataProcessor");
@@ -230,10 +235,14 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Allows the addition of <see cref="DataProcessor"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// Allows the addition of <see cref="DataProcessor"/>s which are not auto detected.  Use only if the assembly 
+        /// in which the <see cref="DataProcessor"/> is defined is not in the working directory (including subfolders) 
+        /// or if automatic detection is not supported on your platform.
         /// </summary>
         /// <typeparam name="T">The type of <see cref="DataProcessor"/> to make the <see cref="DPSManager"/> aware of</typeparam>
-        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataProcessor"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the <see cref="DataProcessor"/> type does not have a hidden or visible paramerterless constructor</exception>
+        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataProcessor"/> of the same 
+        /// <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the <see cref="DataProcessor"/>
+        /// type does not have a hidden or visible parameterless constructor</exception>
         public static void AddDataProcessor<T>() where T : DataProcessor
         {
             Type processorType = typeof(T);
@@ -251,7 +260,7 @@ namespace DPSBase
                 constructor = processorType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
 #endif
             if (constructor == null)
-                throw new ArgumentException("Data processors should have a paramerterless constructor");
+                throw new ArgumentException("Data processors should have a parameterless constructor");
 
             DataProcessor res = constructor.Invoke(null) as DataProcessor;
 
@@ -259,10 +268,13 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Allows the addition of <see cref="DataSerializer"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// Allows the addition of <see cref="DataSerializer"/>s which are not auto detected.  Use only if the assembly 
+        /// in which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) 
+        /// or if automatic detection is not supported on your platform
         /// </summary>
         /// <param name="dataSerializer">The <see cref="DataSerializer"/> to make the see <see cref="DPSManager"/> aware of</param>
-        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
+        /// <exception cref="ArgumentException">Thrown if A different <see cref="DataSerializer"/> of the same 
+        /// <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/></exception>
         public static void AddDataSerializer(DataSerializer dataSerializer)
         {
             if (dataSerializer == null) throw new ArgumentNullException("dataSerializer");
@@ -278,10 +290,14 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Allows the addition of <see cref="DataSerializer"/>s which are not autodetected.  Use only if the assmbley in which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) or if automatic detection is not supported on your platform
+        /// Allows the addition of <see cref="DataSerializer"/>s which are not auto detected.  Use only if the assembly in 
+        /// which the <see cref="DataSerializer"/> is defined is not in the working directory (including subfolders) or 
+        /// if automatic detection is not supported on your platform
         /// </summary>
         /// <typeparam name="T">The type of <see cref="DataSerializer"/> to make the <see cref="DPSManager"/> aware of</typeparam>
-        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataSerializer"/> of the same <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the <see cref="DataSerializer"/> type does not have a hidden or visible paramerterless constructor</exception>
+        /// <exception cref="ArgumentException">Thrown if a different <see cref="DataSerializer"/> of the same 
+        /// <see cref="System.Type"/> or Id has already been added to the <see cref="DPSManager"/> or if the 
+        /// <see cref="DataSerializer"/> type does not have a hidden or visible parameterless constructor</exception>
         public static void AddDataSerializer<T>() where T : DataSerializer
         {
             Type serializerType = typeof(T);
@@ -300,7 +316,7 @@ namespace DPSBase
                 constructor = serializerType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
 
             if (constructor == null)
-                throw new ArgumentException("Data processors should have a paramerterless constructor");
+                throw new ArgumentException("Data processors should have a parameterless constructor");
 #endif
             DataSerializer res = constructor.Invoke(null) as DataSerializer;
 
@@ -314,7 +330,8 @@ namespace DPSBase
         /// <param name="dataProcessors">A <see cref="System.Collections.Generic.List{DataProcessor}()"/> to be used.  The order of this </param>
         /// <returns>A <see cref="long"/> describing the arguments</returns>
         /// <exception cref="ArgumentException">Thrown is more than 7 <see cref="DataSerializer"/>s are used</exception>
-        /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be used when transmitting data using NetworkCommsDotNet</remarks>
+        /// <remarks>This method is used to specify succinctly the serialization method and any data processing that will be 
+        /// used when transmitting data using NetworkCommsDotNet</remarks>
         public static long CreateSerializerDataProcessorIdentifier(DataSerializer serializer, List<DataProcessor> dataProcessors)
         {
             if (serializer == null) throw new ArgumentNullException("serializer");
@@ -347,12 +364,14 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Takes an identifier generated using <see cref="DPSManager.CreateSerializerDataProcessorIdentifier"/> and returns the <see cref="DataSerializer"/> and set of <see cref="DataProcessor"/>s used to generate the identifier
+        /// Takes an identifier generated using <see cref="DPSManager.CreateSerializerDataProcessorIdentifier"/> and returns 
+        /// the <see cref="DataSerializer"/> and set of <see cref="DataProcessor"/>s used to generate the identifier
         /// </summary>
         /// <param name="id">The <see cref="long"/> describing the <see cref="DataSerializer"/> and a set of <see cref="DataProcessor"/>s</param>
         /// <param name="serializer">The resultant <see cref="DataSerializer"/></param>
         /// <param name="dataProcessors">A List of the resultant <see cref="DataProcessor"/>s</param>
-        /// <remarks>This method is used to extract the serialization method and any data processing that needs to be used when transmitting data using NetworkCommsDotNet</remarks>
+        /// <remarks>This method is used to extract the serialization method and any data processing that needs to 
+        /// be used when transmitting data using NetworkCommsDotNet</remarks>
         public static void GetSerializerDataProcessorsFromIdentifier(long id, out DataSerializer serializer, out List<DataProcessor> dataProcessors)
         {
             serializer = GetDataSerializer((byte)(id >> 56));
@@ -371,9 +390,11 @@ namespace DPSBase
 
         private DPSManager()
         {
-            //This constructor loops through referenced assemblies looking for types that inherit off of DataSerializer and DataProcessor.  On windows this should mean perfect autodetection
-            //of serializers and compressors. On windows phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  Any others that are used will
-            //have to be added manually.  On windows this will be done from a new app domain so we can unload it afterwards
+            //This constructor loops through referenced assemblies looking for types that inherit off of DataSerializer and 
+            //DataProcessor.  On windows this should mean perfect auto detection of serializers and compressors. On windows 
+            //phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  
+            //Any others that are used will have to be added manually.  On windows this will be done from a new app domain 
+            //so we can unload it afterwards
 
             AssemblyLoader loader;
             ProcessArgument args;
@@ -400,7 +421,7 @@ namespace DPSBase
 
                 args = new ProcessArgument();
 
-                //If an entry asssembly exists just pass that, the rest can be worked out from there.  
+                //If an entry assembly exists just pass that, the rest can be worked out from there.  
                 //On WCF there is no entry assembly. In that case fill the loaded domains list with those already loaded
                 if (Assembly.GetEntryAssembly() != null)
                     args.loadedDomains = new List<string>() { Assembly.GetEntryAssembly().FullName };

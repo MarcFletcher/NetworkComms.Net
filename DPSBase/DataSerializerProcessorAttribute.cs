@@ -5,7 +5,7 @@ using System.Text;
 namespace DPSBase
 {
     /// <summary>
-    /// Custom attribute used to keep track of serializers and proccesors
+    /// Custom attribute used to keep track of serializers and processors
     /// </summary>
     [System.AttributeUsage(AttributeTargets.Class)]
     public class DataSerializerProcessorAttribute : System.Attribute

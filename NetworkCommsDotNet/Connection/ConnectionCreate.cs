@@ -60,7 +60,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new connection object
         /// </summary>
-        /// <param name="connectionInfo">ConnecitonInfo corresponding to the new connection</param>
+        /// <param name="connectionInfo">ConnectionInfo corresponding to the new connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
         protected Connection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
         {
@@ -153,7 +153,7 @@ namespace NetworkCommsDotNet
 
                     connectionEstablishWait.Set();
 
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection succesfully established with " + ConnectionInfo);
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... connection successfully established with " + ConnectionInfo);
                 }
             }
             catch (SocketException e)
@@ -183,9 +183,8 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Performs a connection handshake with the remote end of the connection.
         /// Exchanges network identifier and any listener whose IPAddress matches the connection localEndPoint IPAddress.
-        /// During the handshake 
         /// </summary>
-        protected virtual void ConnectionHandshake()
+        protected void ConnectionHandshake()
         {
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled)
                 throw new CommunicationException("Attempted to perform handshake on connection where the application protocol has been disabled.");
@@ -289,7 +288,7 @@ namespace NetworkCommsDotNet
             else
             {
                 if (NetworkComms.LoggingEnabled)
-                    NetworkComms.Logger.Trace("Waiting for new connection to be succesfully established before continuing with " + ConnectionInfo);
+                    NetworkComms.Logger.Trace("Waiting for new connection to be successfully established before continuing with " + ConnectionInfo);
 
                 if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                     throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
@@ -366,7 +365,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Attempts to complete the connection establish with a minimum of locking to prevent possible deadlocking
+        /// Attempts to complete the connection establish with a minimum of locking to avoid possible deadlocking
         /// </summary>
         /// <param name="remoteConnectionInfo"><see cref="ConnectionInfo"/> corresponding with remoteEndPoint</param>
         /// <param name="possibleClashWithExistingConnection">True if a connection already exists with provided remoteEndPoint</param>

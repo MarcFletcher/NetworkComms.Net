@@ -29,9 +29,9 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A <see cref="UDPConnection"/> could support different combinations of features. i.e. From the most basic (None) which sends conectionless UDP packets
-    /// upto an emulated TCP. Future versions of NetworkCommsDotNet will support an ever increasing number of UDP features.
-    /// This flag enum is used to specifiy which of the available features should be used.
+    /// A <see cref="UDPConnection"/> could support different combinations of features. i.e. From the most basic (None) which 
+    /// sends connectionless UDP packets up to an emulated TCP. Future versions of NetworkCommsDotNet will support an ever 
+    /// increasing number of UDP features. This flag enum is used to specify which of the available features should be used.
     /// </summary>
     [Flags]
     public enum UDPOptions

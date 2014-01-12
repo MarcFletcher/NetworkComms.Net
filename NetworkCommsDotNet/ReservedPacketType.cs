@@ -23,7 +23,7 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Reserved packetTypeStrs. Removing or modifying these will prevent network comms from working
+    /// Reserved packetTypeStrs. Removing or modifying these will prevent NetworkComms.Net from working
     /// </summary>
     enum ReservedPacketType
     {

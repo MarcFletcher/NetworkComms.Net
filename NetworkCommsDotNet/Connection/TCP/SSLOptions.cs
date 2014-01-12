@@ -8,7 +8,7 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Contains SSL configuration
+    /// Contains SSL configuration options
     /// </summary>
     public class SSLOptions
     {

@@ -97,7 +97,7 @@ namespace NetworkCommsDotNet
     }
 
     /// <summary>
-    /// Contains information required to send, receive and correctly rebuild any objects sent via NetworkCommsDotNet.
+    /// Contains information required to send, receive and correctly rebuild any objects sent via NetworkComms.Net.
     /// Any data sent via NetworkCommsDotNet is always preceded by a packetHeader.
     /// </summary>
     [ProtoContract]

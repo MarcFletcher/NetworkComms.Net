@@ -28,14 +28,13 @@ using NetworkCommsDotNet.XPlatformHelper;
 using System.Net.Sockets;
 #endif
 
-
 namespace NetworkCommsDotNet
 {
 #if WINDOWS_PHONE || NETFX_CORE
     //UdpClientThreadSafe not yet required for WP8
 #else
     /// <summary>
-    /// Wrapper around a udpClient object so that we can easily check usage.
+    /// Internal wrapper around a udpClient object so that we can easily manage usage.
     /// </summary>
     class UdpClientWrapper
     {

@@ -18,13 +18,19 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class BluetoothConnectionListener : ConnectionListenerBase
     {
+        /// <summary>
+        /// The local Bluetooth listener
+        /// </summary>
         BluetoothListener listenerInstance;
 
         /// <summary>
         /// Create a new instance of BluetoothConnectionListener
         /// </summary>
-        /// <param name="sendReceiveOptions"></param>
-        /// <param name="applicationLayerProtocol"></param>
+        /// <param name="sendReceiveOptions">The send receive options to use for this listener.</param>
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public BluetoothConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol)
             : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol)
@@ -32,6 +38,7 @@ namespace NetworkCommsDotNet
 
         }
 
+        /// <inheritdoc />
         internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
             if (IsListening) throw new InvalidOperationException("Attempted to call StartListening when already listening.");
@@ -76,6 +83,7 @@ namespace NetworkCommsDotNet
             this.IsListening = true;
         }
 
+        /// <inheritdoc />
         internal override void StopListening()
         {
             IsListening = false;
@@ -87,6 +95,10 @@ namespace NetworkCommsDotNet
             catch (Exception) { }
         }
 
+        /// <summary>
+        /// Handle a new incoming bluetooth connection
+        /// </summary>
+        /// <param name="ar"></param>
         private void BluetoothConnectionReceivedAsync(IAsyncResult ar)
         {
             if (!IsListening)

@@ -21,9 +21,9 @@ using System;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Implemenaton of the <see href="http://en.wikipedia.org/wiki/Adler-32">Adler32</see> checksum algorithm. 
+    /// Implementation of the <see href="http://en.wikipedia.org/wiki/Adler-32">Adler32</see> checksum algorithm. 
     /// It is not a particularly reliable checksum compared with <see href="http://en.wikipedia.org/wiki/MD5">MD5</see> but it is about 10 times faster.
-    /// NetworkCommsDotNet uses <see href="http://en.wikipedia.org/wiki/MD5">MD5</see> as its default but this class is provided should speed be the more important factor.
+    /// NetworkComms.Net uses <see href="http://en.wikipedia.org/wiki/MD5">MD5</see> as its default but this class is provided should speed be the more important factor.
     /// </summary>
     public static class Adler32Checksum
     {

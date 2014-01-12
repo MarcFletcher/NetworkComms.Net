@@ -60,8 +60,11 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new instance of a TCP listener
         /// </summary>
-        /// <param name="sendReceiveOptions"></param>
-        /// <param name="applicationLayerProtocol"></param>
+        /// <param name="sendReceiveOptions">The SendReceiveOptions to use with incoming data on this listener</param>
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol)
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
@@ -75,9 +78,12 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a new instance of a TCP listener
         /// </summary>
-        /// <param name="sendReceiveOptions"></param>
-        /// <param name="applicationLayerProtocol"></param>
-        /// <param name="sslOptions"></param>
+        /// <param name="sendReceiveOptions">The SendReceiveOptions to use with incoming data on this listener</param>
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="sslOptions">The SSLOptions to use with this listener</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions)
             : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
@@ -86,11 +92,7 @@ namespace NetworkCommsDotNet
         }
 #endif
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="desiredLocalListenEndPoint"></param>
-        /// <param name="useRandomPortFailOver"></param>
+        /// <inheritdoc />
         internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
             if (desiredLocalListenEndPoint.GetType() != typeof(IPEndPoint)) throw new ArgumentException("Invalid desiredLocalListenEndPoint type provided.", "desiredLocalListenEndPoint");
@@ -148,9 +150,7 @@ namespace NetworkCommsDotNet
             this.IsListening = true;
         }
 
-        /// <summary>
-        /// Stop this TCP listener
-        /// </summary>
+        /// <inheritdoc />
         internal override void StopListening()
         {
             IsListening = false;
@@ -207,7 +207,7 @@ namespace NetworkCommsDotNet
         }
 #else
         /// <summary>
-        /// Async method for picking up new incoming TCP connections
+        /// Async method for handling up new incoming TCP connections
         /// </summary>
         private void TCPConnectionReceivedAsync(IAsyncResult ar)
         {

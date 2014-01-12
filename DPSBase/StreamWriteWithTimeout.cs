@@ -13,7 +13,7 @@ using Windows.Storage;
 namespace DPSBase
 {
     /// <summary>
-    /// Wrapper class for writing to streams with timeouts. Used primarily to prevent stream write deadlocks.
+    /// Wrapper class for writing to streams with time-outs. Used primarily to prevent stream write deadlocks.
     /// </summary>
     public static class StreamWriteWithTimeout
     {
@@ -100,7 +100,7 @@ namespace DPSBase
         /// <summary>
         /// Write the provided input stream to the destination stream in chunks of writeBufferSize. Throws exception if any write takes longer than timeoutPerByteWriteMS.
         /// </summary>
-        /// <param name="inputStream">Input stream continaing data to send</param>
+        /// <param name="inputStream">Input stream containing data to send</param>
         /// <param name="inputStart">The start position in sendBuffer</param>
         /// <param name="inputLength">The number of bytes to write</param>
         /// <param name="destinationStream">The destination stream</param>

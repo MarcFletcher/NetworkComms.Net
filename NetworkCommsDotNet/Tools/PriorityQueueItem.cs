@@ -35,9 +35,16 @@ namespace NetworkCommsDotNet
         public MemoryStream DataStream { get; private set; }
         public SendReceiveOptions SendReceiveOptions { get; private set; }
 
+        /// <summary>
+        /// Initialise a new PriorityQueueItem
+        /// </summary>
+        /// <param name="priority"></param>
+        /// <param name="connection"></param>
+        /// <param name="packetHeader"></param>
+        /// <param name="dataStream"></param>
+        /// <param name="sendReceiveOptions"></param>
         public PriorityQueueItem(QueueItemPriority priority, Connection connection, PacketHeader packetHeader, MemoryStream dataStream, SendReceiveOptions sendReceiveOptions)
         {
-            //Nullreference checks
             if (connection == null) throw new ArgumentNullException("connection", "Provided Connection parameter cannot be null.");
             if (packetHeader == null) throw new ArgumentNullException("packetHeader", "Provided PacketHeader parameter cannot be null.");
             if (dataStream == null) throw new ArgumentNullException("dataStream", "Provided MemoryStream parameter cannot be null.");

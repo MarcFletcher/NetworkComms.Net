@@ -24,7 +24,7 @@ using System.Text;
 namespace DPSBase
 {
     /// <summary>
-    /// Base comms exception. All NetworkCommsDotNet exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
+    /// Base exception. All connection related exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -73,7 +73,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// A checksum error has occured. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
+    /// A checksum error has occurred. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
     /// </summary>
 #if !WINDOWS_PHONE && ! NETFX_CORE
     [Serializable]
@@ -121,7 +121,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// A timeout has occured while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS
+    /// A timeout has occurred while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -169,7 +169,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// A timeout has occured while waiting for an expected return object. Check for errors and or consider increasing the provided return timeout value.
+    /// A timeout has occurred while waiting for an expected return object. Check for errors and or consider increasing the provided return timeout value.
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -217,7 +217,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to serialise/compress or deserialise/uncompress an object.
+    /// An error occurred while trying to serialise/compress or deserialise/uncompress an object.
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -265,7 +265,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to establish a Connection
+    /// An error occurred while trying to establish a Connection
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -313,7 +313,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to establish a Connection
+    /// An error occurred while trying to establish a Connection
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -361,7 +361,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while trying to setup or shutdown NetworkCommsDotNet
+    /// An error occurred while trying to setup or shutdown NetworkComms.Net
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -409,7 +409,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured while during communication which does not fall under other exception cases.
+    /// An error occurred while during communication which does not fall under other exception cases.
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
@@ -649,7 +649,7 @@ namespace DPSBase
     }
 
     /// <summary>
-    /// An error occured during a packetType data handler execution.
+    /// An error occurred during a packetType data handler execution.
     /// </summary>
 #if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]

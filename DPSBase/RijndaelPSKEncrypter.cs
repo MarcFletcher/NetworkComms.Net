@@ -191,9 +191,9 @@ namespace DPSBase
         }
         
         /// <summary>
-        /// Adds a password, using the correct key, to a Dicitonary
+        /// Adds a password, using the correct key, to a Dictionary
         /// </summary>
-        /// <param name="options">The Dictionary to add the optoion to</param>
+        /// <param name="options">The Dictionary to add the option to</param>
         /// <param name="password">The password</param>        
         public static void AddPasswordToOptions(Dictionary<string, string> options, string password)
         {

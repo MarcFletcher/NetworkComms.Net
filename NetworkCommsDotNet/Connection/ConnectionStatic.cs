@@ -33,7 +33,8 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// Global connection base class for NetworkCommsDotNet. Most user interactions happen using a connection object. Extended by <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
+    /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
+    /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="BluetoothConnection"/>.
     /// </summary>
     public abstract partial class Connection
     {
@@ -47,7 +48,7 @@ namespace NetworkCommsDotNet
 #endif
 
         /// <summary>
-        /// Private static TCP constructor which sets any connection defaults
+        /// Private static constructor which sets the connection defaults
         /// </summary>
         static Connection()
         {
@@ -155,9 +156,10 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Serverside connections are polled slightly earlier than client side to help reduce potential congestion.
+        /// Polls all existing connections based on ConnectionKeepAlivePollIntervalSecs value. Server side connections are polled 
+        /// slightly earlier than client side to help reduce potential congestion.
         /// </summary>
-        /// <param name="returnImmediately"></param>
+        /// <param name="returnImmediately">If true runs as task and returns immediately.</param>
         private static void AllConnectionsSendNullPacketKeepAlive(bool returnImmediately = false)
         {
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Starting AllConnectionsSendNullPacketKeepAlive");
@@ -171,7 +173,7 @@ namespace NetworkCommsDotNet
             ManualResetEvent allConnectionsComplete = new ManualResetEvent(false);
             for (int i = 0; i < allConnections.Count; i++)
             {
-                //We don't send null packets to unconnected udp connections
+                //We don't send null packets to unconnected UDP connections
                 UDPConnection asUDP = allConnections[i] as UDPConnection;
                 if (asUDP != null && asUDP.ConnectionUDPOptions == UDPOptions.None)
                 {
@@ -199,7 +201,7 @@ namespace NetworkCommsDotNet
                                 }
                                 else
                                 {
-                                    //If we are client side we wait upto an additional 3 seconds to do the poll
+                                    //If we are client side we wait up to an additional 3 seconds to do the poll
                                     //This means the server will probably beat us
                                     if ((DateTime.Now - allConnections[innerIndex].ConnectionInfo.LastTrafficTime).TotalSeconds > ConnectionKeepAlivePollIntervalSecs + 1.0 + (NetworkComms.randomGen.NextDouble() * 2.0))
                                         allConnections[innerIndex].SendNullPacket();

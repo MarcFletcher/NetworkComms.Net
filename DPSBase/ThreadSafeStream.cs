@@ -97,10 +97,11 @@ namespace DPSBase
         /// Returns data from the specified portion of Stream
         /// </summary>
         /// <param name="start">The start position of the desired bytes</param>
-        /// <param name="length">The total number of desired bytes</param>
-        /// <param name="numberZeroBytesPrefex">If non zero will append N 0 value bytes to the start of the returned array</param>
+        /// <param name="length">The total number of desired bytes, not including the zero byte prefix and append parameters</param>
+        /// <param name="numberZeroBytesPrefix">If non zero will append N 0 value bytes to the start of the returned array</param>
+        /// <param name="numberZeroBytesAppend">If non zero will append N 0 value bytes to the end of the returned array</param>
         /// <returns></returns>
-        public byte[] ToArray(long start, long length, int numberZeroBytesPrefex = 0)
+        public byte[] ToArray(long start, long length, int numberZeroBytesPrefix = 0, int numberZeroBytesAppend = 0)
         {
             if (length>int.MaxValue)
                 throw new ArgumentOutOfRangeException( "length", "Unable to return array whose size is larger than int.MaxValue. Consider requesting multiple smaller arrays.");
@@ -111,8 +112,8 @@ namespace DPSBase
                     throw new ArgumentOutOfRangeException("length", "Provided start and length parameters reference past the end of the available stream.");
 
                 stream.Seek(start, SeekOrigin.Begin);
-                byte[] returnData = new byte[length + numberZeroBytesPrefex];
-                stream.Read(returnData, numberZeroBytesPrefex, returnData.Length - numberZeroBytesPrefex);
+                byte[] returnData = new byte[length + numberZeroBytesPrefix + numberZeroBytesAppend];
+                stream.Read(returnData, numberZeroBytesPrefix, (int)length);
                 return returnData;
             }
         }
@@ -150,7 +151,7 @@ namespace DPSBase
         /// <summary>
         /// Calculate the MD5 of the provided stream
         /// </summary>
-        /// <param name="streamToMD5">The stream to calcualte Md5 for</param>
+        /// <param name="streamToMD5">The stream to calculate Md5 for</param>
         /// <returns></returns>
         private static string MD5Stream(Stream streamToMD5)
         {

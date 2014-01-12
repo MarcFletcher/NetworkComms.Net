@@ -153,7 +153,7 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// If enabled NetworkComms.Net uses a custom application layer protocol to provide 
-        /// usefull features such as inline serialisation, transparent packet tranmission, 
+        /// useful features such as inline serialisation, transparent packet transmission, 
         /// remote peer information etc. Default: ApplicationLayerProtocolStatus.Enabled
         /// </summary>
         [ProtoMember(6)]
@@ -224,8 +224,8 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="remoteEndPoint">The end point corresponding with the remote target</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public ConnectionInfo(EndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
@@ -250,7 +250,7 @@ namespace NetworkCommsDotNet
         {
             IPAddress ipAddress;
             if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
-                throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
+                throw new ArgumentException("Provided remoteIPAddress string was not successfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
@@ -266,8 +266,8 @@ namespace NetworkCommsDotNet
         /// <param name="remotePort">The available port of the remote target. 
         /// Valid ports are 1 through 65535. Port numbers less than 256 are reserved for well-known services (like HTTP on port 80) and port numbers less than 1024 generally require admin access</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public ConnectionInfo(string remoteIPAddress, int remotePort, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
@@ -276,7 +276,7 @@ namespace NetworkCommsDotNet
 
             IPAddress ipAddress;
             if (!IPAddress.TryParse(remoteIPAddress, out ipAddress))
-                throw new ArgumentException("Provided remoteIPAddress string was not succesfully parsed.", "remoteIPAddress");
+                throw new ArgumentException("Provided remoteIPAddress string was not successfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
             this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
@@ -313,8 +313,8 @@ namespace NetworkCommsDotNet
         /// <param name="localEndPoint">The localEndPoint which should be referenced remotely</param>
         /// <param name="isConnectable">True if connectable on provided localEndPoint</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public ConnectionInfo(ConnectionType connectionType, ShortGuid localNetworkIdentifier, EndPoint localEndPoint, bool isConnectable, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
@@ -339,8 +339,8 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, EndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
@@ -363,8 +363,8 @@ namespace NetworkCommsDotNet
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         /// <param name="localEndPoint">The localEndpoint of this connection</param>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         internal ConnectionInfo(bool serverSide, ConnectionType connectionType, EndPoint remoteEndPoint, EndPoint localEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {
@@ -430,7 +430,7 @@ namespace NetworkCommsDotNet
 
                 if (!(ConnectionState == ConnectionState.Establishing)) throw new ConnectionSetupException("Connection should be marked as establishing before calling CompleteConnectionEstablish");
 
-                if (ConnectionState == ConnectionState.Established) throw new ConnectionSetupException("Connection already marked as establised.");
+                if (ConnectionState == ConnectionState.Established) throw new ConnectionSetupException("Connection already marked as established.");
 
                 ConnectionState = ConnectionState.Established;
                 ConnectionEstablishedTime = DateTime.Now;
@@ -521,7 +521,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Compares this <see cref="ConnectionInfo"/> object with obj and returns true if obj is ConnectionInfo and both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
+        /// Compares this <see cref="ConnectionInfo"/> object with obj and returns true if obj is ConnectionInfo and both 
+        /// the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
         /// </summary>
         /// <param name="obj">The object to test of equality</param>
         /// <returns></returns>
@@ -538,7 +539,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Compares this <see cref="ConnectionInfo"/> object with other and returns true if both the <see cref="NetworkIdentifier"/> and <see cref="RemoteEndPoint"/> match.
+        /// Compares this <see cref="ConnectionInfo"/> object with other and returns true if both the <see cref="NetworkIdentifier"/> 
+        /// and <see cref="RemoteEndPoint"/> match.
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>

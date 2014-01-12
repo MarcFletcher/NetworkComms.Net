@@ -23,7 +23,7 @@ using System.Text;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// A simple class to do math operations in NetworkCommsDotNet. Primarly used for load detection.
+    /// A class used for math operations in NetworkComms.Net. Primarily used for load analysis.
     /// </summary>
     public class CommsMath
     {

@@ -31,7 +31,7 @@ using System.Net.Sockets;
 namespace NetworkCommsDotNet
 {
     /// <summary>
-    /// 
+    /// A UDP connection listener
     /// </summary>
     public class UDPConnectionListener : ConnectionListenerBase
     {
@@ -41,16 +41,19 @@ namespace NetworkCommsDotNet
         public UDPOptions UDPOptions { get; private set; }
 
         /// <summary>
-        /// The udp listener is a udp connection
+        /// The UDP listener is a UDP connection
         /// </summary>
         internal UDPConnection UDPConnection { get; set; }
 
         /// <summary>
-        /// 
+        /// Create a new instance of a UDP listener
         /// </summary>
-        /// <param name="sendReceiveOptions"></param>
-        /// <param name="applicationLayerProtocol"></param>
-        /// <param name="udpOptions"></param>
+        /// <param name="sendReceiveOptions">The SendReceiveOptions to use with incoming data on this listener</param>
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
+        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="udpOptions">The UDPOptions to use with this listener</param>
         public UDPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, 
             UDPOptions udpOptions)
@@ -62,11 +65,7 @@ namespace NetworkCommsDotNet
             UDPOptions = udpOptions;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="desiredLocalListenEndPoint"></param>
-        /// <param name="useRandomPortFailOver"></param>
+        /// <inheritdoc />
         internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
         {
             if (desiredLocalListenEndPoint.GetType() != typeof(IPEndPoint)) throw new ArgumentException("Invalid desiredLocalListenEndPoint type provided.", "desiredLocalListenEndPoint");
@@ -109,9 +108,7 @@ namespace NetworkCommsDotNet
             this.IsListening = true;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
+        /// <inheritdoc />
         internal override void StopListening()
         {
             this.IsListening = false;

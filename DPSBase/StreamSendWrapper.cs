@@ -24,7 +24,7 @@ using System.IO;
 namespace DPSBase
 {
     /// <summary>
-    /// Used to send all or parts of a stream. Particularly usefull for sending files directly from disk etc.
+    /// Used to send all or parts of a stream. Particularly useful for sending files directly from disk etc.
     /// </summary>
     public class StreamSendWrapper : IDisposable
     {
