@@ -290,8 +290,8 @@ namespace NetworkCommsDotNet
         private void IncomingTCPPacketHandler(IAsyncResult ar)
 #endif
         {
-            //Initialised with true so that logic still works in WP8
-            bool dataAvailable = true;
+            //Initialised with false so that logic still works in WP8
+            bool dataAvailable = false;
 
 #if !WINDOWS_PHONE && !NETFX_CORE
             //Incoming data always gets handled in a timeCritical fashion at this point
