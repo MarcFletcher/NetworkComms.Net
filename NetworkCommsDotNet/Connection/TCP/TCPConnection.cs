@@ -295,35 +295,34 @@ namespace NetworkCommsDotNet
 
 #if !WINDOWS_PHONE && !NETFX_CORE
             //Incoming data always gets handled in a timeCritical fashion at this point
+            //Windows phone and RT platforms do not support thread priorities
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
-            //int bytesRead;
 #endif
 
             try
             {
 #if WINDOWS_PHONE
-                var stream = ar.AsyncState as Stream;
-                var count = stream.EndRead(ar);
-                totalBytesRead = count + totalBytesRead;
+                Stream stream = ar.AsyncState as Stream;
+                totalBytesRead = stream.EndRead(ar); + totalBytesRead;
 #elif NETFX_CORE
                 totalBytesRead = count + totalBytesRead;
 #else
-                Stream netStream;
+                Stream stream;
                 if (SSLOptions.SSLEnabled)
-                    netStream = (SslStream)ar.AsyncState;
+                    stream = (SslStream)ar.AsyncState;
                 else
-                    netStream = (NetworkStream)ar.AsyncState;
+                    stream = (NetworkStream)ar.AsyncState;
 
-                if (!netStream.CanRead)
+                if (!stream.CanRead)
                     throw new ObjectDisposedException("Unable to read from stream.");
 
-                totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
+                totalBytesRead = stream.EndRead(ar) + totalBytesRead;
 
                 if (SSLOptions.SSLEnabled)
                     //SSLstream does not have a DataAvailable property. We will just assume false.
                     dataAvailable = false;
                 else
-                    dataAvailable = ((NetworkStream)netStream).DataAvailable;
+                    dataAvailable = ((NetworkStream)stream).DataAvailable;
 #endif
                 if (totalBytesRead > 0)
                 {
@@ -357,7 +356,7 @@ namespace NetworkCommsDotNet
                                 //If we have nothing to reuse we allocate a new buffer
                                 dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
 
-                            totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
+                            totalBytesRead = stream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
                             if (totalBytesRead > 0)
                             {
@@ -378,7 +377,7 @@ namespace NetworkCommsDotNet
                                         //SSLstream does not have a DataAvailable property. We will just assume false.
                                         dataAvailable = false;
                                     else
-                                        dataAvailable = ((NetworkStream)netStream).DataAvailable;
+                                        dataAvailable = ((NetworkStream)stream).DataAvailable;
                                 }
                             }
                             else
@@ -411,13 +410,11 @@ namespace NetworkCommsDotNet
                         totalBytesRead = 0;
                     }
 
-#if WINDOWS_PHONE
-                    stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
-#elif NETFX_CORE
+#if NETFX_CORE
                     count = await stream.ReadAsync(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead);
                     IncomingTCPPacketHandler(stream, count).RunSynchronously();
 #else
-                    netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, netStream);
+                    stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
 #endif
                 }
 
