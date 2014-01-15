@@ -52,12 +52,9 @@ namespace ExamplesChat.WinRT
         {
             //To ensure we can succesfully append to the text box from any thread
             //we need to wrap the append within an invoke action.
-            ChatHistory.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, new Windows.UI.Core.DispatchedHandler(() =>
-                {
-                    ChatHistory.Text += message + "\n";
-                    ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
-                    ChatHistoryScroller.UpdateLayout();
-                })).AsTask().Start();
+            ChatHistory.Text += message + "\n";
+            ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
+            ChatHistoryScroller.UpdateLayout();
         }
 
         /// <summary>
@@ -65,12 +62,9 @@ namespace ExamplesChat.WinRT
         /// </summary>
         public override void ClearChatHistory()
         {
-            ChatHistory.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, new Windows.UI.Core.DispatchedHandler(() =>
-            {
-                ChatHistory.Text = "";
-                ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
-                ChatHistoryScroller.UpdateLayout();
-            })).AsTask().Start();
+            ChatHistory.Text = "";
+            ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
+            ChatHistoryScroller.UpdateLayout();
         }
 
         /// <summary>
@@ -78,10 +72,7 @@ namespace ExamplesChat.WinRT
         /// </summary>
         public override void ClearInputLine()
         {
-            CurrentMessageInputBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, new Windows.UI.Core.DispatchedHandler(() =>
-            {
-                CurrentMessageInputBox.Text = "";
-            })).AsTask().Start();
+            CurrentMessageInputBox.Text = "";
         }
 
         /// <summary>
@@ -96,7 +87,9 @@ namespace ExamplesChat.WinRT
             Func<Task> messageTask = new Func<Task>(async () =>
                 {
                     await md.ShowAsync();                             
-                });            
+                });
+
+            messageTask();
         }
         #endregion
     }

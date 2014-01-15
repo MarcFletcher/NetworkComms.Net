@@ -551,11 +551,16 @@ namespace DPSBase
 
                     Func<Task> getAssemblies = new Func<Task>(async ()=>
                         {
-                            foreach (Windows.Storage.StorageFile file in await folder.GetFilesAsync())
+                            var t = folder.GetFilesAsync().AsTask();
+                            await t.ConfigureAwait(false);
+                            t.Wait();
+                            var filesInt = t.Result;
+
+                            foreach (Windows.Storage.StorageFile file in filesInt)
                             {
                                 if (file.FileType == ".dll" || file.FileType == ".exe")
-                                {
-                                    AssemblyName name = new AssemblyName() { Name = file.Name };
+                                {                                    
+                                    AssemblyName name = new AssemblyName() { Name = file.Name.Substring(0, file.Name.Length - 4) };                                    
                                     Assembly asm = Assembly.Load(name);
                                     alreadyLoadedAssemblies.Add(asm);
                                 }

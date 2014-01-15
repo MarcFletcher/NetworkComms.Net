@@ -184,10 +184,10 @@ namespace NetworkCommsDotNet
 
                 try
                 {
-                    if (ConnectionInfo.LocalEndPoint != null)
-                    {
+                    if (ConnectionInfo.LocalEndPoint != null && ConnectionInfo.LocalIPEndPoint.Address != IPAddress.IPv6Any && ConnectionInfo.LocalIPEndPoint.Address != IPAddress.Any)
+                    {                        
                         var endpointPairForConnection = new Windows.Networking.EndpointPair(new Windows.Networking.HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString(),
-                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString());
+                                                        new Windows.Networking.HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString());                        
 
                         var task = socket.ConnectAsync(endpointPairForConnection).AsTask(cancelAfterTimeoutToken.Token);
                         task.Wait();
@@ -257,7 +257,7 @@ namespace NetworkCommsDotNet
                 await IncomingTCPPacketHandler(stream, count);
             });
 
-            tFunc().Start();
+            tFunc();
 #else
             lock (delegateLocker)
             {

@@ -64,6 +64,7 @@
   <ItemGroup>
     <Compile Include="AsyncStreamCopier.cs" />
     <Compile Include="BinaryFormaterSerializer.cs" />
+    <Compile Include="DataPadder.cs" />
     <Compile Include="DataProcessor.cs" />
     <Compile Include="DataSerializer.cs" />
     <Compile Include="DataSerializerProcessorAttribute.cs" />
