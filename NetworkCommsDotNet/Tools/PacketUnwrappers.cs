@@ -68,11 +68,11 @@ namespace NetworkCommsDotNet
         bool EqualsDelegate(Delegate other);
     }
 
-    class PacketTypeHandlerDelegateWrapper<T> : IPacketTypeHandlerDelegateWrapper
+    class PacketTypeHandlerDelegateWrapper<incomingObjectType> : IPacketTypeHandlerDelegateWrapper
     {
-        NetworkComms.PacketHandlerCallBackDelegate<T> innerDelegate;
+        NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> innerDelegate;
 
-        public PacketTypeHandlerDelegateWrapper(NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelegate)
+        public PacketTypeHandlerDelegateWrapper(NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> packetHandlerDelegate)
         {
             this.innerDelegate = packetHandlerDelegate;
         }
@@ -86,18 +86,18 @@ namespace NetworkCommsDotNet
                 //if (options.DataSerializer == null)
                 //    throw new ArgumentNullException("options", "The provided options.DataSerializer was null. Cannot continue with deserialise.");
 
-                return options.DataSerializer.DeserialiseDataObject<T>(incomingBytes, options.DataProcessors, options.Options);
+                return options.DataSerializer.DeserialiseDataObject<incomingObjectType>(incomingBytes, options.DataProcessors, options.Options);
             //}
         }
 
         public void Process(PacketHeader packetHeader, Connection connection, object obj)
         {
-            innerDelegate(packetHeader, connection, (obj == null ? default(T) : (T)obj));
+            innerDelegate(packetHeader, connection, (obj == null ? default(incomingObjectType) : (incomingObjectType)obj));
         }
 
         public bool Equals(IPacketTypeHandlerDelegateWrapper other)
         {
-            if (innerDelegate == (other as PacketTypeHandlerDelegateWrapper<T>).innerDelegate)
+            if (innerDelegate == (other as PacketTypeHandlerDelegateWrapper<incomingObjectType>).innerDelegate)
                 return true;
             else
                 return false;
@@ -105,7 +105,7 @@ namespace NetworkCommsDotNet
 
         public bool EqualsDelegate(Delegate other)
         {
-            return other as NetworkComms.PacketHandlerCallBackDelegate<T> == innerDelegate;
+            return other as NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> == innerDelegate;
         }
     }
 }

@@ -221,14 +221,14 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Append a connection specific packet handler
         /// </summary>
-        /// <typeparam name="T">The type of incoming object</typeparam>
+        /// <typeparam name="incomingObjectType">The type of incoming object</typeparam>
         /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
         /// <param name="options">The <see cref="SendReceiveOptions"/> to be used for the provided packet type</param>
-        public void AppendIncomingPacketHandler<T>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions options)
+        public void AppendIncomingPacketHandler<incomingObjectType>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> packetHandlerDelgatePointer, SendReceiveOptions options)
         {
             if (packetTypeStr == null) throw new ArgumentNullException("packetTypeStr", "Provided packetType string cannot be null.");
-            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided NetworkComms.PacketHandlerCallBackDelegate<T> cannot be null.");
+            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> cannot be null.");
             if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
 
             //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
@@ -257,7 +257,7 @@ namespace NetworkCommsDotNet
                 if (incomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
                     //Make sure we avoid duplicates
-                    PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
+                    PacketTypeHandlerDelegateWrapper<incomingObjectType> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer);
                     bool delegateAlreadyExists = false;
                     foreach (var handler in incomingPacketHandlers[packetTypeStr])
                     {
@@ -271,10 +271,10 @@ namespace NetworkCommsDotNet
                     if (delegateAlreadyExists)
                         throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
 
-                    incomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer));
+                    incomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer));
                 }
                 else
-                    incomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
+                    incomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer) });
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added connection specific incoming packetHandler for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
             }

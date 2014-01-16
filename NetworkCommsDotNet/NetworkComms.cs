@@ -810,7 +810,7 @@ namespace NetworkCommsDotNet
                         if (item.PacketHeader.TotalPayloadSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
                         {
                             //Instead of throwing an exception we can request the packet to be resent
-                            Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
+                            Packet<string> returnPacket = new Packet<string>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
                             item.Connection.SendPacket(returnPacket);
                             //We need to wait for the packet to be resent before going further
                             return;
@@ -831,7 +831,7 @@ namespace NetworkCommsDotNet
                     else
                         throw new InvalidOperationException("Attempted to access packet header sequence number when non was set.");
 
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
+                    Packet<long> returnPacket = new Packet<long>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
                     
                     //Should an error occur while sending the confirmation it should not prevent the handling of this packet
                     try
@@ -857,7 +857,7 @@ namespace NetworkCommsDotNet
                         NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
+                    Packet<byte[]> returnPacket = new Packet<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
                     item.Connection.SendPacket(returnPacket);
                 }
 
@@ -976,11 +976,11 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Delegate for handling incoming packets. See AppendGlobalIncomingPacketHandler members.
         /// </summary>
-        /// <typeparam name="T">The type of object which is expected for this handler</typeparam>
+        /// <typeparam name="incomingObjectType">The type of object which is expected for this handler</typeparam>
         /// <param name="packetHeader">The <see cref="PacketHeader"/> of the incoming packet</param>
         /// <param name="connection">The connection with which this packet was received</param>
         /// <param name="incomingObject">The incoming object of specified type T</param>
-        public delegate void PacketHandlerCallBackDelegate<T>(PacketHeader packetHeader, Connection connection, T incomingObject);
+        public delegate void PacketHandlerCallBackDelegate<incomingObjectType>(PacketHeader packetHeader, Connection connection, incomingObjectType incomingObject);
 
         /// <summary>
         /// If true any unknown incoming packet types are ignored. Default is false and will result in an error file being created if 
@@ -992,10 +992,10 @@ namespace NetworkCommsDotNet
         /// Add an incoming packet handler using default SendReceiveOptions. Multiple handlers for the same packet type will be 
         /// executed in the order they are added.
         /// </summary>
-        /// <typeparam name="T">The type of incoming object</typeparam>
+        /// <typeparam name="incomingObjectType">The type of incoming object</typeparam>
         /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer)
+        public static void AppendGlobalIncomingPacketHandler<incomingObjectType>(string packetTypeStr, PacketHandlerCallBackDelegate<incomingObjectType> packetHandlerDelgatePointer)
         {
             //Checks for unmanaged packet types
             if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
@@ -1007,20 +1007,20 @@ namespace NetworkCommsDotNet
                     throw new InvalidOperationException("Attempted to add packet handler for an unmanaged packet type when the global send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
             }
 
-            AppendGlobalIncomingPacketHandler<T>(packetTypeStr, packetHandlerDelgatePointer, DefaultSendReceiveOptions);
+            AppendGlobalIncomingPacketHandler<incomingObjectType>(packetTypeStr, packetHandlerDelgatePointer, DefaultSendReceiveOptions);
         }
 
         /// <summary>
         /// Add an incoming packet handler using the provided SendReceiveOptions. Multiple handlers for the same packet type will be executed in the order they are added.
         /// </summary>
-        /// <typeparam name="T">The type of incoming object</typeparam>
+        /// <typeparam name="incomingObjectType">The type of incoming object</typeparam>
         /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
         /// <param name="sendReceiveOptions">The SendReceiveOptions to be used for the provided packet type</param>
-        public static void AppendGlobalIncomingPacketHandler<T>(string packetTypeStr, PacketHandlerCallBackDelegate<T> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
+        public static void AppendGlobalIncomingPacketHandler<incomingObjectType>(string packetTypeStr, PacketHandlerCallBackDelegate<incomingObjectType> packetHandlerDelgatePointer, SendReceiveOptions sendReceiveOptions)
         {
             if (packetTypeStr == null) throw new ArgumentNullException("packetTypeStr", "Provided packetType string cannot be null.");
-            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided PacketHandlerCallBackDelegate<T> cannot be null.");
+            if (packetHandlerDelgatePointer == null) throw new ArgumentNullException("packetHandlerDelgatePointer", "Provided PacketHandlerCallBackDelegate<incomingObjectType> cannot be null.");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions cannot be null.");
 
             //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
@@ -1049,7 +1049,7 @@ namespace NetworkCommsDotNet
                 if (globalIncomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
                     //Make sure we avoid duplicates
-                    PacketTypeHandlerDelegateWrapper<T> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer);
+                    PacketTypeHandlerDelegateWrapper<incomingObjectType> toCompareDelegate = new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer);
 
                     bool delegateAlreadyExists = false;
                     foreach (var handler in globalIncomingPacketHandlers[packetTypeStr])
@@ -1064,10 +1064,10 @@ namespace NetworkCommsDotNet
                     if (delegateAlreadyExists)
                         throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
 
-                    globalIncomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer));
+                    globalIncomingPacketHandlers[packetTypeStr].Add(new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer));
                 }
                 else
-                    globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<T>(packetHandlerDelgatePointer) });
+                    globalIncomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { new PacketTypeHandlerDelegateWrapper<incomingObjectType>(packetHandlerDelgatePointer) });
 
                 if (LoggingEnabled) logger.Info("Added incoming packetHandler for '" + packetTypeStr + "' packetType.");
             }
@@ -1804,7 +1804,7 @@ namespace NetworkCommsDotNet
         /// <param name="destinationIPAddress">The destination IP address</param>
         /// <param name="destinationPort">The destination listen port</param>
         /// <param name="sendObject">The object to send</param>
-        public static void SendObject(string packetTypeStr, string destinationIPAddress, int destinationPort, object sendObject)
+        public static void SendObject<sendObjectType>(string packetTypeStr, string destinationIPAddress, int destinationPort, sendObjectType sendObject)
         {
             TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
             conn.SendObject(packetTypeStr, sendObject);
@@ -1814,6 +1814,7 @@ namespace NetworkCommsDotNet
         /// Send the provided object to the specified destination and wait for a return object using TCP. Uses default sendReceiveOptions. 
         /// For more control over options see connection specific methods.
         /// </summary>
+        /// <typeparam name="sendObjectType">The sending object type, i.e. string, int[], etc</typeparam>
         /// <typeparam name="returnObjectType">The expected return object type, i.e. string, int[], etc</typeparam>
         /// <param name="sendingPacketTypeStr">Packet type to use during send</param>
         /// <param name="destinationIPAddress">The destination IP address</param>
@@ -1822,10 +1823,10 @@ namespace NetworkCommsDotNet
         /// <param name="returnPacketTimeOutMilliSeconds">Time to wait in milliseconds for return object</param>
         /// <param name="sendObject">Object to send</param>
         /// <returns>The expected return object</returns>
-        public static returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int destinationPort, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, object sendObject)
+        public static returnObjectType SendReceiveObject<sendObjectType, returnObjectType>(string sendingPacketTypeStr, string destinationIPAddress, int destinationPort, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, sendObjectType sendObject)
         {
             TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
-            return conn.SendReceiveObject<returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
+            return conn.SendReceiveObject<sendObjectType, returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
         }
 
         /// <summary>

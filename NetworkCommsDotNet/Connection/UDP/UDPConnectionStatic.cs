@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
         public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
-            return GetConnection(connectionInfo, NetworkComms.DefaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
+            return GetConnection(connectionInfo, level, NetworkComms.DefaultSendReceiveOptions, listenForReturnPackets, null, null, establishIfRequired);
         }
 
         /// <summary>
@@ -95,9 +95,9 @@ namespace NetworkCommsDotNet
         /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a 
         /// new connection is returned</param>
         /// <returns>Returns a <see cref="UDPConnection"/></returns>
-        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets = true, bool establishIfRequired = true)
+        public static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, SendReceiveOptions defaultSendReceiveOptions, bool listenForReturnPackets = true, bool establishIfRequired = true)
         {
-            return GetConnection(connectionInfo, defaultSendReceiveOptions, level, listenForReturnPackets, null, null, establishIfRequired);
+            return GetConnection(connectionInfo, level, defaultSendReceiveOptions, listenForReturnPackets, null, null, establishIfRequired);
         }
 
         /// <summary>
@@ -112,7 +112,7 @@ namespace NetworkCommsDotNet
         /// <param name="establishIfRequired">Will establish the connection, triggering connection establish delegates if a new 
         /// connection is returned</param>
         /// <returns></returns>
-        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, UDPOptions level, bool listenForReturnPackets, UDPConnection existingListenerConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
+        internal static UDPConnection GetConnection(ConnectionInfo connectionInfo, UDPOptions level, SendReceiveOptions defaultSendReceiveOptions, bool listenForReturnPackets, UDPConnection existingListenerConnection, HandshakeUDPDatagram possibleHandshakeUDPDatagram, bool establishIfRequired = true)
         {
             connectionInfo.ConnectionType = ConnectionType.UDP;
 
@@ -260,7 +260,7 @@ namespace NetworkCommsDotNet
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you use the NetworkComms.Net application layer protocol.</param>
-        public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
+        public static void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
             if (ipEndPoint == null) throw new ArgumentNullException("ipEndPoint");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions");
@@ -345,7 +345,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
+            using (Packet<sendObjectType> sendPacket = new Packet<sendObjectType>(sendingPacketType, objectToSend, sendReceiveOptions))
                 connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
         }
         #endregion

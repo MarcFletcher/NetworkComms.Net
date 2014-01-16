@@ -68,6 +68,14 @@ namespace DebugTests
                 //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
+            SendReceiveOptions options = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
+            options.Options.Add("UseNestedPacketType", "");
+
+            ConnectionInfo info = new ConnectionInfo("::1", 10000);
+            UDPConnection conn = UDPConnection.GetConnection(info, UDPOptions.None, options);
+
+            conn.SendObject("test", "testString");
+
             //DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();

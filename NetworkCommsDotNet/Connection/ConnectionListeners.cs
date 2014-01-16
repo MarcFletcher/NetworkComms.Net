@@ -385,30 +385,30 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns a list of requested existing local listeners.
         /// </summary>
-        /// <typeparam name="T">Type of listener to return.</typeparam>
+        /// <typeparam name="listenerType">Type of listener to return.</typeparam>
         /// <param name="endPointToMatch">The <see cref="EndPoint"/> to match to local listeners. Use IPAddress.Any to match all 
         /// addresses. Use port 0 to match all ports.</param>
         /// <returns></returns>
-        public static List<T> ExistingLocalListeners<T>(EndPoint endPointToMatch) where T : ConnectionListenerBase
+        public static List<listenerType> ExistingLocalListeners<listenerType>(EndPoint endPointToMatch) where listenerType : ConnectionListenerBase
         {
-            List<T> result = new List<T>();
+            List<listenerType> result = new List<listenerType>();
             lock (staticConnectionLocker)
             {
                 //Get a list of valid endPoints
-                if (typeof(T) == typeof(UDPConnectionListener))
+                if (typeof(listenerType) == typeof(UDPConnectionListener))
                 {
                     List<EndPoint> endPointsToUse = ExistingLocalListenEndPoints(ConnectionType.UDP, endPointToMatch);
                     foreach (EndPoint endPoint in endPointsToUse)
-                        result.Add((T)listenersDict[ConnectionType.UDP][endPoint]);
+                        result.Add((listenerType)listenersDict[ConnectionType.UDP][endPoint]);
                 }
-                else if (typeof(T) == typeof(TCPConnectionListener))
+                else if (typeof(listenerType) == typeof(TCPConnectionListener))
                 {
                     List<EndPoint> endPointsToUse = ExistingLocalListenEndPoints(ConnectionType.TCP, endPointToMatch);
                     foreach (EndPoint endPoint in endPointsToUse)
-                        result.Add((T)listenersDict[ConnectionType.TCP][endPoint]);
+                        result.Add((listenerType)listenersDict[ConnectionType.TCP][endPoint]);
                 }
                 else
-                    throw new NotImplementedException("This method has not been implemented for provided type of " + typeof(T));
+                    throw new NotImplementedException("This method has not been implemented for provided type of " + typeof(listenerType));
             }
 
             return result;

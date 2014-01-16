@@ -38,13 +38,6 @@ namespace NetworkCommsDotNet
         TotalPayloadSize,
 
         /// <summary>
-        /// The portion of TotalPayloadSize that is random pad data. Pad data is always appended 
-        /// after header and real payload bytes. Used with encrypted communication to reduce the 
-        /// risk of leaking real data volume via traffic analysis attacks.
-        /// </summary>
-        PartialPayloadPadSize,
-
-        /// <summary>
         /// The data serialiser and data processor used to unwrap the payload. Used as flags.
         /// </summary>
         SerializerProcessors,
@@ -189,22 +182,6 @@ namespace NetworkCommsDotNet
         public int TotalPayloadSize
         {
             get { return (int)longItems[PacketHeaderLongItems.TotalPayloadSize]; }
-        }
-
-        /// <summary>
-        /// The portion of TotalPayloadSize that is random pad data. Pad data is always appended 
-        /// after header and real payload bytes. Used with encrypted communication to reduce the 
-        /// risk of leaking real data volume via traffic analysis attacks.
-        /// </summary>
-        public int PartialPayloadPadSize
-        {
-            get 
-            {
-                if (ContainsOption(PacketHeaderLongItems.PartialPayloadPadSize))
-                    return 0;
-                else
-                    return (int)longItems[PacketHeaderLongItems.PartialPayloadPadSize]; 
-            }
         }
 
         /// <summary>

@@ -21,26 +21,60 @@ using System.Collections.Generic;
 using System.Text;
 using DPSBase;
 using System.IO;
+using ProtoBuf;
 
 namespace NetworkCommsDotNet
 {
     /// <summary>
+    /// Interface for defining Application Layer Protocol packets
+    /// </summary>
+    public interface IPacket
+    {
+        /// <summary>
+        /// The packet header for this packet
+        /// </summary>
+        PacketHeader PacketHeader { get; }
+
+        /// <summary>
+        /// The payload data stream
+        /// </summary>
+        StreamSendWrapper PacketData { get; }
+
+        /// <summary>
+        /// Returns the serialised bytes of the packet header appended by the serialised header size. This is required to 
+        /// rebuild the header on receive.
+        /// </summary>
+        /// <returns>The serialised header as byte[]</returns>
+        byte[] SerialiseHeader(SendReceiveOptions options);
+
+        /// <summary>
+        /// Dispose of internal packet resources
+        /// </summary>
+        void Dispose();
+    }
+
+    /// <summary>
     /// Wrapper for <see cref="PacketHeader"/> and packetData.
     /// </summary>
-    public class Packet : IDisposable
+    [ProtoContract]
+    public class Packet<payloadObjectType> : IDisposable, IPacket
     {
-        PacketHeader packetHeader;
-        StreamSendWrapper packetData;
+        [ProtoMember(1)]
+        PacketHeader _packetHeader;
+        [ProtoMember(2)]
+        payloadObjectType _payloadObject;
+
+        StreamSendWrapper payloadStream;
 
         /// <summary>
         /// Create a new packet
         /// </summary>
-        /// <param name="packetTypeStr">The sending packet type</param>
-        /// <param name="packetObject">The object to be sent</param>
+        /// <param name="sendingPacketTypeStr">The sending packet type</param>
+        /// <param name="payloadObject">The object to be sent</param>
         /// <param name="options">The <see cref="SendReceiveOptions"/> to be used to create this packet</param>
-        public Packet(string packetTypeStr, object packetObject, SendReceiveOptions options)
+        public Packet(string sendingPacketTypeStr, payloadObjectType payloadObject, SendReceiveOptions options)
         {
-            Constructor(packetTypeStr, null, packetObject, options);
+            Constructor(sendingPacketTypeStr, null, payloadObject, options, false);
         }
 
         /// <summary>
@@ -48,75 +82,111 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="sendingPacketTypeStr">The sending packet type</param>
         /// <param name="requestReturnPacketTypeStr">The expected return packet type</param>
-        /// <param name="packetObject">The object to be sent</param>
+        /// <param name="payloadObject">The object to be sent</param>
         /// <param name="options">The <see cref="SendReceiveOptions"/> to be used to create this packet</param>
-        public Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
+        public Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, payloadObjectType payloadObject, SendReceiveOptions options)
         {
-            Constructor(sendingPacketTypeStr, requestReturnPacketTypeStr, packetObject, options);
+            Constructor(sendingPacketTypeStr, requestReturnPacketTypeStr, payloadObject, options, false);
         }
 
-        private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, object packetObject, SendReceiveOptions options)
+        /// <summary>
+        /// Private constructor used for nesting packets
+        /// </summary>
+        /// <param name="sendingPacketTypeStr"></param>
+        /// <param name="requestReturnPacketTypeStr"></param>
+        /// <param name="payloadObject"></param>
+        /// <param name="options"></param>
+        /// <param name="isNested"></param>
+        private Packet(string sendingPacketTypeStr, string requestReturnPacketTypeStr, payloadObjectType payloadObject, SendReceiveOptions options, bool isNested)
+        {
+            Constructor(sendingPacketTypeStr, requestReturnPacketTypeStr, payloadObject, options, isNested);
+        }
+
+        private void Constructor(string sendingPacketTypeStr, string requestReturnPacketTypeStr, payloadObjectType payloadObject, SendReceiveOptions options, bool isNested)
         {
             if (sendingPacketTypeStr == null || sendingPacketTypeStr == "") throw new ArgumentNullException("sendingPacketTypeStr", "The provided string can not be null or zero length.");
             if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
             if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
 
-            object packetDataObject = packetObject;
-            if (packetDataObject == null)
+            object objectToSerialise;
+            if (options.Options.ContainsKey("UseNestedPacketType") && !isNested)
             {
+                //We need to create a nested packet
+                objectToSerialise = new Packet<payloadObjectType>(sendingPacketTypeStr, requestReturnPacketTypeStr, payloadObject, options, true);
+
+                //Serialise the nested packet
+                this.payloadStream = options.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
+
+                //We only calculate the checkSum if we are going to use it
+                string hashStr = null;
+                if (NetworkComms.EnablePacketCheckSumValidation)
+                    hashStr = NetworkComms.MD5Bytes(payloadStream.ThreadSafeStream.ToArray(payloadStream.Start, payloadStream.Length));
+
+                //Set the packet header
+                this._packetHeader = new PacketHeader(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.NestedPacket), payloadStream.Length, options, null, hashStr);
+
+                //Add an identifier specifying the serialisers and processors we have used
+                this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
+            }
+            else if (isNested)
+            {
+                //Set the payload object
+                _payloadObject = payloadObject;
+
+                //Set the packet header
+                this._packetHeader = new PacketHeader(sendingPacketTypeStr, 0, options, requestReturnPacketTypeStr, null);
+            }
+            else
+            {
+                objectToSerialise = payloadObject;
+                if (objectToSerialise == null)
+                {
 #if NETFX_CORE
                 var emptyStream = new MemoryStream(new byte[0], 0, 0, false);
 #else
-                var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
+                    var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
 #endif
-                packetDataObject = new StreamSendWrapper(new ThreadSafeStream(emptyStream, true));
+                    objectToSerialise = new StreamSendWrapper(new ThreadSafeStream(emptyStream, true));
+                }
+
+                //Set the packet data
+                this.payloadStream = options.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
+
+                //We only calculate the checkSum if we are going to use it
+                string hashStr = null;
+                if (NetworkComms.EnablePacketCheckSumValidation)
+                    hashStr = NetworkComms.MD5Bytes(payloadStream.ThreadSafeStream.ToArray(payloadStream.Start, payloadStream.Length));
+
+                //Set the packet header
+                this._packetHeader = new PacketHeader(sendingPacketTypeStr, payloadStream.Length, options, requestReturnPacketTypeStr, hashStr);
+
+                //Add an identifier specifying the serialisers and processors we have used
+                this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
             }
 
-            //Set the packet data
-            this.packetData = options.DataSerializer.SerialiseDataObject(packetDataObject, options.DataProcessors, options.Options);
-
-            //We only calculate the checkSum if we are going to use it
-            string hashStr = null;
-            if (NetworkComms.EnablePacketCheckSumValidation)
-                hashStr = NetworkComms.MD5Bytes(packetData.ThreadSafeStream.ToArray(packetData.Start, packetData.Length));
-
-            //Set the packet header
-            this.packetHeader = new PacketHeader(sendingPacketTypeStr, packetData.Length, options, requestReturnPacketTypeStr, hashStr);
-
-            //Add an identifier specifying the serialisers and processors we have used
-            this.packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
-
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + packetData.Length.ToString() + " bytes");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
         }
 
-        /// <summary>
-        /// Return the packet header for this packet
-        /// </summary>
+        /// <inheritdoc />
         public PacketHeader PacketHeader
         {
-            get { return packetHeader; }
+            get { return _packetHeader; }
         }
 
-        /// <summary>
-        /// Return the byte[] packet data
-        /// </summary>
+        /// <inheritdoc />
         public StreamSendWrapper PacketData
         {
-            get { return packetData; }
+            get { return payloadStream; }
         }
 
-        /// <summary>
-        /// Returns the serialised bytes of the packet header appended by the serialised header size. This is required to 
-        /// rebuild the header on receive.
-        /// </summary>
-        /// <returns>The serialised header as byte[]</returns>
+        /// <inheritdoc />
         public byte[] SerialiseHeader(SendReceiveOptions options)
         {
             if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
 
             //We need to start of by serialising the header
             byte[] serialisedHeader;
-            using(StreamSendWrapper sendWrapper = options.DataSerializer.SerialiseDataObject(packetHeader, options.DataProcessors, null))
+            using(StreamSendWrapper sendWrapper = options.DataSerializer.SerialiseDataObject(_packetHeader, options.DataProcessors, null))
                 serialisedHeader = sendWrapper.ThreadSafeStream.ToArray(1);
 
             if (serialisedHeader.Length - 1 > byte.MaxValue)
@@ -131,12 +201,11 @@ namespace NetworkCommsDotNet
             return serialisedHeader;
         }
 
-        /// <summary>
-        /// Dispose of internal resources
-        /// </summary>
+        /// <inheritdoc />
         public void Dispose()
         {
-            packetData.Dispose();
+            _payloadObject = default(payloadObjectType);
+            payloadStream.Dispose();
         }
     }
 }

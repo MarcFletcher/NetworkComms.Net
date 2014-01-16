@@ -32,5 +32,6 @@ namespace NetworkCommsDotNet
         AliveTestPacket,
         ConnectionSetup,
         Unmanaged,
+        NestedPacket,
     }
 }

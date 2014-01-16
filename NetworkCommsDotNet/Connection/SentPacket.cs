@@ -28,10 +28,10 @@ namespace NetworkCommsDotNet
     class SentPacket
     {
         public int SendCount { get; private set; }
-        public Packet Packet { get; private set; }
+        public IPacket Packet { get; private set; }
         public DateTime SentPacketCreationTime { get; private set; }
 
-        public SentPacket(Packet packet)
+        public SentPacket(IPacket packet)
         {
             this.SentPacketCreationTime = DateTime.Now;
             this.Packet = packet;

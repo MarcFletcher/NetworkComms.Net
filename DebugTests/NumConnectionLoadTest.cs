@@ -347,7 +347,7 @@ namespace DebugTests
                     }
                     else
                     {
-                        conn = UDPConnection.GetConnection(connInfo, sendReceiveOptions, UDPConnection.DefaultUDPOptions);
+                        conn = UDPConnection.GetConnection(connInfo, UDPConnection.DefaultUDPOptions, sendReceiveOptions);
                         conn.SendObject(packetTypeStr, clientHammerData);
 
                         if (closeConnectionAfterSend)

@@ -303,7 +303,7 @@ namespace NetworkCommsDotNet
             {
 #if WINDOWS_PHONE
                 Stream stream = ar.AsyncState as Stream;
-                totalBytesRead = stream.EndRead(ar); + totalBytesRead;
+                totalBytesRead = stream.EndRead(ar) + totalBytesRead;
 #elif NETFX_CORE
                 totalBytesRead = count + totalBytesRead;
 #else

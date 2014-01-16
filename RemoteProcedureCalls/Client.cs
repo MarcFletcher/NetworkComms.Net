@@ -93,10 +93,10 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
+            instanceId = connection.SendReceiveObject<string, string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
-                throw new RPCException("Server not listenning for new instances of type " + typeof(T).ToString());
+                throw new RPCException("Server not listening for new instances of type " + typeof(T).ToString());
 
             return Cache<T>.CreateInstance(instanceId, connection);
         }
@@ -117,7 +117,7 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
+            instanceId = connection.SendReceiveObject<string,string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Named instance does not exist");
@@ -139,7 +139,7 @@ namespace RemoteProcedureCalls
                 throw new InvalidOperationException(typeof(T).Name + " is not an interface");
 
             string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
-            instanceId = connection.SendReceiveObject<string>(packetType, packetType, RPCInitialisationTimeout, instanceId);
+            instanceId = connection.SendReceiveObject<string,string>(packetType, packetType, RPCInitialisationTimeout, instanceId);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Instance with given Id not found");
@@ -811,7 +811,7 @@ namespace RemoteProcedureCalls
 
             string packetType = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
 
-            wrapper = connection.SendReceiveObject<RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
+            wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
 
             if (wrapper.Exception != null)
                 throw new RPCException(wrapper.Exception);

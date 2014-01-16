@@ -215,7 +215,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet">Packet to send</param>
         /// <param name="ipEndPoint">The target ipEndPoint</param>
-        private void SendPacketSpecific(Packet packet, IPEndPoint ipEndPoint)
+        private void SendPacketSpecific<packetObjectType>(Packet<packetObjectType> packet, IPEndPoint ipEndPoint)
         {
 #if FREETRIAL
             if (ipEndPoint.Address == IPAddress.Broadcast)
@@ -389,7 +389,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        connection = GetConnection(desiredConnection, ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
+                        connection = GetConnection(desiredConnection, ConnectionUDPOptions, ConnectionDefaultSendReceiveOptions, false, this, possibleHandshakeUDPDatagram);
                     }
                     catch (ConnectionShutdownException)
                     {
@@ -486,7 +486,7 @@ namespace NetworkCommsDotNet
                     {
                         //Look for an existing connection, if one does not exist we will create it
                         //This ensures that all further processing knows about the correct endPoint
-                        connection = GetConnection(desiredConnection, ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
+                        connection = GetConnection(desiredConnection, ConnectionUDPOptions, ConnectionDefaultSendReceiveOptions, false, this, possibleHandshakeUDPDatagram);
                     }
                     catch (ConnectionShutdownException)
                     {
@@ -588,7 +588,7 @@ namespace NetworkCommsDotNet
                         {
                             //Look for an existing connection, if one does not exist we will create it
                             //This ensures that all further processing knows about the correct endPoint
-                            connection = GetConnection(desiredConnection, ConnectionDefaultSendReceiveOptions, ConnectionUDPOptions, false, this, possibleHandshakeUDPDatagram);
+                            connection = GetConnection(desiredConnection, ConnectionUDPOptions, ConnectionDefaultSendReceiveOptions, false, this, possibleHandshakeUDPDatagram);
                         }
                         catch (ConnectionShutdownException)
                         {
