@@ -52,6 +52,9 @@
     <Compile Include="..\..\..\DPSBase\BinaryFormaterSerializer.cs">
       <Link>BinaryFormaterSerializer.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\DPSBase\DataPadder.cs">
+      <Link>DataPadder.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\DPSBase\DataProcessor.cs">
       <Link>DataProcessor.cs</Link>
     </Compile>
