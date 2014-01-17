@@ -29,6 +29,11 @@ using NetworkCommsDotNet.XPlatformHelper;
 using System.Net.Sockets;
 #endif
 
+#if NET4 || NET35
+using InTheHand.Net;
+using InTheHand.Net.Bluetooth;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -76,7 +81,7 @@ namespace NetworkCommsDotNet
         string NetworkIdentifierStr;
 
         [ProtoMember(3)]
-        string localEndPointIPStr; //Only set on serialise
+        string localEndPointAddressStr; //Only set on serialise
         [ProtoMember(4)]
         int localEndPointPort; //Only set on serialise
 
@@ -195,6 +200,46 @@ namespace NetworkCommsDotNet
                 }
             }
         }
+
+#if NET4 || NET35
+
+        /// <summary>
+        /// The localEndPoint cast as <see cref="IPEndPoint"/>.
+        /// </summary>
+        internal BluetoothEndPoint LocalBTEndPoint
+        {
+            get
+            {
+                try
+                {
+                    return (BluetoothEndPoint)LocalEndPoint;
+                }
+                catch (InvalidCastException ex)
+                {
+                    throw new InvalidCastException("Unable to cast LocalEndPoint to IPEndPoint.", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The remoteEndPoint cast as <see cref="IPEndPoint"/>.
+        /// </summary>
+        internal BluetoothEndPoint RemoteBTEndPoint
+        {
+            get
+            {
+                try
+                {
+                    return (BluetoothEndPoint)RemoteEndPoint;
+                }
+                catch (InvalidCastException ex)
+                {
+                    throw new InvalidCastException("Unable to cast LocalEndPoint to IPEndPoint.", ex);
+                }
+            }
+        }
+#endif
+
         #endregion
 
         /// <summary>
@@ -389,18 +434,37 @@ namespace NetworkCommsDotNet
             {
                 if (LocalEndPoint as IPEndPoint != null)
                 {
-                    localEndPointIPStr = LocalIPEndPoint.Address.ToString();
+                    localEndPointAddressStr = LocalIPEndPoint.Address.ToString();
                     localEndPointPort = LocalIPEndPoint.Port;
                 }
+
+#if NET4 || NET35
+                if (LocalEndPoint as InTheHand.Net.BluetoothEndPoint != null)
+                {
+                    localEndPointAddressStr = LocalBTEndPoint.Address.ToString();
+                    localEndPointPort = LocalBTEndPoint.Port;
+                }
+#endif
             }
         }
 
         [ProtoAfterDeserialization]
         private void OnDeserialise()
-        {
+        {   
+#if NET4 || NET35
+            if (ConnectionType == NetworkCommsDotNet.ConnectionType.Bluetooth)
+            {
+                BluetoothAddress btAddress;
+                if(!BluetoothAddress.TryParse(localEndPointAddressStr, out btAddress))
+                    throw new ArgumentException("Failed to parse BluetoothAddress from localEndPointAddressStr", "localEndPointAddressStr");
+
+                LocalEndPoint = new BluetoothEndPoint(btAddress, BluetoothService.SerialPort, localEndPointPort);
+            }
+#endif
+
             IPAddress ipAddress;
-            if (!IPAddress.TryParse(localEndPointIPStr, out ipAddress))
-                throw new ArgumentException("Failed to parse IPAddress from localEndPointIPStr", "localEndPointIPStr");
+            if (!IPAddress.TryParse(localEndPointAddressStr, out ipAddress))
+                throw new ArgumentException("Failed to parse IPAddress from localEndPointAddressStr", "localEndPointAddressStr");
 
             LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
         }
