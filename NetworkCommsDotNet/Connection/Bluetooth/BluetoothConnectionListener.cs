@@ -106,17 +106,17 @@ namespace NetworkCommsDotNet
 
             try
             {
-                var newTCPClient = listenerInstance.EndAcceptBluetoothClient(ar);
-                ConnectionInfo newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newTCPClient.Client.RemoteEndPoint, ApplicationLayerProtocol);
+                var newBTClient = listenerInstance.EndAcceptBluetoothClient(ar);
+                ConnectionInfo newConnectionInfo = new ConnectionInfo(true, ConnectionType.Bluetooth, newBTClient.Client.RemoteEndPoint, ApplicationLayerProtocol);
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New TCP connection from " + newConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New bluetooth connection from " + newConnectionInfo);
 
                 ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {
                     #region Pickup The New Connection
                     try
                     {
-                        BluetoothConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true);
+                        BluetoothConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newBTClient, true);
                     }
                     catch (ConfirmationTimeoutException)
                     {
