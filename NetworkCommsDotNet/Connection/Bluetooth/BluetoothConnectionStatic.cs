@@ -54,7 +54,7 @@ namespace NetworkCommsDotNet
         /// <returns>An existing connection or a new one</returns>
         internal static BluetoothConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, BluetoothClient btClient, bool establishIfRequired = true)
         {
-            connectionInfo.ConnectionType = ConnectionType.TCP;
+            connectionInfo.ConnectionType = ConnectionType.Bluetooth;
 
             //If we have a tcpClient at this stage we must be server side
             if (btClient != null) connectionInfo.ServerSide = true;

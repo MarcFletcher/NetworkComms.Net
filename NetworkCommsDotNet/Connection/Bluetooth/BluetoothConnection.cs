@@ -52,13 +52,7 @@ namespace NetworkCommsDotNet
 
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
             btClientNetworkStream = btClient.GetStream();
-
-            //This disables the 'nagle algorithm'
-            //http://msdn.microsoft.com/en-us/library/system.net.sockets.socket.nodelay.aspx
-            //Basically we may want to send lots of small packets (<200 bytes) and sometimes those are time critical (e.g. when establishing a connection)
-            //If we leave this enabled small packets may never be sent until a suitable send buffer length threshold is passed. i.e. BAD
-            btClient.Client.NoDelay = true;
-
+                        
             //Start listening for incoming data
             StartIncomingDataListen();
 
@@ -72,14 +66,7 @@ namespace NetworkCommsDotNet
 
                 //Trigger any connection setup waits
                 connectionSetupWait.Set();
-            }
-
-            //Once the connection has been established we may want to re-enable the 'nagle algorithm' used for reducing network congestion (apparently).
-            //By default we leave the nagle algorithm disabled because we want the quick through put when sending small packets
-            if (EnableNagleAlgorithmForNewConnections)
-            {
-                btClient.Client.NoDelay = false;
-            }
+            }            
         }
 
         /// <summary>
@@ -89,7 +76,7 @@ namespace NetworkCommsDotNet
         {
             try
             {
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting TCP client with " + ConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Connecting bluetooth client with " + ConnectionInfo);
 
                 bool connectSuccess = true;
 
@@ -115,19 +102,19 @@ namespace NetworkCommsDotNet
                     connectionWait.Close();
                 }
 
-                if (!connectSuccess) throw new ConnectionSetupException("Timeout waiting for remoteEndPoint to accept TCP connection.");
+                if (!connectSuccess) throw new ConnectionSetupException("Timeout waiting for remoteEndPoint to accept bluetooth connection.");
             }
             catch (Exception ex)
             {
                 CloseConnection(true, 17);
-                throw new ConnectionSetupException("Error during TCP connection establish with destination (" + ConnectionInfo + "). Destination may not be listening or connect timed out. " + ex.ToString());
+                throw new ConnectionSetupException("Error during bluetooth connection establish with destination (" + ConnectionInfo + "). Destination may not be listening or connect timed out. " + ex.ToString());
             }
         }
 
         /// <inheritdoc />
         protected override void StartIncomingDataListen()
         {
-            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.TCP, ConnectionInfo.ApplicationLayerProtocol))
+            if (!NetworkComms.ConnectionExists(ConnectionInfo.RemoteEndPoint, ConnectionInfo.LocalEndPoint, ConnectionType.Bluetooth, ConnectionInfo.ApplicationLayerProtocol))
             {
                 CloseConnection(true, 18);
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");

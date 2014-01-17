@@ -85,6 +85,8 @@ namespace DebugTests
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
+                    var connection = BluetoothConnection.GetConnection(targetServerConnectionInfo);
+
                     NetworkComms.SendObject("Message", ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Address.ToString(), ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Port, test);
                 }
             }
@@ -108,10 +110,8 @@ namespace DebugTests
             Console.WriteLine();
 
             BluetoothClient btc = new BluetoothClient();
-            var devs = (from dev in btc.DiscoverDevicesInRange()
-                        where dev.InstalledServices.Contains(BluetoothService.SerialPort)
-                        select dev).ToList();
-
+            var devs = btc.DiscoverDevicesInRange().ToList();
+            
             if (devs == null || devs.Count() == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
