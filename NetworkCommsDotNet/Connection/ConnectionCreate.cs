@@ -213,8 +213,13 @@ namespace NetworkCommsDotNet
                 //If we are client side part of the handshake is to inform the server of a potential local listener
                 //Get a list of existing listeners
                 List<EndPoint> existingLocalListeners = null;
-                if (ConnectionInfo.LocalEndPoint.GetType() == typeof(IPEndPoint))
+                if (ConnectionInfo.LocalEndPoint is IPEndPoint)
                     existingLocalListeners = Connection.ExistingLocalListenEndPoints(ConnectionInfo.ConnectionType, new IPEndPoint(ConnectionInfo.LocalIPEndPoint.Address, 0));
+
+#if NET4 || NET35
+                if (ConnectionInfo.LocalEndPoint is InTheHand.Net.BluetoothEndPoint)
+                    existingLocalListeners = Connection.ExistingLocalListenEndPoints(ConnectionInfo.ConnectionType, new InTheHand.Net.BluetoothEndPoint(ConnectionInfo.LocalBTEndPoint.Address, ConnectionInfo.LocalBTEndPoint.Service, 0));
+#endif
 
                 //Check to see if we have a local listener for matching the local endpoint address
                 //If we are client side we use this local listener in our reply to the server

@@ -459,6 +459,7 @@ namespace NetworkCommsDotNet
                     throw new ArgumentException("Failed to parse BluetoothAddress from localEndPointAddressStr", "localEndPointAddressStr");
 
                 LocalEndPoint = new BluetoothEndPoint(btAddress, BluetoothService.SerialPort, localEndPointPort);
+                return;
             }
 #endif
 

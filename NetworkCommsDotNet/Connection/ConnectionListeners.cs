@@ -342,6 +342,40 @@ namespace NetworkCommsDotNet
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined may not be used with this override. Please see others.", "connectionType");
 
+#if NET4 || NET35
+            if (connectionType == ConnectionType.Bluetooth)
+            {
+                InTheHand.Net.BluetoothEndPoint btEndPointToMatch = localEndPointToMatch as InTheHand.Net.BluetoothEndPoint;
+
+                List<EndPoint> btResult = new List<EndPoint>();
+                lock (staticConnectionLocker)
+                {
+                    if (listenersDict.ContainsKey(connectionType))
+                    {
+                        foreach (EndPoint endPoint in listenersDict[connectionType].Keys)
+                        {
+                            var btEndPoint = endPoint as InTheHand.Net.BluetoothEndPoint;                            
+                            if (btEndPointToMatch != null && btEndPointToMatch.Port == 0)
+                            {
+                                //Match the IP Address
+                                if (btEndPoint.Address.Equals(btEndPointToMatch.Address) &&
+                                    listenersDict[connectionType][btEndPoint].IsListening)
+                                    btResult.Add(btEndPoint);
+                            }                            
+                            else if ((endPoint.Equals(localEndPointToMatch) || localEndPointToMatch == null) &&
+                                    listenersDict[connectionType][endPoint].IsListening)
+                            {
+                                btResult.Add(endPoint);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return btResult;
+            }
+#endif
+
             IPEndPoint ipEndPointToMatch = localEndPointToMatch as IPEndPoint;
 
             List<EndPoint> result = new List<EndPoint>();
