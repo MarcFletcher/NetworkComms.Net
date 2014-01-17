@@ -83,7 +83,8 @@ namespace DebugTests
             //DebugTest.RunExample();
             //DFSTest.RunExample();
             //BandwidthLoadTest.RunExample();
-            NumConnectionLoadTest.RunExample();
+            BluetoothTest.RunExample();
+            //NumConnectionLoadTest.RunExample();
             //ThreadPoolTest.RunExample();
             //SSLTest.RunExample();
 

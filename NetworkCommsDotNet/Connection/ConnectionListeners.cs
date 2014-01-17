@@ -323,7 +323,10 @@ namespace NetworkCommsDotNet
         /// <returns></returns>
         public static List<EndPoint> ExistingLocalListenEndPoints(ConnectionType connectionType)
         {
-            return ExistingLocalListenEndPoints(connectionType, new IPEndPoint(IPAddress.Any, 0));
+            if (connectionType == ConnectionType.TCP || connectionType == ConnectionType.UDP)
+                return ExistingLocalListenEndPoints(connectionType, new IPEndPoint(IPAddress.Any, 0));
+            else
+                return ExistingLocalListenEndPoints(connectionType, null);
         }
 
         /// <summary>
@@ -369,7 +372,7 @@ namespace NetworkCommsDotNet
                                 listenersDict[connectionType][ipEndPoint].IsListening)
                                 result.Add(ipEndPoint);
                         }
-                        else if (endPoint.Equals(localEndPointToMatch) &&
+                        else if ((endPoint.Equals(localEndPointToMatch) || localEndPointToMatch == null) &&
                                 listenersDict[connectionType][endPoint].IsListening)
                         {
                             result.Add(endPoint);
