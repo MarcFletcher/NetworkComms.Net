@@ -2149,7 +2149,7 @@ namespace NetworkCommsDotNet
                     {
                         //For each connection type we create a list of matching IPEndPoints. 
                         //[0] is remoteEndPoint, [1] will be localEndPoint
-                        Dictionary<EndPoint, List<EndPoint>> matchedIPEndPoints = new Dictionary<EndPoint, List<EndPoint>>();
+                        Dictionary<EndPoint, List<EndPoint>> matchedEndPoints = new Dictionary<EndPoint, List<EndPoint>>();
                         List<EndPoint> connectionTypeRemoteEndPointKeys = new List<EndPoint>(allConnectionsByEndPoint[currentConnectionType].Keys);
 
                         //We can only use the match if we can successfully cast to IPEndPoint
@@ -2170,14 +2170,14 @@ namespace NetworkCommsDotNet
                                 foreach (IPEndPoint endPoint in connectionTypeRemoteEndPointKeys)
                                 {
                                     if (endPoint.Port == remoteIPEndPoint.Port)
-                                        matchedIPEndPoints.Add(endPoint, new List<EndPoint>());
+                                        matchedEndPoints.Add(endPoint, new List<EndPoint>());
                                 }
                             }
                             else if ((remoteIPEndPoint.Address == IPAddress.Any || remoteIPEndPoint.Address == IPAddress.IPv6Any) &&
                                 remoteIPEndPoint.Port == 0)
                             {
                                 foreach (IPEndPoint endPoint in connectionTypeRemoteEndPointKeys)
-                                    matchedIPEndPoints.Add(endPoint, new List<EndPoint>());
+                                    matchedEndPoints.Add(endPoint, new List<EndPoint>());
                             }
                             else if ((remoteIPEndPoint.Address != IPAddress.Any && remoteIPEndPoint.Address != IPAddress.IPv6Any) &&
                                 remoteIPEndPoint.Port == 0)
@@ -2186,18 +2186,18 @@ namespace NetworkCommsDotNet
                                 foreach (IPEndPoint endPoint in connectionTypeRemoteEndPointKeys)
                                 {
                                     if (endPoint.Address.Equals(remoteIPEndPoint.Address))
-                                        matchedIPEndPoints.Add(endPoint, new List<EndPoint>());
+                                        matchedEndPoints.Add(endPoint, new List<EndPoint>());
                                 }
                             }
                             else
                             {
                                 if (allConnectionsByEndPoint[currentConnectionType].ContainsKey(remoteIPEndPoint))
-                                    matchedIPEndPoints.Add(remoteIPEndPoint, new List<EndPoint>());
+                                    matchedEndPoints.Add(remoteIPEndPoint, new List<EndPoint>());
                             }
                             #endregion
 
                             #region Match Local IPEndPoint
-                            foreach (KeyValuePair<EndPoint, List<EndPoint>> keyPair in matchedIPEndPoints)
+                            foreach (KeyValuePair<EndPoint, List<EndPoint>> keyPair in matchedEndPoints)
                             {
                                 //If the localEndPoint only has a port specified
                                 if ((localIPEndPoint.Address == IPAddress.Any || localIPEndPoint.Address == IPAddress.IPv6Any) &&
@@ -2237,13 +2237,13 @@ namespace NetworkCommsDotNet
                         else if (allConnectionsByEndPoint[currentConnectionType].ContainsKey(remoteEndPoint) &&
                             allConnectionsByEndPoint[currentConnectionType][remoteEndPoint].ContainsKey(localEndPoint))
                         {
-                            matchedIPEndPoints.Add(remoteEndPoint, new List<EndPoint>() { localEndPoint });
+                            matchedEndPoints.Add(remoteEndPoint, new List<EndPoint>() { localEndPoint });
                         }
 
                         //Now pick out all of the matched IPEndPoints and see if there are matched connections
-                        foreach (EndPoint currentRemoteEndPoint in matchedIPEndPoints.Keys)
+                        foreach (EndPoint currentRemoteEndPoint in matchedEndPoints.Keys)
                         {
-                            foreach (EndPoint currentLocalEndPoint in matchedIPEndPoints[currentRemoteEndPoint])
+                            foreach (EndPoint currentLocalEndPoint in matchedEndPoints[currentRemoteEndPoint])
                             {
                                 if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined ||
                                     allConnectionsByEndPoint[currentConnectionType][currentRemoteEndPoint][currentLocalEndPoint].ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)

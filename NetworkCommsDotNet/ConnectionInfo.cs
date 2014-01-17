@@ -259,7 +259,22 @@ namespace NetworkCommsDotNet
         public ConnectionInfo(EndPoint remoteEndPoint)
         {
             this.RemoteEndPoint = remoteEndPoint;
-            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+            
+            switch (remoteEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+            
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
@@ -278,7 +293,22 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
             this.RemoteEndPoint = remoteEndPoint;
-            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+            
+            switch (remoteEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -298,7 +328,22 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("Provided remoteIPAddress string was not successfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
-            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+            
+            switch (this.RemoteEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
         }
@@ -324,7 +369,22 @@ namespace NetworkCommsDotNet
                 throw new ArgumentException("Provided remoteIPAddress string was not successfully parsed.", "remoteIPAddress");
 
             this.RemoteEndPoint = new IPEndPoint(ipAddress, remotePort);
-            this.LocalEndPoint = new IPEndPoint((RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+            
+            switch (this.RemoteEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -344,7 +404,22 @@ namespace NetworkCommsDotNet
 
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
-            this.RemoteEndPoint = new IPEndPoint((localEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+
+            switch (localEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.LocalEndPoint = localEndPoint;
             this.IsConnectable = isConnectable;
             this.ApplicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled;
@@ -372,7 +447,22 @@ namespace NetworkCommsDotNet
             this.ConnectionType = connectionType;
             this.NetworkIdentifierStr = localNetworkIdentifier.ToString();
             this.LocalEndPoint = localEndPoint;
-            this.RemoteEndPoint = new IPEndPoint((localEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+
+            switch (localEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.IsConnectable = isConnectable;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
@@ -395,7 +485,22 @@ namespace NetworkCommsDotNet
             this.ServerSide = serverSide;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
-            this.LocalEndPoint = new IPEndPoint((remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any), 0);
+
+            switch (this.RemoteEndPoint.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                    break;
+#if NET4 || NET35
+                case (AddressFamily)32:
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    break;
+#endif
+            }
+
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
