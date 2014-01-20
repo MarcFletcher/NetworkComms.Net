@@ -41,7 +41,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</see> to communicate between peers.
     /// </summary>
-    public sealed partial class UDPConnection : Connection
+    public sealed partial class UDPConnection : IPConnection
     {
 #if WINDOWS_PHONE || NETFX_CORE
         internal DatagramSocket socket;

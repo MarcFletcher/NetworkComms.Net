@@ -348,11 +348,11 @@ namespace ExamplesConsole
                 }
 
                 //Change the port comms will listen on
-                NetworkComms.DefaultListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + NetworkComms.DefaultListenPort + " has been set.\n");
+                IPConnection.DefaultListenPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + IPConnection.DefaultListenPort + " has been set.\n");
             }
             else
-                Console.WriteLine(" ... default listen port number " + NetworkComms.DefaultListenPort + " of will be used.\n");
+                Console.WriteLine(" ... default listen port number " + IPConnection.DefaultListenPort + " of will be used.\n");
         }
 
         /// <summary>

@@ -1,0 +1,585 @@
+﻿using DPSBase;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Text;
+using System.Threading;
+using System.Net.NetworkInformation;
+
+#if NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
+using System.Threading.Tasks;
+using Windows.Storage;
+#else
+using System.Net.Sockets;
+#endif
+
+namespace NetworkCommsDotNet
+{
+    /// <summary>
+    /// IP Connection base class for NetworkComms.Net. This contains the functionality and tools shared by any connections
+    /// that use IP related endPoints such as <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
+    /// </summary>
+    public abstract class IPConnection : Connection
+    {
+        static IPConnection()
+        {
+            DOSProtection = new DOSProtection();
+
+            NetworkLoadUpdateWindowMS = 2000;
+            InterfaceLinkSpeed = 95000000;
+            DefaultListenPort = 10000;
+        }
+
+        /// <summary>
+        /// Create a new IP connection object
+        /// </summary>
+        /// <param name="connectionInfo">ConnectionInfo corresponding to the new connection</param>
+        /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which should be used as connection defaults</param>
+        protected IPConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions)
+            : base(connectionInfo, defaultSendReceiveOptions)
+        {
+
+        }
+
+        /// <summary>
+        /// Shutdown any static features at the IPConnection base level
+        /// </summary>
+        /// <param name="threadShutdownTimeoutMS"></param>
+        internal static void ShutdownIPBase(int threadShutdownTimeoutMS = 1000)
+        {
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+            try
+            {
+                if (NetworkLoadThread != null)
+                {
+                    NetworkLoadThreadWait.Set();
+                    if (!NetworkLoadThread.Join(threadShutdownTimeoutMS))
+                    {
+                        NetworkLoadThread.Abort();
+                        throw new CommsSetupShutdownException("Timeout waiting for NetworkLoadThread thread to shutdown after " + threadShutdownTimeoutMS.ToString() + " ms. ");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                NetworkComms.LogError(ex, "CommsShutdownError");
+            }
+#endif
+        }
+
+        #region Local Host IP Information
+        /// <summary>
+        /// Restricts the IPAdddresses that are returned by <see cref="AllAllowedIPs()"/>.
+        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
+        /// will only listen on IP Addresses within provided ranges. Also see <see cref="NetworkComms.AllowedAdaptorNames"/>.
+        /// The order of provided ranges determines the order of IPAddresses returned by <see cref="AllAllowedIPs()"/>.
+        /// </summary>
+        public static IPRange[] AllowedListeningIPRanges { get; set; }
+
+        /// <summary>
+        /// Returns all allowed local IP addresses. 
+        /// If <see cref="NetworkComms.AllowedAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
+        /// If <see cref="AllowedListeningIPRanges"/> has been set only returns matching addresses ordered in descending 
+        /// preference. i.e. Most preferred at [0].
+        /// </summary>
+        /// <returns></returns>
+        public static List<IPAddress> AllAllowedIPs()
+        {
+
+#if WINDOWS_PHONE || NETFX_CORE
+            //On windows phone we simply ignore IP addresses from the auto assigned range as well as those without a valid prefix
+            List<IPAddress> allowedIPs = new List<IPAddress>();
+
+            foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
+            {
+                if (!hName.DisplayName.StartsWith("169.254"))
+                {
+                     if (AllowedListeningIPRanges != null)
+                    {
+                        bool valid = false;
+
+                        for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
+                            valid |= AllowedListeningIPRanges[i].Contains(hName.DisplayName);
+                                
+                        if(valid)
+                            allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
+                    }
+                    else
+                        allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
+                }
+            }
+
+            return allowedIPs;
+#else
+
+            //We want to ignore IP's that have been auto assigned
+            //169.254.0.0
+            IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
+            //255.255.0.0
+            IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
+
+            List<IPAddress> validIPAddresses = new List<IPAddress>();
+
+#if ANDROID
+
+            var iFaces = Java.Net.NetworkInterface.NetworkInterfaces;
+            while (iFaces.HasMoreElements)
+            {
+                bool interfaceValid = false;
+                var iFace = iFaces.NextElement() as Java.Net.NetworkInterface;
+                var javaAddresses = iFace.InetAddresses;
+
+                while (javaAddresses.HasMoreElements)
+                {
+                    var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
+                    IPAddress address = default(IPAddress);
+                    if (IPAddress.TryParse(javaAddress.HostAddress, out address))
+                    {
+                        if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
+                        {
+                            if (AllowedAdaptorNames != null)
+                            {
+                                foreach (var id in AllowedAdaptorNames)
+                                    if (id == iFace.Name)
+                                    {
+                                        interfaceValid = true;
+                                        break;
+                                    }
+                            }
+                            else
+                                interfaceValid = true;
+
+                            if (interfaceValid)
+                                break;
+                        }
+                    }
+                }
+
+                if (!interfaceValid)
+                    continue;
+
+                javaAddresses = iFace.InetAddresses;
+
+                while (javaAddresses.HasMoreElements)
+                {
+                    var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
+                    IPAddress address = default(IPAddress);
+
+                    if (IPAddress.TryParse(javaAddress.HostAddress, out address))
+                    {
+                        if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
+                        {
+                            if (!IPTools.IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                            {
+                                bool allowed = false;
+
+                                if (AllowedAdaptorNames != null)
+                                {
+                                    foreach (var id in AllowedAdaptorNames)
+                                    {
+                                        if (id == iFace.Name)
+                                        {
+                                            allowed = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                    allowed = true;
+
+                                if (!allowed)
+                                    continue;
+
+                                allowed = false;
+
+                                if (AllowedListeningIPRanges != null)
+                                {
+                                    if (IPTools.Contains(AllowedListeningIPRanges, address))
+                                        allowed = true;
+                                }
+                                else
+                                    allowed = true;
+
+                                if (!allowed)
+                                    continue;
+
+                                if (address != IPAddress.None)
+                                    validIPAddresses.Add(address);
+                            }
+                        }
+                    }
+                }    
+            }
+
+#else
+
+
+            foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                bool interfaceValid = false;
+                var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
+
+                foreach (var address in unicastAddresses)
+                {
+                    if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                    {
+                        if (NetworkComms.AllowedAdaptorNames != null)
+                        {
+                            foreach (var id in NetworkComms.AllowedAdaptorNames)
+                            {
+                                if (iFace.Id == id)
+                                {
+                                    interfaceValid = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                            interfaceValid = true;
+
+                        if (interfaceValid)
+                            break;
+                    }
+                }
+
+                if (!interfaceValid)
+                    continue;
+
+                foreach (var address in unicastAddresses)
+                {
+                    var addressInformation = address.Address;
+                    if (addressInformation.AddressFamily == AddressFamily.InterNetwork || addressInformation.AddressFamily == AddressFamily.InterNetworkV6)
+                    {
+                        if (!IPTools.IsAddressInSubnet(addressInformation, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        {
+                            bool allowed = false;
+
+                            if (NetworkComms.AllowedAdaptorNames != null)
+                            {
+                                foreach (var id in NetworkComms.AllowedAdaptorNames)
+                                {
+                                    if (id == iFace.Id)
+                                    {
+                                        allowed = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                                allowed = true;
+
+                            if (!allowed)
+                                continue;
+
+                            allowed = false;
+
+                            if (AllowedListeningIPRanges != null)
+                            {
+                                if (IPRange.Contains(AllowedListeningIPRanges, addressInformation))
+                                    allowed = true;
+                            }
+                            else
+                                allowed = true;
+
+                            if (!allowed)
+                                continue;
+
+                            if (addressInformation != IPAddress.None)
+                                validIPAddresses.Add(addressInformation);
+                        }
+                    }
+                }
+            }
+#endif
+
+            if (AllowedListeningIPRanges != null)
+            {
+                validIPAddresses.Sort((a, b) =>
+                {
+                    for (int i = 0; i < AllowedListeningIPRanges.Length; i++)
+                    {
+                        if (AllowedListeningIPRanges[i].Contains(a))
+                        {
+                            if (AllowedListeningIPRanges[i].Contains(b))
+                                return 0;
+                            else
+                                return -1;
+                        }
+                        else if (AllowedListeningIPRanges[i].Contains(b))
+                            return 1;
+                    }
+
+                    return 0;
+                });
+            }
+
+            return validIPAddresses;
+#endif
+        }
+
+        /// <summary>
+        /// The default port NetworkCommsDotNet will operate on
+        /// </summary>
+        public static int DefaultListenPort { get; set; }
+
+
+        /// <summary>
+        /// The number of milliseconds over which to take an instance load (CurrentNetworkLoad) to be used in averaged 
+        /// values (AverageNetworkLoad). Default is 2000ms. Shorter values can be used but less than 200ms may cause significant 
+        /// errors in the value of returned value, especially in mono environments.
+        /// </summary>
+        public static int NetworkLoadUpdateWindowMS { get; set; }
+
+        private static double currentNetworkLoadIncoming;
+        private static double currentNetworkLoadOutgoing;
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+        private static Thread NetworkLoadThread = null;
+        private static CommsMath currentNetworkLoadValuesIncoming;
+        private static CommsMath currentNetworkLoadValuesOutgoing;
+        private static ManualResetEvent NetworkLoadThreadWait;
+#endif
+
+        /// <summary>
+        /// The interface link speed in bits/sec used for network load calculations. Default is 100Mb/sec
+        /// </summary>
+        public static long InterfaceLinkSpeed { get; set; }
+
+        /// <summary>
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available 
+        /// network adaptor. Triggers load analysis upon first call.
+        /// </summary>
+        public static double CurrentNetworkLoadIncoming
+        {
+            get
+            {
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+                //We start the load thread when we first access the network load
+                //this helps cut down on unnecessary threads if unrequired
+                if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                {
+                    lock (NetworkComms.globalDictAndDelegateLocker)
+                    {
+                        if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                        {
+                            currentNetworkLoadValuesIncoming = new CommsMath();
+                            currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                            NetworkLoadThread = new Thread(NetworkLoadWorker);
+                            NetworkLoadThread.Name = "NetworkLoadThread";
+                            NetworkLoadThread.Start();
+                        }
+                    }
+                }
+#endif
+                return currentNetworkLoadIncoming;
+            }
+            private set { currentNetworkLoadIncoming = value; }
+        }
+
+        /// <summary>
+        /// Returns the current instance network usage, as a value between 0 and 1. Returns the largest value for any available network 
+        /// adaptor. Triggers load analysis upon first call.
+        /// </summary>
+        public static double CurrentNetworkLoadOutgoing
+        {
+            get
+            {
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+                //We start the load thread when we first access the network load
+                //this helps cut down on unnecessary threads if unrequired
+                if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                {
+                    lock (NetworkComms.globalDictAndDelegateLocker)
+                    {
+                        if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                        {
+                            currentNetworkLoadValuesIncoming = new CommsMath();
+                            currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                            NetworkLoadThread = new Thread(NetworkLoadWorker);
+                            NetworkLoadThread.Name = "NetworkLoadThread";
+                            NetworkLoadThread.Start();
+                        }
+                    }
+                }
+#endif
+                return currentNetworkLoadOutgoing;
+            }
+            private set { currentNetworkLoadOutgoing = value; }
+        }
+
+        /// <summary>
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of up to 254 seconds. 
+        /// Triggers load analysis upon first call.
+        /// </summary>
+        /// <param name="secondsToAverage">Number of seconds over which historical data should be used to arrive at an average</param>
+        /// <returns>Average network load as a double between 0 and 1</returns>
+        public static double AverageNetworkLoadIncoming(byte secondsToAverage)
+        {
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+
+            if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+            {
+                lock (NetworkComms.globalDictAndDelegateLocker)
+                {
+                    if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                    {
+                        currentNetworkLoadValuesIncoming = new CommsMath();
+                        currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                        NetworkLoadThread = new Thread(NetworkLoadWorker);
+                        NetworkLoadThread.Name = "NetworkLoadThread";
+                        NetworkLoadThread.Start();
+                    }
+                }
+            }
+
+            return currentNetworkLoadValuesIncoming.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+#else
+            return 0;
+#endif
+        }
+
+        /// <summary>
+        /// Returns the averaged value of CurrentNetworkLoadIncoming, as a value between 0 and 1, for a time window of up to 254 seconds.
+        /// Triggers load analysis upon first call.
+        /// </summary>
+        /// <param name="secondsToAverage">Number of seconds over which historical data should be used to arrive at an average</param>
+        /// <returns>Average network load as a double between 0 and 1</returns>
+        public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
+        {
+#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+            if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+            {
+                lock (NetworkComms.globalDictAndDelegateLocker)
+                {
+                    if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
+                    {
+                        currentNetworkLoadValuesIncoming = new CommsMath();
+                        currentNetworkLoadValuesOutgoing = new CommsMath();
+
+                        NetworkLoadThread = new Thread(NetworkLoadWorker);
+                        NetworkLoadThread.Name = "NetworkLoadThread";
+                        NetworkLoadThread.Start();
+                    }
+                }
+            }
+
+            return currentNetworkLoadValuesOutgoing.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
+#else
+            return 0;
+#endif
+        }
+
+#if !WINDOWS_PHONE && !ANDROID  && !NETFX_CORE
+        /// <summary>
+        /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
+        /// </summary>
+        private static void NetworkLoadWorker()
+        {
+            NetworkLoadThreadWait = new ManualResetEvent(false);
+
+            //Get all interfaces
+            NetworkInterface[] interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
+
+            long[] startSent, startReceived, endSent, endReceived;
+
+            while (!NetworkComms.commsShutdown)
+            {
+                try
+                {
+                    //we need to look at the load across all adaptors, by default we will probably choose the adaptor with the highest usage
+                    DateTime startTime = DateTime.Now;
+
+                    IPv4InterfaceStatistics[] stats = new IPv4InterfaceStatistics[interfacesToUse.Length];
+                    startSent = new long[interfacesToUse.Length];
+                    startReceived = new long[interfacesToUse.Length];
+
+                    for (int i = 0; i < interfacesToUse.Length; ++i)
+                    {
+                        stats[i] = interfacesToUse[i].GetIPv4Statistics();
+                        startSent[i] = stats[i].BytesSent;
+                        startReceived[i] = stats[i].BytesReceived;
+                    }
+
+                    if (NetworkComms.commsShutdown) return;
+
+                    //Thread.Sleep(NetworkLoadUpdateWindowMS);
+                    NetworkLoadThreadWait.WaitOne(NetworkLoadUpdateWindowMS);
+
+                    if (NetworkComms.commsShutdown) return;
+
+                    stats = new IPv4InterfaceStatistics[interfacesToUse.Length];
+                    endSent = new long[interfacesToUse.Length];
+                    endReceived = new long[interfacesToUse.Length];
+
+                    for (int i = 0; i < interfacesToUse.Length; ++i)
+                    {
+                        stats[i] = interfacesToUse[i].GetIPv4Statistics();
+                        endSent[i] = stats[i].BytesSent;
+                        endReceived[i] = stats[i].BytesReceived;
+                    }
+
+                    DateTime endTime = DateTime.Now;
+
+                    List<double> outUsage = new List<double>();
+                    List<double> inUsage = new List<double>();
+                    for (int i = 0; i < startSent.Length; i++)
+                    {
+                        outUsage.Add((double)(endSent[i] - startSent[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
+                        inUsage.Add((double)(endReceived[i] - startReceived[i]) / ((double)(InterfaceLinkSpeed * (endTime - startTime).TotalMilliseconds) / 8000));
+                    }
+
+                    //double loadValue = Math.Max(outUsage.Max(), inUsage.Max());
+                    double inMax = double.MinValue, outMax = double.MinValue;
+                    for (int i = 0; i < startSent.Length; ++i)
+                    {
+                        if (inUsage[i] > inMax) inMax = inUsage[i];
+                        if (outUsage[i] > outMax) outMax = outUsage[i];
+                    }
+
+                    //If either of the usage levels have gone above 2 it suggests we are most likely on a faster connection that we think
+                    //As such we will bump the interface link speed up to 1Gbps so that future load calculations more accurately reflect the 
+                    //actual load.
+                    if (inMax > 2 || outMax > 2) InterfaceLinkSpeed = 950000000;
+
+                    //Limit to one
+                    CurrentNetworkLoadIncoming = (inMax > 1 ? 1 : inMax);
+                    CurrentNetworkLoadOutgoing = (outMax > 1 ? 1 : outMax);
+
+                    currentNetworkLoadValuesIncoming.AddValue(CurrentNetworkLoadIncoming);
+                    currentNetworkLoadValuesOutgoing.AddValue(CurrentNetworkLoadOutgoing);
+
+                    //We can only have up to 255 seconds worth of data in the average list
+                    int maxListSize = (int)(255000.0 / NetworkLoadUpdateWindowMS);
+                    currentNetworkLoadValuesIncoming.TrimList(maxListSize);
+                    currentNetworkLoadValuesOutgoing.TrimList(maxListSize);
+                }
+                catch (Exception ex)
+                {
+                    NetworkComms.LogError(ex, "NetworkLoadWorker");
+
+                    //It may be the interfaces available to the OS have changed so we will reset them here
+                    interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
+                    //If an error has happened we don't want to thrash the problem, we wait for 5 seconds and hope whatever was wrong goes away
+                    Thread.Sleep(5000);
+                }
+            }
+        }
+#endif
+        #endregion
+
+        #region Security
+        /// <summary>
+        /// The NetworkComms.Net DOS protection class. By default DOSProtection is disabled.
+        /// </summary>
+        public static DOSProtection DOSProtection { get; private set; }
+
+        /// <summary>
+        /// If set NetworkComms.Net will only accept incoming connections from the provided IP ranges. 
+        /// </summary>
+        public static IPRange[] AllowedIncomingIPRanges { get; set; }
+        #endregion
+    }
+}

@@ -73,6 +73,7 @@
     <Compile Include="Connection\ConnectionStatic.cs" />
     <Compile Include="Connection\ConnectionType.cs" />
     <Compile Include="Connection\ConnectionListenerBase.cs" />
+    <Compile Include="Connection\IPConnection.cs" />
     <Compile Include="Connection\SentPacket.cs" />
     <Compile Include="Connection\TCP\SSLOptions.cs" />
     <Compile Include="Connection\TCP\TCPConnectionListener.cs" />

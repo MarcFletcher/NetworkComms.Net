@@ -650,6 +650,7 @@ namespace NetworkCommsDotNet
                 RemoteEndPoint = remoteEndPoint;
 
                 //Not sure what this section was supposed to do
+                //For now we will uncomment and see if there was a reason during testing
                 //It certainly creates a bug at the moment
                 //if (LocalEndPoint.GetType() == typeof(IPEndPoint) && handshakeInfo.LocalEndPoint.GetType() == typeof(IPEndPoint))
                 //    ((IPEndPoint)LocalEndPoint).Address = ((IPEndPoint)handshakeInfo.LocalEndPoint).Address;

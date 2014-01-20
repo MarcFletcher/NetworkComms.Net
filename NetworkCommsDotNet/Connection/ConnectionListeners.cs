@@ -37,8 +37,8 @@ namespace NetworkCommsDotNet
         static Dictionary<ConnectionType, Dictionary<EndPoint, ConnectionListenerBase>> listenersDict = new Dictionary<ConnectionType, Dictionary<EndPoint, ConnectionListenerBase>>();
 
         /// <summary>
-        /// Start listening on all allowed local IPs, <see cref="NetworkComms.AllAllowedIPs()"/>, 
-        /// or <see cref="NetworkComms.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false,
+        /// Start listening on all allowed local addresses for the provided connectionType, <see cref="IPConnection.AllAllowedIPs()"/>, 
+        /// or <see cref="IPConnection.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false for IP connection types,
         /// on the default port for the provided <see cref="ConnectionType"/>. If the default port is
         /// unavailable will fail over to a random port.
         /// </summary>
@@ -49,8 +49,8 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
-        /// Start listening on all allowed local IPs, <see cref="NetworkComms.AllAllowedIPs()"/>, 
-        /// or <see cref="NetworkComms.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false,
+        /// Start listening on all allowed local IPs, <see cref="IPConnection.AllAllowedIPs()"/>, 
+        /// or <see cref="IPConnection.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false for IP connection types,
         /// on the default port for the provided <see cref="ConnectionType"/>.
         /// </summary>
         /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
@@ -60,7 +60,10 @@ namespace NetworkCommsDotNet
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
 
-            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
+            if (connectionType != ConnectionType.TCP && connectionType != ConnectionType.UDP)
+                throw new NotImplementedException("This method has only been implemented for TCP and UDP connection types.");
+
+            List<IPAddress> localIPs = IPConnection.AllAllowedIPs();
 
             if (NetworkComms.ListenOnAllAllowedInterfaces)
             {
@@ -86,7 +89,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(listeners[i], new IPEndPoint(localIPs[i], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                            StartListening(listeners[i], new IPEndPoint(localIPs[i], IPConnection.DefaultListenPort), useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException) { }
                     }
@@ -117,7 +120,7 @@ namespace NetworkCommsDotNet
                 else
                     throw new NotImplementedException("This method has not been implemented for the provided connection type.");
 
-                StartListening(listener, new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                StartListening(listener, new IPEndPoint(localIPs[0], IPConnection.DefaultListenPort), useRandomPortFailOver);
             }
         }
 
