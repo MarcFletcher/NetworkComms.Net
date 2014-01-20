@@ -37,6 +37,8 @@ namespace DebugTests
         /// </summary>
         public static void RunExample()
         {
+            NetworkComms.ConnectionEstablishTimeoutMS = int.MaxValue;
+
             SendReceiveOptions nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(), null, null);
             NetworkComms.DefaultSendReceiveOptions = nullCompressionSRO;
 
@@ -58,7 +60,7 @@ namespace DebugTests
             defaultRadio.Mode = RadioMode.Connectable;
             BluetoothEndPoint localEP = new BluetoothEndPoint(defaultRadio.LocalAddress, BluetoothService.SerialPort);
             Connection.StartListening(listenner, localEP, false);
-                        
+
             //Print the IP addresses and ports we are listening on to make sure everything
             //worked as expected.
             Console.WriteLine("Listening for messages on:");
@@ -78,8 +80,8 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    ConnectionInfo targetServerConnectionInfo;
-                    GetServerDetails(out targetServerConnectionInfo);
+                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), BluetoothService.SerialPort));
+                    //GetServerDetails(out targetServerConnectionInfo);
 
                     PingRequestReturnDC test = new PingRequestReturnDC(0, 0);
 
@@ -88,7 +90,7 @@ namespace DebugTests
                     //We pull these values out of the ConnectionInfo object we got above and voila!
                     var connection = BluetoothConnection.GetConnection(targetServerConnectionInfo);
 
-                    NetworkComms.SendObject("Message", ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Address.ToString(), ((System.Net.IPEndPoint)targetServerConnectionInfo.RemoteEndPoint).Port, test);
+                    connection.SendObject("Message", test);                    
                 }
             }
 
@@ -101,7 +103,7 @@ namespace DebugTests
             ConsoleColor initColor = Console.ForegroundColor;
 
             Console.WriteLine("Please press 'Enter' to scan for bluetooth devices");
-            
+
             if (Console.ReadKey(false).Key != ConsoleKey.Enter)
             {
                 Console.ForegroundColor = initColor;
@@ -112,13 +114,13 @@ namespace DebugTests
 
             BluetoothClient btc = new BluetoothClient();
             var devs = btc.DiscoverDevicesInRange().ToList();
-            
+
             if (devs == null || devs.Count() == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("No other listenning devices detected please check that the other device is listenning and try again");
                 Console.ForegroundColor = initColor;
-                GetServerDetails(out connectionInfo);                
+                GetServerDetails(out connectionInfo);
                 return;
             }
             else
