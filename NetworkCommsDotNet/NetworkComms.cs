@@ -1712,7 +1712,7 @@ namespace NetworkCommsDotNet
 
                             #region Match Remote IPEndPoint
                             //If the remoteEndPoint only has a port specified
-                            if ((remoteIPEndPoint.Address == BluetoothAddress.None && remoteIPEndPoint.Port > 0)
+                            if (remoteIPEndPoint.Address == BluetoothAddress.None && remoteIPEndPoint.Port > 0)
                             {
                                 //If the provided IP is match any then we look for matching ports
                                 foreach (BluetoothEndPoint endPoint in connectionTypeRemoteEndPointKeys)
