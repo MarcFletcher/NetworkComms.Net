@@ -55,6 +55,7 @@ namespace DebugTests
             //Create a bluetooth listener
             BluetoothConnectionListener listenner = new BluetoothConnectionListener(nullCompressionSRO, ApplicationLayerProtocolStatus.Enabled);
             BluetoothRadio defaultRadio = BluetoothRadio.PrimaryRadio;
+            defaultRadio.Mode = RadioMode.Connectable;
             BluetoothEndPoint localEP = new BluetoothEndPoint(defaultRadio.LocalAddress, BluetoothService.SerialPort);
             Connection.StartListening(listenner, localEP, false);
                         
