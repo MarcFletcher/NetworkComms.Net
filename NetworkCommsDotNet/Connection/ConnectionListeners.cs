@@ -358,7 +358,7 @@ namespace NetworkCommsDotNet
                         foreach (EndPoint endPoint in listenersDict[connectionType].Keys)
                         {
                             var btEndPoint = endPoint as InTheHand.Net.BluetoothEndPoint;                            
-                            if (btEndPointToMatch != null && btEndPointToMatch.Port == 0)
+                            if (btEndPointToMatch != null && !btEndPointToMatch.HasPort)
                             {
                                 //Match the IP Address
                                 if (btEndPoint.Address.Equals(btEndPointToMatch.Address) &&
