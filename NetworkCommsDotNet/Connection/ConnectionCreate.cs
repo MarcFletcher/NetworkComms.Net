@@ -465,9 +465,10 @@ namespace NetworkCommsDotNet
                         //We never change the this.ConnectionInfo.RemoteEndPoint.Address as there might be NAT involved
                         //We may update the port however
                         EndPoint newRemoteEndPoint;
-                        if (this.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint) &&
-                            remoteConnectionInfo.LocalEndPoint.GetType() == typeof(IPEndPoint))
+                        if (this is IPConnection)
                             newRemoteEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteIPEndPoint.Address, remoteConnectionInfo.LocalIPEndPoint.Port);
+                        else if (this is BluetoothConnection)
+                            newRemoteEndPoint = ConnectionInfo.RemoteBTEndPoint;
                         else
                             throw new NotImplementedException("ConnectionSetupHandlerFinal not implemented for EndPoints of type " + this.ConnectionInfo.RemoteEndPoint.GetType());
 
