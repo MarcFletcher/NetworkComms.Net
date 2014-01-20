@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using DPSBase;
 using InTheHand.Net.Sockets;
 using InTheHand.Net;
+using InTheHand.Net.Bluetooth;
 
 namespace NetworkCommsDotNet
 {
@@ -44,8 +45,11 @@ namespace NetworkCommsDotNet
             if (btClient == null) ConnectSocket();
 
             //We should now be able to set the connectionInfo localEndPoint
-            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, btClient.Client.LocalEndPoint);
-            ConnectionInfo.UpdateLocalEndPointInfo(btClient.Client.LocalEndPoint);
+            var localEndPoint = btClient.Client.LocalEndPoint as BluetoothEndPoint;
+            localEndPoint = new BluetoothEndPoint(localEndPoint.Address, BluetoothService.SerialPort, localEndPoint.Port);
+
+            NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
+            ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
 
             btClient.Client.ReceiveBufferSize = NetworkComms.ReceiveBufferSizeBytes;
             btClient.Client.SendBufferSize = NetworkComms.SendBufferSizeBytes;
