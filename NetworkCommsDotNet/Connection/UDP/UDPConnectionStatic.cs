@@ -31,7 +31,7 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet
 {
-    public sealed partial class UDPConnection : Connection
+    public sealed partial class UDPConnection : IPConnection
     {
         /// <summary>
         /// By default a UDP datagram sent to an unreachable destination will result in an ICMP Destination Unreachable 
@@ -360,7 +360,7 @@ namespace NetworkCommsDotNet
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(bool useRandomPortFailOver = false)
         {
-            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
+            List<IPAddress> localIPs = IPConnection.AllAllowedIPs();
 
             if (NetworkComms.ListenOnAllAllowedInterfaces)
             {
@@ -370,7 +370,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                            StartListening(new IPEndPoint(ip, IPConnection.DefaultListenPort), useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -386,7 +386,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                StartListening(new IPEndPoint(localIPs[0], IPConnection.DefaultListenPort), useRandomPortFailOver);
         }
 
         /// <summary>

@@ -225,9 +225,12 @@ namespace NetworkCommsDotNet
                 //Any error, throw an exception.
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("A fatal exception occurred in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. See log file for more information.");
 
-                //Log the exception in DOS protection if enabled
-                if (NetworkComms.DOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
-                    NetworkComms.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
+                if (this is IPConnection)
+                {
+                    //Log the exception in DOS protection if enabled
+                    if (IPConnection.DOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
+                        IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
+                }
 
                 NetworkComms.LogError(ex, "CommsError");
                 CloseConnection(true, 45);

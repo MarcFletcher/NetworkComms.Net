@@ -111,6 +111,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\ConnectionType.cs">
       <Link>Connection\ConnectionType.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Connection\IPConnection.cs">
+      <Link>IPConnection.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\SentPacket.cs">
       <Link>Connection\SentPacket.cs</Link>
     </Compile>

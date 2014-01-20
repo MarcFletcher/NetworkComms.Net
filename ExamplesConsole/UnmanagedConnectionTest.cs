@@ -79,8 +79,8 @@ namespace ExamplesConsole
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
-            List<EndPoint> localIPEndPoints = (from current in NetworkComms.AllAllowedIPs() select
-                                                 ((EndPoint)new IPEndPoint(current, NetworkComms.DefaultListenPort))).ToList();
+            List<EndPoint> localIPEndPoints = (from current in IPConnection.AllAllowedIPs() select
+                                                 ((EndPoint)new IPEndPoint(current, IPConnection.DefaultListenPort))).ToList();
 
             //Create suitable listeners
             List<ConnectionListenerBase> listeners;
@@ -226,11 +226,11 @@ namespace ExamplesConsole
                 }
 
                 //Change the port comms will listen on
-                NetworkComms.DefaultListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + NetworkComms.DefaultListenPort + " has been set.\n");
+                IPConnection.DefaultListenPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + IPConnection.DefaultListenPort + " has been set.\n");
             }
             else
-                Console.WriteLine(" ... default listen port number " + NetworkComms.DefaultListenPort + " of will be used.\n");
+                Console.WriteLine(" ... default listen port number " + IPConnection.DefaultListenPort + " of will be used.\n");
         }
 
         /// <summary>

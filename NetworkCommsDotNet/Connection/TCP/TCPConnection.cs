@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.
     /// </summary>
-    public sealed partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : IPConnection
     {
 #if WINDOWS_PHONE || NETFX_CORE
         /// <summary>

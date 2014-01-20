@@ -74,8 +74,8 @@ namespace ExamplesConsole
             SelectSSLOptions();
 
             //Get a list of all local endPoints using the default port
-            List<EndPoint> desiredlocalEndPoints = (from current in NetworkComms.AllAllowedIPs() 
-                                                      select ((EndPoint)new IPEndPoint(current, NetworkComms.DefaultListenPort))).ToList();
+            List<EndPoint> desiredlocalEndPoints = (from current in IPConnection.AllAllowedIPs()
+                                                    select ((EndPoint)new IPEndPoint(current, IPConnection.DefaultListenPort))).ToList();
 
             //Create a list of matching TCP listeners where we provide the listenerSSLOptions
             List<ConnectionListenerBase> listeners = (from current in desiredlocalEndPoints

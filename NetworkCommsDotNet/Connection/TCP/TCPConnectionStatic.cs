@@ -38,7 +38,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace NetworkCommsDotNet
 {
-    public sealed partial class TCPConnection : Connection
+    public sealed partial class TCPConnection : IPConnection
     {
         /// <summary>
         /// By default usage of <see href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's algorithm</see> during TCP exchanges is disabled for performance reasons. If you wish it to be used for newly established connections set this property to true.
@@ -177,7 +177,7 @@ namespace NetworkCommsDotNet
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(bool useRandomPortFailOver = false)
         {
-            List<IPAddress> localIPs = NetworkComms.AllAllowedIPs();
+            List<IPAddress> localIPs = IPConnection.AllAllowedIPs();
 
             if (NetworkComms.ListenOnAllAllowedInterfaces)
             {
@@ -187,7 +187,7 @@ namespace NetworkCommsDotNet
                     {
                         try
                         {
-                            StartListening(new IPEndPoint(ip, NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                            StartListening(new IPEndPoint(ip, IPConnection.DefaultListenPort), useRandomPortFailOver);
                         }
                         catch (CommsSetupShutdownException)
                         {
@@ -203,7 +203,7 @@ namespace NetworkCommsDotNet
                 }
             }
             else
-                StartListening(new IPEndPoint(localIPs[0], NetworkComms.DefaultListenPort), useRandomPortFailOver);
+                StartListening(new IPEndPoint(localIPs[0], IPConnection.DefaultListenPort), useRandomPortFailOver);
         }
 
         /// <summary>

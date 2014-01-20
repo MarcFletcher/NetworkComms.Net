@@ -65,13 +65,13 @@ namespace DebugTests
                 byte[] someRandomData = new byte[numberMegsToCreate * 1024 * 1024];
                 randGen.NextBytes(someRandomData);
 
-                Console.WriteLine("\n ... succesfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
+                Console.WriteLine("\n ... successfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
 
                 object listLocker = new object();
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Initialise the DFS before creating the test object to ensure the correct port and IP are used as the seed
-                DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
+                DFS.InitialiseDFS(IPConnection.DefaultListenPort);
 
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
@@ -197,7 +197,7 @@ namespace DebugTests
                     ConnectionInfo serverConnectionInfo = new ConnectionInfo("192.168.0.105", 10000);
                     //ExampleHelper.GetServerDetails(out serverConnectionInfo);
 
-                    DFS.InitialiseDFS(NetworkComms.DefaultListenPort);
+                    DFS.InitialiseDFS(IPConnection.DefaultListenPort);
                     Console.WriteLine(" ... DFS has been initialised.");
 
                     bool shutDown = false;
