@@ -270,7 +270,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -304,7 +304,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -339,7 +339,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -380,7 +380,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -415,7 +415,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -458,7 +458,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }
@@ -496,7 +496,7 @@ namespace NetworkCommsDotNet
                     break;
 #if NET4 || NET35
                 case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort); ;
+                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
 #endif
             }

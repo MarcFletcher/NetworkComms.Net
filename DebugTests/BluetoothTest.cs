@@ -80,7 +80,7 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), BluetoothService.SerialPort));
+                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), BluetoothService.SerialPort, 1));
                     //GetServerDetails(out targetServerConnectionInfo);
 
                     PingRequestReturnDC test = new PingRequestReturnDC(0, 0);
