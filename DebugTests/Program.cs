@@ -68,25 +68,6 @@ namespace DebugTests
                 //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
-            var test = HostInfo.AllLocalAdaptorNames();
-
-            HostInfo.RestrictLocalAdaptorNames = new string[] { "F+N" };
-
-            var ips = HostInfo.FilteredLocalIPAddresses();
-
-            foreach (string current in test)
-                Console.WriteLine(current);
-
-            Console.ReadKey();
-
-            //SendReceiveOptions options = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
-            //options.Options.Add("UseNestedPacketType", "");
-
-            //ConnectionInfo info = new ConnectionInfo("::1", 10000);
-            //UDPConnection conn = UDPConnection.GetConnection(info, UDPOptions.None, options);
-
-            //conn.SendObject("test", "testString");
-
             //DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();
