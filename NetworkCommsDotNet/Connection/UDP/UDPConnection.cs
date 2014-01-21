@@ -346,7 +346,8 @@ namespace NetworkCommsDotNet
                 {
                     incomingDataListenThread = new Thread(IncomingUDPPacketWorker);
                     incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
-                    incomingDataListenThread.Name = "IncomingDataListener";
+                    incomingDataListenThread.Name = "UDP_IncomingDataListener";
+                    incomingDataListenThread.IsBackground = true;
                     incomingDataListenThread.Start();
                 }
             }

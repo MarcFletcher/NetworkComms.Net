@@ -524,7 +524,7 @@ namespace DistributedFileSystem
                     bool useCompletedPeers = (SwarmChunkAvailability.NumCompletePeersInSwarm(TotalNumChunks) >= SwarmChunkAvailability.NumPeersInSwarm() / 2.0);
 
                     //We only make requests if remote chunks are available and our recieve load is below a given threshold
-                    double incomingNetworkLoad = IPConnection.AverageNetworkLoadIncoming(7);
+                    double incomingNetworkLoad = HostInfo.AverageNetworkLoadIncoming(7);
                     if (nonLocalChunkExistence.Count > 0 && incomingNetworkLoad <= DFS.PeerBusyNetworkLoadThreshold)
                     {
                         AddBuildLogLine(nonLocalChunkExistence.Count + " chunks required with " + (from current in nonLocalChunkExistence select current.Value.Values.ToList()).Aggregate(new List<PeerInfo>(), (left, right) => { return left.Union(right).ToList(); }).Distinct().Count(entry=> entry.HasAtleastOneOnlineIPEndPoint()) + " unique online peers.");

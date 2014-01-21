@@ -29,7 +29,7 @@ namespace ExamplesChat.WinRT
             this.InitializeComponent();
             
             //Set the localName text to the hostname
-            localNameBox.Text = NetworkComms.HostName;
+            localNameBox.Text = HostInfo.HostName;
 
             //Initialise the chat application
             chatApplication = new ChatAppWinRT(currentMessageInputBox, chatBox, chatBoxScroller);

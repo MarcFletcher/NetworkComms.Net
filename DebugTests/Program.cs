@@ -68,6 +68,17 @@ namespace DebugTests
                 //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
+            var test = HostInfo.AllLocalAdaptorNames();
+
+            HostInfo.RestrictLocalAdaptorNames = new string[] { "F+N" };
+
+            var ips = HostInfo.FilteredLocalIPAddresses();
+
+            foreach (string current in test)
+                Console.WriteLine(current);
+
+            Console.ReadKey();
+
             //SendReceiveOptions options = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
             //options.Options.Add("UseNestedPacketType", "");
 

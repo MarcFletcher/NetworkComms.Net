@@ -33,7 +33,7 @@ namespace ExamplesWPFChat
             InitializeComponent();
 
             //Set the localName text to the hostname
-            localName.Text = NetworkComms.HostName;
+            localName.Text = HostInfo.HostName;
 
             //Initialise the chat application
             chatApplication = new ChatAppWPF(chatBox, scroller, messagesFrom, messageText);

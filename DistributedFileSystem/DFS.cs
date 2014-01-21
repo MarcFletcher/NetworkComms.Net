@@ -211,6 +211,7 @@ namespace DistributedFileSystem
 
                 elapsedTimerThread = new Thread(ElapsedTimerWorker);
                 elapsedTimerThread.Name = "DFSElapsedTimerThread";
+                elapsedTimerThread.IsBackground = true;
                 elapsedTimerThread.Start();
 
                 //Load the allowed IP addresses
@@ -250,13 +251,13 @@ namespace DistributedFileSystem
                 #endregion
 
                 #region OpenIncomingPorts
-                List<IPAddress> availableIPAddresses = IPConnection.AllAllowedIPs();
+                List<IPAddress> availableIPAddresses = HostInfo.FilteredLocalIPAddresses();
                 List<EndPoint> localEndPointAttempts;
                 List<ConnectionListenerBase> connectionListeners = new List<ConnectionListenerBase>();
 
                 try
                 {
-                    IPConnection.DefaultListenPort = initialPort;
+                    //IPConnection.DefaultListenPort = initialPort;
                     //We need a copy of each endPoint for each listener
                     localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort))).ToList();
                     localEndPointAttempts.AddRange(from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort)));
@@ -280,7 +281,7 @@ namespace DistributedFileSystem
                         {
                             try
                             {
-                                IPConnection.DefaultListenPort = tryPort;
+                                //IPConnection.DefaultListenPort = tryPort;
                                 connectionListeners = new List<ConnectionListenerBase>();
 
                                 localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, tryPort))).ToList();
@@ -338,7 +339,8 @@ namespace DistributedFileSystem
             if (!DFSInitialised)
                 throw new Exception("Attempted to initialise DFS link before DFS had been initialised.");
 
-            if (linkTargetIP == IPConnection.AllAllowedIPs()[0].ToString() && linkTargetPort == IPConnection.DefaultListenPort)
+            if (linkTargetIP == HostInfo.FilteredLocalIPAddresses()[0].ToString() &&
+                Connection.ExistingLocalListenEndPoints(ConnectionType.TCP, new IPEndPoint(HostInfo.FilteredLocalIPAddresses()[0], linkTargetPort)).Count() > 0)
                 throw new Exception("Attempted to initialise DFS link with local peer.");
 
             lock (globalDFSLocker)
@@ -351,6 +353,7 @@ namespace DistributedFileSystem
 
                 linkWorkerThread = new Thread(LinkModeWorker);
                 linkWorkerThread.Name = "DFSLinkWorkerThread";
+                linkWorkerThread.IsBackground = true;
                 linkWorkerThread.Start();
                 IsLinked = true;
             }
@@ -1268,7 +1271,7 @@ namespace DistributedFileSystem
                     else
                     {
                         //If we are a super peer we always have to respond to the request
-                        if (IPConnection.AverageNetworkLoadOutgoing(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
+                        if (HostInfo.AverageNetworkLoadOutgoing(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);

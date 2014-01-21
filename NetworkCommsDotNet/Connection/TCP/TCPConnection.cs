@@ -268,7 +268,8 @@ namespace NetworkCommsDotNet
                         incomingDataListenThread = new Thread(IncomingTCPDataSyncWorker);
                         //Incoming data always gets handled in a time critical fashion
                         incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
-                        incomingDataListenThread.Name = "IncomingDataListener";
+                        incomingDataListenThread.Name = "UDP_IncomingDataListener";
+                        incomingDataListenThread.IsBackground = true;
                         incomingDataListenThread.Start();
                     }
                 }

@@ -121,6 +121,7 @@ namespace NetworkCommsDotNet
                 {
                     connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
                     connectionKeepAliveWorker.Name = "ConnectionKeepAliveWorker";
+                    connectionKeepAliveWorker.IsBackground = true;
                     connectionKeepAliveWorker.Start();
                 }
 #endif

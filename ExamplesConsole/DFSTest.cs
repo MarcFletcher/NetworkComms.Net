@@ -70,7 +70,7 @@ namespace ExamplesConsole
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Initialise the DFS before creating the test object to ensure the correct port and IP are used as the seed
-                DFS.InitialiseDFS(IPConnection.DefaultListenPort);
+                DFS.InitialiseDFS(10000);
 
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
@@ -193,7 +193,7 @@ namespace ExamplesConsole
 
                 ConnectionInfo serverConnectionInfo = ExampleHelper.GetServerDetails();
 
-                DFS.InitialiseDFS(IPConnection.DefaultListenPort);
+                DFS.InitialiseDFS(10000);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 bool shutDown = false;

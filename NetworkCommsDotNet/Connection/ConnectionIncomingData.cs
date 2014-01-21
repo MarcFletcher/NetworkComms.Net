@@ -228,8 +228,8 @@ namespace NetworkCommsDotNet
                 if (this is IPConnection)
                 {
                     //Log the exception in DOS protection if enabled
-                    if (IPConnection.DOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
-                        IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
+                    if (IPConnection.IPDOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
+                        IPConnection.IPDOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
                 }
 
                 NetworkComms.LogError(ex, "CommsError");

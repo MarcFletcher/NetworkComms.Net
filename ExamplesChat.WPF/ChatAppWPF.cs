@@ -40,7 +40,7 @@ namespace ExamplesWPFChat
         /// Constructor for the WPF chat app.
         /// </summary>
         public ChatAppWPF(TextBlock chatHistory, ScrollViewer scroller, TextBox messagesFrom, TextBox messagesText)
-            : base (NetworkComms.HostName, NetworkCommsDotNet.ConnectionType.TCP)
+            : base (HostInfo.HostName, NetworkCommsDotNet.ConnectionType.TCP)
         {
             this.ChatHistory = chatHistory;
             this.Scroller = scroller;

@@ -120,6 +120,9 @@ namespace NetworkCommsDotNet
             if (sslOptions == null) sslOptions = new SSLOptions();
 #endif
 
+            //Set default connection options if none have been provided
+            if (defaultSendReceiveOptions == null) defaultSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
+
             bool newConnection = false;
             TCPConnection connection;
 
@@ -177,33 +180,28 @@ namespace NetworkCommsDotNet
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(bool useRandomPortFailOver = false)
         {
-            List<IPAddress> localIPs = IPConnection.AllAllowedIPs();
+            List<IPAddress> localIPs = HostInfo.FilteredLocalIPAddresses();
 
-            if (NetworkComms.ListenOnAllAllowedInterfaces)
+            try
             {
-                try
+                foreach (IPAddress ip in localIPs)
                 {
-                    foreach (IPAddress ip in localIPs)
+                    try
                     {
-                        try
-                        {
-                            StartListening(new IPEndPoint(ip, IPConnection.DefaultListenPort), useRandomPortFailOver);
-                        }
-                        catch (CommsSetupShutdownException)
-                        {
+                        StartListening(new IPEndPoint(ip, 0), useRandomPortFailOver);
+                    }
+                    catch (CommsSetupShutdownException)
+                    {
 
-                        }
                     }
                 }
-                catch (Exception)
-                {
-                    //If there is an exception here we remove any added listeners and then rethrow
-                    Shutdown();
-                    throw;
-                }
             }
-            else
-                StartListening(new IPEndPoint(localIPs[0], IPConnection.DefaultListenPort), useRandomPortFailOver);
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                Shutdown();
+                throw;
+            }
         }
 
         /// <summary>

@@ -133,7 +133,8 @@ namespace NetworkCommsDotNet
                         incomingDataListenThread = new Thread(IncomingBluetoothDataSyncWorker);
                         //Incoming data always gets handled in a time critical fashion
                         incomingDataListenThread.Priority = NetworkComms.timeCriticalThreadPriority;
-                        incomingDataListenThread.Name = "IncomingDataListener";
+                        incomingDataListenThread.Name = "BT_IncomingDataListener";
+                        incomingDataListenThread.IsBackground = true;
                         incomingDataListenThread.Start();
                     }
                 }

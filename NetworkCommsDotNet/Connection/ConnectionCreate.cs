@@ -466,8 +466,10 @@ namespace NetworkCommsDotNet
                         EndPoint newRemoteEndPoint;
                         if (this is IPConnection)
                             newRemoteEndPoint = new IPEndPoint(this.ConnectionInfo.RemoteIPEndPoint.Address, remoteConnectionInfo.LocalIPEndPoint.Port);
+#if NET35 || NET4
                         else if (this is BluetoothConnection)
                             newRemoteEndPoint = ConnectionInfo.RemoteBTEndPoint;
+#endif
                         else
                             throw new NotImplementedException("ConnectionSetupHandlerFinal not implemented for EndPoints of type " + this.ConnectionInfo.RemoteEndPoint.GetType());
 

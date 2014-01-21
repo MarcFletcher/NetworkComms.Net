@@ -85,6 +85,7 @@
     <Compile Include="Tools\Adler32.cs" />
     <Compile Include="Connection\ConnectionSendClose.cs" />
     <Compile Include="Tools\DOSProtection.cs" />
+    <Compile Include="Tools\HostInfo.cs" />
     <Compile Include="Tools\IPTools.cs" />
     <Compile Include="Tools\CommsThreadPool.cs" />
     <Compile Include="Tools\PacketBuilder.cs" />

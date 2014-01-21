@@ -37,90 +37,55 @@ namespace NetworkCommsDotNet
         static Dictionary<ConnectionType, Dictionary<EndPoint, ConnectionListenerBase>> listenersDict = new Dictionary<ConnectionType, Dictionary<EndPoint, ConnectionListenerBase>>();
 
         /// <summary>
-        /// Start listening on all allowed local addresses for the provided connectionType, <see cref="IPConnection.AllAllowedIPs()"/>, 
-        /// or <see cref="IPConnection.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false for IP connection types,
-        /// on the default port for the provided <see cref="ConnectionType"/>. If the default port is
-        /// unavailable will fail over to a random port.
+        /// Start listening on all filtered local addresses for the provided <see cref="ConnectionType"/>, <see cref="HostInfo.FilteredLocalIPAddresses()"/>. 
         /// </summary>
         /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
         public static void StartListening(ConnectionType connectionType)
-        {
-            StartListening(connectionType, true);
-        }
-
-        /// <summary>
-        /// Start listening on all allowed local IPs, <see cref="IPConnection.AllAllowedIPs()"/>, 
-        /// or <see cref="IPConnection.AllAllowedIPs()"/>[0] if <see cref="NetworkComms.ListenOnAllAllowedInterfaces"/> is false for IP connection types,
-        /// on the default port for the provided <see cref="ConnectionType"/>.
-        /// </summary>
-        /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
-        /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
-        /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening(ConnectionType connectionType, bool useRandomPortFailOver)
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
 
             if (connectionType != ConnectionType.TCP && connectionType != ConnectionType.UDP)
                 throw new NotImplementedException("This method has only been implemented for TCP and UDP connection types.");
 
-            List<IPAddress> localIPs = IPConnection.AllAllowedIPs();
+            List<IPAddress> localIPs = HostInfo.FilteredLocalIPAddresses();
 
-            if (NetworkComms.ListenOnAllAllowedInterfaces)
+            //Construct the listener list
+            List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
+            for (int i = 0; i < localIPs.Count; i++)
             {
-                //Construct the listener list
-                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
-                for (int i = 0; i < localIPs.Count; i++)
-                {
-                    if (connectionType == ConnectionType.TCP)
-                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
-                    else if (connectionType == ConnectionType.UDP)
-                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+                if (connectionType == ConnectionType.TCP)
+                    listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                else if (connectionType == ConnectionType.UDP)
+                    listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
 #if !NET2 && !WINDOWS_PHONE && !NETFX_CORE
                     else if (connectionType == ConnectionType.Bluetooth)
                         listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
 #endif
-                    else
-                        throw new NotImplementedException("This method has not been implemented for the provided connection type.");
-                }
-
-                try
-                {
-                    for (int i = 0; i < localIPs.Count; i++)
-                    {
-                        try
-                        {
-                            StartListening(listeners[i], new IPEndPoint(localIPs[i], IPConnection.DefaultListenPort), useRandomPortFailOver);
-                        }
-                        catch (CommsSetupShutdownException) { }
-                    }
-                }
-                catch (Exception)
-                {
-                    //If there is an exception here we remove any added listeners and then rethrow
-                    for (int i = 0; i < listeners.Count; i++)
-                    {
-                        if (listeners[i].IsListening)
-                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
-                    }
-
-                    throw;
-                }
-            }
-            else
-            {
-                ConnectionListenerBase listener;
-                if (connectionType == ConnectionType.TCP)
-                    listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
-                else if (connectionType == ConnectionType.UDP)
-                    listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions);
-#if !NET2 && !WINDOWS_PHONE && !NETFX_CORE
-                else if (connectionType == ConnectionType.Bluetooth)
-                    listener = new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
-#endif
                 else
                     throw new NotImplementedException("This method has not been implemented for the provided connection type.");
+            }
 
-                StartListening(listener, new IPEndPoint(localIPs[0], IPConnection.DefaultListenPort), useRandomPortFailOver);
+            try
+            {
+                for (int i = 0; i < localIPs.Count; i++)
+                {
+                    try
+                    {
+                        StartListening(listeners[i], new IPEndPoint(localIPs[i], 0), true);
+                    }
+                    catch (CommsSetupShutdownException) { }
+                }
+            }
+            catch (Exception)
+            {
+                //If there is an exception here we remove any added listeners and then rethrow
+                for (int i = 0; i < listeners.Count; i++)
+                {
+                    if (listeners[i].IsListening)
+                        StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
+                }
+
+                throw;
             }
         }
 

@@ -53,5 +53,10 @@ namespace NetworkCommsDotNet
         /// Xamarin.iOS
         /// </summary>
         Xamarin_iOS,
+
+        /// <summary>
+        /// Windows RT or Windows Store 
+        /// </summary>
+        Windows_RT,
     }
 }

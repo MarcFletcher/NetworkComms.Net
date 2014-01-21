@@ -63,8 +63,6 @@ namespace NetworkCommsDotNet
         {
             //NetworkComms.Net base defaults are defined here
             NetworkIdentifier = ShortGuid.NewGuid();
-            
-            ListenOnAllAllowedInterfaces = true;
 
             CheckSumMismatchSentPacketCacheMaxByteLimit = 75000;
             MinimumSentPacketCacheTimeMinutes = 1;
@@ -73,7 +71,10 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
-#if SILVERLIGHT || WINDOWS_PHONE || NETFX_CORE
+#if NETFX_CORE
+            CurrentRuntimeEnvironment = RuntimeEnvironment.Windows_RT;
+            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+#elif SILVERLIGHT || WINDOWS_PHONE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
             SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
 #elif iOS
@@ -151,29 +152,7 @@ namespace NetworkCommsDotNet
                 new Dictionary<string, string>());
         }
 
-        #region Local Host Information
-        /// <summary>
-        /// Returns the current machine hostname
-        /// </summary>
-        public static string HostName
-        {
-            get 
-            {
-#if WINDOWS_PHONE || NETFX_CORE
-                return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
-#else
-                return Dns.GetHostName(); 
-#endif
-            }
-        }
-
-        /// <summary>
-        /// Restricts the addresses that may be used when listening.
-        /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
-        /// will only listen on specified adaptors. Correct format is string[] { "eth0", "en0", "wlan0" }.
-        /// </summary>
-        public static string[] AllowedAdaptorNames { get; set; }
-
+        #region NetworkComms.Net Instance Information
         /// <summary>
         /// The local identifier for this instance of NetworkCommsDotNet. This is an application unique identifier.
         /// </summary>
@@ -230,11 +209,6 @@ namespace NetworkCommsDotNet
         /// between the two modes.
         /// </summary>
         public static bool ConnectionListenModeUseSync { get; set; }
-
-        /// <summary>
-        /// Used for switching between listening on a single interface or multiple interfaces. Default is true.
-        /// </summary>
-        public static bool ListenOnAllAllowedInterfaces { get; set; }
 
         /// <summary>
         /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.
@@ -960,7 +934,7 @@ namespace NetworkCommsDotNet
 
             CommsThreadPool.BeginShutdown();
             Connection.Shutdown(threadShutdownTimeoutMS);
-            IPConnection.ShutdownIPBase(threadShutdownTimeoutMS);
+            HostInfo.ShutdownHostTools(threadShutdownTimeoutMS);
 
             try
             {
@@ -974,7 +948,6 @@ namespace NetworkCommsDotNet
             {
                 LogError(ex, "CommsShutdownError");
             }
-
 
             try
             {
@@ -1703,6 +1676,7 @@ namespace NetworkCommsDotNet
                             }
                             #endregion
                         }
+#if NET35 || NET4
                         else if (connectionTypeRemoteEndPointKeys.Count > 0 &&
                             connectionTypeRemoteEndPointKeys[0].GetType() == typeof(BluetoothEndPoint) &&
                             connectionType == ConnectionType.Bluetooth)
@@ -1782,6 +1756,7 @@ namespace NetworkCommsDotNet
                             }
                             #endregion
                         }
+#endif
                         else if (allConnectionsByEndPoint[currentConnectionType].ContainsKey(remoteEndPoint) &&
                             allConnectionsByEndPoint[currentConnectionType][remoteEndPoint].ContainsKey(localEndPoint))
                         {
@@ -2040,7 +2015,7 @@ namespace NetworkCommsDotNet
 
                 //Check for connection initialise in DOS protection
                 #region DOS Protection
-                if (IPConnection.DOSProtection.Enabled)
+                if (IPConnection.IPDOSProtection.Enabled)
                 {
                     //If remoteEndPointToUse != null validate using that
                     if (remoteEndPointToUse != null && remoteEndPointToUse.GetType() == typeof(IPEndPoint))
@@ -2049,17 +2024,17 @@ namespace NetworkCommsDotNet
 
                         //This may well be an updated endPoint. We only log the connection initialise if the endpoint addresses are different
                         if (!remoteIPEndPoint.Address.Equals(connection.ConnectionInfo.RemoteIPEndPoint.Address) &&
-                            IPConnection.DOSProtection.LogConnectionInitialise(remoteIPEndPoint.Address))
-                            throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
-                        else if (IPConnection.DOSProtection.RemoteIPAddressBanned(remoteIPEndPoint.Address))
+                            IPConnection.IPDOSProtection.LogConnectionInitialise(remoteIPEndPoint.Address))
+                            throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.IPDOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                        else if (IPConnection.IPDOSProtection.RemoteIPAddressBanned(remoteIPEndPoint.Address))
                             throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
                     }
                     //Otherwise use connection.ConnectionInfo.RemoteEndPoint
                     else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
                     {
-                        if (IPConnection.DOSProtection.LogConnectionInitialise(connection.ConnectionInfo.RemoteIPEndPoint.Address))
-                            throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
-                        else if (IPConnection.DOSProtection.RemoteIPAddressBanned(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                        if (IPConnection.IPDOSProtection.LogConnectionInitialise(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                            throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.IPDOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                        else if (IPConnection.IPDOSProtection.RemoteIPAddressBanned(connection.ConnectionInfo.RemoteIPEndPoint.Address))
                             throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
                     }
                 }

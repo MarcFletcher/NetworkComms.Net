@@ -41,6 +41,12 @@ namespace ExamplesConsole
         static ConnectionType connectionTypeToUse;
 
         /// <summary>
+        /// A custom listen port if it is selected. 
+        /// If this remains unchanged, i.e. 0, a random port will be selected when listening.
+        /// </summary>
+        static int customListenPort = 0;
+
+        /// <summary>
         /// Run the AdvancedSend example.
         /// </summary>
         public static void RunExample()
@@ -64,10 +70,9 @@ namespace ExamplesConsole
             //Possibly change the default local listening port
             SelectListeningPort();
 
-            //Add a packet handler for dealing with incoming connections.  Fuction will be called when a packet is received with the specified type.  We also here specify the type of object
+            //Add a packet handler for dealing with incoming connections.  Function will be called when a packet is received with the specified type.  We also here specify the type of object
             //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
-            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("Unmanaged",
-                (header, connection, array) =>
+            NetworkComms.AppendGlobalIncomingUnmanagedPacketHandler((header, connection, array) =>
                 {
                     Console.WriteLine("\nReceived unmanaged byte[] from " + connection.ToString());
 
@@ -79,8 +84,8 @@ namespace ExamplesConsole
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
-            List<EndPoint> localIPEndPoints = (from current in IPConnection.AllAllowedIPs() select
-                                                 ((EndPoint)new IPEndPoint(current, IPConnection.DefaultListenPort))).ToList();
+            List<EndPoint> localIPEndPoints = (from current in HostInfo.FilteredLocalIPAddresses()
+                                               select ((EndPoint)new IPEndPoint(current, customListenPort))).ToList();
 
             //Create suitable listeners
             List<ConnectionListenerBase> listeners;
@@ -135,9 +140,9 @@ namespace ExamplesConsole
 
                 //Create the connection
                 if (connectionTypeToUse == ConnectionType.TCP)
-                    connectionToUse = TCPConnection.GetConnection(connectionInfo);
+                    connectionToUse = TCPConnection.GetConnection(connectionInfo, optionsToUse);
                 else
-                    connectionToUse = UDPConnection.GetConnection(connectionInfo, UDPOptions.None);
+                    connectionToUse = UDPConnection.GetConnection(connectionInfo, UDPOptions.None, optionsToUse);
 
                 //Send the object
                 connectionToUse.SendObject("Unmanaged", byteDataToSend);
@@ -226,11 +231,11 @@ namespace ExamplesConsole
                 }
 
                 //Change the port comms will listen on
-                IPConnection.DefaultListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + IPConnection.DefaultListenPort + " has been set.\n");
+                customListenPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + customListenPort + " has been set.\n");
             }
             else
-                Console.WriteLine(" ... default listen port number " + IPConnection.DefaultListenPort + " of will be used.\n");
+                Console.WriteLine(" ... a random listen port will be used.\n");
         }
 
         /// <summary>
@@ -242,7 +247,7 @@ namespace ExamplesConsole
             byte[] result;
 
             #region Number of Elements
-            Console.WriteLine("Please enter the number of array elements:");
+            Console.WriteLine("Please enter the number of byte[] elements to send:");
 
             int numberOfElements;
             while (true)
@@ -257,7 +262,7 @@ namespace ExamplesConsole
             result = new byte[numberOfElements];
 
             #region Populate Elements
-            Console.WriteLine("\nPlease enter elements:");
+            Console.WriteLine("\nPlease enter a valid byte element:");
             for (int i = 0; i < result.Length; i++)
             {
                 byte byteValue = 0; 

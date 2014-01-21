@@ -41,6 +41,12 @@ namespace ExamplesConsole
         static ConnectionType connectionTypeToUse;
 
         /// <summary>
+        /// A custom listen port if it is selected. 
+        /// If this remains unchanged, i.e. 0, a random port will be selected when listening.
+        /// </summary>
+        static int customListenPort = 0;
+
+        /// <summary>
         /// Run the AdvancedSend example.
         /// </summary>
         public static void RunExample()
@@ -136,7 +142,7 @@ namespace ExamplesConsole
                 //Create the send object based on user input
                 CreateSendObject();
 
-                //Expecting user to enter ip address as 192.168.0.1:4000
+                //Expecting user to enter IP address as 192.168.0.1:4000
                 ConnectionInfo connectionInfo = ExampleHelper.GetServerDetails();
 
                 //***************************************************************//
@@ -348,11 +354,11 @@ namespace ExamplesConsole
                 }
 
                 //Change the port comms will listen on
-                IPConnection.DefaultListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + IPConnection.DefaultListenPort + " has been set.\n");
+                customListenPort = selectedPort;
+                Console.WriteLine(" ... custom listen port number " + customListenPort + " has been set.\n");
             }
             else
-                Console.WriteLine(" ... default listen port number " + IPConnection.DefaultListenPort + " of will be used.\n");
+                Console.WriteLine(" ... a random listen port will be used.\n");
         }
 
         /// <summary>
