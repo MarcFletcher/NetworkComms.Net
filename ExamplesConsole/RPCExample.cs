@@ -24,6 +24,7 @@ using ProtoBuf;
 using NetworkCommsDotNet;
 using System.Collections.Specialized;
 using NLog;
+using System.Net;
 
 namespace ExamplesConsole
 {
@@ -338,18 +339,21 @@ namespace ExamplesConsole
                     case 1:
                         Console.WriteLine("\nYou selected private client object instances.");
                         RemoteProcedureCalls.Server.RegisterTypeForPrivateRemoteCall<MathClass, IMath>();
-                        Console.WriteLine("\nA type of {0} has been succesfully registered for RPC usage.\n",typeof(IMath));
+                        Console.WriteLine("\nA type of {0} has been successfully registered for RPC usage.\n",typeof(IMath));
                         break;
                     case 2:
                         Console.WriteLine("\nYou selected a single named, public, object instance.");
                         Console.Write("Please enter an identifying name for the public instance: ");
                         instanceName = Console.ReadLine();
                         RemoteProcedureCalls.Server.RegisterInstanceForPublicRemoteCall<MathClass, IMath>(new MathClass(), instanceName);
-                        Console.WriteLine("\nServer object instance has been succesfully created.\n");
+                        Console.WriteLine("\nServer object instance has been successfully created.\n");
                         break;
                 }
 
-                Connection.StartListening(connectionTypeToUse);
+                //Start listening for incoming connections
+                //We want to select a random port on all available adaptors so provide 
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(connectionTypeToUse, new IPEndPoint(IPAddress.Any, 0));
             }
         }
 

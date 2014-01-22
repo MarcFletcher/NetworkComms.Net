@@ -40,14 +40,14 @@ namespace ExamplesWP8Chat
         /// <summary>
         /// An optional encryption key to use should one be required.
         /// This can be changed freely but must obviously be the same
-        /// for both sender and reciever.
+        /// for both sender and receiver.
         /// </summary>
         string _encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
         #endregion
 
         #region Public Fields
         /// <summary>
-        /// The type of connection currently used to send and recieve messages. Default is TCP.
+        /// The type of connection currently used to send and receive messages. Default is TCP.
         /// </summary>
         public ConnectionType ConnectionType { get; set; }
 
@@ -100,14 +100,14 @@ namespace ExamplesWP8Chat
         public void RefreshNetworkCommsConfiguration()
         {
             #region First Initialisation
-            //On first initilisation we need to configure NetworkComms.Net to handle our incoming packet types
+            //On first initialisation we need to configure NetworkComms.Net to handle our incoming packet types
             //We only need to add the packet handlers once. If we call NetworkComms.Shutdown() at some future point these are not removed.
             if (FirstInitialisation)
             {
                 FirstInitialisation = false;
 
                 //Configure NetworkComms.Net to handle any incoming packet of type 'ChatMessage'
-                //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
+                //e.g. If we receive a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
 
                 //Configure NetworkComms.Net to perform some action when a connection is closed
@@ -138,7 +138,7 @@ namespace ExamplesWP8Chat
             #region Local Server Mode and Connection Type Changes
             if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !Connection.Listening(ConnectionType.TCP))
             {
-                //If we were previously listening for UDP we first shutdown comms.
+                //If we were previously listening for UDP we first shutdown NetworkComms.Net.
                 if (Connection.Listening(ConnectionType.UDP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
@@ -151,8 +151,9 @@ namespace ExamplesWP8Chat
                 }
 
                 //Start listening for new incoming TCP connections
-                //Parameter is true so that we listen on a random port if the default is not available
-                Connection.StartListening(ConnectionType.TCP);
+                //We want to select a random port on all available adaptors so provide 
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 0));
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
@@ -164,7 +165,7 @@ namespace ExamplesWP8Chat
             }
             else if (LocalServerEnabled && ConnectionType == ConnectionType.UDP && !Connection.Listening(ConnectionType.UDP))
             {
-                //If we were previously listening for TCP we first shutdown comms.
+                //If we were previously listening for TCP we first shutdown NetworkComms.Net.
                 if (Connection.Listening(ConnectionType.TCP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
@@ -177,8 +178,9 @@ namespace ExamplesWP8Chat
                 }
 
                 //Start listening for new incoming UDP connections
-                //Parameter is true so that we listen on a random port if the default is not available
-                Connection.StartListening(ConnectionType.UDP);
+                //We want to select a random port on all available adaptors so provide
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0));
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
@@ -209,15 +211,15 @@ namespace ExamplesWP8Chat
         }
 
         /// <summary>
-        /// Performs whatever functions we might so desire when we recieve an incoming ChatMessage
+        /// Performs whatever functions we might so desire when we receive an incoming ChatMessage
         /// </summary>
-        /// <param name="header">The PacketHeader corresponding with the recieved object</param>
-        /// <param name="connection">The Connection from which this object was recieved</param>
+        /// <param name="header">The PacketHeader corresponding with the received object</param>
+        /// <param name="connection">The Connection from which this object was received</param>
         /// <param name="incomingMessage">The incoming ChatMessage we are after</param>
         protected virtual void HandleIncomingChatMessage(PacketHeader header, Connection connection, ChatMessage incomingMessage)
         {
             //We only want to write a message once to the chat window
-            //Because we support relaying and may recieve the same message twice from multiple sources
+            //Because we support relaying and may receive the same message twice from multiple sources
             //we use our history and message indexes to ensure we have a new message
             //We perform this action within a lock as HandleIncomingChatMessage could be called in parallel
             lock (lastPeerMessageDict)
@@ -230,14 +232,14 @@ namespace ExamplesWP8Chat
                         //write the message to the ChatBox
                         AppendLineToChatHistory(incomingMessage.SourceName + " - " + incomingMessage.Message);
 
-                        //We now replace the last recieved message with the current one
+                        //We now replace the last received message with the current one
                         lastPeerMessageDict[incomingMessage.SourceIdentifier] = incomingMessage;
                     }
                 }
                 else
                 {
                     //If we have never had a message from this source before then it has to be new
-                    //by defintion
+                    //by definition
                     lastPeerMessageDict.Add(incomingMessage.SourceIdentifier, incomingMessage);
                     AppendLineToChatHistory(incomingMessage.SourceName + " - " + incomingMessage.Message);
                 }
@@ -261,7 +263,7 @@ namespace ExamplesWP8Chat
                     //To ensure a single failed send will not prevent the
                     //relay to all working connections.
                     try { relayConnection.SendObject("ChatMessage", incomingMessage); }
-                    catch (CommsException) { /* Catch the comms exception, ignore and continue */ }
+                    catch (CommsException) { /* Catch the general comms exception, ignore and continue */ }
                 }
             }
         }
@@ -273,14 +275,14 @@ namespace ExamplesWP8Chat
         private void HandleConnectionClosed(Connection connection)
         {
             //We are going to write a message to the chat history when a connection disconnects
-            //We perform the following within a lock incase mutliple connections disconnect simultaneously  
+            //We perform the following within a lock in case multiple connections disconnect simultaneously  
             lock (lastPeerMessageDict)
             {
                 //Get the remoteIdentifier from the closed connection
                 //This a unique GUID which can be used to identify peers
                 ShortGuid remoteIdentifier = connection.ConnectionInfo.NetworkIdentifier;
 
-                //If at any point we recieved a message with a matching identifier we can
+                //If at any point we received a message with a matching identifier we can
                 //include the peer name in the disconnection message.
                 if (lastPeerMessageDict.ContainsKey(remoteIdentifier))
                     AppendLineToChatHistory("Connection with '" + lastPeerMessageDict[remoteIdentifier].SourceName + "' has been closed.");
@@ -315,7 +317,7 @@ namespace ExamplesWP8Chat
             //We wrap everything we want to send in the ChatMessage class we created
             ChatMessage chatMessage = new ChatMessage(NetworkComms.NetworkIdentifier, LocalName, stringToSend, messageSendIndex++);
 
-            //We add our own message to the message history incase it gets relayed back to us
+            //We add our own message to the message history in case it gets relayed back to us
             lock (lastPeerMessageDict) lastPeerMessageDict[NetworkComms.NetworkIdentifier] = chatMessage;
 
             //We write our own message to the chatBox
@@ -337,8 +339,8 @@ namespace ExamplesWP8Chat
                     else
                         throw new Exception("An invalid connectionType is set.");
                 }
-                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
-                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
+                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occurred while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
+                catch (Exception) { AppendLineToChatHistory("Error: A general error occurred while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
             }
 
             //If we have any other connections we now send the message to those as well
@@ -362,8 +364,8 @@ namespace ExamplesWP8Chat
                     else
                         throw new Exception("An invalid connectionType is set.");
                 }
-                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + info + ". Please check settings and try again."); }
-                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + info + ". Please check settings and try again."); }
+                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occurred while trying to send message to " + info + ". Please check settings and try again."); }
+                catch (Exception) { AppendLineToChatHistory("Error: A general error occurred while trying to send message to " + info + ". Please check settings and try again."); }
             }
 
             return;
@@ -379,7 +381,7 @@ namespace ExamplesWP8Chat
             AppendLineToChatHistory("");
             AppendLineToChatHistory("Chat usage instructions:");
             AppendLineToChatHistory("");
-            AppendLineToChatHistory("Step 1. Open atleast two chat applications. You can choose from Android, Windows Phone, iOS or native Windows versions.");
+            AppendLineToChatHistory("Step 1. Open at least two chat applications. You can choose from Android, Windows Phone, iOS or native Windows versions.");
             AppendLineToChatHistory("Step 2. Enable local server mode in a single application, see settings.");
             AppendLineToChatHistory("Step 3. Provide remote server IP and port information in settings on remaining application.");
             AppendLineToChatHistory("Step 4. Start chatting.");

@@ -934,7 +934,7 @@ namespace NetworkCommsDotNet
 
             CommsThreadPool.BeginShutdown();
             Connection.Shutdown(threadShutdownTimeoutMS);
-            HostInfo.ShutdownHostTools(threadShutdownTimeoutMS);
+            HostInfo.IP.ShutdownThreads(threadShutdownTimeoutMS);
 
             try
             {

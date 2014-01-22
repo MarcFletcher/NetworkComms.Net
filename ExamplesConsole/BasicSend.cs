@@ -48,8 +48,10 @@ namespace ExamplesConsole
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
 
             //Start listening for incoming 'TCP' connections.
-            //See also Connection.StartListening(ConnectionType.UDP)
-            Connection.StartListening(ConnectionType.TCP);
+            //We want to select a random port on all available adaptors so provide 
+            //an IPEndPoint using IPAddress.Any and port 0.
+            //See also Connection.StartListening(ConnectionType.UDP, IPEndPoint)
+            Connection.StartListening(ConnectionType.TCP, new System.Net.IPEndPoint(System.Net.IPAddress.Any, 0));
 
             //Print the IP addresses and ports we are listening on to make sure everything
             //worked as expected.
@@ -57,7 +59,7 @@ namespace ExamplesConsole
             foreach (System.Net.IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
             //We loop here to allow any number of test messages to be sent and received
-            while (true)
+            while (true) 
             {
                 //Request a message to send somewhere
                 Console.WriteLine("\nPlease enter your message and press enter (Type 'exit' to quit):");
@@ -65,7 +67,7 @@ namespace ExamplesConsole
 
                 //If the user has typed exit then we leave our loop and end the example
                 if (stringToSend == "exit") break;
-                else
+                else 
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
@@ -78,7 +80,7 @@ namespace ExamplesConsole
                 }
             }
 
-            //We should always call shutdown on comms if we have used it
+            //We should always call shutdown on NetworkComms.Net if we have used it
             NetworkComms.Shutdown();
         }
     }

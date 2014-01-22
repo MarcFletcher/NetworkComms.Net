@@ -360,7 +360,7 @@ namespace NetworkCommsDotNet
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(bool useRandomPortFailOver = false)
         {
-            List<IPAddress> localIPs = HostInfo.FilteredLocalIPAddresses();
+            List<IPAddress> localIPs = HostInfo.IP.FilteredLocalAddresses();
 
             try
             {

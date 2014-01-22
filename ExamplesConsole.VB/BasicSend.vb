@@ -14,10 +14,11 @@ Module BasicSend
         'the <string> bit means) and then write that string to the local console window.
         NetworkComms.AppendGlobalIncomingPacketHandler(Of String)("Message", Sub(packetHeader As PacketHeader, connection As Connection, incomingString As String) Console.WriteLine(Environment.NewLine + "  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."))
 
-        'Start listening for incoming 'TCP' connections. The true parameter means
-        'try to use the default port and if that fails just choose a random port
-        'See also Connection.StartListening(ConnectionType.UDP)
-        Connection.StartListening(ConnectionType.TCP)
+        'Start listening for incoming 'TCP' connections.
+        'We want to select a random port on all available adaptors so provide 
+        'an IPEndPoint using IPAddress.Any and port 0.
+        'See also Connection.StartListening(ConnectionType.UDP, IPEndPoint)
+        Connection.StartListening(ConnectionType.TCP, New IPEndPoint(IPAddress.Any, 0))
 
         'Print the IP addresses and ports we are listening on to make sure everything
         'worked as expected.

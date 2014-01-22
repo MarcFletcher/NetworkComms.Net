@@ -66,8 +66,8 @@ namespace DebugTests
 
                 while (true)
                 {
-                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.CurrentNetworkLoadIncoming.ToString("0.000"), HostInfo.AverageNetworkLoadIncoming(5).ToString("0.000"), HostInfo.AverageNetworkLoadIncoming(15).ToString("0.000"));
-                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.CurrentNetworkLoadOutgoing.ToString("0.000"), HostInfo.AverageNetworkLoadOutgoing(5).ToString("0.000"), HostInfo.AverageNetworkLoadOutgoing(15).ToString("0.000"));
+                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.IP.CurrentNetworkLoadIncoming.ToString("0.000"), HostInfo.IP.AverageNetworkLoadIncoming(5).ToString("0.000"), HostInfo.IP.AverageNetworkLoadIncoming(15).ToString("0.000"));
+                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.IP.CurrentNetworkLoadOutgoing.ToString("0.000"), HostInfo.IP.AverageNetworkLoadOutgoing(5).ToString("0.000"), HostInfo.IP.AverageNetworkLoadOutgoing(15).ToString("0.000"));
                     Thread.Sleep(1000);
                 }
             }
@@ -78,13 +78,16 @@ namespace DebugTests
                     Console.WriteLine("{0} - Caught {1} bytes thrown by {2}.", DateTime.Now.ToLongTimeString(), data.Length, connection.ConnectionInfo);
                 });
 
-                Connection.StartListening(ConnectionType.TCP);
+                //Start listening for TCP connections
+                //We want to select a random port on all available adaptors so provide 
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 0));
 
                 Console.WriteLine("Let the catching begin, on port " + ((IPEndPoint)Connection.ExistingLocalListenEndPoints(ConnectionType.TCP).First()).Port + "!\n");
                 while (true)
                 {
-                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.CurrentNetworkLoadIncoming.ToString("0.000"), HostInfo.AverageNetworkLoadIncoming(5).ToString("0.000"), HostInfo.AverageNetworkLoadIncoming(15).ToString("0.000"));
-                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.CurrentNetworkLoadOutgoing.ToString("0.000"), HostInfo.AverageNetworkLoadOutgoing(5).ToString("0.000"), HostInfo.AverageNetworkLoadOutgoing(15).ToString("0.000"));
+                    Console.WriteLine("IN - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.IP.CurrentNetworkLoadIncoming.ToString("0.000"), HostInfo.IP.AverageNetworkLoadIncoming(5).ToString("0.000"), HostInfo.IP.AverageNetworkLoadIncoming(15).ToString("0.000"));
+                    Console.WriteLine("OUT - {0} - Instance Load = {1}, 5 sec load= {2}, 15 sec load= {3}", DateTime.Now.ToLongTimeString(), HostInfo.IP.CurrentNetworkLoadOutgoing.ToString("0.000"), HostInfo.IP.AverageNetworkLoadOutgoing(5).ToString("0.000"), HostInfo.IP.AverageNetworkLoadOutgoing(15).ToString("0.000"));
                     Thread.Sleep(10000);
                 }
             }

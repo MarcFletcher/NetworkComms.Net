@@ -74,7 +74,10 @@ namespace ExamplesConsole
                 NetworkComms.AppendGlobalConnectionCloseHandler(clientShutdownDelegate);
                 NetworkComms.AppendGlobalIncomingPacketHandler("SpeedData", IncomingDataDelegate);
 
-                Connection.StartListening(ConnectionType.TCP);
+                //Start listening for TCP connections
+                //We want to select a random port on all available adaptors so provide 
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 0));
 
                 Console.WriteLine("\nListening for incoming connections on:");
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))

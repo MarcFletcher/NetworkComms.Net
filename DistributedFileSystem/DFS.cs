@@ -251,51 +251,27 @@ namespace DistributedFileSystem
                 #endregion
 
                 #region OpenIncomingPorts
-                List<IPAddress> availableIPAddresses = HostInfo.FilteredLocalIPAddresses();
-                List<EndPoint> localEndPointAttempts;
-                List<ConnectionListenerBase> connectionListeners = new List<ConnectionListenerBase>();
-
                 try
                 {
-                    //IPConnection.DefaultListenPort = initialPort;
-                    //We need a copy of each endPoint for each listener
-                    localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort))).ToList();
-                    localEndPointAttempts.AddRange(from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, initialPort)));
-
-                    connectionListeners.AddRange(from current in availableIPAddresses
-                                                 select
-                                                     new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
-                    connectionListeners.AddRange(from current in availableIPAddresses
-                                                 select
-                                                     new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
-
-                    Connection.StartListening(connectionListeners, localEndPointAttempts, false);
+                    Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, initialPort));
+                    Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, initialPort));
                 }
                 catch (Exception)
                 {
+                    //If an exception occurred first reset NetworkComms.Net
                     NetworkComms.Shutdown();
 
                     if (rangeRandomPortFailover)
                     {
+                        //Keep trying to listen on an ever increasing port number
                         for (int tryPort = MinTargetLocalPort; tryPort <= MaxTargetLocalPort; tryPort++)
                         {
                             try
                             {
-                                //IPConnection.DefaultListenPort = tryPort;
-                                connectionListeners = new List<ConnectionListenerBase>();
+                                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, tryPort));
+                                Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, tryPort));
 
-                                localEndPointAttempts = (from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, tryPort))).ToList();
-                                localEndPointAttempts.AddRange(from current in availableIPAddresses select ((EndPoint)new IPEndPoint(current, tryPort)));
-
-                                connectionListeners.AddRange(from current in availableIPAddresses
-                                                             select
-                                                                 new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
-                                connectionListeners.AddRange(from current in availableIPAddresses
-                                                             select
-                                                                 new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
-
-                                Connection.StartListening(connectionListeners, localEndPointAttempts, false);
-
+                                //Once we are successfully listening we can break
                                 break;
                             }
                             catch (Exception) { NetworkComms.Shutdown(); }
@@ -339,8 +315,8 @@ namespace DistributedFileSystem
             if (!DFSInitialised)
                 throw new Exception("Attempted to initialise DFS link before DFS had been initialised.");
 
-            if (linkTargetIP == HostInfo.FilteredLocalIPAddresses()[0].ToString() &&
-                Connection.ExistingLocalListenEndPoints(ConnectionType.TCP, new IPEndPoint(HostInfo.FilteredLocalIPAddresses()[0], linkTargetPort)).Count() > 0)
+            if (linkTargetIP == HostInfo.IP.FilteredLocalAddresses()[0].ToString() &&
+                Connection.ExistingLocalListenEndPoints(ConnectionType.TCP, new IPEndPoint(HostInfo.IP.FilteredLocalAddresses()[0], linkTargetPort)).Count() > 0)
                 throw new Exception("Attempted to initialise DFS link with local peer.");
 
             lock (globalDFSLocker)
@@ -1271,7 +1247,7 @@ namespace DistributedFileSystem
                     else
                     {
                         //If we are a super peer we always have to respond to the request
-                        if (HostInfo.AverageNetworkLoadOutgoing(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
+                        if (HostInfo.IP.AverageNetworkLoadOutgoing(10) > DFS.PeerBusyNetworkLoadThreshold && !selectedItem.SwarmChunkAvailability.PeerIsSuperPeer(NetworkComms.NetworkIdentifier))
                         {
                             //We can return a busy reply if we are currently experiencing high demand
                             connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);

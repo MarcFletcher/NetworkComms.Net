@@ -23,6 +23,7 @@ using System.Text;
 using DPSBase;
 using NetworkCommsDotNet;
 using ProtoBuf;
+using System.Net;
 
 namespace DebugTests
 {
@@ -69,10 +70,11 @@ namespace DebugTests
             //the <string> bit means) and then write that string to the local console window.
             NetworkComms.AppendGlobalIncomingPacketHandler<PingRequestReturnDC>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString.ClientID + "'-'" + incomingString .PingID+ "'."); });
 
-            //Start listening for incoming 'TCP' connections. The true parameter means
-            //try to use the default port and if that fails just choose a random port
+            //Start listening for incoming 'TCP' connections.
+            //We want to select a random port on all available adaptors so provide 
+            //an IPEndPoint using IPAddress.Any and port 0.
             //See also UDPConnection.StartListening()
-            Connection.StartListening(ConnectionType.TCP);
+            Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 0));
 
             //Print the IP addresses and ports we are listening on to make sure everything
             //worked as expected.

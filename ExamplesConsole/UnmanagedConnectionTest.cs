@@ -84,8 +84,8 @@ namespace ExamplesConsole
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
-            List<EndPoint> localIPEndPoints = (from current in HostInfo.FilteredLocalIPAddresses()
-                                               select ((EndPoint)new IPEndPoint(current, customListenPort))).ToList();
+            List<IPEndPoint> localIPEndPoints = (from current in HostInfo.IP.FilteredLocalAddresses()
+                                               select new IPEndPoint(current, customListenPort)).ToList();
 
             //Create suitable listeners
             List<ConnectionListenerBase> listeners;

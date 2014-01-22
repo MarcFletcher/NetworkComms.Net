@@ -115,10 +115,13 @@ namespace ExamplesConsole
                                 });
             }
 
+            //Start listening for incoming connections
+            //We want to select a random port on all available adaptors so provide 
+            //an IPEndPoint using IPAddress.Any and port 0.
             if (connectionTypeToUse == ConnectionType.TCP)
-                Connection.StartListening(ConnectionType.TCP);
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any ,0));
             else
-                Connection.StartListening(ConnectionType.UDP);
+                Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0));
 
             //***************************************************************//
             //                End of interesting stuff                       //
