@@ -99,9 +99,6 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\DPSBase\AsyncStreamCopier.cs">
-      <Link>AsyncStreamCopier.cs</Link>
-    </Compile>
     <Compile Include="..\..\..\DPSBase\BinaryFormaterSerializer.cs">
       <Link>BinaryFormaterSerializer.cs</Link>
     </Compile>
@@ -135,14 +132,8 @@
     <Compile Include="..\..\..\DPSBase\RijndaelPSKEncrypter.cs">
       <Link>RijndaelPSKEncrypter.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\DPSBase\StreamSendWrapper.cs">
-      <Link>StreamSendWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\StreamWriteWithTimeout.cs">
-      <Link>StreamWriteWithTimeout.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\ThreadSafeStream.cs">
-      <Link>ThreadSafeStream.cs</Link>
+    <Compile Include="..\..\..\DPSBase\StreamTools.cs">
+      <Link>StreamTools.cs</Link>
     </Compile>
     <Compile Include="..\..\..\DPSBase\XPlatformHelper\AddressFamily.cs">
       <Link>XPlatformHelper\AddressFamily.cs</Link>

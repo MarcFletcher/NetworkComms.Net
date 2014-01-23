@@ -422,7 +422,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <inheritdoc />
-        protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
+        protected override double[] SendStreams(StreamTools.StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
             double[] timings = new double[streamsToSend.Length];
 

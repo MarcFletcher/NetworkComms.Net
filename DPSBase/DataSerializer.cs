@@ -74,7 +74,7 @@ namespace DPSBase
         /// <typeparam name="T">Type of object to serialize</typeparam>
         /// <param name="objectToSerialise">Object to serialize</param>
         /// <returns>Serialized array of bytes</returns>
-        public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise)
+        public StreamTools.StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise)
         {
             return SerialiseDataObject<T>(objectToSerialise, null, null);
         }
@@ -87,17 +87,17 @@ namespace DPSBase
         /// <param name="dataProcessors">Data processors to apply to serialised data.  These will be run in index order i.e. low index to high</param>
         /// <param name="options">Options dictionary for serialisation/data processing</param>
         /// <returns>Serialized array of bytes</returns>
-        public StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public StreamTools.StreamSendWrapper SerialiseDataObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (objectToSerialise == null) throw new ArgumentNullException("objectToSerialise");
 
             Type objectToSerialiseType = objectToSerialise.GetType();
             if (objectToSerialiseType == typeof(Stream))
                 throw new ArgumentException("Parameter should not be of type Stream. Consider using StreamSendWrapper as send object instead.", "objectToSerialise");
-            else if (objectToSerialiseType == typeof(StreamSendWrapper))
-                return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamSendWrapper, dataProcessors, options);
+            else if (objectToSerialiseType == typeof(StreamTools.StreamSendWrapper))
+                return StreamSendWrapperSerializer.SerialiseStreamSendWrapper(objectToSerialise as StreamTools.StreamSendWrapper, dataProcessors, options);
 
-            StreamSendWrapper baseRes = null;
+            StreamTools.StreamSendWrapper baseRes = null;
      
             baseRes = ArraySerializer.SerialiseArrayObject(objectToSerialise, dataProcessors, options);
 
@@ -108,7 +108,7 @@ namespace DPSBase
                 return SerialiseGeneralObject<T>(objectToSerialise, dataProcessors, options);
         }
 
-        private StreamSendWrapper SerialiseGeneralObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        private StreamTools.StreamSendWrapper SerialiseGeneralObject<T>(T objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             //Create the first memory stream that will be used 
             MemoryStream tempStream1 = new MemoryStream();
@@ -118,7 +118,7 @@ namespace DPSBase
 
             //If we have no data processing to do we can simply return the serialised bytes
             if (dataProcessors == null || dataProcessors.Count == 0)
-                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
             else
             {
                 //Otherwise we will need a second memory stream to process the data
@@ -163,7 +163,7 @@ namespace DPSBase
                     //Return the resultant bytes
                     //return tempStream1.ToArray();
                     tempStream2.Dispose();
-                    return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                 }
                 else
                 {
@@ -173,7 +173,7 @@ namespace DPSBase
                     //Return the resultant bytes
                     //return tempStream2.ToArray();
                     tempStream1.Dispose();
-                    return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
+                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream2, true));
                 }
             }
         }
@@ -377,7 +377,7 @@ namespace DPSBase
         /// <param name="dataProcessors">The compression provider to use</param>
         /// <param name="options">Options to be used during serialization and processing of data</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public static StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static StreamTools.StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             Type objType = objectToSerialise.GetType();
 
@@ -391,9 +391,9 @@ namespace DPSBase
                     byte[] bytesToSerialise = objectToSerialise as byte[];
                     //return objectToSerialise as byte[];
 #if NETFX_CORE
-                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false), true));
+                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false), true));
 #else
-                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
+                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
 #endif
                 }
 #if NETFX_CORE
@@ -466,7 +466,7 @@ namespace DPSBase
                                 tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream2.ToArray();
                                 tempStream1.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
+                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream2, true));
                             }
                             else
                             {
@@ -475,7 +475,7 @@ namespace DPSBase
                                 tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream1.ToArray();
                                 tempStream2.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                             }
                         }
                         else
@@ -484,7 +484,7 @@ namespace DPSBase
                             tempStream1.Seek(writtenBytes, 0);
                             tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                             //return tempStream1.ToArray();
-                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                            return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                         }
                     }
                     finally
@@ -509,7 +509,7 @@ namespace DPSBase
         /// <param name="dataProcessors">The compression provider to use</param>
         /// <param name="options">Options to be used during serialization and processing of data</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public static unsafe StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static unsafe StreamTools.StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             Type objType = objectToSerialise.GetType();
 
@@ -522,7 +522,7 @@ namespace DPSBase
                 {
                     byte[] bytesToSerialise = objectToSerialise as byte[];
                     //return objectToSerialise as byte[];
-                    return new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
+                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
                 }
                 else if (elementType.IsPrimitive)
                 {
@@ -540,9 +540,9 @@ namespace DPSBase
                         {
                             if (dataProcessors == null || dataProcessors.Count == 0)
                             {
-                                AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
+                                StreamTools.AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
                                 //return tempStream1.ToArray();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                             }
 
                             dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
@@ -573,7 +573,7 @@ namespace DPSBase
                                 tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream2.ToArray();
                                 tempStream1.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream2, true));
+                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream2, true));
                             }
                             else
                             {
@@ -582,7 +582,7 @@ namespace DPSBase
                                 tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                                 //return tempStream1.ToArray();
                                 tempStream2.Dispose();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                             }
                         }
                         else
@@ -591,7 +591,7 @@ namespace DPSBase
                             tempStream1.Seek(writtenBytes, 0);
                             tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
                             //return tempStream1.ToArray();
-                            return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
+                            return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                         }
                     }
                     finally
@@ -746,7 +746,7 @@ namespace DPSBase
                                     if (dataProcessors != null && dataProcessors.Count == 1)
                                         dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
                                     else
-                                        AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
+                                        StreamTools.AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
                                 }
                             }
                         }
@@ -881,7 +881,7 @@ namespace DPSBase
                                     if (dataProcessors != null && dataProcessors.Count == 1)
                                         dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
                                     else
-                                        AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
+                                        StreamTools.AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
                                 }
                             }
                         }
@@ -913,7 +913,7 @@ namespace DPSBase
         /// <param name="dataProcessors">The compression provider to use</param>
         /// <param name="options">Options to be used during serialization and processing of data</param>
         /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public static StreamSendWrapper SerialiseStreamSendWrapper(StreamSendWrapper streamSendWrapperToSerialize, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
+        public static StreamTools.StreamSendWrapper SerialiseStreamSendWrapper(StreamTools.StreamSendWrapper streamSendWrapperToSerialize, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             //If we have no data processing to do we can simply return the serialised bytes
             if (dataProcessors == null || dataProcessors.Count == 0)
@@ -927,7 +927,7 @@ namespace DPSBase
         }
 
         /// <summary>
-        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is a <see cref="StreamSendWrapper"/>
+        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is a <see cref="StreamTools.StreamSendWrapper"/>
         /// </summary>        
         /// <param name="receivedObjectBytes">Byte array containing serialized and compressed object</param>
         /// <param name="dataProcessors">Compression provider to use</param>

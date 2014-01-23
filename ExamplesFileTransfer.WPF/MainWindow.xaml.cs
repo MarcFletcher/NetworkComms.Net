@@ -455,7 +455,7 @@ namespace ExamplesWPFFileTransfer
                         FileStream stream = new FileStream(filename, FileMode.Open, FileAccess.Read);
 
                         //Wrap the fileStream in a threadSafeStream so that future operations are thread safe
-                        ThreadSafeStream safeStream = new ThreadSafeStream(stream);
+                        StreamTools.ThreadSafeStream safeStream = new StreamTools.ThreadSafeStream(stream);
 
                         //Get the filename without the associated path information
                         string shortFileName = System.IO.Path.GetFileName(filename);
@@ -492,7 +492,7 @@ namespace ExamplesWPFFileTransfer
 
                             //Wrap the threadSafeStream in a StreamSendWrapper so that we can get NetworkComms.Net
                             //to only send part of the stream.
-                            StreamSendWrapper streamWrapper = new StreamSendWrapper(safeStream, totalBytesSent, bytesToSend);
+                            StreamTools.StreamSendWrapper streamWrapper = new StreamTools.StreamSendWrapper(safeStream, totalBytesSent, bytesToSend);
 
                             //We want to record the packetSequenceNumber
                             long packetSequenceNumber;

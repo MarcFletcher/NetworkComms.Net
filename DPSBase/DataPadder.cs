@@ -76,7 +76,7 @@ namespace DPSBase
             else
                 padData = new byte[paddingSize];
 
-            StreamWriteWithTimeout.Write(inStream, 0, inStream.Length, outStream, 8192, double.MaxValue, int.MaxValue);
+            StreamTools.Write(inStream, 0, inStream.Length, outStream, 8192, double.MaxValue, int.MaxValue);
 
             if (paddingSize != 0)
                 outStream.Write(padData, 0, padData.Length);
@@ -95,7 +95,7 @@ namespace DPSBase
 
             //read the last 4 bytes from the input stream
             int padSize = BitConverter.ToInt32(buffer, 0);
-            StreamWriteWithTimeout.Write(inStream, 0, inStream.Length - padSize, outStream, 8192, double.MaxValue, int.MaxValue);
+            StreamTools.Write(inStream, 0, inStream.Length - padSize, outStream, 8192, double.MaxValue, int.MaxValue);
             writtenBytes = outStream.Length;
         }
 

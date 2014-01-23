@@ -142,33 +142,19 @@ namespace NetworkCommsDotNet
                             #region Handle Packet
                             //We can either have exactly the right amount or even more than we were expecting
                             //We may have too much data if we are sending high quantities and the packets have been concatenated
-                            //no problem!!
                             SendReceiveOptions incomingPacketSendReceiveOptions = IncomingPacketSendReceiveOptions(topPacketHeader);
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Received packet of type '" + topPacketHeader.PacketType + "' from " + ConnectionInfo + ", containing " + packetHeaderSize.ToString() + " header bytes and " + topPacketHeader.TotalPayloadSize.ToString() + " payload bytes.");
 
-                            bool isReservedType = false;
-                            if (topPacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged)
-                                && ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
-                            {
-                                //If this is a reserved packetType we call the method inline so that it gets dealt with immediately
-                                foreach (var tName in NetworkComms.reservedPacketTypeNames)
-                                {
-                                    //isReservedType |= topPacketHeader.PacketType == tName;
-                                    if (topPacketHeader.PacketType == tName)
-                                    {
-                                        isReservedType = true;
-                                        break;
-                                    }
-                                }
-                            }
+                            bool isReservedPacketType = (topPacketHeader.PacketType != Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged) &&
+                                NetworkComms.ReservedPacketTypeNames.ContainsKey(topPacketHeader.PacketType));
 
-                            //Add the packet sequence number if logging
+                            //Get the packet sequence number if logging
                             string packetSeqNumStr = "";
                             if (NetworkComms.LoggingEnabled)
                                 packetSeqNumStr = (topPacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber) ? ". pSeq#-" + topPacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber).ToString() + "." : "");
 
-                            //Only reserved packet types get completed inline
-                            if (isReservedType)
+                            //Only reserved packet types get completed inline by default
+                            if (isReservedPacketType)
                             {
 #if WINDOWS_PHONE || NETFX_CORE
                                 QueueItemPriority priority = QueueItemPriority.Normal;
@@ -228,8 +214,8 @@ namespace NetworkCommsDotNet
                 if (this is IPConnection)
                 {
                     //Log the exception in DOS protection if enabled
-                    if (IPConnection.IPDOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
-                        IPConnection.IPDOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
+                    if (IPConnection.DOSProtection.Enabled && ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
+                        IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
                 }
 
                 NetworkComms.LogError(ex, "CommsError");

@@ -345,8 +345,8 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            using (Packet<sendObjectType> sendPacket = new Packet<sendObjectType>(sendingPacketType, objectToSend, sendReceiveOptions))
-                connectionToUse.SendPacketSpecific(sendPacket, ipEndPoint);
+            using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
+                connectionToUse.SendPacketSpecific<sendObjectType>(sendPacket, ipEndPoint);
         }
         #endregion
 

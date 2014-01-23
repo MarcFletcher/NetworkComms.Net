@@ -67,7 +67,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="header">The <see cref="PacketHeader"/> options are desired.</param>
         /// <returns>The requested <see cref="SendReceiveOptions"/></returns>
-        private SendReceiveOptions IncomingPacketSendReceiveOptions(PacketHeader header)
+        internal SendReceiveOptions IncomingPacketSendReceiveOptions(PacketHeader header)
         {
             //Are there connection specific or global packet handlers?
             bool connectionSpecificHandlers = false;
@@ -79,7 +79,7 @@ namespace NetworkCommsDotNet
             SendReceiveOptions connectionSpecificOptions = PacketTypeUnwrapperOptions(header.PacketType);
             if (connectionSpecificOptions == null) connectionSpecificOptions = ConnectionDefaultSendReceiveOptions;
 
-            //Get global options for this packet type, if there arn't any use the global default options
+            //Get global options for this packet type, if there aren't any use the global default options
             SendReceiveOptions globalOptions = NetworkComms.GlobalPacketTypeUnwrapperOptions(header.PacketType);
             if (globalOptions == null) globalOptions = NetworkComms.DefaultSendReceiveOptions;
 
@@ -173,7 +173,7 @@ namespace NetworkCommsDotNet
                     //Pass the data onto the handler and move on.
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... passing completed data packet to selected connection specific handlers.");
 
-                    //Pass the object to all necessary delgates
+                    //Pass the object to all necessary delegates
                     //We need to use a copy because we may modify the original delegate list during processing
                     foreach (IPacketTypeHandlerDelegateWrapper wrapper in handlersCopy)
                     {

@@ -62,7 +62,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AsyncStreamCopier.cs" />
     <Compile Include="BinaryFormaterSerializer.cs" />
     <Compile Include="DataPadder.cs" />
     <Compile Include="DataProcessor.cs" />
@@ -75,9 +74,7 @@
     <Compile Include="ProtobufSerializer.cs" />
     <Compile Include="RijndaelPSKEncrypter.cs" />
     <Compile Include="DPSManager.cs" />
-    <Compile Include="StreamSendWrapper.cs" />
-    <Compile Include="StreamWriteWithTimeout.cs" />
-    <Compile Include="ThreadSafeStream.cs" />
+    <Compile Include="StreamTools.cs" />
     <Compile Include="XPlatformHelper\AddressFamily.cs" />
     <Compile Include="XPlatformHelper\DateTimeExtenensions.cs" />
     <Compile Include="XPlatformHelper\EndPoint.cs" />

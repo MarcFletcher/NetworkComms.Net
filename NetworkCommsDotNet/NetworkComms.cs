@@ -71,6 +71,12 @@ namespace NetworkCommsDotNet
             PacketConfirmationTimeoutMS = 5000;
             ConnectionAliveTestTimeoutMS = 1000;
 
+            //Initialise the reserved packet type dictionary
+            //this is faster than enumerating Enum.GetNames(typeof(ReservedPacketType)) every time
+            ReservedPacketTypeNames = new Dictionary<string, string>();
+            foreach(string reservedPacketTypeName in Enum.GetNames(typeof(ReservedPacketType)))
+                ReservedPacketTypeNames.Add(reservedPacketTypeName, "");
+
 #if NETFX_CORE
             CurrentRuntimeEnvironment = RuntimeEnvironment.Windows_RT;
             SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
@@ -133,6 +139,7 @@ namespace NetworkCommsDotNet
 
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
+            DPSManager.GetDataProcessor<DataPadder>();
 
 #if !FREETRIAL
             //Only the full version includes the encrypter
@@ -229,20 +236,42 @@ namespace NetworkCommsDotNet
         /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different 
         /// priorities.
         /// </summary>
-        /// <param name="itemAsObj">Possible PriorityQueueItem. If null is provided an item will be removed from the global item queue</param>
-        internal static void CompleteIncomingItemTask(object itemAsObj)
+        /// <param name="priorityQueueItemObj">Possible PriorityQueueItem. If null is provided an item will be removed from the global item queue</param>
+        internal static void CompleteIncomingItemTask(object priorityQueueItemObj)
         {
-            if (itemAsObj == null)
-                throw new ArgumentNullException("itemAsObj", "Provided parameter itemAsObj cannot be null.");
+            if (priorityQueueItemObj == null) throw new ArgumentNullException("itemAsObj", "Provided parameter itemAsObj cannot be null.");
 
             PriorityQueueItem item = null;
             try
             {
                 //If the packetBytes are null we need to ask the incoming packet queue for what we should be running
-                item = itemAsObj as PriorityQueueItem;
+                item = priorityQueueItemObj as PriorityQueueItem;
 
                 if (item == null)
                     throw new InvalidCastException("Cast from object to PriorityQueueItem resulted in null reference, unable to continue.");
+
+                //If this is a nested packet we want to unwrap it here before continuing
+                if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.NestedPacket))
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unwrapping a " + ReservedPacketType.NestedPacket + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
+
+                    Packet nestedPacket = item.SendReceiveOptions.DataSerializer.DeserialiseDataObject<Packet>((MemoryStream)item.DataStream, item.SendReceiveOptions.DataProcessors, item.SendReceiveOptions.Options);
+
+                    //Add the sequence number to the nested packet header
+                    if (item.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
+                        nestedPacket.PacketHeader.SetOption(PacketHeaderLongItems.PacketSequenceNumber, item.PacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber));
+
+                    SendReceiveOptions incomingPacketSendReceiveOptions = item.Connection.IncomingPacketSendReceiveOptions(nestedPacket.PacketHeader);
+                    QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
+
+#if NETFX_CORE
+                    MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadObjectBytes.Length, false);
+#else
+                    MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadObjectBytes.Length, false, true);
+#endif
+
+                    item = new PriorityQueueItem(itemPriority, item.Connection, nestedPacket.PacketHeader, wrappedDataStream, incomingPacketSendReceiveOptions);
+                }
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
 
@@ -259,7 +288,7 @@ namespace NetworkCommsDotNet
                     var packetHeaderHash = item.PacketHeader.GetOption(PacketHeaderStringItems.CheckSumHash);
 
                     //Validate the checkSumhash of the data
-                    string packetDataSectionMD5 = NetworkComms.MD5Bytes(item.DataStream);
+                    string packetDataSectionMD5 = StreamTools.MD5(item.DataStream);
                     if (packetHeaderHash != packetDataSectionMD5)
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn(" ... corrupted packet detected, expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
@@ -270,7 +299,7 @@ namespace NetworkCommsDotNet
                         if (item.PacketHeader.TotalPayloadSize < NetworkComms.CheckSumMismatchSentPacketCacheMaxByteLimit)
                         {
                             //Instead of throwing an exception we can request the packet to be resent
-                            Packet<string> returnPacket = new Packet<string>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
+                            Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
                             item.Connection.SendPacket(returnPacket);
                             //We need to wait for the packet to be resent before going further
                             return;
@@ -291,7 +320,7 @@ namespace NetworkCommsDotNet
                     else
                         throw new InvalidOperationException("Attempted to access packet header sequence number when non was set.");
 
-                    Packet<long> returnPacket = new Packet<long>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
                     
                     //Should an error occur while sending the confirmation it should not prevent the handling of this packet
                     try
@@ -317,7 +346,7 @@ namespace NetworkCommsDotNet
                         NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet<byte[]> returnPacket = new Packet<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
                     item.Connection.SendPacket(returnPacket);
                 }
 
@@ -419,9 +448,9 @@ namespace NetworkCommsDotNet
 
         #region PacketType Config and Global Handlers
         /// <summary>
-        /// An internal reference copy of all reservedPacketTypeNames.
+        /// An internal reference copy of all reservedPacketTypeNames, key is packet type name
         /// </summary>
-        internal static string[] reservedPacketTypeNames = Enum.GetNames(typeof(ReservedPacketType));
+        internal static Dictionary<string, string> ReservedPacketTypeNames;
 
         /// <summary>
         /// Dictionary of all custom packetHandlers. Key is packetType.
@@ -667,18 +696,7 @@ namespace NetworkCommsDotNet
                 if (handlersCopy == null && !IgnoreUnknownPacketTypes && !ignoreUnknownPacketTypeOverride)
                 {
                     //We may get here if we have not added any custom delegates for reserved packet types
-                    bool isReservedType = false;
-
-                    for (int i = 0; i < reservedPacketTypeNames.Length; i++)
-                    {
-                        if (reservedPacketTypeNames[i] == packetHeader.PacketType)
-                        {
-                            isReservedType = true;
-                            break;
-                        }
-                    }
-
-                    if (!isReservedType)
+                    if (!ReservedPacketTypeNames.ContainsKey(packetHeader.PacketType))
                     {
                         //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
@@ -1269,71 +1287,6 @@ namespace NetworkCommsDotNet
         {
             TCPConnection conn = TCPConnection.GetConnection(new ConnectionInfo(destinationIPAddress, destinationPort));
             return conn.SendReceiveObject<sendObjectType, returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, sendObject);
-        }
-
-        /// <summary>
-        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on 
-        /// return, this ensures the MD5 is consistent.
-        /// </summary>
-        /// <param name="streamToMD5">The bytes which will be checksummed</param>
-        /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(Stream streamToMD5)
-        {
-            if (streamToMD5 == null) throw new ArgumentNullException("streamToMD5", "Provided Stream cannot be null.");
-
-            string resultStr;
-
-#if NETFX_CORE
-            var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
-            var buffer = (new Windows.Storage.Streams.DataReader(streamToMD5.AsInputStream())).ReadBuffer((uint)streamToMD5.Length);
-            var hashedData = alg.HashData(buffer);
-            resultStr = Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
-#else
-            using (System.Security.Cryptography.HashAlgorithm md5 =
-#if WINDOWS_PHONE
-                new DPSBase.MD5Managed())
-#else
-            System.Security.Cryptography.MD5.Create())
-#endif
-            {
-                //If we don't ensure the position is consistent the MD5 changes
-                streamToMD5.Seek(0, SeekOrigin.Begin);
-                resultStr = BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
-            }
-#endif
-            return resultStr;
-        }
-
-        /// <summary>
-        /// Return the MD5 hash of the provided memory stream as a string. Stream position will be equal to the length of stream on 
-        /// return, this ensures the MD5 is consistent.
-        /// </summary>
-        /// <param name="streamToMD5">The bytes which will be checksummed</param>
-        /// <param name="start">The start position in the stream</param>
-        /// <param name="length">The length in the stream to MD5</param>
-        /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(Stream streamToMD5, long start, int length)
-        {
-            if (streamToMD5 == null) throw new ArgumentNullException("streamToMD5", "Provided Stream cannot be null.");
-
-            using (MemoryStream stream = new MemoryStream(length))
-            {
-                StreamWriteWithTimeout.Write(streamToMD5, start, length, stream, 8000, 100, 2000);
-                return MD5Bytes(stream);
-            }
-        }
-
-        /// <summary>
-        /// Return the MD5 hash of the provided byte array as a string
-        /// </summary>
-        /// <param name="bytesToMd5">The bytes which will be checksummed</param>
-        /// <returns>The MD5 checksum as a string</returns>
-        public static string MD5Bytes(byte[] bytesToMd5)
-        {
-            if (bytesToMd5 == null) throw new ArgumentNullException("bytesToMd5", "Provided byte[] cannot be null.");
-
-            using(MemoryStream stream = new MemoryStream(bytesToMd5, 0, bytesToMd5.Length, false))
-                return MD5Bytes(stream);
         }
 
         /// <summary>
@@ -2015,7 +1968,7 @@ namespace NetworkCommsDotNet
 
                 //Check for connection initialise in DOS protection
                 #region DOS Protection
-                if (IPConnection.IPDOSProtection.Enabled)
+                if (IPConnection.DOSProtection.Enabled)
                 {
                     //If remoteEndPointToUse != null validate using that
                     if (remoteEndPointToUse != null && remoteEndPointToUse.GetType() == typeof(IPEndPoint))
@@ -2024,17 +1977,17 @@ namespace NetworkCommsDotNet
 
                         //This may well be an updated endPoint. We only log the connection initialise if the endpoint addresses are different
                         if (!remoteIPEndPoint.Address.Equals(connection.ConnectionInfo.RemoteIPEndPoint.Address) &&
-                            IPConnection.IPDOSProtection.LogConnectionInitialise(remoteIPEndPoint.Address))
-                            throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.IPDOSProtection.BanTimeout + " due to a high number of connection initialisations.");
-                        else if (IPConnection.IPDOSProtection.RemoteIPAddressBanned(remoteIPEndPoint.Address))
+                            IPConnection.DOSProtection.LogConnectionInitialise(remoteIPEndPoint.Address))
+                            throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                        else if (IPConnection.DOSProtection.RemoteIPAddressBanned(remoteIPEndPoint.Address))
                             throw new ConnectionSetupException("Connection remoteEndPoint (" + remoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
                     }
                     //Otherwise use connection.ConnectionInfo.RemoteEndPoint
                     else if (connection.ConnectionInfo.RemoteEndPoint.GetType() == typeof(IPEndPoint))
                     {
-                        if (IPConnection.IPDOSProtection.LogConnectionInitialise(connection.ConnectionInfo.RemoteIPEndPoint.Address))
-                            throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.IPDOSProtection.BanTimeout + " due to a high number of connection initialisations.");
-                        else if (IPConnection.IPDOSProtection.RemoteIPAddressBanned(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                        if (IPConnection.DOSProtection.LogConnectionInitialise(connection.ConnectionInfo.RemoteIPEndPoint.Address))
+                            throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") has been banned for " + IPConnection.DOSProtection.BanTimeout + " due to a high number of connection initialisations.");
+                        else if (IPConnection.DOSProtection.RemoteIPAddressBanned(connection.ConnectionInfo.RemoteIPEndPoint.Address))
                             throw new ConnectionSetupException("Connection remoteEndPoint (" + connection.ConnectionInfo.RemoteIPEndPoint.ToString() + ") is currently banned by DOS protection.");
                     }
                 }

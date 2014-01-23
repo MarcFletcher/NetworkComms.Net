@@ -46,6 +46,7 @@ namespace NetworkCommsDotNet
         public static void StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint) where T : EndPoint
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
+            if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "desiredLocalEndPoint cannot be null.");
 
             if (connectionType == ConnectionType.TCP || connectionType == ConnectionType.UDP)
             {

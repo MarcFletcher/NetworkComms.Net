@@ -80,7 +80,7 @@ namespace NetworkCommsDotNet
         public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, SendReceiveOptions options)
         {
             long packetSequenceNumber;
-            SendPacket(new Packet<sendObjectType>(sendingPacketType, objectToSend, options), out packetSequenceNumber);
+            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
         public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, SendReceiveOptions options, out long packetSequenceNumber)
         {
-            SendPacket(new Packet<sendObjectType>(sendingPacketType, objectToSend, options), out packetSequenceNumber);
+            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace NetworkCommsDotNet
             AppendShutdownHandler(SendReceiveShutDownDelegate);
             AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
-            using(Packet<sendObjectType> sendPacket = new Packet<sendObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions))
+            using(Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions))
                 SendPacket(sendPacket, out sentPacketSequenceNumber);
 
             //We wait for the return data here
@@ -654,9 +654,9 @@ namespace NetworkCommsDotNet
                                 maxSendTimePerKB = DefaultMSPerKBSendTimeout;
                         }
 
-                        StreamSendWrapper[] streamsToSend = new StreamSendWrapper[] 
+                        StreamTools.StreamSendWrapper[] streamsToSend = new StreamTools.StreamSendWrapper[] 
                         { 
-                            new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(new byte[] { 0 }))) 
+                            new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(new byte[] { 0 }))) 
                         }; 
 
                         SendStreams(streamsToSend, maxSendTimePerKB, 1);
@@ -713,12 +713,12 @@ namespace NetworkCommsDotNet
 
             DateTime startTime = DateTime.Now;
 
-            StreamSendWrapper[] streamsToSend = new StreamSendWrapper[] 
-            { new StreamSendWrapper(new ThreadSafeStream(new MemoryStream(headerBytes))),
+            StreamTools.StreamSendWrapper[] streamsToSend = new StreamTools.StreamSendWrapper[] 
+            { new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(headerBytes))),
                 packet.PacketData};
 
             long totalBytesToSend = 0;
-            foreach (StreamSendWrapper stream in streamsToSend)
+            foreach (StreamTools.StreamSendWrapper stream in streamsToSend)
                 totalBytesToSend += stream.Length;
 
             //Send the streams
@@ -745,7 +745,7 @@ namespace NetworkCommsDotNet
         /// <param name="maxSendTimePerKB">The maximum time to allow per KB before a write timeout exception.</param>
         /// <param name="totalBytesToSend">A precalculated sum of streams.Length</param>
         /// <returns>Should return double[] which represents the milliseconds per byte written for each StreamSendWrapper</returns>
-        protected abstract double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend);
+        protected abstract double[] SendStreams(StreamTools.StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend);
 
         /// <summary>
         /// Dispose of the connection. Recommended usage is to call CloseConnection instead.

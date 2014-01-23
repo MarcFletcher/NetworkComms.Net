@@ -215,7 +215,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet">Packet to send</param>
         /// <param name="ipEndPoint">The target ipEndPoint</param>
-        private void SendPacketSpecific<packetObjectType>(Packet<packetObjectType> packet, IPEndPoint ipEndPoint)
+        private void SendPacketSpecific<packetObjectType>(Packet packet, IPEndPoint ipEndPoint)
         {
 #if FREETRIAL
             if (ipEndPoint.Address == IPAddress.Broadcast)
@@ -280,7 +280,7 @@ namespace NetworkCommsDotNet
         }
 
         /// <inheritdoc />
-        protected override double[] SendStreams(StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
+        protected override double[] SendStreams(StreamTools.StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
 #if FREETRIAL
             if (this.ConnectionInfo.RemoteEndPoint.Address == IPAddress.Broadcast)

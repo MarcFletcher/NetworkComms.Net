@@ -25,8 +25,6 @@ namespace NetworkCommsDotNet
         {
             IP.NetworkLoadUpdateWindowMS = 2000;
             IP.InterfaceLinkSpeed = 95000000;
-
-            _restrictLocalAdaptorNames = null;
         }
 
         /// <summary>
@@ -44,7 +42,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        static string[] _restrictLocalAdaptorNames;
+        static string[] _restrictLocalAdaptorNames = new string[0];
         /// <summary>
         /// Restricts the addresses that may be used when listening.
         /// If set <see cref="IP.FilteredLocalAddresses()"/> will only return addresses corresponding with specified adaptors names. 

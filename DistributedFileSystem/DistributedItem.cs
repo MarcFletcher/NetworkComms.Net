@@ -104,7 +104,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// The stream containing the item chunk data
         /// </summary>
-        ThreadSafeStream ItemDataStream { get; set; }
+        StreamTools.ThreadSafeStream ItemDataStream { get; set; }
 
         /// <summary>
         /// The chunk positions and lengths. Key is chunkIndex.
@@ -196,10 +196,10 @@ namespace DistributedFileSystem
         {
             this.ItemTypeStr = itemTypeStr;
             this.ItemIdentifier = itemIdentifier;
-            this.ItemDataStream = new ThreadSafeStream(itemData);
+            this.ItemDataStream = new StreamTools.ThreadSafeStream(itemData);
             this.ItemBuildTarget = itemBuildTarget;
 
-            ItemCheckSum = ItemDataStream.MD5CheckSum();
+            ItemCheckSum = ItemDataStream.MD5();
             ItemBytesLength = (int)ItemDataStream.Length;
             this.ItemBuildCascadeDepth = itemBuildCascadeDepth;
 
@@ -263,7 +263,7 @@ namespace DistributedFileSystem
                     try
                     {
                         file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                        if (NetworkComms.MD5Bytes(file) != assemblyConfig.ItemCheckSum)
+                        if (StreamTools.MD5(file) != assemblyConfig.ItemCheckSum)
                             throw new Exception("Wrong place, wrong time, wrong file!");
                     }
                     catch (Exception)
@@ -279,7 +279,7 @@ namespace DistributedFileSystem
                         }
                     }
 
-                    this.ItemDataStream = new ThreadSafeStream(file);
+                    this.ItemDataStream = new StreamTools.ThreadSafeStream(file);
                 }
                 else
                 {
@@ -292,7 +292,7 @@ namespace DistributedFileSystem
                     FileStream newStream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
                     newStream.SetLength(ItemBytesLength);
                     newStream.Flush();
-                    this.ItemDataStream = new ThreadSafeStream(newStream);
+                    this.ItemDataStream = new StreamTools.ThreadSafeStream(newStream);
                 }
 
                 if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
@@ -301,7 +301,7 @@ namespace DistributedFileSystem
             {
                 MemoryStream itemStream = new MemoryStream(ItemBytesLength);
                 itemStream.SetLength(ItemBytesLength);
-                this.ItemDataStream = new ThreadSafeStream(itemStream);
+                this.ItemDataStream = new StreamTools.ThreadSafeStream(itemStream);
             }
 
             InitialiseChunkPositionLengthDict();
@@ -814,7 +814,7 @@ namespace DistributedFileSystem
                                 //The data we have received may be correct but if the disk is faulty it may not read back the same 
                                 if (ItemBuildTarget == ItemBuildTarget.Disk && ChunkCheckSums != null && ChunkCheckSums[incomingReply.ChunkIndex] != "")
                                 {
-                                    string chunkDiskMD5 = ItemDataStream.MD5CheckSum(ChunkPositionLengthDict[incomingReply.ChunkIndex].Position, ChunkPositionLengthDict[incomingReply.ChunkIndex].Length);
+                                    string chunkDiskMD5 = ItemDataStream.MD5(ChunkPositionLengthDict[incomingReply.ChunkIndex].Position, ChunkPositionLengthDict[incomingReply.ChunkIndex].Length);
                                     if (chunkDiskMD5 == ChunkCheckSums[incomingReply.ChunkIndex])
                                         break;
                                     else if (chunkDiskMD5 != ChunkCheckSums[incomingReply.ChunkIndex] && writeCount >= writeRetryCountMax)
@@ -829,7 +829,7 @@ namespace DistributedFileSystem
                                     break;
 
                                 //If there was a failure we now check the incoming data to ensure that is correct
-                                if (NetworkComms.MD5Bytes(incomingReply.ChunkData) != ChunkCheckSums[incomingReply.ChunkIndex])
+                                if (StreamTools.MD5(incomingReply.ChunkData) != ChunkCheckSums[incomingReply.ChunkIndex])
                                 {
                                         AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " was corrupted before integration.");
                                         if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " was corrupted before integration.");
@@ -1057,7 +1057,7 @@ namespace DistributedFileSystem
                     //If we have set the chunk check sums we can check it here
                     if (ChunkCheckSums != null && ChunkCheckSums[incomingReply.ChunkIndex] != "")
                     {
-                        if (NetworkComms.MD5Bytes(incomingReply.ChunkData) == ChunkCheckSums[incomingReply.ChunkIndex])
+                        if (StreamTools.MD5(incomingReply.ChunkData) == ChunkCheckSums[incomingReply.ChunkIndex])
                         {
                             AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
                             if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
@@ -1110,10 +1110,10 @@ namespace DistributedFileSystem
         /// Returns a streamSendWrapper that contains the item
         /// </summary>
         /// <returns></returns>
-        public StreamSendWrapper GetItemStream()
+        public StreamTools.StreamSendWrapper GetItemStream()
         {
             if (LocalItemComplete())
-                return new StreamSendWrapper(ItemDataStream, 0, ItemBytesLength);
+                return new StreamTools.StreamSendWrapper(ItemDataStream, 0, ItemBytesLength);
             else
                 throw new Exception("Attempted to acces DFS item data stream when item was not complete.");
         }
@@ -1123,14 +1123,14 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="chunkIndex">The desired chunk index data</param>
         /// <returns></returns>
-        public StreamSendWrapper GetChunkStream(byte chunkIndex)
+        public StreamTools.StreamSendWrapper GetChunkStream(byte chunkIndex)
         {
             //If we have made it this far we are returning data
             if (SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, chunkIndex))
             {
                 lock (itemLocker) TotalChunkSupplyCount++;
 
-                return new StreamSendWrapper(ItemDataStream, ChunkPositionLengthDict[chunkIndex].Position, ChunkPositionLengthDict[chunkIndex].Length);
+                return new StreamTools.StreamSendWrapper(ItemDataStream, ChunkPositionLengthDict[chunkIndex].Position, ChunkPositionLengthDict[chunkIndex].Length);
             }
             else
                 throw new Exception("Attempted to access DFS chunk which was not available locally");
@@ -1159,7 +1159,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public bool LocalItemValid()
         {
-            if (ItemDataStream.MD5CheckSum() == ItemCheckSum)
+            if (ItemDataStream.MD5() == ItemCheckSum)
                 return true;
             else
                 return false;
@@ -1175,10 +1175,10 @@ namespace DistributedFileSystem
             {
                 ChunkCheckSums = new string[TotalNumChunks];
                 for (int i = 0; i < TotalNumChunks; i++)
-                    ChunkCheckSums[i] = this.ItemDataStream.MD5CheckSum(i * ChunkSizeInBytes, ChunkSizeInBytes);
+                    ChunkCheckSums[i] = this.ItemDataStream.MD5(i * ChunkSizeInBytes, ChunkSizeInBytes);
             }
             else
-                throw new Exception("Current loadad data is not valid.");
+                throw new Exception("Current loaded data is not valid.");
         }
 
         /// <summary>
@@ -1222,7 +1222,7 @@ namespace DistributedFileSystem
         public static DistributedItem Load(string fileName, Stream itemDataStream, List<ConnectionInfo> seedConnectionInfoList)
         {
             DistributedItem loadedItem = DPSManager.GetDataSerializer<ProtobufSerializer>().DeserialiseDataObject<DistributedItem>(File.ReadAllBytes(fileName));
-            loadedItem.ItemDataStream = new ThreadSafeStream(itemDataStream);
+            loadedItem.ItemDataStream = new StreamTools.ThreadSafeStream(itemDataStream);
             loadedItem.InitialiseChunkPositionLengthDict();
             loadedItem.SwarmChunkAvailability = new SwarmChunkAvailability(seedConnectionInfoList, loadedItem.TotalNumChunks);
             //loadedItem.BuildChunkCheckSums();

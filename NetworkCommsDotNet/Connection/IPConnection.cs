@@ -24,7 +24,7 @@ namespace NetworkCommsDotNet
     {
         static IPConnection()
         {
-            IPDOSProtection = new DOSProtection();
+            DOSProtection = new DOSProtection();
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The NetworkComms.Net DOS protection class. By default DOSProtection is disabled.
         /// </summary>
-        public static DOSProtection IPDOSProtection { get; private set; }
+        public static DOSProtection DOSProtection { get; private set; }
 
         /// <summary>
         /// If set NetworkComms.Net will only accept incoming connections from the provided IP ranges. 

@@ -1256,7 +1256,7 @@ namespace DistributedFileSystem
                         }
                         else
                         {
-                            StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
+                            StreamTools.StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
 
                             if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
