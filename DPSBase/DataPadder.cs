@@ -7,6 +7,12 @@ using System.Text;
 using Windows.Security.Cryptography;
 #endif
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace DPSBase
 {
     /// <summary>
@@ -33,6 +39,11 @@ namespace DPSBase
         private const string paddedSizeOptionName = "DataPadder_PADDEDSIZE";
         private const string padTypeOptionName = "DataPadder_PADTYPE";
         private const string padExceptionOptionName = "DataPadder_PADEXCEPTION";
+
+#if ANDROID || iOS
+        [Preserve]
+#endif
+        private DataPadder() { }
 
 #if !NETFX_CORE
         System.Security.Cryptography.RandomNumberGenerator rand = new System.Security.Cryptography.RNGCryptoServiceProvider();
