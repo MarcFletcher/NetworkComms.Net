@@ -23,6 +23,10 @@ using System.Net;
 using System.Threading;
 using DPSBase;
 
+#if NET35 || NET4
+using InTheHand.Net;
+#endif
+
 #if NETFX_CORE
 using NetworkCommsDotNet.XPlatformHelper;
 #endif
@@ -93,6 +97,48 @@ namespace NetworkCommsDotNet
                     throw;
                 }
             }
+#if NET35 || NET4
+            else if (connectionType == ConnectionType.Bluetooth)
+            {
+                BluetoothEndPoint desiredLocalBTEndPoint = desiredLocalEndPoint as BluetoothEndPoint;
+                if (desiredLocalBTEndPoint == null)
+                    throw new ArgumentException("The provided desiredLocalEndPoint must be an IPEndPoint for TCP and UDP connection types.", "desiredLocalEndPoint");
+
+                //Collect a list of IPEndPoints we want to listen on
+                List<BluetoothEndPoint> localListenBTEndPoints = new List<BluetoothEndPoint>();
+                if (desiredLocalBTEndPoint.Address == BluetoothAddress.None)
+                {
+                    foreach (var address in HostInfo.BT.FilteredLocalAddresses())
+                        localListenBTEndPoints.Add(new BluetoothEndPoint(address, desiredLocalBTEndPoint.Service));
+                }
+                else
+                    localListenBTEndPoints.Add(desiredLocalBTEndPoint);
+
+                //Initialise the listener list
+                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
+                for (int i = 0; i < localListenBTEndPoints.Count; i++)
+                    listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+
+                //Start listening on all selected listeners
+                //We do this is a separate step in case there is an exception
+                try
+                {
+                    for (int i = 0; i < localListenBTEndPoints.Count; i++)
+                        StartListening(listeners[i], localListenBTEndPoints[i], false);
+                }
+                catch (Exception)
+                {
+                    //If there is an exception here we remove any added listeners and then rethrow
+                    for (int i = 0; i < listeners.Count; i++)
+                    {
+                        if (listeners[i].IsListening)
+                            StopListening(listeners[i].ConnectionType, listeners[i].LocalListenEndPoint);
+                    }
+
+                    throw;
+                }
+            }
+#endif
             else
                 throw new NotImplementedException("This method has not been implemented for the provided connections of type " + connectionType);
         }
@@ -112,6 +158,9 @@ namespace NetworkCommsDotNet
             if (listener == null) throw new ArgumentNullException("listener", "Provided listener cannot be null.");
             if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "Provided desiredLocalEndPoint cannot be null.");
             if (desiredLocalEndPoint.GetType() == typeof(IPEndPoint) && ((desiredLocalEndPoint as IPEndPoint).Address == IPAddress.Any || (desiredLocalEndPoint as IPEndPoint).Address == IPAddress.IPv6Any)) throw new ArgumentException("desiredLocalEndPoint must specify a valid local IPAddress.", "desiredLocalEndPoint");
+#if NET35 || NET4
+            if (desiredLocalEndPoint is BluetoothEndPoint && (desiredLocalEndPoint as BluetoothEndPoint).Address == BluetoothAddress.None) throw new ArgumentException("desiredLocalEndPoint must specify a valid local Bluetooth Address.", "desiredLocalEndPoint");
+#endif
             #endregion
 
             lock (staticConnectionLocker)

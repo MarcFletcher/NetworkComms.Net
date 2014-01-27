@@ -14,24 +14,7 @@ namespace DebugTests
     class BluetoothTest
     {
         static Guid ServiceGUID = new Guid("3a768eea-cbda-4926-a82d-831cb89092aa");
-
-        [ProtoContract]
-        public class PingRequestReturnDC
-        {
-            [ProtoMember(1)]
-            public short ClientID { get; set; }
-            [ProtoMember(2)]
-            public short PingID { get; set; }
-
-            private PingRequestReturnDC() { }
-
-            public PingRequestReturnDC(short clientId, short pingId)
-            {
-                this.ClientID = clientId;
-                this.PingID = pingId;
-            }
-        }
-
+        
         /// <summary>
         /// Run example
         /// </summary>
@@ -52,16 +35,14 @@ namespace DebugTests
             //
             //This handler will convert the incoming raw bytes into a string (this is what 
             //the <string> bit means) and then write that string to the local console window.
-            NetworkComms.AppendGlobalIncomingPacketHandler<PingRequestReturnDC>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString.ClientID + "'-'" + incomingString.PingID + "'."); });
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Message", (packetHeader, connection, incomingString) => { Console.WriteLine("\n  ... Incoming message from " + connection.ToString() + " saying '" + incomingString + "'."); });
 
-            //Create a bluetooth listener
-            BluetoothConnectionListener listenner = new BluetoothConnectionListener(nullCompressionSRO, ApplicationLayerProtocolStatus.Enabled);
+            //Start listenning
             BluetoothRadio defaultRadio = BluetoothRadio.PrimaryRadio;
             defaultRadio.Mode = RadioMode.Connectable;
-            BluetoothEndPoint localEP = new BluetoothEndPoint(defaultRadio.LocalAddress, BluetoothService.SerialPort);
-            Connection.StartListening(listenner, localEP, false);
+            Connection.StartListening(ConnectionType.Bluetooth, new BluetoothEndPoint(defaultRadio.LocalAddress, ServiceGUID));
 
-            //Print the IP addresses and ports we are listening on to make sure everything
+            //Print the address we are listening on to make sure everything
             //worked as expected.
             Console.WriteLine("Listening for messages on:");
             foreach (var localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.Bluetooth))
@@ -83,14 +64,12 @@ namespace DebugTests
                     ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), BluetoothService.SerialPort, 1));
                     //GetServerDetails(out targetServerConnectionInfo);
 
-                    PingRequestReturnDC test = new PingRequestReturnDC(0, 0);
-
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
                     var connection = BluetoothConnection.GetConnection(targetServerConnectionInfo);
 
-                    connection.SendObject("Message", test);                    
+                    connection.SendObject("Message", "Hello world");                    
                 }
             }
 

@@ -58,11 +58,9 @@ namespace NetworkCommsDotNet
                 {
                     try
                     {
-                        throw new NotImplementedException();
-
-                        //listenerInstance = new BluetoothListener(;
-                        //listenerInstance.Start();
-                        //listenerInstance.BeginAcceptBluetoothClient(TCPConnectionReceivedAsync, null);
+                        listenerInstance = new BluetoothListener(new BluetoothEndPoint((desiredLocalListenEndPoint as BluetoothEndPoint).Address, Guid.NewGuid()));
+                        listenerInstance.Start();
+                        listenerInstance.BeginAcceptBluetoothClient(BluetoothConnectionReceivedAsync, null);
                     }
                     catch (SocketException)
                     {

@@ -14,6 +14,11 @@ using Windows.Storage;
 using System.Net.Sockets;
 #endif
 
+#if NET35 || NET4
+using InTheHand.Net;
+using InTheHand.Net.Bluetooth;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -558,12 +563,47 @@ namespace NetworkCommsDotNet
 #endif
         }
 
+#if NET35 || NET4
+
         /// <summary>
         /// Host bluetooth information
         /// </summary>
         public static class BT
         {
-            //Bluetooth host information here :-)
+            /// <summary>
+            /// Returns all allowed local Bluetooth addresses. 
+            /// If <see cref="RestrictLocalAdaptorNames"/> has been set only returns bBluetooth addresses corresponding with specified adaptors.
+            /// </summary>
+            /// <returns></returns>
+            public static List<BluetoothAddress> FilteredLocalAddresses()
+            {
+                List<BluetoothAddress> allowedAddresses = new List<BluetoothAddress>();
+
+                if (RestrictLocalAdaptorNames == null)
+                {
+                    foreach (var radio in BluetoothRadio.AllRadios)
+                        allowedAddresses.Add(radio.LocalAddress);
+                }
+                else
+                {
+                    foreach (var radio in BluetoothRadio.AllRadios)
+                    {
+                        foreach (var name in RestrictLocalAdaptorNames)
+                        {
+                            if (name == radio.Name)
+                            {
+                                allowedAddresses.Add(radio.LocalAddress);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return allowedAddresses;
+            }
+
         }
+
+#endif
     }
 }

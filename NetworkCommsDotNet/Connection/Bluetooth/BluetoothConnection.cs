@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet
 
             //We should now be able to set the connectionInfo localEndPoint
             var localEndPoint = btClient.Client.LocalEndPoint as BluetoothEndPoint;
-            localEndPoint = new BluetoothEndPoint(localEndPoint.Address, BluetoothService.SerialPort, localEndPoint.Port);
+            localEndPoint = new BluetoothEndPoint(localEndPoint.Address, ConnectionInfo.RemoteBTEndPoint.Service, localEndPoint.Port);
 
             NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
