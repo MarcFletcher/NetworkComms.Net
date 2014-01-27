@@ -61,7 +61,7 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), BluetoothService.SerialPort, 1));
+                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), ServiceGUID));
                     //GetServerDetails(out targetServerConnectionInfo);
 
                     //There are loads of ways of sending data (see AdvancedSend example for more)
