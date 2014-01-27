@@ -53,7 +53,7 @@ namespace DPSBase
         {
             if (options == null)
                 throw new ArgumentException("Options dictionary was null", "options");
-            else if (options.ContainsKey(paddedSizeOptionName) || !options.ContainsKey(padTypeOptionName) || !options.ContainsKey(padExceptionOptionName))
+            else if (!options.ContainsKey(paddedSizeOptionName) || !options.ContainsKey(padTypeOptionName) || !options.ContainsKey(padExceptionOptionName))
                 throw new ArgumentException("Options dictionary did not contain the necessary padding options", "options");
 
             int paddingSize;
