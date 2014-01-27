@@ -70,9 +70,11 @@ namespace DebugTests
                 ConnectionInfo serverInfo = new ConnectionInfo(new IPEndPoint(localIPAddress, 10000));
 
                 SendReceiveOptions customOptions = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
-                customOptions.Options.Add("UseNestedPacketType", "");
+                
                 customOptions.DataProcessors.Add(DPSManager.GetDataProcessor<DataPadder>());
                 DataPadder.AddPaddingOptions(customOptions.Options, 10240, DataPadder.DataPaddingType.Random, false);
+
+                customOptions.UseNestedPacket = true;
 
                 Connection conn = UDPConnection.GetConnection(serverInfo, UDPOptions.None, customOptions);
                 conn.SendObject("Data", sendArray);

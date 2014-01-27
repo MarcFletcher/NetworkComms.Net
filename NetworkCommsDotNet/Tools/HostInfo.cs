@@ -601,7 +601,6 @@ namespace NetworkCommsDotNet
 
                 return allowedAddresses;
             }
-
         }
 
 #endif

@@ -102,9 +102,9 @@ namespace NetworkCommsDotNet
             {
                 BluetoothEndPoint desiredLocalBTEndPoint = desiredLocalEndPoint as BluetoothEndPoint;
                 if (desiredLocalBTEndPoint == null)
-                    throw new ArgumentException("The provided desiredLocalEndPoint must be an IPEndPoint for TCP and UDP connection types.", "desiredLocalEndPoint");
+                    throw new ArgumentException("The provided desiredLocalEndPoint must be a BluetoothEndPoint for Bluetooth connection types.", "desiredLocalEndPoint");
 
-                //Collect a list of IPEndPoints we want to listen on
+                //Collect a list of BluetoothEndPoints we want to listen on
                 List<BluetoothEndPoint> localListenBTEndPoints = new List<BluetoothEndPoint>();
                 if (desiredLocalBTEndPoint.Address == BluetoothAddress.None)
                 {
