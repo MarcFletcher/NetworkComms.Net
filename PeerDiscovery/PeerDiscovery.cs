@@ -33,6 +33,11 @@ namespace NetworkCommsDotNet.PeerDiscovery
         private static object _syncRoot = new object();
 
         /// <summary>
+        /// The packet type used for peer discovery
+        /// </summary>
+        private static string discoveryPacketType = "PeerDiscovery";
+
+        /// <summary>
         /// Listeners associated with this peers discover status
         /// </summary>
         private static Dictionary<ConnectionType, List<ConnectionListenerBase>> _discoveryListeners = new Dictionary<ConnectionType, List<ConnectionListenerBase>>();
@@ -89,6 +94,10 @@ namespace NetworkCommsDotNet.PeerDiscovery
                 else
                     throw new NotImplementedException("This feature has not been implemented for the provided connection type.");
             }
+
+            //Add the packet handlers
+            if (!NetworkComms.GlobalIncomingPacketHandlerExists<byte[]>(discoveryPacketType, PeerDiscoveryHandler))
+                NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
         }
 
         /// <summary>
@@ -115,6 +124,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
                         Connection.StopListening(_discoveryListeners[currentType]);
 
                     _discoveryListeners = new Dictionary<ConnectionType, List<ConnectionListenerBase>>();
+
                 }
                 else if (_discoveryListeners.ContainsKey(connectionType))
                 {
@@ -129,7 +139,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
         /// </summary>
         /// <param name="connectionType">The connection type to use for discovering peers.</param>
         /// <returns></returns>
-        public static List<ConnectionInfo> DiscoverPeers(ConnectionType connectionType)
+        public static List<EndPoint> DiscoverPeers(ConnectionType connectionType)
         {
             return DiscoverPeers(connectionType, DefaultMaximumDiscoverTimeMS);
         }
@@ -140,7 +150,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
         /// <param name="connectionType">The connection type to use for discovering peers.</param>
         /// <param name="maximumDiscoverTime">The maximum time allowed in MS before a request to discover peers returns.</param>
         /// <returns></returns>
-        public static List<ConnectionInfo> DiscoverPeers(ConnectionType connectionType, int maximumDiscoverTime)
+        public static List<EndPoint> DiscoverPeers(ConnectionType connectionType, int maximumDiscoverTime)
         {
             //Discover peers asynchronously, and return after maximumDiscoverTime 
 
@@ -191,6 +201,18 @@ namespace NetworkCommsDotNet.PeerDiscovery
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Handle the incoming peer discovery packet
+        /// </summary>
+        /// <typeparam name="?"></typeparam>
+        /// <param name="header"></param>
+        /// <param name="connection"></param>
+        /// <param name="data"></param>
+        private static void PeerDiscoveryHandler(PacketHeader header, Connection connection, byte[] data)
+        {
+
         }
     }
 }

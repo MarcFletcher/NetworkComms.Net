@@ -575,7 +575,7 @@ namespace NetworkCommsDotNet
         /// Removes the provided delegate for unmanaged packet types. If the provided delegate does not exist for this packet type just returns.
         /// </summary>
         /// <param name="packetHandlerDelgatePointer">The delegate to be removed</param>
-        public static void RemoveGlobalIncomingUnmanagedPacketHandler(Delegate packetHandlerDelgatePointer)
+        public static void RemoveGlobalIncomingUnmanagedPacketHandler<packetHandlerIncomingObjectType>(PacketHandlerCallBackDelegate<packetHandlerIncomingObjectType> packetHandlerDelgatePointer)
         {
             RemoveGlobalIncomingPacketHandler(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
         }
@@ -585,7 +585,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which the delegate will be removed</param>
         /// <param name="packetHandlerDelgatePointer">The delegate to be removed</param>
-        public static void RemoveGlobalIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        public static void RemoveGlobalIncomingPacketHandler<packetHandlerIncomingObjectType>(string packetTypeStr, PacketHandlerCallBackDelegate<packetHandlerIncomingObjectType> packetHandlerDelgatePointer)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -792,7 +792,7 @@ namespace NetworkCommsDotNet
         /// <param name="packetTypeStr">The packet type within which to check packet handlers</param>
         /// <param name="packetHandlerDelgatePointer">The packet handler to look for</param>
         /// <returns>True if a global packet handler exists for the provided packetType</returns>
-        public static bool GlobalIncomingPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
+        public static bool GlobalIncomingPacketHandlerExists<packetHandlerIncomingObjectType>(string packetTypeStr, PacketHandlerCallBackDelegate<packetHandlerIncomingObjectType> packetHandlerDelgatePointer)
         {
             lock (globalDictAndDelegateLocker)
             {
@@ -814,7 +814,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packetHandlerDelgatePointer">The packet handler to look for.</param>
         /// <returns>True if a global unmanaged packet handler exists.</returns>
-        public static bool GlobalIncomingUnmanagedPacketHandlerExists(Delegate packetHandlerDelgatePointer)
+        public static bool GlobalIncomingUnmanagedPacketHandlerExists<packetHandlerIncomingObjectType>(PacketHandlerCallBackDelegate<packetHandlerIncomingObjectType> packetHandlerDelgatePointer)
         {
             return GlobalIncomingPacketHandlerExists(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), packetHandlerDelgatePointer);
         }
