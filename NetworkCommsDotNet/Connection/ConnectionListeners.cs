@@ -47,10 +47,13 @@ namespace NetworkCommsDotNet
         /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
         /// <param name="desiredLocalEndPoint">The desired localEndPoint. For IPEndPoints use IPAddress.Any 
         /// to listen on all <see cref="HostInfo.IP.FilteredLocalAddresses()"/> and port 0 to randomly select an available port.</param>
-        public static void StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint) where T : EndPoint
+        /// <returns>A list of all listeners used.</returns>
+        public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint) where T : EndPoint
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
             if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "desiredLocalEndPoint cannot be null.");
+
+            List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
 
             if (connectionType == ConnectionType.TCP || connectionType == ConnectionType.UDP)
             {
@@ -69,7 +72,6 @@ namespace NetworkCommsDotNet
                     localListenIPEndPoints.Add(desiredLocalIPEndPoint);
 
                 //Initialise the listener list
-                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                 for (int i = 0; i < localListenIPEndPoints.Count; i++)
                 {
                     if (connectionType == ConnectionType.TCP)
@@ -115,7 +117,6 @@ namespace NetworkCommsDotNet
                     localListenBTEndPoints.Add(desiredLocalBTEndPoint);
 
                 //Initialise the listener list
-                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                 for (int i = 0; i < localListenBTEndPoints.Count; i++)
                     listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
 
@@ -141,6 +142,8 @@ namespace NetworkCommsDotNet
 #endif
             else
                 throw new NotImplementedException("This method has not been implemented for the provided connections of type " + connectionType);
+
+            return listeners;
         }
 
         /// <summary>
@@ -271,6 +274,29 @@ namespace NetworkCommsDotNet
                         StopListening(connectionType, endPoint);
                 }
             }
+        }
+
+        /// <summary>
+        /// Stop listening for new incoming connections on specified <see cref="ConnectionListenerBase"/> and remove it from the local listeners dictionary.
+        /// </summary>
+        /// <param name="listener">The listener which should stop listening.</param>
+        public static void StopListening(ConnectionListenerBase listener)
+        {
+            if (listener == null) throw new ArgumentNullException("listener", "Provided listener cannot be null.");
+
+            StopListening(listener.ConnectionType, listener.LocalListenEndPoint);
+        }
+
+        /// <summary>
+        /// Stop listening for new incoming connections on specified list of <see cref="ConnectionListenerBase"/> and remove them from the local listeners dictionary.
+        /// </summary>
+        /// <param name="listeners">The listeners which should stop listening</param>
+        public static void StopListening(List<ConnectionListenerBase> listeners)
+        {
+            if (listeners == null) throw new ArgumentNullException("listeners", "Provided listener cannot be null.");
+
+            foreach(ConnectionListenerBase listener in listeners)
+                StopListening(listener);
         }
 
         /// <summary>
