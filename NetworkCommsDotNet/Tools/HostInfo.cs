@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-        static string[] _restrictLocalAdaptorNames = new string[0];
+        static string[] _restrictLocalAdaptorNames = null;
         /// <summary>
         /// Restricts the addresses that may be used when listening.
         /// If set <see cref="IP.FilteredLocalAddresses()"/> will only return addresses corresponding with specified adaptors names. 

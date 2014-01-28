@@ -250,7 +250,11 @@ namespace RemoteProcedureCalls
 
                 foreach (var handlerName in allRPCHandlersLeft)
                 {
-                    NetworkComms.RemoveGlobalIncomingPacketHandler(handlerName, addedHandlers[handlerName]);
+                    if (addedHandlers[handlerName] is NetworkComms.PacketHandlerCallBackDelegate<string>)
+                        NetworkComms.RemoveGlobalIncomingPacketHandler<string>(handlerName, addedHandlers[handlerName] as NetworkComms.PacketHandlerCallBackDelegate<string>);
+                    else
+                        NetworkComms.RemoveGlobalIncomingPacketHandler<RemoteCallWrapper>(handlerName, addedHandlers[handlerName] as NetworkComms.PacketHandlerCallBackDelegate<RemoteCallWrapper>);
+
                     addedHandlers.Remove(handlerName);
                 }
             }
@@ -271,10 +275,14 @@ namespace RemoteProcedureCalls
                                     where key.StartsWith(type.ToString()) && !key.EndsWith("-NEW-INSTANCE-RPC-CONNECTION") && key.Contains("-RPC-")
                                     select key).ToArray();
 
-                    foreach (var key in toRemove)
+                    foreach (var handlerName in toRemove)
                     {
-                        NetworkComms.RemoveGlobalIncomingPacketHandler(key, addedHandlers[key]);
-                        addedHandlers.Remove(key);
+                        if (addedHandlers[handlerName] is NetworkComms.PacketHandlerCallBackDelegate<string>)
+                            NetworkComms.RemoveGlobalIncomingPacketHandler<string>(handlerName, addedHandlers[handlerName] as NetworkComms.PacketHandlerCallBackDelegate<string>);
+                        else
+                            NetworkComms.RemoveGlobalIncomingPacketHandler<RemoteCallWrapper>(handlerName, addedHandlers[handlerName] as NetworkComms.PacketHandlerCallBackDelegate<RemoteCallWrapper>);
+
+                        addedHandlers.Remove(handlerName);
                     }
                 }
 
