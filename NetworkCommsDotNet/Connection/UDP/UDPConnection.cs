@@ -219,7 +219,7 @@ namespace NetworkCommsDotNet
         {
 #if FREETRIAL
             if (ipEndPoint.Address == IPAddress.Broadcast)
-                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commerical license from www.networkcomms.net which supports UDP broadcast datagrams.");
+                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commercial license from www.networkcomms.net which supports UDP broadcast datagrams.");
 #endif
 
             byte[] headerBytes = new byte[0];

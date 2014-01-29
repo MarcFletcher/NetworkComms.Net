@@ -25,6 +25,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using NetworkCommsDotNet;
 using DPSBase;
+using NetworkCommsDotNet.PeerDiscovery;
 
 namespace DebugTests
 {
@@ -41,8 +42,8 @@ namespace DebugTests
             IPAddress localIPAddress = IPAddress.Parse("::1");
 
             Console.WriteLine("Please select mode:");
-            Console.WriteLine("1 - Server (Listens for connections)");
-            Console.WriteLine("2 - Client (Creates connections to server)");
+            Console.WriteLine("1 - Server (Discoverable)");
+            Console.WriteLine("2 - Client (Locates clients)");
 
             //Read in user choice
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
@@ -50,23 +51,24 @@ namespace DebugTests
 
             if (serverMode)
             {
+                PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
 
-                Console.WriteLine("\nListening for messages on:");
-                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                Console.WriteLine("Server discoverable.");
 
                 Console.WriteLine("\nPress any key to quit.");
                 ConsoleKeyInfo key = Console.ReadKey(true);
             }
             else
             {
-                
+                List<EndPoint> result = PeerDiscovery.DiscoverPeers(ConnectionType.UDP);
+
+                Console.WriteLine("Found clients at:");
+                foreach (IPEndPoint endPoint in result)
+                    Console.WriteLine("{0}:{1}", endPoint.Address, endPoint.Port);
 
                 Console.WriteLine("\nClient complete. Press any key to quit.");
                 Console.ReadKey(true);
             }
-
-            NetworkComms.Shutdown();
         }
 
         private static void ServerDataHandler(PacketHeader header, Connection connection, byte[] data)

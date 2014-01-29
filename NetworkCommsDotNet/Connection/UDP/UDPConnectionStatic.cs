@@ -234,7 +234,7 @@ namespace NetworkCommsDotNet
         /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
         public static void SendObject(string sendingPacketType, object objectToSend, IPEndPoint ipEndPoint)
         {
-            SendObject(sendingPacketType, objectToSend, ipEndPoint, null);
+            SendObject(sendingPacketType, objectToSend, ipEndPoint, NetworkComms.DefaultSendReceiveOptions);
         }
 
         /// <summary>

@@ -3,7 +3,9 @@ using NetworkCommsDotNet;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
+using System.Threading;
 
 namespace NetworkCommsDotNet.PeerDiscovery
 {
@@ -62,6 +64,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
         #region Local Configuration
         /// <summary>
         /// Make this peer discoverable using the provided connection type. 
+        /// IMPORTANT NOTE: For IP networks we strongly recommend using UDP as the connection type.
         /// </summary>
         /// <param name="connectionType"></param>
         public static void EnableDiscoverable(ConnectionType connectionType)
@@ -112,6 +115,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
         /// <summary>
         /// Make this peer discoverable using the provided connection type and local end point.
+        /// IMPORTANT NOTE: For IP networks we strongly recommend using UDP as the connection type.
         /// </summary>
         /// <param name="connectionType"></param>
         /// <param name="localDiscoveryEndPoint"></param>
@@ -214,6 +218,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
         /// <summary>
         /// Discover local peers using the provided connection type. Returns connectionInfos of discovered peers.
+        /// IMPORTANT NOTE: For IP networks we strongly recommend using UDP as the connection type.
         /// </summary>
         /// <param name="connectionType">The connection type to use for discovering peers.</param>
         /// <param name="discoverTimeMS">The wait time in MS before all peers discovered are returned.</param>
@@ -234,12 +239,37 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
         private static List<EndPoint> DiscoverPeersUDP(int discoverTimeMS)
         {
-            //We use UDP broadcasting to contact peers
-
             //Get a list of all multicast addressees for all adaptors
-            List<IPEndPoint> addressesToContact = new List<IPEndPoint>();
+            List<IPAddress> addressesToContact = new List<IPAddress>();
+            foreach (NetworkInterface iFace in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                foreach (var address in iFace.GetIPProperties().MulticastAddresses)
+                {
+                    if (!addressesToContact.Contains(address.Address))
+                        addressesToContact.Add(address.Address);
+                }
+            }
 
-            throw new NotImplementedException();
+            foreach (IPAddress address in addressesToContact)
+            {
+                for (int port = MinTargetLocalPort; port <= MaxTargetLocalPort; port++)
+                    UDPConnection.SendObject(discoveryPacketType, new byte[] { 0 }, new IPEndPoint(address, port));
+            }
+
+            AutoResetEvent eventWait = new AutoResetEvent(false);
+            eventWait.WaitOne(discoverTimeMS);
+
+            List<EndPoint> result = new List<EndPoint>();
+            lock (_syncRoot)
+            {
+                if (_discoveredPeers.ContainsKey(ConnectionType.UDP))
+                {
+                    foreach (IPEndPoint endPoint in _discoveredPeers[ConnectionType.UDP].Keys)
+                        result.Add(endPoint);
+                }
+            }
+
+            return result;
         }
 
         private static List<EndPoint> DiscoverPeersTCP(int discoverTimeMS)
@@ -249,6 +279,9 @@ namespace NetworkCommsDotNet.PeerDiscovery
             //Get a list of all IPEndPoint that we should try and connect to
             //This requires the network and peer portion of current IP addresses
             List<IPEndPoint> addressesToContact = new List<IPEndPoint>();
+
+            //We can only do TCP discovery for IPv4 ranges. Doing it for IPv6 would be a BAD
+            //idea due to the shear volume of addresses
 
             throw new NotImplementedException();
         }
@@ -264,7 +297,9 @@ namespace NetworkCommsDotNet.PeerDiscovery
         {
             if (data.Length != 1) throw new ArgumentException("Idiot check exception");
 
-            if (data[0] == 0)
+            Console.WriteLine("Received peer discovery packet.");
+
+            if (data[0] == 0 && IsDiscoverable(connection.ConnectionInfo.ConnectionType))
             {
                 //This is a peer discovery request, we just need to let the other peer know we are alive
                 connection.SendObject(discoveryPacketType, new byte[] { 1 });
