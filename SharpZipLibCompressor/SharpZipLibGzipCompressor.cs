@@ -65,7 +65,7 @@ namespace SharpZipLibCompressor
             using (GZipOutputStream gzStream = new GZipOutputStream(outStream))
             {
                 gzStream.IsStreamOwner = false;
-                StreamTools.AsyncStreamCopier.CopyStreamTo(inStream, gzStream);
+                StreamTools.Write(inStream, gzStream);
             }
 
             writtenBytes = outStream.Position;
@@ -75,7 +75,7 @@ namespace SharpZipLibCompressor
         public override void ReverseProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
             using (GZipInputStream zip = new GZipInputStream(inStream))
-                StreamTools.AsyncStreamCopier.CopyStreamTo(zip, outStream);
+                StreamTools.Write(zip, outStream);
 
             writtenBytes = outStream.Position;
         }

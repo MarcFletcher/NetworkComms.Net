@@ -540,7 +540,7 @@ namespace DPSBase
                         {
                             if (dataProcessors == null || dataProcessors.Count == 0)
                             {
-                                StreamTools.AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
+                                StreamTools.Write(inputDataStream, tempStream1);
                                 //return tempStream1.ToArray();
                                 return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
                             }
@@ -881,7 +881,7 @@ namespace DPSBase
                                     if (dataProcessors != null && dataProcessors.Count == 1)
                                         dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
                                     else
-                                        StreamTools.AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
+                                        StreamTools.Write(inputBytesStream, finalOutputStream);
                                 }
                             }
                         }
