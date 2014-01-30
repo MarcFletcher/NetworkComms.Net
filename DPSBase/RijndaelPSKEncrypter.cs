@@ -113,12 +113,12 @@ namespace DPSBase
                 {
                     using (CryptoStream csEncrypt = new CryptoStream(internalStream, transform, CryptoStreamMode.Write))
                     {
-                        StreamTools.AsyncStreamCopier.CopyStreamTo(inStream, csEncrypt);
+                        StreamTools.Write(inStream, csEncrypt);
                         inStream.Flush();
                         csEncrypt.FlushFinalBlock();
 
                         internalStream.Seek(0, 0);
-                        StreamTools.AsyncStreamCopier.CopyStreamTo(internalStream, outStream);
+                        StreamTools.Write(internalStream, outStream);
                         writtenBytes = outStream.Position;
                     }                    
                 }
@@ -177,12 +177,12 @@ namespace DPSBase
                 {
                     using (CryptoStream csDecrypt = new CryptoStream(internalStream, transform, CryptoStreamMode.Write))
                     {
-                        StreamTools.AsyncStreamCopier.CopyStreamTo(inStream, csDecrypt);
+                        StreamTools.Write(inStream, csDecrypt);
                         inStream.Flush();
                         csDecrypt.FlushFinalBlock();
 
                         internalStream.Seek(0, 0);
-                        StreamTools.AsyncStreamCopier.CopyStreamTo(internalStream, outStream);
+                        StreamTools.Write(internalStream, outStream);
                         writtenBytes = outStream.Position;
                     }
                 }

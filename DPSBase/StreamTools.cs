@@ -18,91 +18,98 @@ namespace DPSBase
     public static class StreamTools
     {
         #region Static Stream Tools
+
         /// <summary>
         /// Write the provided sendbuffer to the destination stream in chunks of writeBufferSize. Throws exception if any write takes longer than timeoutPerByteWriteMS.
         /// </summary>
         /// <param name="sendBuffer">Buffer containing data to write</param>
+        /// <param name="inputStart">The start position in sendBuffer</param>
         /// <param name="bufferLength">The number of bytes to write</param>
         /// <param name="destinationStream">The destination stream</param>
         /// <param name="writeBufferSize">The size in bytes of each successive write</param>
         /// <param name="timeoutMSPerKBWrite">The maximum time to allow for write to complete per KB</param>
         /// <param name="minTimeoutMS">The minimum time to allow for any sized write</param>
         /// <returns>The average time in milliseconds per KB written</returns>
-        public static double Write(byte[] sendBuffer, int bufferLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
+        public static double Write(byte[] sendBuffer, int inputStart, int bufferLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
             if (sendBuffer == null) throw new ArgumentNullException("sendBuffer");
             if (destinationStream == null) throw new ArgumentNullException("destinationStream");
 
-            int totalBytesCompleted = 0;
-            Exception innerException = null;
-            AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
-
-            int writeWaitTimeMS = Math.Max(minTimeoutMS, (int)(((bufferLength < writeBufferSize ? bufferLength : writeBufferSize) / 1024.0) * timeoutMSPerKBWrite));
-
-            System.Diagnostics.Stopwatch timerTotal = new System.Diagnostics.Stopwatch();
-            timerTotal.Start();
-             
-            do
+            using (MemoryStream ms = new MemoryStream(sendBuffer))
             {
-                int writeCountBytes = (bufferLength - totalBytesCompleted < writeBufferSize ? bufferLength - totalBytesCompleted : writeBufferSize);
+                return Write(ms, inputStart, bufferLength, destinationStream, writeBufferSize, timeoutMSPerKBWrite, minTimeoutMS);
+            }
 
-#if NETFX_CORE
-                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
+//            int totalBytesCompleted = 0;
+//            Exception innerException = null;
+//            AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
 
-                if (!writeTask().Wait(writeWaitTimeMS))
-                {
-#else
-                destinationStream.BeginWrite(sendBuffer, totalBytesCompleted, writeCountBytes, new AsyncCallback((state)=>
-                    {
-                        try
-                        {
-                            destinationStream.EndWrite(state);
-                        }
-                        catch (Exception ex)
-                        {
-                            innerException = ex;
-                        }
+//            int writeWaitTimeMS = Math.Max(minTimeoutMS, (int)(((bufferLength < writeBufferSize ? bufferLength : writeBufferSize) / 1024.0) * timeoutMSPerKBWrite));
 
-                        writeCompletedEvent.Set();
+//            System.Diagnostics.Stopwatch timerTotal = new System.Diagnostics.Stopwatch();
+//            timerTotal.Start();
+             
+//            do
+//            {
+//                int writeCountBytes = (bufferLength - totalBytesCompleted < writeBufferSize ? bufferLength - totalBytesCompleted : writeBufferSize);
 
-                    }), null);
+//#if NETFX_CORE
+//                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
 
-                if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
-                {
-#endif
-                    //#if !WINDOWS_PHONE
-//                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-//                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
+//                if (!writeTask().Wait(writeWaitTimeMS))
+//                {
+//#else
+//                destinationStream.BeginWrite(sendBuffer, totalBytesCompleted, writeCountBytes, new AsyncCallback((state)=>
+//                    {
+//                        try
+//                        {
+//                            destinationStream.EndWrite(state);
+//                        }
+//                        catch (Exception ex)
+//                        {
+//                            innerException = ex;
+//                        }
+
+//                        writeCompletedEvent.Set();
+
+//                    }), null);
+
+//                if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
+//                {
 //#endif
-                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
-                }
+//                    //#if !WINDOWS_PHONE
+////                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
+////                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
+////#endif
+//                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
+//                }
 
 
-                if (innerException != null)
-                    throw innerException;
+//                if (innerException != null)
+//                    throw innerException;
 
-                totalBytesCompleted += writeCountBytes;
-            } while (totalBytesCompleted < bufferLength);
+//                totalBytesCompleted += writeCountBytes;
+//            } while (totalBytesCompleted < bufferLength);
 
-            timerTotal.Stop();
+//            timerTotal.Stop();
 
-            double writeTimePerKBms = 0;
-            if (bufferLength > 0)
-                writeTimePerKBms = (double)timerTotal.ElapsedMilliseconds * 1024.0 / bufferLength;
+//            double writeTimePerKBms = 0;
+//            if (bufferLength > 0)
+//                writeTimePerKBms = (double)timerTotal.ElapsedMilliseconds * 1024.0 / bufferLength;
 
-//#if !WINDOWS_PHONE
-//            using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-//                AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write succeded using " + writeWaitTimeMS.ToString() + "ms, using buffer of " + sendBuffer.Length.ToString() + " bytes, average write time was " + writeTimePerKBms.ToString("0.00") + " ms/KB.  timeoutMSPerKBWrite was " + timeoutMSPerKBWrite);
-//#endif
+////#if !WINDOWS_PHONE
+////            using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
+////                AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write succeded using " + writeWaitTimeMS.ToString() + "ms, using buffer of " + sendBuffer.Length.ToString() + " bytes, average write time was " + writeTimePerKBms.ToString("0.00") + " ms/KB.  timeoutMSPerKBWrite was " + timeoutMSPerKBWrite);
+////#endif
 
-            return writeTimePerKBms;
+//            return writeTimePerKBms;
         }
 
         /// <summary>
         /// Write the provided input stream to the destination stream in chunks of writeBufferSize. Throws exception if any write takes longer than timeoutPerByteWriteMS.
         /// </summary>
         /// <param name="inputStream">Input stream containing data to send</param>
-        /// <param name="inputStart">The start position in sendBuffer</param>
+        /// <param name="inputStart">The start position in inputStream</param>
         /// <param name="inputLength">The number of bytes to write</param>
         /// <param name="destinationStream">The destination stream</param>
         /// <param name="writeBufferSize">The size in bytes of each successive write, recommended 8K</param>
@@ -111,87 +118,100 @@ namespace DPSBase
         /// <returns>The average time in milliseconds per KB written</returns>
         public static double Write(Stream inputStream, long inputStart, long inputLength, Stream destinationStream, int writeBufferSize, double timeoutMSPerKBWrite, int minTimeoutMS)
         {
-            if (inputStream == null) throw new ArgumentException("inputStream");
-            if (destinationStream == null) throw new ArgumentException("destinationStream");
+            if (inputStream == null) throw new ArgumentNullException("source");
+            if (destinationStream == null) throw new ArgumentNullException("destination");
 
             //Make sure we start in the right place
             inputStream.Seek(inputStart, SeekOrigin.Begin);
             long totalBytesCompleted = 0;
-            Exception innerException = null;
-            AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
+            long bytesRemaining = inputLength;
 
-            byte[] sendBuffer = new byte[Math.Min(inputLength, writeBufferSize)];
-            int writeWaitTimeMS = Math.Max(minTimeoutMS, (int)((sendBuffer.Length / 1024.0) * timeoutMSPerKBWrite));
+            int writeWaitTimeMS = Math.Max(minTimeoutMS, (int)((writeBufferSize / 1024.0) * timeoutMSPerKBWrite));
 
             System.Diagnostics.Stopwatch timerTotal = new System.Diagnostics.Stopwatch();
             timerTotal.Start();
 
-            do
+            byte[] bufferA = new byte[writeBufferSize];
+            byte[] bufferB = new byte[writeBufferSize];
+            AutoResetEvent readCanStartSignal = new AutoResetEvent(true);
+            AutoResetEvent allDataWritten = new AutoResetEvent(false);
+            Exception innerException = null;
+
+            AsyncCallback readCompleted = null, writeCompleted = null;
+
+            readCompleted = new AsyncCallback((IAsyncResult ar) =>
             {
-                long bytesRemaining = inputLength - totalBytesCompleted;
+                var streams = ar.AsyncState as Stream[];
+                var input = streams[0];
+                var output = streams[1];
 
-                //writeCountBytes is the total number of bytes that need to be written to the destinationStream
-                //The sendBuffer.Length can never be larger than int.maxValue
-                //If the sendBuffer.Length is greater than bytesRemaining we use the bytesRemaining value as an int
-                int writeCountBytes = inputStream.Read(sendBuffer, 0, (sendBuffer.Length > bytesRemaining ? (int)bytesRemaining : sendBuffer.Length));
+                // input read asynchronously completed
+                int bytesRead = input.EndRead(ar);
 
-                if (writeCountBytes <= 0)
-                    break;
+                if (!readCanStartSignal.WaitOne(writeWaitTimeMS))
+                    innerException = new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
-                if (!destinationStream.CanWrite) throw new Exception("Unable to write to provided destinationStream.");
-
-#if NETFX_CORE
-                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
-
-                if (!writeTask().Wait(writeWaitTimeMS))
+                if (bytesRead == 0 || innerException != null)
                 {
-#else
-                destinationStream.BeginWrite(sendBuffer, 0, writeCountBytes, new AsyncCallback((state) =>
-                {
-                    try
-                    {
-                        destinationStream.EndWrite(state);
-                    }
-                    catch (Exception ex)
-                    {
-                        innerException = ex;
-                    }
-
-                    writeCompletedEvent.Set();
-
-                }), null);
-
-
-                if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
-                {
-#endif
-//#if !WINDOWS_PHONE
-//                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-//                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
-//#endif
-                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
+                    allDataWritten.Set();
+                    return;
                 }
 
+                var temp = bufferA;
+                bufferA = bufferB;
+                bufferB = temp;
 
-                if (innerException != null)
-                    throw innerException;
+                // write asynchronously
+                output.BeginWrite(bufferB, 0, bytesRead, writeCompleted, streams);
 
-                totalBytesCompleted += writeCountBytes;
+                //start the next read straight away
+                totalBytesCompleted += bytesRead;
+                bytesRemaining = inputLength - totalBytesCompleted;
+                input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
+            });
 
-            } while (totalBytesCompleted < inputLength);
+            writeCompleted = new AsyncCallback((IAsyncResult ar) =>
+            {
+                var streams = ar.AsyncState as Stream[];
+                var input = streams[0];
+                var output = streams[1];
+
+                try
+                {
+                    output.EndWrite(ar);
+                }
+                catch (Exception ex)
+                {
+                    innerException = ex;
+                }
+
+                readCanStartSignal.Set();
+            });
+
+            inputStream.BeginRead(bufferA, 0, bufferA.Length, readCompleted, new Stream[] { inputStream, destinationStream });
+            allDataWritten.WaitOne();
 
             timerTotal.Stop();
+
+            if (innerException != null)
+                throw innerException;
 
             double writeTimePerKBms = 0;
             if (inputLength > 0)
                 writeTimePerKBms = (double)timerTotal.ElapsedMilliseconds * 1024.0 / inputLength;
 
-//#if !WINDOWS_PHONE
-//            using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-//                AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write succeded using " + writeWaitTimeMS.ToString() + "ms, using buffer of " + sendBuffer.Length.ToString() + " bytes, average write time was " + writeTimePerKBms.ToString("0.00") + " ms/KB.  timeoutMSPerKBWrite was " + timeoutMSPerKBWrite);
-//#endif
-
             return writeTimePerKBms;
+        }
+
+        /// <summary>
+        /// Write the provided input stream to the destination stream
+        /// </summary>
+        /// <param name="inputStream">Input stream containing data to send</param>
+        /// <param name="destinationStream">The destination stream</param>
+        /// <returns>The average time in milliseconds per KB written</returns>
+        public static double Write(Stream inputStream, Stream destinationStream)
+        {
+            return Write(inputStream, 0, inputStream.Length, destinationStream, 8096, 0, int.MaxValue);
         }
 
         /// <summary>
@@ -299,98 +319,6 @@ namespace DPSBase
             return resultStr;
         }
         #endregion
-
-        /// <summary>
-        /// The Async Copier class reads the input Stream Async and writes Synchronously
-        /// </summary>
-        public class AsyncStreamCopier
-        {
-#if !NETFX_CORE
-            /// <summary>
-            /// Event raised when copy has completed
-            /// </summary>
-            public event EventHandler Completed;
-
-            private byte[] bufferA = new byte[4096];
-            private byte[] bufferB = new byte[4096];
-            private AutoResetEvent signal = new AutoResetEvent(true);
-
-            /// <summary>
-            /// Initialise a new instance of the asyncStreamCopier
-            /// </summary>
-            public AsyncStreamCopier()
-            {
-            }
-
-            /// <summary>
-            /// Starts the async copy
-            /// </summary>
-            /// <param name="input">Input stream</param>
-            /// <param name="output">Output stream</param>
-            public void Start(Stream input, Stream output)
-            {
-                if (input == null) throw new ArgumentNullException("input");
-                if (output == null) throw new ArgumentNullException("output");
-
-                input.BeginRead(bufferA, 0, bufferA.Length, InputReadComplete, new Stream[] { input, output });
-            }
-
-            private void InputReadComplete(IAsyncResult ar)
-            {
-                var streams = ar.AsyncState as Stream[];
-                var input = streams[0];
-                var output = streams[1];
-
-                // input read asynchronously completed
-                int bytesRead = input.EndRead(ar);
-
-                if (bytesRead == 0)
-                {
-                    RaiseCompleted();
-                    return;
-                }
-
-                signal.WaitOne();
-
-                var temp = bufferA;
-                bufferA = bufferB;
-                bufferB = temp;
-
-                // write synchronously
-                output.BeginWrite(bufferB, 0, bytesRead, (asyncRes) => { signal.Set(); }, streams);
-                input.BeginRead(bufferA, 0, bufferA.Length, InputReadComplete, streams);
-            }
-
-            private void RaiseCompleted()
-            {
-                if (Completed != null)
-                {
-                    Completed(this, EventArgs.Empty);
-                }
-            }
-#endif
-            /// <summary>
-            /// Copy contents of source into destination
-            /// </summary>
-            /// <param name="source"></param>
-            /// <param name="destination"></param>
-            public static void CopyStreamTo(Stream source, Stream destination)
-            {
-#if NETFX_CORE
-            var t = source.CopyToAsync(destination);
-            t.Wait();
-#else
-                var completedEvent = new ManualResetEvent(false);
-
-                // copy as usual but listen for completion
-                var copier = new AsyncStreamCopier();
-                copier.Completed += (s, e) => completedEvent.Set();
-                copier.Start(source, destination);
-
-                completedEvent.WaitOne();
-#endif
-            }
-        }
 
         /// <summary>
         /// Used to send all or parts of a stream. Particularly useful for sending files directly from disk etc.
