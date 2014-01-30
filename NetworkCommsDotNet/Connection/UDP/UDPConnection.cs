@@ -215,7 +215,7 @@ namespace NetworkCommsDotNet
         /// </summary>
         /// <param name="packet">Packet to send</param>
         /// <param name="ipEndPoint">The target ipEndPoint</param>
-        private void SendPacketSpecific<packetObjectType>(Packet packet, IPEndPoint ipEndPoint)
+        private void SendPacketSpecific<packetObjectType>(IPacket packet, IPEndPoint ipEndPoint)
         {
 #if FREETRIAL
             if (ipEndPoint.Address == IPAddress.Broadcast)

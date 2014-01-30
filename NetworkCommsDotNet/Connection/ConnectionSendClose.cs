@@ -69,7 +69,10 @@ namespace NetworkCommsDotNet
         /// <param name="sendingPacketType">The sending packet type</param>
         /// <param name="objectToSend">The object to send</param>
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
-        public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, out long packetSequenceNumber) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions, out packetSequenceNumber); }
+        public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, out long packetSequenceNumber) 
+        { 
+            SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions, out packetSequenceNumber); 
+        }
 
         /// <summary>
         /// Send an object using the provided SendReceiveOptions
@@ -79,8 +82,20 @@ namespace NetworkCommsDotNet
         /// <param name="options">Send specific <see cref="SendReceiveOptions"/></param>
         public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, SendReceiveOptions options)
         {
-            long packetSequenceNumber;
-            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
+            //Check to see if we already have a packet
+            Packet objectToSendAsPacket = objectToSend as Packet;
+            if (objectToSendAsPacket == null)
+            {
+                using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, options))
+                    SendPacket<sendObjectType>(sendPacket);
+            }
+            else
+            {
+                if (objectToSendAsPacket.PacketHeader.PacketType != sendingPacketType)
+                    throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
+
+                SendPacket<sendObjectType>(objectToSendAsPacket);
+            }
         }
 
         /// <summary>
@@ -92,7 +107,19 @@ namespace NetworkCommsDotNet
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
         public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, SendReceiveOptions options, out long packetSequenceNumber)
         {
-            SendPacket(new Packet(sendingPacketType, objectToSend, options), out packetSequenceNumber);
+            Packet objectToSendAsPacket = objectToSend as Packet;
+            if (objectToSendAsPacket == null)
+            {
+                using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, options))
+                    SendPacket<sendObjectType>(sendPacket, out packetSequenceNumber);
+            }
+            else
+            {
+                if (objectToSendAsPacket.PacketHeader.PacketType != sendingPacketType)
+                    throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
+
+                SendPacket<sendObjectType>(objectToSendAsPacket, out packetSequenceNumber);
+            }
         }
 
         /// <summary>
@@ -213,8 +240,20 @@ namespace NetworkCommsDotNet
             AppendShutdownHandler(SendReceiveShutDownDelegate);
             AppendIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate, receiveOptions);
 
-            using(Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions))
-                SendPacket(sendPacket, out sentPacketSequenceNumber);
+            //Check to see if we already have a packet
+            Packet sendObjectAsPacket = sendObject as Packet;
+            if (sendObjectAsPacket == null)
+            {
+                using (Packet sendPacket = new Packet(sendingPacketTypeStr, expectedReturnPacketTypeStr, sendObject, sendOptions))
+                    SendPacket<sendObjectType>(sendPacket, out sentPacketSequenceNumber);
+            }
+            else
+            {
+                if (sendObjectAsPacket.PacketHeader.PacketType != sendingPacketTypeStr)
+                    throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
+
+                SendPacket<sendObjectType>(sendObjectAsPacket, out sentPacketSequenceNumber);
+            }
 
             //We wait for the return data here
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
@@ -443,19 +482,21 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Send the provided packet to the remoteEndPoint. Waits for receive confirmation if required.
         /// </summary>
+        /// <typeparam name="packetPayloadObjectType">The type of object encapsulated by the provided packet</typeparam>
         /// <param name="packet">The packet to send</param>
-        internal void SendPacket(IPacket packet)
+        public void SendPacket<packetPayloadObjectType>(IPacket packet)
         {
             long packetSequenceNumber;
-            SendPacket(packet, out packetSequenceNumber);
+            SendPacket<packetPayloadObjectType>(packet, out packetSequenceNumber);
         }
 
         /// <summary>
         /// Send the provided packet to the remoteEndPoint. Waits for receive confirmation if required.
         /// </summary>
+        /// <typeparam name="packetPayloadObjectType">The type of object encapsulated by the provided packet</typeparam>
         /// <param name="packet">The packet to send</param>
         /// <param name="packetSequenceNumber">The sequence number of the packet sent</param>
-        internal void SendPacket(IPacket packet, out long packetSequenceNumber) 
+        public void SendPacket<packetPayloadObjectType>(IPacket packet, out long packetSequenceNumber) 
         {
             if (NetworkComms.LoggingEnabled)
             {

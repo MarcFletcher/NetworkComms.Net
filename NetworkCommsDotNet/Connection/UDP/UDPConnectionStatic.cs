@@ -263,11 +263,34 @@ namespace NetworkCommsDotNet
         /// recommend you use the NetworkComms.Net application layer protocol.</param>
         public static void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
         {
+            Packet sendPacket = objectToSend as Packet;
+            if (sendPacket == null)
+                sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
+            else
+            {
+                if (sendPacket.PacketHeader.PacketType != sendingPacketType)
+                    throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
+            }
+
+            SendObject<sendObjectType>(sendPacket, ipEndPoint, sendReceiveOptions, applicationLayerProtocol);
+        }
+
+        /// <summary>
+        /// Sends a <see cref="Packet"/> to the provided endPoint. Offers more performance if an identical packet is being sent to multiple peers. 
+        /// NOTE: Any possible reply will be ignored unless listening for incoming UDP packets. 
+        /// </summary>
+        /// <typeparam name="packetPayloadObjectType">The type of object encapsulated by the provided packet</typeparam>
+        /// <param name="packetToSend">The packet to send</param>
+        /// <param name="ipEndPoint">The destination IPEndPoint. Supports multicast endpoints.</param>
+        /// <param name="sendReceiveOptions">The sendReceiveOptions to use for this send</param>
+        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
+        /// recommend you use the NetworkComms.Net application layer protocol.</param>
+        public static void SendObject<packetPayloadObjectType>(IPacket packetToSend, IPEndPoint ipEndPoint, SendReceiveOptions sendReceiveOptions, ApplicationLayerProtocolStatus applicationLayerProtocol)
+        {
             if (ipEndPoint == null) throw new ArgumentNullException("ipEndPoint");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions");
-
-            if (objectToSend.GetType() == typeof(Packet) && (objectToSend as Packet).PacketHeader.PacketType != sendingPacketType)
-                throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
 
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.", "applicationLayerProtocol");
@@ -407,16 +430,11 @@ namespace NetworkCommsDotNet
                 #endregion
             }
 
-            //Send packet over every connection
-            Packet sendPacket = objectToSend as Packet;
-            if (sendPacket == null) 
-                sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
-
             foreach (UDPConnection connection in connectionsToUse)
             {
                 try
                 {
-                    connection.SendPacketSpecific<sendObjectType>(sendPacket, ipEndPoint);
+                    connection.SendPacketSpecific<packetPayloadObjectType>(packetToSend, ipEndPoint);
                 }
                 catch (SocketException) { /* Ignore any socket exceptions */ }
             }

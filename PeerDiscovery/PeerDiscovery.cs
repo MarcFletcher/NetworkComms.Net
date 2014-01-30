@@ -287,7 +287,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
             using (Packet sendPacket = new Packet(discoveryPacketType, new byte[] { 0 }, NetworkComms.DefaultSendReceiveOptions))
             {
                 for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
-                    UDPConnection.SendObject(discoveryPacketType, sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions);
+                    UDPConnection.SendObject<byte[]>(sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
             }
 
             AutoResetEvent eventWait = new AutoResetEvent(false);

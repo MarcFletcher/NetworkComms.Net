@@ -300,7 +300,7 @@ namespace NetworkCommsDotNet
                         {
                             //Instead of throwing an exception we can request the packet to be resent
                             Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.CheckSumFailResend), packetHeaderHash, NetworkComms.InternalFixedSendReceiveOptions);
-                            item.Connection.SendPacket(returnPacket);
+                            item.Connection.SendPacket<string>(returnPacket);
                             //We need to wait for the packet to be resent before going further
                             return;
                         }
@@ -325,7 +325,7 @@ namespace NetworkCommsDotNet
                     //Should an error occur while sending the confirmation it should not prevent the handling of this packet
                     try
                     {
-                        item.Connection.SendPacket(returnPacket);
+                        item.Connection.SendPacket<long>(returnPacket);
                     }
                     catch (CommsException) 
                     { 
@@ -347,7 +347,7 @@ namespace NetworkCommsDotNet
                 {
                     //If we have received a ping packet from the originating source we reply with true
                     Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
-                    item.Connection.SendPacket(returnPacket);
+                    item.Connection.SendPacket<byte[]>(returnPacket);
                 }
 
                 //We allow users to add their own custom handlers for reserved packet types here
