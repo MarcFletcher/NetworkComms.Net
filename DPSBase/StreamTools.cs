@@ -39,70 +39,6 @@ namespace DPSBase
             {
                 return Write(ms, inputStart, bufferLength, destinationStream, writeBufferSize, timeoutMSPerKBWrite, minTimeoutMS);
             }
-
-//            int totalBytesCompleted = 0;
-//            Exception innerException = null;
-//            AutoResetEvent writeCompletedEvent = new AutoResetEvent(false);
-
-//            int writeWaitTimeMS = Math.Max(minTimeoutMS, (int)(((bufferLength < writeBufferSize ? bufferLength : writeBufferSize) / 1024.0) * timeoutMSPerKBWrite));
-
-//            System.Diagnostics.Stopwatch timerTotal = new System.Diagnostics.Stopwatch();
-//            timerTotal.Start();
-             
-//            do
-//            {
-//                int writeCountBytes = (bufferLength - totalBytesCompleted < writeBufferSize ? bufferLength - totalBytesCompleted : writeBufferSize);
-
-//#if NETFX_CORE
-//                Func<Task> writeTask = new Func<Task>(async () => { await destinationStream.WriteAsync(sendBuffer, (int)totalBytesCompleted, writeCountBytes); });
-
-//                if (!writeTask().Wait(writeWaitTimeMS))
-//                {
-//#else
-//                destinationStream.BeginWrite(sendBuffer, totalBytesCompleted, writeCountBytes, new AsyncCallback((state)=>
-//                    {
-//                        try
-//                        {
-//                            destinationStream.EndWrite(state);
-//                        }
-//                        catch (Exception ex)
-//                        {
-//                            innerException = ex;
-//                        }
-
-//                        writeCompletedEvent.Set();
-
-//                    }), null);
-
-//                if (!writeCompletedEvent.WaitOne(writeWaitTimeMS))
-//                {
-//#endif
-//                    //#if !WINDOWS_PHONE
-////                    using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-////                        AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write timed out after " + writeWaitTimeMS.ToString() + "ms, while writing " + writeCountBytes + " bytes.");
-////#endif
-//                    throw new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
-//                }
-
-
-//                if (innerException != null)
-//                    throw innerException;
-
-//                totalBytesCompleted += writeCountBytes;
-//            } while (totalBytesCompleted < bufferLength);
-
-//            timerTotal.Stop();
-
-//            double writeTimePerKBms = 0;
-//            if (bufferLength > 0)
-//                writeTimePerKBms = (double)timerTotal.ElapsedMilliseconds * 1024.0 / bufferLength;
-
-////#if !WINDOWS_PHONE
-////            using (System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess())
-////                AppendStringToLogFile("WriteWithTimeLog_" + process.Id, "Write succeded using " + writeWaitTimeMS.ToString() + "ms, using buffer of " + sendBuffer.Length.ToString() + " bytes, average write time was " + writeTimePerKBms.ToString("0.00") + " ms/KB.  timeoutMSPerKBWrite was " + timeoutMSPerKBWrite);
-////#endif
-
-//            return writeTimePerKBms;
         }
 
         /// <summary>
@@ -137,9 +73,23 @@ namespace DPSBase
             AutoResetEvent allDataWritten = new AutoResetEvent(false);
             Exception innerException = null;
 
+
+#if NETFX_CORE
+            Action readAction = null; Action<int> writeAction = null;
+
+            Stream input = inputStream;
+            Stream output = destinationStream;
+
+            readAction = new Action(async () =>
+            {
+                while (true)  {
+
+                int bytesRead = await input.ReadAsync(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize));
+#else
             AsyncCallback readCompleted = null, writeCompleted = null;
 
             readCompleted = new AsyncCallback((IAsyncResult ar) =>
+
             {
                 var streams = ar.AsyncState as Stream[];
                 var input = streams[0];
@@ -147,7 +97,7 @@ namespace DPSBase
 
                 // input read asynchronously completed
                 int bytesRead = input.EndRead(ar);
-
+#endif
                 if (!readCanStartSignal.WaitOne(writeWaitTimeMS))
                     innerException = new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
@@ -162,20 +112,33 @@ namespace DPSBase
                 bufferB = temp;
 
                 // write asynchronously
+#if NETFX_CORE
+                writeAction(bytesRead);
+#else
                 output.BeginWrite(bufferB, 0, bytesRead, writeCompleted, streams);
+#endif
 
                 //start the next read straight away
                 totalBytesCompleted += bytesRead;
                 bytesRemaining = inputLength - totalBytesCompleted;
-                input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
-            });
 
+#if NETFX_CORE
+                }
+#else
+                input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
+#endif
+            });
+#if NETFX_CORE
+            writeAction = new Action<int>(async (bytesRead) =>
+            {
+                await output.WriteAsync(bufferB, 0, bytesRead);            
+#else
             writeCompleted = new AsyncCallback((IAsyncResult ar) =>
             {
                 var streams = ar.AsyncState as Stream[];
                 var input = streams[0];
                 var output = streams[1];
-
+      
                 try
                 {
                     output.EndWrite(ar);
@@ -184,11 +147,15 @@ namespace DPSBase
                 {
                     innerException = ex;
                 }
-
+#endif
                 readCanStartSignal.Set();
             });
 
-            inputStream.BeginRead(bufferA, 0, bufferA.Length, readCompleted, new Stream[] { inputStream, destinationStream });
+#if NETFX_CORE
+            readAction();
+#else
+            inputStream.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, new Stream[] { inputStream, destinationStream });
+#endif
             allDataWritten.WaitOne();
 
             timerTotal.Stop();
