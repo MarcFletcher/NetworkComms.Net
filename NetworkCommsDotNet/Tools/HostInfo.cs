@@ -90,6 +90,11 @@ namespace NetworkCommsDotNet
         /// </summary>
         public static class IP
         {
+            //Local IPAddress cache. Provides significant performance improvement if
+            //the IPAddresses are enumerated many times in a short period of time
+            static List<IPAddress> filteredLocalAddressesCache = null;
+            static DateTime filteredLocalAddressesCacheUpdate = DateTime.Now;
+
             /// <summary>
             /// Restricts the IPAdddresses that are returned by <see cref="FilteredLocalAddresses()"/>.
             /// If using StartListening overrides that do not take IPEndPoints NetworkComms.Net 
@@ -99,7 +104,7 @@ namespace NetworkCommsDotNet
             public static IPRange[] RestrictLocalAddressRanges { get; set; }
 
             /// <summary>
-            /// Returns all allowed local IP addresses. 
+            /// Returns all allowed local IP addresses. Caches results for up to 5 second since the previous refresh.
             /// If <see cref="RestrictLocalAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
             /// If <see cref="RestrictLocalAddressRanges"/> has been set only returns matching addresses ordered in descending 
             /// preference. i.e. Most preferred at [0].
@@ -107,6 +112,24 @@ namespace NetworkCommsDotNet
             /// <returns></returns>
             public static List<IPAddress> FilteredLocalAddresses()
             {
+                return FilteredLocalAddresses(false);
+            }
+
+            /// <summary>
+            /// Returns all allowed local IP addresses. Caches results for up to 5 second since the previous refresh unless forceCacheUpdate is true.
+            /// If <see cref="RestrictLocalAdaptorNames"/> has been set only returns IP addresses corresponding with specified adaptors.
+            /// If <see cref="RestrictLocalAddressRanges"/> has been set only returns matching addresses ordered in descending 
+            /// preference. i.e. Most preferred at [0].
+            /// </summary>
+            /// <param name="forceCacheUpdate">If true will refresh the cache and return latest result</param>
+            /// <returns></returns>
+            public static List<IPAddress> FilteredLocalAddresses(bool forceCacheUpdate)
+            {
+                if (filteredLocalAddressesCache != null &&
+                    (DateTime.Now - filteredLocalAddressesCacheUpdate).TotalSeconds < 5)
+                    return filteredLocalAddressesCache;
+                else
+                {
 
 #if WINDOWS_PHONE || NETFX_CORE
             //On windows phone we simply ignore IP addresses from the auto assigned range as well as those without a valid prefix
@@ -134,13 +157,13 @@ namespace NetworkCommsDotNet
             return allowedIPs;
 #else
 
-                //We want to ignore IP's that have been auto assigned
-                //169.254.0.0
-                IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
-                //255.255.0.0
-                IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
+                    //We want to ignore IP's that have been auto assigned
+                    //169.254.0.0
+                    IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
+                    //255.255.0.0
+                    IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
 
-                List<IPAddress> validIPAddresses = new List<IPAddress>();
+                    List<IPAddress> validIPAddresses = new List<IPAddress>();
 
 #if ANDROID
 
@@ -202,82 +225,86 @@ namespace NetworkCommsDotNet
 
 #else
 
-                foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
-                {
-                    bool interfaceValid = false;
-                    var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
-
-                    //Check if this adaptor is allowed
-                    if (RestrictLocalAdaptorNames != null)
+                    foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
                     {
-                        foreach (var currentName in RestrictLocalAdaptorNames)
+                        bool interfaceValid = false;
+                        var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
+
+                        //Check if this adaptor is allowed
+                        if (RestrictLocalAdaptorNames != null)
                         {
-                            if (iFace.Name == currentName)
+                            foreach (var currentName in RestrictLocalAdaptorNames)
                             {
-                                interfaceValid = true;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                        interfaceValid = true;
-
-                    //If the interface is not allowed move to the next adaptor
-                    if (!interfaceValid)
-                        continue;
-
-                    //If the adaptor is allowed we can now investigate the individual addresses
-                    foreach (var address in unicastAddresses)
-                    {
-                        if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                        {
-                            if (!IPTools.IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
-                            {
-                                bool allowed = false;
-
-                                if (RestrictLocalAddressRanges != null)
+                                if (iFace.Name == currentName)
                                 {
-                                    if (IPRange.Contains(RestrictLocalAddressRanges, address.Address))
-                                        allowed = true;
+                                    interfaceValid = true;
+                                    break;
                                 }
-                                else
-                                    allowed = true;
+                            }
+                        }
+                        else
+                            interfaceValid = true;
 
-                                if (!allowed)
-                                    continue;
+                        //If the interface is not allowed move to the next adaptor
+                        if (!interfaceValid)
+                            continue;
 
-                                if (address.Address != IPAddress.None)
-                                    validIPAddresses.Add(address.Address);
+                        //If the adaptor is allowed we can now investigate the individual addresses
+                        foreach (var address in unicastAddresses)
+                        {
+                            if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                            {
+                                if (!IPTools.IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                                {
+                                    bool allowed = false;
+
+                                    if (RestrictLocalAddressRanges != null)
+                                    {
+                                        if (IPRange.Contains(RestrictLocalAddressRanges, address.Address))
+                                            allowed = true;
+                                    }
+                                    else
+                                        allowed = true;
+
+                                    if (!allowed)
+                                        continue;
+
+                                    if (address.Address != IPAddress.None)
+                                        validIPAddresses.Add(address.Address);
+                                }
                             }
                         }
                     }
-                }
 #endif
 
-                //Sort the results to be returned
-                if (RestrictLocalAddressRanges != null)
-                {
-                    validIPAddresses.Sort((a, b) =>
+                    //Sort the results to be returned
+                    if (RestrictLocalAddressRanges != null)
                     {
-                        for (int i = 0; i < RestrictLocalAddressRanges.Length; i++)
+                        validIPAddresses.Sort((a, b) =>
                         {
-                            if (RestrictLocalAddressRanges[i].Contains(a))
+                            for (int i = 0; i < RestrictLocalAddressRanges.Length; i++)
                             {
-                                if (RestrictLocalAddressRanges[i].Contains(b))
-                                    return 0;
-                                else
-                                    return -1;
+                                if (RestrictLocalAddressRanges[i].Contains(a))
+                                {
+                                    if (RestrictLocalAddressRanges[i].Contains(b))
+                                        return 0;
+                                    else
+                                        return -1;
+                                }
+                                else if (RestrictLocalAddressRanges[i].Contains(b))
+                                    return 1;
                             }
-                            else if (RestrictLocalAddressRanges[i].Contains(b))
-                                return 1;
-                        }
 
-                        return 0;
-                    });
-                }
+                            return 0;
+                        });
+                    }
 
-                return validIPAddresses;
+                    filteredLocalAddressesCache = validIPAddresses;
+                    filteredLocalAddressesCacheUpdate = DateTime.Now;
+
+                    return validIPAddresses;
 #endif
+                }
             }
 
             /// <summary>

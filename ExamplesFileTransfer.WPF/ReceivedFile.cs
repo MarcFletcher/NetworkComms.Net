@@ -40,7 +40,6 @@ namespace ExamplesWPFFileTransfer
         public double CompletedPercent
         {
             get { return (double)ReceivedBytes / SizeBytes; }
-            set { throw new Exception("An attempt to modify readonly value."); }
         }
 
         /// <summary>
@@ -65,7 +64,7 @@ namespace ExamplesWPFFileTransfer
         object SyncRoot = new object();
 
         /// <summary>
-        /// A memorystream used to build the file
+        /// A memory stream used to build the file
         /// </summary>
         Stream data;
 
@@ -93,7 +92,7 @@ namespace ExamplesWPFFileTransfer
         /// <summary>
         /// Add data to file
         /// </summary>
-        /// <param name="dataStart">Where to start writing this data to the interal memoryStream</param>
+        /// <param name="dataStart">Where to start writing this data to the internal memoryStream</param>
         /// <param name="bufferStart">Where to start copying data from buffer</param>
         /// <param name="bufferLength">The number of bytes to copy from buffer</param>
         /// <param name="buffer">Buffer containing data to add</param>
@@ -121,7 +120,7 @@ namespace ExamplesWPFFileTransfer
                 throw new Exception("Attempted to save out file before data is complete.");
 
             if (!File.Exists(Filename))
-                throw new Exception("The transfered file should have been created within the local application directory. Where has it gone?");
+                throw new Exception("The transferred file should have been created within the local application directory. Where has it gone?");
 
             File.Delete(saveLocation);
             File.Copy(Filename, saveLocation);

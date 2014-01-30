@@ -366,6 +366,7 @@ namespace NetworkCommsDotNet
                     //Launch a new thread
                     Thread newThread = new Thread(ThreadWorker);
                     newThread.Name = "ManagedThreadPool_" + newThread.ManagedThreadId.ToString();
+                    newThread.IsBackground = true;
 
                     WorkerInfo info = new WorkerInfo(newThread.ManagedThreadId, new WaitCallBackWrapper(callback, state));
 

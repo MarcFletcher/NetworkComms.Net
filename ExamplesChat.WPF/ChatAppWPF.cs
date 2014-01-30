@@ -57,10 +57,10 @@ namespace ExamplesWPFChat
             //updated one thread at  time
             lock (lastPeerMessageDict)
             {
-                //Use a linq experssion to extract an array of all current users from lastPeerMessageDict
+                //Use a linq expression to extract an array of all current users from lastPeerMessageDict
                 string[] currentUsers = (from current in lastPeerMessageDict.Values orderby current.SourceName select current.SourceName).ToArray();
 
-                //To ensure we can succesfully append to the text box from any thread
+                //To ensure we can successfully append to the text box from any thread
                 //we need to wrap the append within an invoke action.
                 MessagesFrom.Dispatcher.BeginInvoke(new Action<string[]>((users) =>
                 {
@@ -80,7 +80,7 @@ namespace ExamplesWPFChat
         /// <param name="message"></param>
         public void AppendLineToChatHistory(System.Drawing.FontStyle style, string text, bool addNewLine)
         {
-            //To ensure we can succesfully append to the text box from any thread
+            //To ensure we can successfully append to the text box from any thread
             //we need to wrap the append within an invoke action.
             ChatHistory.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -100,10 +100,10 @@ namespace ExamplesWPFChat
         }
 
         /// <summary>
-        /// Performs whatever functions we might so desire when we recieve an incoming ChatMessage
+        /// Performs whatever functions we might so desire when we receive an incoming ChatMessage
         /// </summary>
-        /// <param name="header">The PacketHeader corresponding with the recieved object</param>
-        /// <param name="connection">The Connection from which this object was recieved</param>
+        /// <param name="header">The PacketHeader corresponding with the received object</param>
+        /// <param name="connection">The Connection from which this object was received</param>
         /// <param name="incomingMessage">The incoming ChatMessage we are after</param>
         protected override void HandleIncomingChatMessage(PacketHeader header, Connection connection, ChatMessage incomingMessage)
         {

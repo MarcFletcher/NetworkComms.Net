@@ -36,8 +36,8 @@ namespace ExamplesConsole
         /// Request user to provide server details and returns the result as a <see cref="ConnectionInfo"/> object. Performs the necessary validation and prevents code duplication across examples.
         /// </summary>
         /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide usefull features such as inline serialisation, 
-        /// transparent packet tranmission, remote peer handshake and information etc. We strongly 
+        /// application layer protocol to provide useful features such as inline serialisation, 
+        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public static ConnectionInfo GetServerDetails(ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
         {

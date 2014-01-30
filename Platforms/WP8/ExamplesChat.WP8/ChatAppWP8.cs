@@ -49,7 +49,7 @@ namespace ExamplesWP8Chat
         /// <param name="message"></param>
         public override void AppendLineToChatHistory(string message)
         {
-            //To ensure we can succesfully append to the text box from any thread
+            //To ensure we can successfully append to the text box from any thread
             //we need to wrap the append within an invoke action.
             ChatHistory.Dispatcher.BeginInvoke(new Action<string>((messageToAdd) =>
             {

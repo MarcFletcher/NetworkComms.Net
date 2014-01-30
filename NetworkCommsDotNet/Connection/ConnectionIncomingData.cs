@@ -249,7 +249,7 @@ namespace NetworkCommsDotNet
 
             //Increment send count and then resend
             packetToReSend.IncrementSendCount();
-            SendPacket(packetToReSend.Packet);
+            SendPacket<object>(packetToReSend.Packet);
         }
     }
 }

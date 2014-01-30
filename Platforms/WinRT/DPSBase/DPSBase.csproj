@@ -172,8 +172,11 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="protobuf-net">
-      <HintPath>..\..\..\DLL\WinRT\protobuf-net.dll</HintPath>
+      <HintPath>..\..\..\packages\protobuf-net.2.0.0.668\lib\netcore45\protobuf-net.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>

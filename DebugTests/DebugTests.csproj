@@ -49,13 +49,11 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\Net40\InTheHand.Net.Personal.dll</HintPath>
     </Reference>
-    <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net40\NLog.dll</HintPath>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.2.1.0\lib\net40\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DLL\Net40\protobuf-net.dll</HintPath>
+    <Reference Include="protobuf-net">
+      <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -82,6 +80,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
@@ -117,6 +116,10 @@
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\PeerDiscovery\PeerDiscovery.csproj">
+      <Project>{4277b88f-5017-44ee-adb7-fcfb54e66962}</Project>
+      <Name>PeerDiscovery</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>

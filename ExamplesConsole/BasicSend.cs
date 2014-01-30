@@ -25,7 +25,7 @@ using NetworkCommsDotNet;
 namespace ExamplesConsole
 {
     /// <summary>
-    /// Networking in only 11 lines (not including comments and whitespace of course).
+    /// Networking in only 11 lines (not including comments and white space of course).
     /// Note: This example deliberately includes no validation or exception handling in order to keep it as short as possible (i.e. it's easy to break).
     /// </summary>
     public static class BasicSend
@@ -55,7 +55,7 @@ namespace ExamplesConsole
 
             //Print the IP addresses and ports we are listening on to make sure everything
             //worked as expected.
-            Console.WriteLine("Listening for messages on:");
+            Console.WriteLine("Listening for TCP messages on:");
             foreach (System.Net.IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)) Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
             //We loop here to allow any number of test messages to be sent and received

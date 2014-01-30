@@ -48,18 +48,22 @@ namespace ExamplesConsole
             SelectLogging();
 
             //All we do here is let the user choice a specific example
-            Console.WriteLine("Please enter an example number:");
+            Console.WriteLine("Please selected an example:\n");
 
             //Print out the available examples
-            int totalNumberOfExamples = 7;
+            int totalNumberOfExamples = 9;
             Console.WriteLine("1 - Basic - Message Send (Only 11 lines!)");
-            Console.WriteLine("2 - Advanced - Object Send");
-            Console.WriteLine("3 - Advanced - Distributed File System");
-            Console.WriteLine("4 - Advanced - Remote Procedure Call");
-            Console.WriteLine("5 - Advanced - Unmanaged Connections");
-            Console.WriteLine("6 - Advanced - TCP (SSL) Connections");
+            Console.WriteLine();
+            Console.WriteLine("2 - Intermediate - Message Send");
+            Console.WriteLine("3 - Intermediate - Peer Discovery");
+            Console.WriteLine();
+            Console.WriteLine("4 - Advanced - Object Send");
+            Console.WriteLine("5 - Advanced - Distributed File System");
+            Console.WriteLine("6 - Advanced - Remote Procedure Call");
+            Console.WriteLine("7 - Advanced - Unmanaged Connections");
+            Console.WriteLine("8 - Advanced - TCP (SSL) Connections");
             Console.WriteLine("");
-            Console.WriteLine("7 - Debug - Speed Test");
+            Console.WriteLine("9 - Debug - Speed Test");
 
             //Get the user choice
             Console.WriteLine("");
@@ -84,21 +88,27 @@ namespace ExamplesConsole
                         BasicSend.RunExample();
                         break;
                     case 2:
-                        AdvancedSend.RunExample();
+                        BasicSend.RunExample();
                         break;
                     case 3:
-                        DFSTest.RunExample();
+                        PeerDiscoveryExample.RunExample();
                         break;
                     case 4:
-                        RPCExample.RunExample();
+                        AdvancedSend.RunExample();
                         break;
                     case 5:
-                        UnmanagedConnection.RunExample();
+                        DFSTest.RunExample();
                         break;
                     case 6:
-                        SSLExample.RunExample();
+                        RPCExample.RunExample();
                         break;
                     case 7:
+                        UnmanagedConnectionExample.RunExample();
+                        break;
+                    case 8:
+                        SSLExample.RunExample();
+                        break;
+                    case 9:
                         SpeedTest.RunExample();
                         break;
                     default:
