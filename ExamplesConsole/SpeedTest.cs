@@ -137,7 +137,7 @@ namespace ExamplesConsole
                     timer.Start();
                     serverConnection.SendObject("SpeedData", someRandomData, nullCompressionSRO);
                     timer.Stop();
-                    Console.WriteLine("SpeedData sent succesfully with recieve confirmation in {0}secs. Corresponds to {1}MB/s", (timer.ElapsedMilliseconds / 1000.0).ToString("0.00"), (numberMegsToCreate / (timer.ElapsedMilliseconds / 1000.0)).ToString("0.00"));
+                    Console.WriteLine("SpeedData sent successfully with receive confirmation in {0}secs. Corresponds to {1}MB/s", (timer.ElapsedMilliseconds / 1000.0).ToString("0.00"), (numberMegsToCreate / (timer.ElapsedMilliseconds / 1000.0)).ToString("0.00"));
                 }
                 #endregion
             }

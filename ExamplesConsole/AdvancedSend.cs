@@ -41,12 +41,6 @@ namespace ExamplesConsole
         static ConnectionType connectionTypeToUse;
 
         /// <summary>
-        /// A custom listen port if it is selected. 
-        /// If this remains unchanged, i.e. 0, a random port will be selected when listening.
-        /// </summary>
-        static int customListenPort = 0;
-
-        /// <summary>
         /// Run the AdvancedSend example.
         /// </summary>
         public static void RunExample()
@@ -68,18 +62,24 @@ namespace ExamplesConsole
             
             List<DataProcessor> dataProcessors;
             Dictionary<string,string> dataProcessorOptions;
-            SelectDataProcessors(out dataProcessors, out dataProcessorOptions);
+
+            //We cannot select data processors if the NullSerializer was selected
+            if (dataSerializer.GetType() != typeof(NullSerializer))
+                SelectDataProcessors(out dataProcessors, out dataProcessorOptions);
+            else
+            {
+                dataProcessors = new List<DataProcessor>();
+                dataProcessorOptions = new Dictionary<string, string>();
+            }
 
             NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(dataSerializer, dataProcessors, dataProcessorOptions);
 
-            SelectListeningPort();
-
-            //Add a packet handler for dealing with incoming connections.  Fuction will be called when a packet is received with the specified type.  We also here specify the type of object
+            //Add a packet handler for dealing with incoming connections.  Function will be called when a packet is received with the specified type.  We also here specify the type of object
             //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
-            NetworkComms.AppendGlobalIncomingPacketHandler<int[]>("ArrayInt",
+            NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("ArrayByte",
                 (header, connection, array) =>
                 {
-                    Console.WriteLine("\nReceived integer array from " + connection.ToString());
+                    Console.WriteLine("\nReceived byte array from " + connection.ToString());
 
                     for (int i = 0; i < array.Length; i++)
                         Console.WriteLine(i.ToString() + " - " + array[i].ToString());
@@ -118,19 +118,15 @@ namespace ExamplesConsole
             //Start listening for incoming connections
             //We want to select a random port on all available adaptors so provide 
             //an IPEndPoint using IPAddress.Any and port 0.
-            if (connectionTypeToUse == ConnectionType.TCP)
-                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any ,0));
-            else
-                Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0));
+            //If we wanted to listen on a specific port we would use that instead of '0'
+            Connection.StartListening(connectionTypeToUse, new IPEndPoint(IPAddress.Any ,0));
 
             //***************************************************************//
             //                End of interesting stuff                       //
             //***************************************************************//
 
             Console.WriteLine("Listening for incoming objects on:");
-
-            List<EndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
-            
+            List<EndPoint> localListeningEndPoints = Connection.ExistingLocalListenEndPoints(connectionTypeToUse);
             foreach(IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
@@ -163,8 +159,8 @@ namespace ExamplesConsole
                 //Send the object
                 if (toSendType == typeof(Array))
                 {
-                    if (toSendObject.GetType().GetElementType() == typeof(int))
-                        connectionToUse.SendObject("ArrayInt", toSendObject);
+                    if (toSendObject.GetType().GetElementType() == typeof(byte))
+                        connectionToUse.SendObject("ArrayByte", toSendObject);
                     else
                         connectionToUse.SendObject("ArrayString", toSendObject);
                 }
@@ -232,13 +228,16 @@ namespace ExamplesConsole
         /// </summary>
         private static void SelectDataSerializer(out DataSerializer dataSerializer)
         {
-            Console.WriteLine("\nPlease select a serializer:\n1 - Protobuf (High Performance, Versatile)\n2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n");
+            Console.WriteLine("\nPlease select a serializer:\n" +
+                "1 - Protobuf (High Performance, Versatile)\n" +
+                "2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n" +
+                "3 - NullSerializer (Pass through serializer for sending byte[] only)\n");
 
             int selectedSerializer;
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedSerializer);
-                if (parseSucces && selectedSerializer <= 2) break;
+                if (parseSucces && selectedSerializer <= 3) break;
                 Console.WriteLine("Invalid serializer choice. Please try again.");
             }
 
@@ -251,6 +250,11 @@ namespace ExamplesConsole
             {
                 Console.WriteLine(" ... selected binary formatter serializer.\n");
                 dataSerializer = DPSManager.GetDataSerializer<BinaryFormaterSerializer>();
+            }
+            else if (selectedSerializer == 3)
+            {
+                Console.WriteLine(" ... selected null serializer.\n");
+                dataSerializer = DPSManager.GetDataSerializer<NullSerializer>();
             }
             else
                 throw new Exception("Unable to determine selected serializer.");
@@ -323,6 +327,9 @@ namespace ExamplesConsole
                 Console.Write("Please enter an encryption password and press enter: ");
                 string password = Console.ReadLine();
                 Console.WriteLine();
+
+                //Use the nested packet feature so that we do not expose the packet type used.
+                NetworkComms.DefaultSendReceiveOptions.UseNestedPacket = true;
                 RijndaelPSKEncrypter.AddPasswordToOptions(dataProcessorOptions, password);
                 dataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }
@@ -330,75 +337,49 @@ namespace ExamplesConsole
         }
 
         /// <summary>
-        /// Allows to choose a custom listen port
-        /// </summary>
-        private static void SelectListeningPort()
-        {
-            Console.WriteLine("Would you like to specify a custom local listen port?:\n1 - No\n2 - Yes\n");
-
-            int selectedOption;
-            while (true)
-            {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
-                if (parseSucces && selectedOption <= 2 && selectedOption > 0) break;
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            if (selectedOption == 2)
-            {
-                Console.WriteLine(" ... selected custom local listen port. Please enter your chosen port number:");
-                int selectedPort;
-
-                while (true)
-                {
-                    bool parseSucces = int.TryParse(Console.ReadLine(), out selectedPort);
-                    if (parseSucces && selectedPort > 0) break;
-                    Console.WriteLine("Invalid choice. Please try again.");
-                }
-
-                //Change the port comms will listen on
-                customListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + customListenPort + " has been set.\n");
-            }
-            else
-                Console.WriteLine(" ... a random listen port will be used.\n");
-        }
-
-        /// <summary>
         /// Base method for creating an object to send
         /// </summary>
         private static void CreateSendObject()
         {
-            Console.Write("\nPlease select something to send:\n" +
-                "1 - Array of ints or strings\n");
-
-            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
-                Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");
-            else
-                Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
-
-            int selectedObjectType;
-            while (true)
+            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(NullSerializer))
             {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedObjectType);
-                if (parseSucces && selectedObjectType <= 2 && selectedObjectType > 0) break;
-                Console.WriteLine("Invalid send choice. Please try again.");
-            }
-
-            if (selectedObjectType == 1)
-            {
-                Console.WriteLine(" ... selected array of primitives.\n");
+                Console.WriteLine("\nThe null serializer was selected so we can only send byte[].");
                 toSendType = typeof(Array);
                 toSendObject = CreateArray();
             }
-            else if (selectedObjectType == 2)
-            {
-                Console.WriteLine(" ... selected custom object.\n");
-                toSendType = typeof(object);
-                toSendObject = CreateCustomObject();
-            }
             else
-                throw new Exception("Unable to determine selected send choice.");
+            {
+                Console.Write("\nPlease select something to send:\n" +
+                    "1 - Array of bytes or strings\n");
+
+                if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
+                    Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");
+                else
+                    Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
+
+                int selectedObjectType;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedObjectType);
+                    if (parseSucces && selectedObjectType <= 2 && selectedObjectType > 0) break;
+                    Console.WriteLine("Invalid send choice. Please try again.");
+                }
+
+                if (selectedObjectType == 1)
+                {
+                    Console.WriteLine(" ... selected array of primitives.\n");
+                    toSendType = typeof(Array);
+                    toSendObject = CreateArray();
+                }
+                else if (selectedObjectType == 2)
+                {
+                    Console.WriteLine(" ... selected custom object.\n");
+                    toSendType = typeof(object);
+                    toSendObject = CreateCustomObject();
+                }
+                else
+                    throw new Exception("Unable to determine selected send choice.");
+            }
         }
 
         /// <summary>
@@ -411,25 +392,30 @@ namespace ExamplesConsole
             Array result = null;
 
             #region Array Type
-            Console.WriteLine("Please select type of array:\n1 - int[]\n2 - string[]\n");
+            if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(NullSerializer))
+                arrayType = typeof(byte);
+            else
+            {
+                Console.WriteLine("Please select type of array:\n1 - byte[]\n2 - string[]\n");
 
-            int selectedArrayType;
-            while (true)
-            {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedArrayType);
-                if (parseSucces && selectedArrayType <= 2) break;
-                Console.WriteLine("Invalid type choice. Please try again.");
-            }
+                int selectedArrayType;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedArrayType);
+                    if (parseSucces && selectedArrayType <= 2) break;
+                    Console.WriteLine("Invalid type choice. Please try again.");
+                }
 
-            if (selectedArrayType == 1)
-            {
-                Console.WriteLine(" ... selected array of ints.\n");
-                arrayType = typeof(int);
-            }
-            else if (selectedArrayType == 2)
-            {
-                Console.WriteLine(" ... selected array of strings.\n");
-                arrayType = typeof(string);
+                if (selectedArrayType == 1)
+                {
+                    Console.WriteLine(" ... selected array of byte.\n");
+                    arrayType = typeof(byte);
+                }
+                else if (selectedArrayType == 2)
+                {
+                    Console.WriteLine(" ... selected array of strings.\n");
+                    arrayType = typeof(string);
+                }
             }
             #endregion
 
@@ -452,7 +438,7 @@ namespace ExamplesConsole
             Console.WriteLine("\nPlease enter elements:");
             for (int i = 0; i < result.Length; i++)
             {
-                int intValue = 0; string stringValue = "";
+                byte byteValue = 0; string stringValue = "";
 
                 while (true)
                 {
@@ -460,8 +446,8 @@ namespace ExamplesConsole
                     bool parseSucces = true;
 
                     string tempStr = Console.ReadLine();
-                    if (arrayType == typeof(int))
-                        parseSucces = int.TryParse(tempStr, out intValue);
+                    if (arrayType == typeof(byte))
+                        parseSucces = byte.TryParse(tempStr, out byteValue);
                     else
                         stringValue = tempStr;
 
@@ -469,8 +455,8 @@ namespace ExamplesConsole
                     Console.WriteLine("Invalid element value entered. Please try again.");
                 }
 
-                if (arrayType == typeof(int))
-                    result.SetValue(intValue, i);
+                if (arrayType == typeof(byte))
+                    result.SetValue(byteValue, i);
                 else
                     result.SetValue(stringValue, i);
             }

@@ -33,18 +33,17 @@ namespace ExamplesConsole
     /// Note that arrays of primitive types are serialised differently from arrays  
     /// of non-primitives. This is done to achieve better performance and lower memory usage                                                                                                      
     /// </summary>
-    public static class UnmanagedConnection
+    public static class UnmanagedConnectionExample
     {
-        //Array that will hold the data to be sent
+        /// <summary>
+        /// The array that will be sent
+        /// </summary>
         static byte[] byteDataToSend;
 
-        static ConnectionType connectionTypeToUse;
-
         /// <summary>
-        /// A custom listen port if it is selected. 
-        /// If this remains unchanged, i.e. 0, a random port will be selected when listening.
+        /// The connection type to use
         /// </summary>
-        static int customListenPort = 0;
+        static ConnectionType connectionTypeToUse;
 
         /// <summary>
         /// Run the AdvancedSend example.
@@ -67,9 +66,6 @@ namespace ExamplesConsole
             //Choose between unmanaged TCP or UDP
             SelectConnectionType();
 
-            //Possibly change the default local listening port
-            SelectListeningPort();
-
             //Add a packet handler for dealing with incoming connections.  Function will be called when a packet is received with the specified type.  We also here specify the type of object
             //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
             NetworkComms.AppendGlobalIncomingUnmanagedPacketHandler((header, connection, array) =>
@@ -84,8 +80,9 @@ namespace ExamplesConsole
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
+            //The port provided is '0' meaning select a random port.
             List<IPEndPoint> localIPEndPoints = (from current in HostInfo.IP.FilteredLocalAddresses()
-                                               select new IPEndPoint(current, customListenPort)).ToList();
+                                               select new IPEndPoint(current, 0)).ToList();
 
             //Create suitable listeners
             List<ConnectionListenerBase> listeners;
@@ -109,9 +106,7 @@ namespace ExamplesConsole
             //***************************************************************//
 
             Console.WriteLine("Listening for incoming byte[] on:");
-
-            List<EndPoint> localListeningEndPoints = (connectionTypeToUse == ConnectionType.TCP ? Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) : Connection.ExistingLocalListenEndPoints(ConnectionType.UDP));
-
+            List<EndPoint> localListeningEndPoints = Connection.ExistingLocalListenEndPoints(connectionTypeToUse);
             foreach (IPEndPoint localEndPoint in localListeningEndPoints)
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
@@ -127,9 +122,7 @@ namespace ExamplesConsole
                 byteDataToSend = CreateSendArray();
 
                 //Get remote endpoint address
-                //Expecting user to enter ip address as 192.168.0.1:4000
-                //IMPORTANT: The false provided here disables the application layer protocol
-                //for outgoing connections which is what we want for this example.
+                //Expecting user to enter IP address as 192.168.0.1:4000
                 ConnectionInfo connectionInfo = ExampleHelper.GetServerDetails(ApplicationLayerProtocolStatus.Disabled);
 
                 //***************************************************************//
@@ -204,41 +197,6 @@ namespace ExamplesConsole
         }
 
         /// <summary>
-        /// Allows to choose a custom listen port
-        /// </summary>
-        private static void SelectListeningPort()
-        {
-            Console.WriteLine("Would you like to specify a custom local listen port?:\n1 - No\n2 - Yes\n");
-
-            int selectedOption;
-            while (true)
-            {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
-                if (parseSucces && selectedOption <= 2 && selectedOption > 0) break;
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            if (selectedOption == 2)
-            {
-                Console.WriteLine(" ... selected custom local listen port. Please enter your chosen port number:");
-                int selectedPort;
-
-                while (true)
-                {
-                    bool parseSucces = int.TryParse(Console.ReadLine(), out selectedPort);
-                    if (parseSucces && selectedPort > 0) break;
-                    Console.WriteLine("Invalid choice. Please try again.");
-                }
-
-                //Change the port comms will listen on
-                customListenPort = selectedPort;
-                Console.WriteLine(" ... custom listen port number " + customListenPort + " has been set.\n");
-            }
-            else
-                Console.WriteLine(" ... a random listen port will be used.\n");
-        }
-
-        /// <summary>
         /// Set object to send as array of primitives
         /// </summary>
         /// <returns></returns>
@@ -285,79 +243,6 @@ namespace ExamplesConsole
 
             //Return the completed array
             return result;
-        }
-
-        /// <summary>
-        /// Allows to choose different compressors
-        /// </summary>
-        private static void SelectDataProcessors(out List<DataProcessor> dataProcessors, out Dictionary<string, string> dataProcessorOptions)
-        {
-            dataProcessors = new List<DataProcessor>();
-            dataProcessorOptions = new Dictionary<string, string>();
-
-            #region Possible Compressor
-            Console.WriteLine("Would you like to include data compression?\n1 - No\n2 - Yes\n");
-
-            int includeCompression;
-            while (true)
-            {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out includeCompression);
-                if (parseSucces && includeCompression <= 2 && includeCompression > 0) break;
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            if (includeCompression == 2)
-            {
-                Console.WriteLine("Please select a compressor:\n1 - LZMA (Slow Speed, Best Compression)\n2 - GZip (Good Speed, Good Compression)\n3 - QuickLZ (Best Speed, Basic Compression)\n");
-
-                int selectedCompressor;
-                while (true)
-                {
-                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedCompressor);
-                    if (parseSucces && selectedCompressor <= 3 && selectedCompressor > 0) break;
-                    Console.WriteLine("Invalid compressor choice. Please try again.");
-                }
-
-                if (selectedCompressor == 1)
-                {
-                    Console.WriteLine(" ... selected LZMA compressor.\n");
-                    dataProcessors.Add(DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>());
-                }
-                else if (selectedCompressor == 2)
-                {
-                    Console.WriteLine(" ... selected GZip compressor.\n");
-                    dataProcessors.Add(DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>());
-                }
-                else if (selectedCompressor == 3)
-                {
-                    Console.WriteLine(" ... selected QuickLZ compressor.\n");
-                    dataProcessors.Add(DPSManager.GetDataProcessor<QuickLZCompressor.QuickLZ>());
-                }
-                else
-                    throw new Exception("Unable to determine selected compressor.");
-            }
-            #endregion
-
-            #region Possible Encryption
-            Console.WriteLine("Would you like to include data encryption?\n1 - No\n2 - Yes\n");
-
-            int includeEncryption;
-            while (true)
-            {
-                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out includeEncryption);
-                if (parseSucces && includeEncryption <= 2 && includeEncryption > 0) break;
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            if (includeEncryption == 2)
-            {
-                Console.Write("Please enter an encryption password and press enter: ");
-                string password = Console.ReadLine();
-                Console.WriteLine();
-                RijndaelPSKEncrypter.AddPasswordToOptions(dataProcessorOptions, password);
-                dataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
-            }
-            #endregion
         }
         #endregion
     }

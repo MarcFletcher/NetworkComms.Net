@@ -22,7 +22,7 @@ Module BasicSend
 
         'Print the IP addresses and ports we are listening on to make sure everything
         'worked as expected.
-        Console.WriteLine("Listening for messages on:")
+        Console.WriteLine("Listening for TCP messages on:")
         For Each localEndPoint As System.Net.IPEndPoint In Connection.ExistingLocalListenEndPoints(ConnectionType.TCP)
             Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port)
         Next

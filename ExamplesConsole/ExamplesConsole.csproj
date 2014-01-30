@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="AdvancedSend.cs" />
     <Compile Include="BasicSend.cs" />
+    <Compile Include="PeerDiscoveryExample.cs" />
     <Compile Include="SpeedTest.cs" />
     <Compile Include="DFSTest.cs" />
     <Compile Include="ExampleHelper.cs" />
@@ -78,7 +79,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RPCExample.cs" />
     <Compile Include="SSLExample.cs" />
-    <Compile Include="UnmanagedConnectionTest.cs" />
+    <Compile Include="UnmanagedConnectionExample.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -96,6 +97,10 @@
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\PeerDiscovery\PeerDiscovery.csproj">
+      <Project>{4277b88f-5017-44ee-adb7-fcfb54e66962}</Project>
+      <Name>PeerDiscovery</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>

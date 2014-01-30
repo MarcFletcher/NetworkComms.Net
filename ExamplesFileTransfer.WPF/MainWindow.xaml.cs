@@ -223,7 +223,7 @@ namespace ExamplesWPFFileTransfer
             //Trigger IncomingPartialFileDataInfo method if we receive a packet of type 'PartialFileDataInfo'
             NetworkComms.AppendGlobalIncomingPacketHandler<SendInfo>("PartialFileDataInfo", IncomingPartialFileDataInfo);
 
-            //Trigger the method OnConnectionClose so that we can do some cleanup
+            //Trigger the method OnConnectionClose so that we can do some clean-up
             NetworkComms.AppendGlobalConnectionCloseHandler(OnConnectionClose);
 
             //Start listening for TCP connections
@@ -263,7 +263,7 @@ namespace ExamplesWPFFileTransfer
                         info = incomingDataInfoCache[connection.ConnectionInfo][sequenceNumber];
                         incomingDataInfoCache[connection.ConnectionInfo].Remove(sequenceNumber);
 
-                        //Check to see if we have already recieved any files from this location
+                        //Check to see if we have already received any files from this location
                         if (!receivedFilesDict.ContainsKey(connection.ConnectionInfo))
                             receivedFilesDict.Add(connection.ConnectionInfo, new Dictionary<string, ReceivedFile>());
 
@@ -291,7 +291,7 @@ namespace ExamplesWPFFileTransfer
                 {
                     file.AddData(info.BytesStart, 0, data.Length, data);
 
-                    //Perform a little cleanup
+                    //Perform a little clean-up
                     file = null;
                     data = null;
                     GC.Collect();
@@ -333,7 +333,7 @@ namespace ExamplesWPFFileTransfer
                         data = incomingDataCache[connection.ConnectionInfo][sequenceNumber];
                         incomingDataCache[connection.ConnectionInfo].Remove(sequenceNumber);
 
-                        //Check to see if we have already recieved any files from this location
+                        //Check to see if we have already received any files from this location
                         if (!receivedFilesDict.ContainsKey(connection.ConnectionInfo))
                             receivedFilesDict.Add(connection.ConnectionInfo, new Dictionary<string, ReceivedFile>());
 
@@ -362,7 +362,7 @@ namespace ExamplesWPFFileTransfer
                 {
                     file.AddData(info.BytesStart, 0, data.Length, data);
 
-                    //Perform a little cleanup
+                    //Perform a little clean-up
                     file = null;
                     data = null;
                     GC.Collect();
@@ -379,7 +379,7 @@ namespace ExamplesWPFFileTransfer
         }
 
         /// <summary>
-        /// If a connection is closed we cleanup any incomplete ReceivedFiles
+        /// If a connection is closed we clean-up any incomplete ReceivedFiles
         /// </summary>
         /// <param name="conn">The closed connection</param>
         private void OnConnectionClose(Connection conn)
@@ -416,7 +416,7 @@ namespace ExamplesWPFFileTransfer
                 }
             }));
 
-            //Write some usefull information the log window
+            //Write some useful information the log window
             AddLineToLog("Connection closed with " + conn.ConnectionInfo.ToString());
         }
 
@@ -438,7 +438,7 @@ namespace ExamplesWPFFileTransfer
                 sendFileButton.IsEnabled = false;
                 UseCompression.IsEnabled = false;
 
-                //Parse the neccessary remote information
+                //Parse the necessary remote information
                 string filename = openDialog.FileName;
                 string remoteIP = this.remoteIP.Text;
                 string remotePort = this.remotePort.Text;
@@ -461,7 +461,7 @@ namespace ExamplesWPFFileTransfer
                         string shortFileName = System.IO.Path.GetFileName(filename);
 
                         //Parse the remote connectionInfo
-                        //We have this in a seperate try catch so that we can write a clear message to the log window
+                        //We have this in a separate try catch so that we can write a clear message to the log window
                         //if there are problems
                         ConnectionInfo remoteInfo;
                         try
