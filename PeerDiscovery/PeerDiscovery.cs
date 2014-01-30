@@ -23,12 +23,24 @@ namespace NetworkCommsDotNet.PeerDiscovery
         /// <summary>
         /// The minimum port number that will be used when making this peer discoverable. Default 10000
         /// </summary>
-        public static int MinTargetLocalPort { get; set; }
+        public static int MinTargetLocalIPPort { get; set; }
 
         /// <summary>
         /// The maximum port number that will be used when making this peer discoverable. Default 10099
         /// </summary>
-        public static int MaxTargetLocalPort { get; set; }
+        public static int MaxTargetLocalIPPort { get; set; }
+
+        /// <summary>
+        /// The event delegate which can optionally be used when a peer is successfully discovered.
+        /// </summary>
+        /// <param name="peerEndPoint"></param>
+        /// <param name="connectionType"></param>
+        public delegate void PeerDiscoveredHandler(EndPoint peerEndPoint, ConnectionType connectionType);
+
+        /// <summary>
+        /// Triggered when a peer is discovered
+        /// </summary>
+        public static event PeerDiscoveredHandler OnPeerDiscovered;
         #endregion
 
         #region Private Properties
@@ -36,6 +48,11 @@ namespace NetworkCommsDotNet.PeerDiscovery
         /// A private object to ensure thread safety
         /// </summary>
         private static object _syncRoot = new object();
+
+        /// <summary>
+        /// A private object used to prevent parallel discovery requests being made
+        /// </summary>
+        private static object _discoverSyncRoot = new object();
 
         /// <summary>
         /// The packet type used for peer discovery
@@ -57,8 +74,8 @@ namespace NetworkCommsDotNet.PeerDiscovery
         {
             DefaultDiscoverTimeMS = 2000;
 
-            MinTargetLocalPort = 10000;
-            MaxTargetLocalPort = 10099;
+            MinTargetLocalIPPort = 10000;
+            MaxTargetLocalIPPort = 10020;
         }
 
         #region Local Configuration
@@ -77,28 +94,29 @@ namespace NetworkCommsDotNet.PeerDiscovery
                 //Based on the connection type select all local endPoints and then enable discoverable
                 if (connectionType == ConnectionType.TCP || connectionType == ConnectionType.UDP)
                 {
-                    List<ConnectionListenerBase> listeners = null;
+                    List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
 
-                    try
-                    {
-                        listeners = Connection.StartListening(connectionType, new IPEndPoint(IPAddress.Any, MinTargetLocalPort));
-                    }
-                    catch (Exception)
+                    //We should select one of the target points across all adaptors, no need for all adaptors to have
+                    //selected a single uniform port.
+                    List<IPAddress> localAddresses = HostInfo.IP.FilteredLocalAddresses();
+
+                    foreach (IPAddress address in localAddresses)
                     {
                         //Keep trying to listen on an ever increasing port number
-                        for (int tryPort = MinTargetLocalPort; tryPort <= MaxTargetLocalPort; tryPort++)
+                        for (int tryPort = MinTargetLocalIPPort; tryPort <= MaxTargetLocalIPPort; tryPort++)
                         {
                             try
                             {
-                                listeners = Connection.StartListening(connectionType, new IPEndPoint(IPAddress.Any, tryPort));
+                                List<ConnectionListenerBase> newlisteners = Connection.StartListening(connectionType, new IPEndPoint(address, tryPort));
 
                                 //Once we are successfully listening we can break
+                                listeners.AddRange(newlisteners);
                                 break;
                             }
                             catch (Exception) { }
 
-                            if (tryPort == MaxTargetLocalPort)
-                                throw new CommsSetupShutdownException("Failed to find local available listen port while trying to make this peer discoverable.");
+                            if (tryPort == MaxTargetLocalIPPort)
+                                throw new CommsSetupShutdownException("Failed to find local available listen port on address " + address.ToString() + " while trying to make this peer discoverable.");
                         }
                     }
 
@@ -176,7 +194,6 @@ namespace NetworkCommsDotNet.PeerDiscovery
         public static List<EndPoint> LocalDiscoveryEndPoints(ConnectionType connectionType)
         {
             Dictionary<ConnectionType, List<EndPoint>> result = LocalDiscoveryEndPoints();
-
             if (result.ContainsKey(connectionType))
                 return result[connectionType];
             else
@@ -221,39 +238,56 @@ namespace NetworkCommsDotNet.PeerDiscovery
         /// IMPORTANT NOTE: For IP networks we strongly recommend using UDP as the connection type.
         /// </summary>
         /// <param name="connectionType">The connection type to use for discovering peers.</param>
-        /// <param name="discoverTimeMS">The wait time in MS before all peers discovered are returned.</param>
+        /// <param name="discoverTimeMS">The wait time, after all requests have been made, in MS before all peers discovered are returned .</param>
         /// <returns></returns>
         public static List<EndPoint> DiscoverPeers(ConnectionType connectionType, int discoverTimeMS)
         {
-            List<EndPoint> result;
+            if (!IsDiscoverable(connectionType))
+                throw new InvalidOperationException("Please ensure this peer is discoverable before attempting to discover other peers.");
 
-            if (connectionType == ConnectionType.UDP)
-                result = DiscoverPeersUDP(discoverTimeMS);
-            else if (connectionType == ConnectionType.TCP)
-                result = DiscoverPeersTCP(discoverTimeMS);
-            else
-                throw new NotImplementedException("Peer discovery has not been implemented for the provided connection type.");
+            List<EndPoint> result;
+            lock (_discoverSyncRoot)
+            {
+                //Clear the discovered peers cache
+                _discoveredPeers = new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>();
+                if (connectionType == ConnectionType.UDP)
+                    result = DiscoverPeersUDP(discoverTimeMS);
+                else if (connectionType == ConnectionType.TCP)
+                    result = DiscoverPeersTCP(discoverTimeMS);
+                else
+                    throw new NotImplementedException("Peer discovery has not been implemented for the provided connection type.");
+            }
 
             return result;
         }
 
+        /// <summary>
+        /// Discover local peers using the provided connection type asynchronously. Makes a single async request for peers to announce.
+        /// Append to OnPeerDiscovered event to handle discovered peers. 
+        /// IMPORTANT NOTE: For IP networks we strongly recommend using UDP as the connection type.
+        /// </summary>
+        /// <param name="connectionType"></param>
+        public static void DiscoverPeersAsync(ConnectionType connectionType)
+        {
+            if (!IsDiscoverable(connectionType))
+                throw new InvalidOperationException("Please ensure this peer is discoverable before attempting to discover other peers.");
+
+            NetworkComms.CommsThreadPool.EnqueueItem(QueueItemPriority.Normal, (state) =>
+                {
+                    try
+                    {
+                        DiscoverPeers(connectionType, 0);
+                    }
+                    catch (Exception) { }
+                }, null);
+        }
+
         private static List<EndPoint> DiscoverPeersUDP(int discoverTimeMS)
         {
-            //Get a list of all multicast addressees for all adaptors
-            List<IPAddress> addressesToContact = new List<IPAddress>();
-            foreach (NetworkInterface iFace in NetworkInterface.GetAllNetworkInterfaces())
+            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[] { 0 }, NetworkComms.DefaultSendReceiveOptions))
             {
-                foreach (var address in iFace.GetIPProperties().MulticastAddresses)
-                {
-                    if (!addressesToContact.Contains(address.Address))
-                        addressesToContact.Add(address.Address);
-                }
-            }
-
-            foreach (IPAddress address in addressesToContact)
-            {
-                for (int port = MinTargetLocalPort; port <= MaxTargetLocalPort; port++)
-                    UDPConnection.SendObject(discoveryPacketType, new byte[] { 0 }, new IPEndPoint(address, port));
+                for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
+                    UDPConnection.SendObject(discoveryPacketType, sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions);
             }
 
             AutoResetEvent eventWait = new AutoResetEvent(false);
@@ -278,12 +312,11 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
             //Get a list of all IPEndPoint that we should try and connect to
             //This requires the network and peer portion of current IP addresses
-            List<IPEndPoint> addressesToContact = new List<IPEndPoint>();
 
             //We can only do TCP discovery for IPv4 ranges. Doing it for IPv6 would be a BAD
             //idea due to the shear volume of addresses
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("Peer discovery has not yet been implemented for TCP.");
         }
 
         #region Incoming Comms Handlers
@@ -297,23 +330,28 @@ namespace NetworkCommsDotNet.PeerDiscovery
         {
             if (data.Length != 1) throw new ArgumentException("Idiot check exception");
 
-            Console.WriteLine("Received peer discovery packet.");
-
-            if (data[0] == 0 && IsDiscoverable(connection.ConnectionInfo.ConnectionType))
+            //Ignore discovery packets that came from this peer
+            if (!Connection.ExistingLocalListenEndPoints(connection.ConnectionInfo.ConnectionType).Contains(connection.ConnectionInfo.RemoteEndPoint))
             {
-                //This is a peer discovery request, we just need to let the other peer know we are alive
-                connection.SendObject(discoveryPacketType, new byte[] { 1 });
-            }
-            else
-            {
-                //This is a peer discovery reply, we need to add this to the tracking dictionary
-                lock (_syncRoot)
+                if (data[0] == 0 && IsDiscoverable(connection.ConnectionInfo.ConnectionType))
                 {
-                    if (_discoveredPeers.ContainsKey(connection.ConnectionInfo.ConnectionType))
-                        _discoveredPeers[connection.ConnectionInfo.ConnectionType][connection.ConnectionInfo.RemoteEndPoint] = DateTime.Now;
-                    else
-                        _discoveredPeers.Add(connection.ConnectionInfo.ConnectionType, new Dictionary<EndPoint,DateTime>() 
-                            { {connection.ConnectionInfo.RemoteEndPoint, DateTime.Now} });
+                    //This is a peer discovery request, we just need to let the other peer know we are alive
+                    connection.SendObject(discoveryPacketType, new byte[] { 1 });
+                }
+                else
+                {
+                    //Trigger the discovery event
+                    if (OnPeerDiscovered != null)
+                        OnPeerDiscovered(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType);
+
+                    //This is a peer discovery reply, we need to add this to the tracking dictionary
+                    lock (_syncRoot)
+                    {
+                        if (_discoveredPeers.ContainsKey(connection.ConnectionInfo.ConnectionType))
+                            _discoveredPeers[connection.ConnectionInfo.ConnectionType][connection.ConnectionInfo.RemoteEndPoint] = DateTime.Now;
+                        else
+                            _discoveredPeers.Add(connection.ConnectionInfo.ConnectionType, new Dictionary<EndPoint, DateTime>() { { connection.ConnectionInfo.RemoteEndPoint, DateTime.Now } });
+                    }
                 }
             }
         }

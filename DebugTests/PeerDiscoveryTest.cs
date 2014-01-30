@@ -53,18 +53,32 @@ namespace DebugTests
             {
                 PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
 
-                Console.WriteLine("Server discoverable.");
+                Console.WriteLine("Now discoverable.");
+                Console.WriteLine("\nListening for UDP messages on:");
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)) 
+                   Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
                 Console.WriteLine("\nPress any key to quit.");
                 ConsoleKeyInfo key = Console.ReadKey(true);
             }
             else
             {
-                List<EndPoint> result = PeerDiscovery.DiscoverPeers(ConnectionType.UDP);
+                PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
+                Console.WriteLine("Now discoverable.");
+                Console.WriteLine("\nListening for UDP messages on:");
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
+                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-                Console.WriteLine("Found clients at:");
-                foreach (IPEndPoint endPoint in result)
-                    Console.WriteLine("{0}:{1}", endPoint.Address, endPoint.Port);
+                PeerDiscovery.OnPeerDiscovered += (endPoint, connectionType) =>
+                    {
+                        Console.WriteLine("Discovered peer at {0}", ((IPEndPoint)endPoint).ToString());
+                    };
+
+                PeerDiscovery.DiscoverPeersAsync(ConnectionType.UDP);
+
+                //Console.WriteLine("Found clients at:");
+                //foreach (IPEndPoint endPoint in result)
+                //    Console.WriteLine("{0}:{1}", endPoint.Address, endPoint.Port);
 
                 Console.WriteLine("\nClient complete. Press any key to quit.");
                 Console.ReadKey(true);

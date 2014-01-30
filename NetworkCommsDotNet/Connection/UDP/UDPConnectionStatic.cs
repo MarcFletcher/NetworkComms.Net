@@ -49,8 +49,9 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// The rogue UDP connection is used for sending ONLY if no available locally bound client is available.
         /// First key is address family of rogue sender, second key is value of ApplicationLayerProtocolEnabled.
+        /// Third key is local IPEndPoint of the rouge sender
         /// </summary>
-        static Dictionary<AddressFamily, Dictionary<ApplicationLayerProtocolStatus, UDPConnection>> udpRogueSenders = new Dictionary<AddressFamily, Dictionary<ApplicationLayerProtocolStatus, UDPConnection>>();
+        static Dictionary<ApplicationLayerProtocolStatus, Dictionary<IPEndPoint, UDPConnection>> udpRogueSenders = new Dictionary<ApplicationLayerProtocolStatus, Dictionary<IPEndPoint, UDPConnection>>();
         static object udpRogueSenderCreationLocker = new object();
 
         /// <summary>
@@ -265,12 +266,15 @@ namespace NetworkCommsDotNet
             if (ipEndPoint == null) throw new ArgumentNullException("ipEndPoint");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions");
 
+            if (objectToSend.GetType() == typeof(Packet) && (objectToSend as Packet).PacketHeader.PacketType != sendingPacketType)
+                throw new ArgumentException("Unable to send object of type Packet if the PacketHeader.PacketType and sendingPacketType do not match.");
+
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when using this method.", "applicationLayerProtocol");
 
             if (sendReceiveOptions.Options.ContainsKey("ReceiveConfirmationRequired"))
                 throw new ArgumentException("Attempted to use a rouge UDP sender when the provided send receive" +
-                    " options specified the ReceiveConfirmationRequired option, which is unsupported. Please create a specific connection"+
+                    " options specified the ReceiveConfirmationRequired option, which is unsupported. Please create a specific connection" +
                     "instance to use this feature.", "sendReceiveOptions");
 
             //Check the send receive options
@@ -287,66 +291,151 @@ namespace NetworkCommsDotNet
                         " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "sendReceiveOptions");
             }
 
-            UDPConnection connectionToUse = null;
+            List<UDPConnection> connectionsToUse = null;
 
-            //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
+            //Initialise best local end point as match all
+            IPEndPoint bestLocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
             try
             {
-                IPEndPoint localEndPoint = IPTools.BestLocalEndPoint(ipEndPoint);
-
+                bestLocalEndPoint = IPTools.BestLocalEndPoint(ipEndPoint);
                 //Set the port to 0 to match all.
-                localEndPoint.Port = 0;
-                List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(localEndPoint);
-
-                for (int i = 0; i < existingListeners.Count; i++)
-                {
-                    if (existingListeners[i].UDPConnection.ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)
-                    {
-                        connectionToUse = existingListeners[i].UDPConnection;
-
-                        //Once we have a matching connection we can break
-                        break;
-                    }
-                }
+                bestLocalEndPoint.Port = 0;
             }
             catch (Exception ex)
             {
                 NetworkComms.LogError(ex, "BestLocalEndPointError");
             }
 
-            //If we have not picked up a connection above we need to use a rougeSender
-            if (connectionToUse == null)
+            //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
+            //The exception here is the broadcasting which goes out all adaptors
+            if (ipEndPoint.Address != IPAddress.Broadcast)
             {
-                lock (udpRogueSenderCreationLocker)
+                #region Check For Existing Local Listener
+                List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(bestLocalEndPoint);
+
+                for (int i = 0; i < existingListeners.Count; i++)
                 {
-                    AddressFamily ipEndPointAddressFamily = ipEndPoint.AddressFamily;
-                    if (NetworkComms.commsShutdown)
-                        throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
-                    else if (!udpRogueSenders.ContainsKey(ipEndPointAddressFamily) || !udpRogueSenders[ipEndPointAddressFamily].ContainsKey(applicationLayerProtocol) || udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                    if (existingListeners[i].UDPConnection.ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)
                     {
-                        //Create a new rogue sender
-                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
+                        connectionsToUse = new List<UDPConnection> { existingListeners[i].UDPConnection };
 
-                        IPAddress any;
-                        if (ipEndPointAddressFamily == AddressFamily.InterNetwork)
-                            any = IPAddress.Any;
-                        else if (ipEndPointAddressFamily == AddressFamily.InterNetworkV6)
-                            any = IPAddress.IPv6Any;
-                        else
-                            throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + ipEndPointAddressFamily.ToString());
-
-                        if (!udpRogueSenders.ContainsKey(ipEndPointAddressFamily)) udpRogueSenders.Add(ipEndPointAddressFamily, new Dictionary<ApplicationLayerProtocolStatus, UDPConnection>());
-
-                        udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(any, 0), new IPEndPoint(any, 0), applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                        //Once we have a matching connection we can break
+                        break;
                     }
+                }
+                #endregion
 
-                    //Get the rouge sender here
-                    connectionToUse = udpRogueSenders[ipEndPointAddressFamily][applicationLayerProtocol];
+                //If we have not picked up an existing listener we need to use/create a rougeSender
+                if (connectionsToUse == null)
+                {
+                    #region Check For Suitable Rouge Sender
+                    lock (udpRogueSenderCreationLocker)
+                    {
+                        if (NetworkComms.commsShutdown)
+                            throw new CommunicationException("Attempting to send UDP packet but NetworkCommsDotNet is in the process of shutting down.");
+                        else
+                        {
+                            if (!udpRogueSenders.ContainsKey(applicationLayerProtocol) ||
+                                !udpRogueSenders[applicationLayerProtocol].ContainsKey(bestLocalEndPoint) ||
+                                udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                            {
+                                //Create a new rogue sender
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Creating UDPRougeSender.");
+
+                                if (!udpRogueSenders.ContainsKey(applicationLayerProtocol))
+                                    udpRogueSenders.Add(applicationLayerProtocol, new Dictionary<IPEndPoint, UDPConnection>());
+
+                                IPAddress anyRemoteIP = AnyRemoteIPAddress(ipEndPoint.AddressFamily);
+                                udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), bestLocalEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                            }
+
+                            connectionsToUse = new List<UDPConnection> { udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint] };
+                        }
+                    }
+                    #endregion
                 }
             }
+            else
+            {
+                #region Get A Sender On All Interfaces For Broadcast
+                lock (udpRogueSenderCreationLocker)
+                {
+                    //We do something special for broadcasts by selected EVERY adaptor
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Getting senders for UDP broadcasting.");
 
-            using (Packet sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions))
-                connectionToUse.SendPacketSpecific<sendObjectType>(sendPacket, ipEndPoint);
+                    if (!udpRogueSenders.ContainsKey(applicationLayerProtocol))
+                        udpRogueSenders.Add(applicationLayerProtocol, new Dictionary<IPEndPoint, UDPConnection>());
+
+                    connectionsToUse = new List<UDPConnection>();
+
+                    //This is a broadcast and we need to send the broadcast over every local adaptor
+                    List<IPAddress> validLocalIPAddresses = HostInfo.IP.FilteredLocalAddresses();
+                    foreach (IPAddress address in validLocalIPAddresses)
+                    {
+                        IPEndPoint currentLocalIPEndPoint = new IPEndPoint(address, 0);
+                        List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(currentLocalIPEndPoint);
+
+                        //If there is an existing listener we use that
+                        if (existingListeners.Count > 0)
+                        {
+                            for (int i = 0; i < existingListeners.Count; i++)
+                            {
+                                if (existingListeners[i].UDPConnection.ConnectionInfo.ApplicationLayerProtocol == applicationLayerProtocol)
+                                {
+                                    connectionsToUse.Add(existingListeners[i].UDPConnection);
+
+                                    //Once we have a matching connection we can break
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //If not we check the rouge senders
+                            if (!udpRogueSenders[applicationLayerProtocol].ContainsKey(currentLocalIPEndPoint) ||
+                                udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint].ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                            {
+                                IPAddress anyRemoteIP = AnyRemoteIPAddress(currentLocalIPEndPoint.AddressFamily);
+
+                                udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), currentLocalIPEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                            }
+
+                            connectionsToUse.Add(udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint]);
+                        }
+                    }
+                }
+                #endregion
+            }
+
+            //Send packet over every connection
+            Packet sendPacket = objectToSend as Packet;
+            if (sendPacket == null) 
+                sendPacket = new Packet(sendingPacketType, objectToSend, sendReceiveOptions);
+
+            foreach (UDPConnection connection in connectionsToUse)
+            {
+                try
+                {
+                    connection.SendPacketSpecific<sendObjectType>(sendPacket, ipEndPoint);
+                }
+                catch (SocketException) { /* Ignore any socket exceptions */ }
+            }
+        }
+
+        /// <summary>
+        /// Provides an IP address that matches all IPAddresses of the provided targetAddressFamily
+        /// </summary>
+        /// <param name="targetAddressFamily"></param>
+        /// <returns></returns>
+        private static IPAddress AnyRemoteIPAddress(AddressFamily targetAddressFamily)
+        {
+            if (targetAddressFamily == AddressFamily.InterNetwork)
+                return IPAddress.Any;
+            else if (targetAddressFamily == AddressFamily.InterNetworkV6)
+                return IPAddress.IPv6Any;
+            else
+                throw new CommunicationException("Attempting to send UDP packet over unsupported network address family: " + targetAddressFamily.ToString());
+
         }
         #endregion
 
