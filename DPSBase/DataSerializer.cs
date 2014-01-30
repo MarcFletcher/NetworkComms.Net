@@ -746,7 +746,7 @@ namespace DPSBase
                                     if (dataProcessors != null && dataProcessors.Count == 1)
                                         dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
                                     else
-                                        StreamTools.AsyncStreamCopier.CopyStreamTo(inputBytesStream, finalOutputStream);
+                                        StreamTools.Write(inputBytesStream, finalOutputStream);
                                 }
                             }
                         }
