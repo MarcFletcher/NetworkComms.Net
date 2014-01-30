@@ -74,27 +74,35 @@ namespace ExamplesConsole
                         Console.WriteLine("Invalid choice. Please try again.");
                     }
 
+                    //Ensure a previous loop does not duplicate the asynchronous event delegate
+                    PeerDiscovery.OnPeerDiscovered -= PeerDiscovered;
+
                     if (selectedOption == 1)
                     {
-                        //Append the OnPeerDiscovered event
+                        #region Discover Asynchronously
+                        Console.WriteLine("\nDiscovering servers asynchronously ... ");
+
+                        //Append the OnPeerDiscovered event (We only want to do this once so we set addedEvent boolean)
                         //If a peer responds to a discovery request we will just write to the console.
-                        PeerDiscovery.OnPeerDiscovered += (endPoint, connectionType) =>
-                        {
-                            Console.WriteLine("\n  - Discovered server at {0}", ((IPEndPoint)endPoint).ToString());
-                        };
+                        PeerDiscovery.OnPeerDiscovered += PeerDiscovered;
 
                         //Trigger the asynchronous discovery
                         PeerDiscovery.DiscoverPeersAsync(ConnectionType.UDP);
+                        #endregion
                     }
                     else if (selectedOption == 2)
                     {
+                        #region Discover Synchronously
+                        Console.WriteLine("\nDiscovering servers synchronously ... ");
+
                         //Discover peers asynchronously
                         //This method allows peers 2 seconds to respond after the request has been sent
                         List<EndPoint> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(ConnectionType.UDP);
 
                         //Write out a list of discovered peers
                         foreach (IPEndPoint ipEndPoint in discoveredPeerEndPoints)
-                            Console.WriteLine("  - Discovered server at {0}", ipEndPoint.ToString());
+                            Console.WriteLine("  ... Discovered server at {0}", ipEndPoint.ToString());
+                        #endregion
                     }
                     else if (selectedOption == 3)
                         break;
@@ -105,6 +113,16 @@ namespace ExamplesConsole
 
             //We should always call shutdown when our application closes.
             NetworkComms.Shutdown();
+        }
+
+        /// <summary>
+        /// Execute this method when a peer is discovered asynchronously 
+        /// </summary>
+        /// <param name="peerEndPoint"></param>
+        /// <param name="connectionType"></param>
+        private static void PeerDiscovered(EndPoint peerEndPoint, ConnectionType connectionType)
+        {
+            Console.WriteLine("\n  ... Discovered server at {0}", ((IPEndPoint)peerEndPoint).ToString());
         }
     }
 }

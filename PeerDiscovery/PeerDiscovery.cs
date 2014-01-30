@@ -249,7 +249,9 @@ namespace NetworkCommsDotNet.PeerDiscovery
             lock (_discoverSyncRoot)
             {
                 //Clear the discovered peers cache
-                _discoveredPeers = new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>();
+                lock(_syncRoot)
+                    _discoveredPeers = new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>();
+
                 if (connectionType == ConnectionType.UDP)
                     result = DiscoverPeersUDP(discoverTimeMS);
                 else if (connectionType == ConnectionType.TCP)
