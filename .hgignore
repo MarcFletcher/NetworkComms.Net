@@ -26,3 +26,4 @@ SingleDllBuild/Xamarin.Android/Release/*
 Documentation/Help/*
 SingleDllBuild/SingleDllBuild.log
 *.orig
+packages/**

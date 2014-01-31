@@ -119,7 +119,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\PeerDiscovery\PeerDiscovery.csproj">
       <Project>{4277b88f-5017-44ee-adb7-fcfb54e66962}</Project>
-      <Name>PeerDiscovery</Name>
+      <Name>PeerDiscovery %28Net40\Extensions\PeerDiscovery%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>

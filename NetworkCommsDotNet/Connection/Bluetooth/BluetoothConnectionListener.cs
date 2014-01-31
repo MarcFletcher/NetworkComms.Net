@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet
                 }
             }
 
-            this.LocalListenEndPoint = listenerInstance.LocalEndPoint;
+            this.LocalListenEndPoint = desiredLocalListenEndPoint;
 
             this.IsListening = true;
         }
