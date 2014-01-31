@@ -40,8 +40,9 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
-            //Select launch mode
-            Console.WriteLine("Launching DFS system ...\n");
+            //Select mode
+            Console.WriteLine("Distributed File System (DFS) Example ...\n");
+
             Console.WriteLine("Please select host or peer mode:");
             Console.WriteLine("1 - Host Mode (Original source of data)");
             Console.WriteLine("2 - Peer Mode (Builds data and then acts as subhost)");

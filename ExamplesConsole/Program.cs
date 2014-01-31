@@ -88,7 +88,7 @@ namespace ExamplesConsole
                         BasicSend.RunExample();
                         break;
                     case 2:
-                        BasicSend.RunExample();
+                        IntermediateSend.RunExample();
                         break;
                     case 3:
                         PeerDiscoveryExample.RunExample();
@@ -119,6 +119,7 @@ namespace ExamplesConsole
             }
             catch (Exception ex)
             {
+                //If an error was uncaught by the examples we can log the exception to a file here
                 NetworkComms.LogError(ex, "ExampleError");
                 NetworkComms.Shutdown();
                 Console.WriteLine(ex.ToString());

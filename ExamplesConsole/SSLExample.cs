@@ -35,7 +35,7 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
-            Console.WriteLine("Launching SSL Example ...\n");
+            Console.WriteLine("Secure Socket Layer (SSL) Example ...\n");
 
             //Ensure we have a certificate to use
             //Maximum security is achieved by using a trusted certificate

@@ -38,6 +38,8 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
+            Console.WriteLine("Remote Procedure Call (RPC) Example ...\n");
+
             Console.WriteLine("Please select run mode:\nServer - 1\nClient - 2\n");
             IRPCExampleInstance exampleToRun;
 

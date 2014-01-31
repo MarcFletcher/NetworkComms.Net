@@ -69,6 +69,27 @@ namespace NetworkCommsDotNet
             }
         }
 
+        /// <summary>
+        ///  Incoming packets are handled using a flexible QueueItemPriority (Default - QueueItemPriority.Normal). Reserved internal 
+        ///  packet types and packets marked with QueueItemPriority.Highest are not enqueued but handled in real time by the thread 
+        ///  handling the incoming data. You are free to specify the queue item priority for packet handlers using this 
+        ///  SendReceiveOptions by setting this value as desired. CAUTION: Only use QueueItemPriority.Highest sparingly.
+        /// </summary>
+        public QueueItemPriority ReceiveHandlePriority
+        {
+            get
+            {
+                if (Options.ContainsKey("ReceiveHandlePriority"))
+                    return (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), "ReceiveHandlePriority");
+                else
+                    return QueueItemPriority.Normal;
+            }
+            set 
+            { 
+                Options["ReceiveHandlePriority"] = Enum.GetName(typeof(QueueItemPriority), value); 
+            }
+        }
+
         private DataSerializer _dataSerializer;
         private List<DataProcessor> _dataProcessors;
 

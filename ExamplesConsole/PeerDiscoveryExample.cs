@@ -33,7 +33,8 @@ namespace ExamplesConsole
     {
         public static void RunExample()
         {
-            Console.WriteLine("Peer discovery example.\n");
+            Console.WriteLine("Peer Discovery Example ...\n");
+
             Console.WriteLine("Please select mode:");
             Console.WriteLine("1 - Server (Discoverable)");
             Console.WriteLine("2 - Client (Discovers servers)");

@@ -28,7 +28,7 @@ using System.Net;
 namespace ExamplesConsole
 {
     /// <summary>
-    /// Advanced test demonstrates how to send and receive more complicated objects.  
+    /// Advanced send demonstrates how to send and receive more complicated objects.  
     /// Note that arrays of primitive types are serialised differently from arrays  
     /// of non-primitives. This is done to achieve better performance and lower memory usage                                                                                                      
     /// </summary>
@@ -45,7 +45,7 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
-            Console.WriteLine("Launching advanced object send example ...");
+            Console.WriteLine("AdvancedSend Example ...\n");
 
             //***************************************************************//
             //              Start of interesting stuff                       //

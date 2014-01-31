@@ -39,8 +39,9 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
-            //Select launch mode
-            Console.WriteLine("Launching SpeedTest ...\n");
+            //Select mode
+            Console.WriteLine("SpeedTest Example ...\n");
+
             Console.WriteLine("Please select host or peer mode:");
             Console.WriteLine("1 - Host Mode (Catches Data)");
             Console.WriteLine("2 - Peer Mode (Sends Data)");

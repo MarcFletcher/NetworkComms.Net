@@ -50,7 +50,7 @@ namespace ExamplesConsole
         /// </summary>
         public static void RunExample()
         {
-            Console.WriteLine("Launching unmanaged connection example ...");
+            Console.WriteLine("Unmanaged Connection Example ...\n");
 
             //***************************************************************//
             //              Start of interesting stuff                       //
