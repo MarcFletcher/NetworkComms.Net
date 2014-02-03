@@ -26,7 +26,7 @@ using System.Reflection;
 using System.Linq;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Provides methods that process data in a <see cref="System.IO.Stream"/> into another <see cref="System.IO.Stream"/>.  Can be used to provide features such as data compression or encryption

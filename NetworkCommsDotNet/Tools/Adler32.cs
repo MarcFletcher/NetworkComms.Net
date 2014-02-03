@@ -18,7 +18,7 @@
 
 using System;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Implementation of the <see href="http://en.wikipedia.org/wiki/Adler-32">Adler32</see> checksum algorithm. 

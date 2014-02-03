@@ -1,4 +1,5 @@
-﻿using DPSBase;
+﻿using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -7,14 +8,14 @@ using System.Threading;
 using System.Net.NetworkInformation;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 using System.Threading.Tasks;
 using Windows.Storage;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     /// <summary>
     /// IP Connection base class for NetworkComms.Net. This contains the functionality and tools shared by any connections

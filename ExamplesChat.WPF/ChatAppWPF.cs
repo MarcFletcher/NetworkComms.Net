@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesChat.WPF
 {
@@ -40,7 +42,7 @@ namespace Examples.ExamplesChat.WPF
         /// Constructor for the WPF chat app.
         /// </summary>
         public ChatAppWPF(TextBlock chatHistory, ScrollViewer scroller, TextBox messagesFrom, TextBox messagesText)
-            : base (HostInfo.HostName, NetworkCommsDotNet.ConnectionType.TCP)
+            : base (HostInfo.HostName, ConnectionType.TCP)
         {
             this.ChatHistory = chatHistory;
             this.Scroller = scroller;

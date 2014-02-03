@@ -23,7 +23,11 @@ using System.Text;
 using NetworkCommsDotNet;
 using ProtoBuf;
 using System.Threading.Tasks;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.UDP;
+using NetworkCommsDotNet.Connections.TCP;
 using System.Threading;
 using System.Net;
 

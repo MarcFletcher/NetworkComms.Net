@@ -24,8 +24,9 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using NetworkCommsDotNet;
-using DPSBase;
-using NetworkCommsDotNet.PeerDiscovery;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
 
 namespace DebugTests
 {

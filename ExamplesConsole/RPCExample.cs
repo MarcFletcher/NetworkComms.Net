@@ -21,10 +21,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ProtoBuf;
-using NetworkCommsDotNet;
 using System.Collections.Specialized;
 using NLog;
 using System.Net;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 
 namespace Examples.ExamplesConsole
 {

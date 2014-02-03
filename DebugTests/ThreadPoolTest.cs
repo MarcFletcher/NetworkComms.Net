@@ -5,7 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using DistributedFileSystem;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet;
 
 namespace DebugTests

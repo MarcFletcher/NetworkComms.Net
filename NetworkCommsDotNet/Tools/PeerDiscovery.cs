@@ -1,22 +1,27 @@
-﻿using DPSBase;
-using NetworkCommsDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
+
 #if NET35 || NET4
 using InTheHand.Net.Sockets;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth.AttributeIds;
+using NetworkCommsDotNet.Connections.Bluetooth;
 #elif NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
 
-namespace NetworkCommsDotNet.PeerDiscovery
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Provides the ability to discover discoverable peers in the 

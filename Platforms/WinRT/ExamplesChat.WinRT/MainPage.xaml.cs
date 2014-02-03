@@ -1,4 +1,6 @@
 ﻿using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 using System;
 using System.Collections.Generic;
 using System.IO;

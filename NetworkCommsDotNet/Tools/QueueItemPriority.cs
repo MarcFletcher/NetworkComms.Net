@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
 //#if WINDOWS_PHONE || NETFX_CORE
 //    /// <summary>

@@ -21,11 +21,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DistributedFileSystem;
-using NetworkCommsDotNet;
 using System.Threading;
-using DPSBase;
 using System.Net;
 using System.IO;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace Examples.ExamplesConsole
 {

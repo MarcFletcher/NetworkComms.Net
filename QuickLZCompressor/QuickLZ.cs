@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.IO;
 
 namespace QuickLZCompressor

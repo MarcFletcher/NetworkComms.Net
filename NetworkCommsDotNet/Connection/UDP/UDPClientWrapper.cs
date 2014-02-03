@@ -20,15 +20,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.UDP
 {
 #if WINDOWS_PHONE || NETFX_CORE
     //UdpClientThreadSafe not yet required for WP8

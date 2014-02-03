@@ -27,7 +27,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Use only when serializing only primitive arrays. Will throw an exception otherwise

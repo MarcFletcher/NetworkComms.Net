@@ -31,7 +31,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// DataSerializer that uses .Net <see cref="System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"/> to perform <see cref="object"/> serialization

@@ -1,4 +1,5 @@
 ﻿Imports NetworkCommsDotNet
+Imports NetworkCommsDotNet.Connections
 
 Module BasicSend
     Sub RunExample()

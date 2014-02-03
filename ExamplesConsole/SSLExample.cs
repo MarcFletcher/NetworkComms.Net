@@ -5,8 +5,11 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesConsole
 {

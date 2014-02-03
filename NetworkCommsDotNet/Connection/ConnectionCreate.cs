@@ -21,16 +21,21 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
-using DPSBase;
 using System.IO;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+
+#if NET35 || NET4
+using NetworkCommsDotNet.Connections.Bluetooth;
+#endif
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     public abstract partial class Connection
     {

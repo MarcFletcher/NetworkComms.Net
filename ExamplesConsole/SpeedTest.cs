@@ -22,8 +22,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace Examples.ExamplesConsole
 {

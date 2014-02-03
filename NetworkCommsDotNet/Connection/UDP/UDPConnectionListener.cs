@@ -20,15 +20,16 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.UDP
 {
     /// <summary>
     /// A UDP connection listener
@@ -105,7 +106,7 @@ namespace NetworkCommsDotNet
             this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
 #endif
             if (IsDiscoverable)
-                PeerDiscovery.PeerDiscovery.EnableDiscoverable(PeerDiscovery.PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             this.IsListening = true;
         }

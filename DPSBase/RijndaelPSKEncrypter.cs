@@ -35,7 +35,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
 #if !FREETRIAL
     /// <summary>

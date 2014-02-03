@@ -19,12 +19,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using DPSBase;
-using NetworkCommsDotNet;
-using ProtoBuf;
 using System.Collections.Specialized;
 using System.Net;
 using System.Linq;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.UDP;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesConsole
 {

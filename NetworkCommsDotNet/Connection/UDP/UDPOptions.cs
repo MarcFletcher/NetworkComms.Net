@@ -21,12 +21,12 @@ using System.Collections.Generic;
 using System.Text;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.UDP
 {
     /// <summary>
     /// A <see cref="UDPConnection"/> could support different combinations of features. i.e. From the most basic (None) which 

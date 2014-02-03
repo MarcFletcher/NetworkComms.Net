@@ -27,7 +27,7 @@ using System.Reflection;
 using System.Linq;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {    
     /// <summary>
     /// Provides methods that convert an <see cref="object"/> into a <see cref="byte"/>[]

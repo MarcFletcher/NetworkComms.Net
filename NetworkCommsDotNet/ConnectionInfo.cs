@@ -21,10 +21,12 @@ using System.Collections.Generic;
 using System.Text;
 using ProtoBuf;
 using System.Net;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
@@ -557,7 +559,7 @@ namespace NetworkCommsDotNet
         private void OnDeserialise()
         {   
 #if NET4 || NET35
-            if (ConnectionType == NetworkCommsDotNet.ConnectionType.Bluetooth)
+            if (ConnectionType == ConnectionType.Bluetooth)
             {
                 BluetoothAddress btAddress;
                 if(!BluetoothAddress.TryParse(localEndPointAddressStr, out btAddress))

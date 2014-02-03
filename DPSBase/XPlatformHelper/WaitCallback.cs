@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet.XPlatformHelper
+namespace NetworkCommsDotNet.Tools.XPlatformHelper
 {
     public delegate void WaitCallback(object obj);    
 }

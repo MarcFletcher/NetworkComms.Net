@@ -8,7 +8,7 @@
     <ProjectGuid>{9A8E342F-2EB6-44ED-A305-A6E0074540C0}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DPSBase</RootNamespace>
+    <RootNamespace>NetworkCommsDotNet.DPSBase</RootNamespace>
     <AssemblyName>DPSBase</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

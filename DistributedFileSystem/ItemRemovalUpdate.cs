@@ -22,6 +22,7 @@ using System.Linq;
 using System.Text;
 using ProtoBuf;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Tools;
 
 namespace DistributedFileSystem
 {

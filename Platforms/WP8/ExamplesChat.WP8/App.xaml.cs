@@ -10,7 +10,7 @@ using Microsoft.Phone.Shell;
 using System.Windows.Controls;
 using System.Collections.Generic;
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using Examples.ExamplesChat.WP8.Resources;
 
 namespace Examples.ExamplesChat.WP8

@@ -4,10 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet.XPlatformHelper
+namespace NetworkCommsDotNet.Tools.XPlatformHelper
 {
     /// <summary>
-    /// On some platforms NLog has issues so this class provides the most basic logging featyres.
+    /// On some platforms NLog has issues so this class provides the most basic logging features.
     /// </summary>
     public class Logger
     {

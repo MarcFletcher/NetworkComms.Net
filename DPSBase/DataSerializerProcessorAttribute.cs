@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Custom attribute used to keep track of serializers and processors

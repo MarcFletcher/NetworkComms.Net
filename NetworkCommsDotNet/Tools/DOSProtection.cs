@@ -4,10 +4,10 @@ using System.Net;
 using System.Text;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// NetworkComms.Net class used for providing Denial Of Service (DOS) protection features. 

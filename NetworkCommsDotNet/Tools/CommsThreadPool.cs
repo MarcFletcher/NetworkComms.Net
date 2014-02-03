@@ -23,11 +23,11 @@ using System.Text;
 using System.Threading;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 using System.Threading.Tasks;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
 #if NETFX_CORE
     /// <summary>

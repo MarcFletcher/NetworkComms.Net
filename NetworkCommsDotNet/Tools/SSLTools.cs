@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Contains the information required to create self signed certificates

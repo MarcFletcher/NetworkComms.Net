@@ -23,9 +23,12 @@ using System.Text;
 using NetworkCommsDotNet;
 using System.Threading;
 using System.Net;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using System.IO;
 using InTheHand.Net;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.Bluetooth;
 
 namespace DebugTests
 {

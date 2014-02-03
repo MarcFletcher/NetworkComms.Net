@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Base exception. All connection related exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)

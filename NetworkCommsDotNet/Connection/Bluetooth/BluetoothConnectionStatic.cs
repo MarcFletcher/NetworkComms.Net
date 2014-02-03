@@ -4,12 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.Threading;
 using System.Net.Sockets;
 using InTheHand.Net.Sockets;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.Bluetooth
 {
     public sealed partial class BluetoothConnection : Connection
     {

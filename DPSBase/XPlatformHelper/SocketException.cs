@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace NetworkCommsDotNet.XPlatformHelper
+namespace NetworkCommsDotNet.Tools.XPlatformHelper
 {
     public class SocketException : Exception
     {

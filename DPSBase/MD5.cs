@@ -13,7 +13,7 @@ using System.Security.Cryptography;
 // * Copyright (c) Microsoft Corporation.  All rights reserved.
 // **************************************************************
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     // Simple struct for the (a,b,c,d) which is used to compute the mesage digest.    
     struct ABCDStruct

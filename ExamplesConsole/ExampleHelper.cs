@@ -22,6 +22,8 @@ using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
 using System.Net;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesConsole
 {

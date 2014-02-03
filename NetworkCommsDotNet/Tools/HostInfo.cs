@@ -1,4 +1,4 @@
-﻿using DPSBase;
+﻿using NetworkCommsDotNet.DPSBase;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -7,7 +7,7 @@ using System.Threading;
 using System.Net.NetworkInformation;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 using System.Threading.Tasks;
 using Windows.Storage;
 #else
@@ -19,7 +19,7 @@ using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// A static class which provides information about the local host.

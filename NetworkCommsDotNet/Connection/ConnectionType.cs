@@ -19,7 +19,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     /// <summary>
     /// The type of <see cref="Connection"/>.

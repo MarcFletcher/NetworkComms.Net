@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Windows.Storage;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Wrapper class for writing to streams with time-outs. Used primarily to prevent stream write deadlocks.

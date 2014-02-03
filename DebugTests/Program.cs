@@ -29,7 +29,7 @@ using NLog.Config;
 using NLog.Targets;
 using System.Net;
 using System.Diagnostics;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using DistributedFileSystem;
 using ProtoBuf;
 

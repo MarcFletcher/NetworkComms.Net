@@ -8,12 +8,12 @@ using InTheHand.Net.Sockets;
 using System.Net;
 using InTheHand.Net;
 using System.Net.Sockets;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.Threading;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Bluetooth.AttributeIds;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.Bluetooth
 {
     /// <summary>
     /// A Bluetooth connection listener

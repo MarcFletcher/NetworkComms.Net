@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     /// <summary>
     /// A wrapper object for keeping track of sent packets. These are used if a resend is requested due to a checksum validation failure.
@@ -47,7 +47,7 @@ namespace NetworkCommsDotNet
         {
             string timeString;
 #if NETFX_CORE
-            timeString = NetworkCommsDotNet.XPlatformHelper.DateTimeExtensions.ToShortTimeString(SentPacketCreationTime);
+            timeString = NetworkCommsDotNet.Tools.XPlatformHelper.DateTimeExtensions.ToShortTimeString(SentPacketCreationTime);
 #else
             timeString = (SentPacketCreationTime).ToShortTimeString();
 #endif

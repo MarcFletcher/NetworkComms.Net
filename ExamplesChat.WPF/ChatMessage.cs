@@ -6,6 +6,7 @@ using System.Text;
 //We need to add the following two namespaces to this class
 using NetworkCommsDotNet;
 using ProtoBuf;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesChat.WPF
 {

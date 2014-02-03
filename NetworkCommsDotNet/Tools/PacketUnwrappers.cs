@@ -21,16 +21,17 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Connections;
 using System.IO;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Wrapper used to track the SendReceiveOptions for different packet types.

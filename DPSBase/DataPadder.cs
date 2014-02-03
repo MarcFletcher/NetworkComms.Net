@@ -13,7 +13,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// <see cref="DataProcessor"/> which pads data section of a packet using to a fixed size

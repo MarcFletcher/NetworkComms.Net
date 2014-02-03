@@ -22,14 +22,13 @@ using System.Text;
 using System.Threading;
 using System.Net;
 using System.IO;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
-
 
 #if WINDOWS_PHONE || NETFX_CORE
 using Windows.Networking.Sockets;
@@ -42,7 +41,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.TCP
 {
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</see> to communicate between peers.

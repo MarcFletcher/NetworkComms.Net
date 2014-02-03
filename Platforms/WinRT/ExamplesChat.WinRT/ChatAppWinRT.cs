@@ -7,6 +7,7 @@ using System.Windows;
 using NetworkCommsDotNet;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Popups;
+using NetworkCommsDotNet.Connections;
 
 namespace Examples.ExamplesChat.WinRT
 {   

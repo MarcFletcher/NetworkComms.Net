@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-//We need to add the following two namespaces to this class
+//We need to add the following namespaces to this class
 using NetworkCommsDotNet;
 using ProtoBuf;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesChat.WinRT
 {
     /// <summary>
-    /// A wrapper class for the messages that we intend to send and recieve. 
+    /// A wrapper class for the messages that we intend to send and receive. 
     /// The [ProtoContract] attribute informs NetworkCommsDotNet that we intend to 
     /// serialise (turn into bytes) this object. At the base level the 
     /// serialisation is performed by protobuf.net.

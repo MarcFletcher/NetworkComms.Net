@@ -21,9 +21,9 @@ using System.Collections.Generic;
 using System.Text;
 using ProtoBuf;
 using System.IO;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
-using Serializer = DPSBase.DataSerializer;
+using Serializer = NetworkCommsDotNet.DPSBase.DataSerializer;
 
 namespace NetworkCommsDotNet
 {

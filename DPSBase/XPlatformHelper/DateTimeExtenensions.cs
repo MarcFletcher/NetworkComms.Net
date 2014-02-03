@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using Windows.Globalization.DateTimeFormatting;
 
-namespace NetworkCommsDotNet.XPlatformHelper
+namespace NetworkCommsDotNet.Tools.XPlatformHelper
 {
     public static class DateTimeExtensions
     {

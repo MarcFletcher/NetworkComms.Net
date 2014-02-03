@@ -8,7 +8,7 @@ using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using Examples.ExamplesChat.WP8.Resources;
 
 namespace Examples.ExamplesChat.WP8

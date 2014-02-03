@@ -4,9 +4,13 @@ using System.Linq;
 using System.Text;
 
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 using System.Net;
-using NetworkCommsDotNet.XPlatformHelper;
 
 namespace Examples.ExamplesChat.WinRT
 {
@@ -119,20 +123,20 @@ namespace Examples.ExamplesChat.WinRT
 
             #region Optional Encryption
             //Configure encryption if requested
-            if (EncryptionEnabled && !NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>()))
+            if (EncryptionEnabled && !NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>()))
             {
                 //Encryption is currently implemented using a pre-shared key (PSK) system
                 //NetworkComms.Net supports multiple data processors which can be used with any level of granularity
                 //To enable encryption globally (i.e. for all connections) we first add the encryption password as an option
                 RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, _encryptionKey);
                 //Finally we add the RijndaelPSKEncrypter data processor to the sendReceiveOptions
-                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>());
+                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }
             else if (!EncryptionEnabled && NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>()))
             {
                 //If encryption has been disabled but is currently enabled
                 //To disable encryption we just remove the RijndaelPSKEncrypter data processor from the sendReceiveOptions
-                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>());
+                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }
             #endregion
 

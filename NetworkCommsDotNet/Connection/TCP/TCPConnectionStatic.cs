@@ -22,10 +22,11 @@ using System.Text;
 using System.Threading;
 using System.Net;
 using System.IO;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
@@ -36,7 +37,7 @@ using Windows.Storage.Streams;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.TCP
 {
     public sealed partial class TCPConnection : IPConnection
     {

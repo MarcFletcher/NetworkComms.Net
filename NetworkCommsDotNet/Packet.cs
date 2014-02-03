@@ -19,7 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.IO;
 using ProtoBuf;
 

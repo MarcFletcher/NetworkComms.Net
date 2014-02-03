@@ -19,7 +19,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using DPSBase;
 using System.IO;
 using System.Reflection;
 
@@ -31,8 +30,7 @@ using System.Threading.Tasks;
 
 //Assembly marked as CLSCompliant
 [assembly: CLSCompliant(true)]
-
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// Automatically detects and manages the use of <see cref="DataSerializer"/> and <see cref="DataProcessor"/>s.  

@@ -4,10 +4,13 @@ using System.Linq;
 using System.Text;
 using ProtoBuf;
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
+using NetworkCommsDotNet.Connections.Bluetooth;
+using NetworkCommsDotNet.Connections;
 
 namespace DebugTests
 {
@@ -61,7 +64,7 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    var endpoints = NetworkCommsDotNet.PeerDiscovery.PeerDiscovery.DiscoverPeers(NetworkCommsDotNet.PeerDiscovery.PeerDiscovery.DiscoveryMethod.BluetoothSDP);
+                    var endpoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.BluetoothSDP);
 
                     ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0xE0B9A5FB552BL), ServiceGUID));
                     //GetServerDetails(out targetServerConnectionInfo);
@@ -99,7 +102,7 @@ namespace DebugTests
             if (devs == null || devs.Count() == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("No other listenning devices detected please check that the other device is listenning and try again");
+                Console.WriteLine("No other listening devices detected please check that the other device is listening and try again");
                 Console.ForegroundColor = initColor;
                 GetServerDetails(out connectionInfo);
                 return;

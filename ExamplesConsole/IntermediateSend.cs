@@ -20,10 +20,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NetworkCommsDotNet;
+
 using System.Net;
-using DPSBase;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 using SevenZipLZMACompressor;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace Examples.ExamplesConsole
 {

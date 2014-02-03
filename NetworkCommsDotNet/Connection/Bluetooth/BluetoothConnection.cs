@@ -7,12 +7,12 @@ using System.Text;
 using System.IO;
 using System.Threading;
 using System.Net.Sockets;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using InTheHand.Net.Sockets;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.Bluetooth
 {
     /// <summary>
     /// A connection type that uses Bluetooth RFCOMM to communicate 

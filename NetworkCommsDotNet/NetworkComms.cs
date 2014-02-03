@@ -21,14 +21,18 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
-using DPSBase;
 using System.Collections;
 using System.Net.NetworkInformation;
 using System.Diagnostics;
 using System.IO;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 using System.Threading.Tasks;
 using Windows.Storage;
 #else
@@ -42,6 +46,7 @@ using NLog.Config;
 
 #if NET35 || NET4
 using InTheHand.Net;
+using NetworkCommsDotNet.Connections.Bluetooth;
 #endif
 
 //Assembly marked as CLSCompliant

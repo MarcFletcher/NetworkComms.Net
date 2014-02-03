@@ -21,16 +21,17 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using System.IO;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     public abstract partial class Connection : IDisposable
     {

@@ -1,4 +1,5 @@
 ﻿Imports NetworkCommsDotNet
+Imports NetworkCommsDotNet.Tools
 
 Module ExampleHelper
     Private lastServerIPEndPoint As IPEndPoint = Nothing

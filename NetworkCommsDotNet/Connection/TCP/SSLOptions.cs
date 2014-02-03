@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.TCP
 {
     /// <summary>
     /// Contains SSL configuration options

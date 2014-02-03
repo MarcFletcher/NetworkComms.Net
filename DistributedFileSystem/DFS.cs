@@ -26,7 +26,11 @@ using NetworkCommsDotNet;
 using System.Threading;
 using NLog;
 using System.Net;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 using NLog.Config;
 
 namespace DistributedFileSystem

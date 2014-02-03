@@ -12,9 +12,11 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using SevenZipLZMACompressor;
 using System.Windows.Threading;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesChat.WPF
 {

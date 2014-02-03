@@ -22,7 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Collections;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Queue which contains features to add and remove items using a simple priority model.

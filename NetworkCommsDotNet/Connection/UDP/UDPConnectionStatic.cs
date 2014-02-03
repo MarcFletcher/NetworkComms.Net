@@ -21,15 +21,16 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Diagnostics;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.UDP
 {
     public sealed partial class UDPConnection : IPConnection
     {

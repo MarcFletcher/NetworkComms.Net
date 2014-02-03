@@ -19,7 +19,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using System.Threading;
 
 namespace NetworkCommsDotNet

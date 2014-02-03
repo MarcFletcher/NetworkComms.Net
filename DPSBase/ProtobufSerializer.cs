@@ -30,7 +30,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace DPSBase
+namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
     /// <see cref="DataSerializer"/> using <see href="http://code.google.com/p/protobuf-net/">ProtoBuf-Net</see> to serialize an <see cref="object"/> to bytes

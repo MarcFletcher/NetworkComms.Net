@@ -24,6 +24,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.IO;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
 using ProtoBuf;
 using System.Threading.Tasks;
 using System.Threading;

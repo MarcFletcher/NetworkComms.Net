@@ -22,10 +22,10 @@ using System.Text;
 using System.Net;
 using System.IO;
 using System.Threading;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
@@ -36,7 +36,7 @@ using Windows.Networking;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.UDP
 {
     /// <summary>
     /// A connection object which utilises <see href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</see> to communicate between peers.

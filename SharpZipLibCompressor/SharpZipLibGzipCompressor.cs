@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.IO;
 
 #if ANDROID

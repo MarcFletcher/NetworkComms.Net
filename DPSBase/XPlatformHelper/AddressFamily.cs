@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet.XPlatformHelper
+namespace NetworkCommsDotNet.Tools.XPlatformHelper
 {
     // Summary:
     //     Specifies the addressing scheme that an instance of the System.Net.Sockets.Socket

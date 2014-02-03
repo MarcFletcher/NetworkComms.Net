@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Represents a shortform globally unique identifier (<see href="http://en.wikipedia.org/wiki/Globally_unique_identifier">GUID</see>) which is easier to handle than Guid.NewGuid(). 

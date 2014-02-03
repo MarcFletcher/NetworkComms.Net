@@ -9,7 +9,7 @@
     <ProjectGuid>{C12BBC4C-371A-42D8-BEA1-03EA64611F6C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DPSBase</RootNamespace>
+    <RootNamespace>NetworkCommsDotNet.DPSBase</RootNamespace>
     <AssemblyName>DPSBase</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <FileAlignment>512</FileAlignment>

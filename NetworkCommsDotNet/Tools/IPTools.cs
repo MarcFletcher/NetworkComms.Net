@@ -22,15 +22,15 @@ using System.Text;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// A collection of tools for dealing with <see href="http://en.wikipedia.org/wiki/IP_address">IP addresses</see>.

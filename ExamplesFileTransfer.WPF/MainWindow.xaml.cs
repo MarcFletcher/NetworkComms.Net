@@ -14,12 +14,14 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-
-using Microsoft.Win32;
-using DPSBase;
-using NetworkCommsDotNet;
-using SevenZipLZMACompressor;
 using System.Net;
+using Microsoft.Win32;
+
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using SevenZipLZMACompressor;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace Examples.ExamplesFileTransfer.WPF
 {

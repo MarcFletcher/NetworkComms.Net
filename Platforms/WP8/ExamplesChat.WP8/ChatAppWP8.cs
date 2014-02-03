@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
 
 namespace Examples.ExamplesChat.WP8
 {   

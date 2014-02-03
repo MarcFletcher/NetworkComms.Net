@@ -21,10 +21,11 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
 #endif
@@ -33,7 +34,7 @@ using System.Net.Sockets;
 using Windows.Networking.Sockets;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections.TCP
 {
     /// <summary>
     /// A TCP connection listener
@@ -147,7 +148,7 @@ namespace NetworkCommsDotNet
             this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
 #endif
             if (IsDiscoverable)
-                PeerDiscovery.PeerDiscovery.EnableDiscoverable(PeerDiscovery.PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             this.IsListening = true;
         }

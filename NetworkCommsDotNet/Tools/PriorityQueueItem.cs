@@ -21,8 +21,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.IO;
+using NetworkCommsDotNet.Connections;
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
     /// Private wrapper class used for passing data to the incoming packet item worker

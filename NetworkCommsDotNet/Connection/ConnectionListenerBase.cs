@@ -20,13 +20,13 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 
 #if NETFX_CORE
-using NetworkCommsDotNet.XPlatformHelper;
+using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
 
-namespace NetworkCommsDotNet
+namespace NetworkCommsDotNet.Connections
 {
     /// <summary>
     /// A base class that the listener of each connection type inherits from.

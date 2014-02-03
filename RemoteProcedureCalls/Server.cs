@@ -23,8 +23,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NetworkCommsDotNet;
 using System.Reflection;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
 
 namespace RemoteProcedureCalls
 {

@@ -23,9 +23,11 @@ using System.Text;
 using DistributedFileSystem;
 using NetworkCommsDotNet;
 using System.Threading;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
 using System.Net;
 using System.IO;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections;
 
 namespace DebugTests
 {

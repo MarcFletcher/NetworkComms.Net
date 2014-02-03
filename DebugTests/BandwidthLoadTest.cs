@@ -24,7 +24,10 @@ using NetworkCommsDotNet;
 using System.Threading;
 using System.Net;
 using System.Threading.Tasks;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace DebugTests
 {
