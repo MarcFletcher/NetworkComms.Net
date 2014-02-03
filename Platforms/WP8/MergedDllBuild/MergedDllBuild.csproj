@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{88B2571F-36B1-4651-9C9F-9CB40BC1F259}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{F366A3AC-DA8F-4715-B552-C3AF2F54971A}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PeerDiscovery</RootNamespace>
-    <AssemblyName>PeerDiscovery</AssemblyName>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <RootNamespace>MergedDllBuild</RootNamespace>
+    <AssemblyName>MergedDllBuild</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -29,33 +31,32 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>networkcomms.pfx</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PeerDiscovery.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{a38225e2-bef8-4ea4-8ac9-4a5b4f5ea85d}</Project>
+      <Project>{e00ba640-8886-4fee-8484-19ce7fb3d9bf}</Project>
       <Name>DPSBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
+      <Project>{c9872f18-12fb-4933-b2af-f86710d4e1d8}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="networkcomms.pfx" />
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{69544da2-22f5-417b-80e4-0ffb3851662c}</Project>
+      <Name>SevenZipLZMACompressor</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

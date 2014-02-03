@@ -231,7 +231,7 @@ namespace ExamplesConsole
             Console.WriteLine("\nPlease select a serializer:\n" +
                 "1 - Protobuf (High Performance, Versatile)\n" +
                 "2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n" +
-                "3 - NullSerializer (Pass through serializer for sending byte[] only)\n");
+                "3 - NullSerializer (High performance pass through serializer for sending byte[] only)\n");
 
             int selectedSerializer;
             while (true)
