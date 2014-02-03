@@ -27,7 +27,7 @@ using DPSBase;
 using System.Net;
 using System.IO;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     static class DFSTest
     {

@@ -22,7 +22,7 @@ using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Networking in only 11 lines (not including comments and white space of course).

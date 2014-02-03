@@ -1,7 +1,7 @@
 ﻿using System;
 using Windows.UI.Xaml.Data;
 
-namespace ExamplesChat.WinRT.Common
+namespace Examples.ExamplesChat.WinRT.Common
 {
     /// <summary>
     /// Value converter that translates true to false and vice versa.

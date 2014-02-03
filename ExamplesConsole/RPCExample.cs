@@ -26,7 +26,7 @@ using System.Collections.Specialized;
 using NLog;
 using System.Net;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// An example which demonstrates <see href="http://en.wikipedia.org/wiki/Remote_procedure_call">Remote Procedure Calls</see> using NetworkCommsDotNet

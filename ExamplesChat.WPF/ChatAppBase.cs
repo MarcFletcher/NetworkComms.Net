@@ -7,7 +7,7 @@ using NetworkCommsDotNet;
 using DPSBase;
 using System.Net;
 
-namespace ExamplesWPFChat
+namespace Examples.ExamplesChat.WPF
 {
     /// <summary>
     /// In an attempt to keep things as clear as possible all shared implementation across chat examples

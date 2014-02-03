@@ -25,7 +25,7 @@ using ProtoBuf;
 using System.Collections.Specialized;
 using System.Net;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Advanced send demonstrates how to send and receive more complicated objects.  

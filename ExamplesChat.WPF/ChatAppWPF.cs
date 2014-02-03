@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using NetworkCommsDotNet;
 
-namespace ExamplesWPFChat
+namespace Examples.ExamplesChat.WPF
 {
     /// <summary>
     /// All NetworkComms.Net implementation can be found here and in ChatAppBase

@@ -5,7 +5,7 @@ using System.Text;
 
 using ProtoBuf;
 
-namespace ExamplesWPFFileTransfer
+namespace Examples.ExamplesFileTransfer.WPF
 {
     /// <summary>
     /// Information class used to associate incoming data with the correct ReceivedFile

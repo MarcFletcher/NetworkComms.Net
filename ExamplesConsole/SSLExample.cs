@@ -8,7 +8,7 @@ using System.Text;
 using DPSBase;
 using NetworkCommsDotNet;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Example which demonstrates the ability to establish SSL encrypted TCP connections

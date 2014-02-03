@@ -7,13 +7,13 @@ using System.Windows.Markup;
 using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
-using ExamplesWP8Chat.Resources;
-using NetworkCommsDotNet;
 using System.Windows.Controls;
 using System.Collections.Generic;
+using NetworkCommsDotNet;
 using DPSBase;
+using Examples.ExamplesChat.WP8.Resources;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {
     public partial class App : Application
     {
@@ -24,7 +24,7 @@ namespace ExamplesWP8Chat
         public static PhoneApplicationFrame RootFrame { get; private set; }
 
         /// <summary>
-        /// The chat application. This has been seperated from the platform specific code to
+        /// The chat application. This has been separated from the platform specific code to
         /// keep things simpler
         /// </summary>
         public ChatAppWP8 ChatApplication { get; set; }

@@ -21,7 +21,7 @@ using NetworkCommsDotNet;
 using SevenZipLZMACompressor;
 using System.Net;
 
-namespace ExamplesWPFFileTransfer
+namespace Examples.ExamplesFileTransfer.WPF
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

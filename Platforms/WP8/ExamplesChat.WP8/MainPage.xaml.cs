@@ -7,11 +7,11 @@ using System.Windows.Controls;
 using System.Windows.Navigation;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
-using ExamplesWP8Chat.Resources;
 using NetworkCommsDotNet;
 using DPSBase;
+using Examples.ExamplesChat.WP8.Resources;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {
     public partial class MainPage : PhoneApplicationPage
     {

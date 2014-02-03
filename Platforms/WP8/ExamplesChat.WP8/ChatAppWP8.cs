@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using NetworkCommsDotNet;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {   
     /// <summary>
     /// All NetworkComms.Net implementation can be found here and in ChatAppBase

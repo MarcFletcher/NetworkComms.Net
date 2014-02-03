@@ -1,4 +1,4 @@
-﻿<Window x:Class="ExamplesWPFChat.MainWindow"
+﻿<Window x:Class="Examples.ExamplesChat.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="NetworkComms.Net WPF Chat Example" Height="374" Width="513" Background="#FF7CA0FF" Closing="Window_Closing">

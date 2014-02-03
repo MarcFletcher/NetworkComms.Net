@@ -27,7 +27,7 @@ using NetworkCommsDotNet;
 using DPSBase;
 using NetworkCommsDotNet.PeerDiscovery;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     static class PeerDiscoveryExample
     {

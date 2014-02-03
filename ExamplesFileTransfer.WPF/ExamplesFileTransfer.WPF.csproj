@@ -7,7 +7,7 @@
     <ProjectGuid>{5BBA9805-E1B5-45D8-927F-4DAD95F1466B}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExamplesWPFFileTransfer</RootNamespace>
+    <RootNamespace>Examples.ExamplesFileTransfer.WPF</RootNamespace>
     <AssemblyName>ExamplesWPFFileTransfer</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

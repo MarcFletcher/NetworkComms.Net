@@ -9,8 +9,8 @@
     </SchemaVersion>
     <ProjectGuid>{825093FC-FC5F-4AEB-96C6-B9569B5EF18A}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <StartupObject>ExamplesConsole.VB.Program</StartupObject>
-    <RootNamespace>ExamplesConsole.VB</RootNamespace>
+    <StartupObject>Examples.ExamplesConsole.VB.Program</StartupObject>
+    <RootNamespace>Examples.ExamplesConsole.VB</RootNamespace>
     <AssemblyName>ExamplesConsole.VB</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>Console</MyType>

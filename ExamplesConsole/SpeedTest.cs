@@ -25,7 +25,7 @@ using System.Text;
 using DPSBase;
 using NetworkCommsDotNet;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Used for testing the performance of networks

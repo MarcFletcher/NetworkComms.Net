@@ -23,7 +23,7 @@ using System.Text;
 using NetworkCommsDotNet;
 using System.Net;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Provides implementation shared across examples

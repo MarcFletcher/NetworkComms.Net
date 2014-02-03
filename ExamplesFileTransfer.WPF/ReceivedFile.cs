@@ -7,7 +7,7 @@ using NetworkCommsDotNet;
 using System.ComponentModel;
 using System.IO;
 
-namespace ExamplesWPFFileTransfer
+namespace Examples.ExamplesFileTransfer.WPF
 {
     /// <summary>
     /// A local class which can be used to populate the WPF list box

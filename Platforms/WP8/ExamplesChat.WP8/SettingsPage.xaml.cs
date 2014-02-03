@@ -10,7 +10,7 @@ using Microsoft.Phone.Shell;
 using DPSBase;
 using NetworkCommsDotNet;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {
     public partial class SettingsPage : PhoneApplicationPage
     {

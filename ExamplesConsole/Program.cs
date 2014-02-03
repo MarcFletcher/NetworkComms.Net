@@ -27,7 +27,7 @@ using NLog.Config;
 using NLog.Targets;
 using NetworkCommsDotNet;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     class Program
     {

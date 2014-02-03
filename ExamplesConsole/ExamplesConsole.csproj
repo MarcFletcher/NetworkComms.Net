@@ -8,7 +8,7 @@
     <ProjectGuid>{8EFAC467-5DE2-4AC8-B90F-45E215BD9C20}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExamplesConsole</RootNamespace>
+    <RootNamespace>Examples.ExamplesConsole</RootNamespace>
     <AssemblyName>ExamplesConsole</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
@@ -31,7 +31,7 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>ExamplesConsole.Program</StartupObject>
+    <StartupObject>Examples.ExamplesConsole.Program</StartupObject>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>

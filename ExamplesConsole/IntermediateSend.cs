@@ -25,7 +25,7 @@ using System.Net;
 using DPSBase;
 using SevenZipLZMACompressor;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// IntermediateSend demonstrates how to send and receive primitive objects (ints, strings etc).  

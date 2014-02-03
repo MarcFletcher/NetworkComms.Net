@@ -1,4 +1,4 @@
-﻿<Window x:Class="ExamplesWPFFileTransfer.MainWindow"
+﻿<Window x:Class="Examples.ExamplesFileTransfer.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="NetworkComms.Net File Transfer Example" Height="450" Width="513" MinWidth="513" MinHeight="450" Background="#FF7CA0FF" Closing="Window_Closing">

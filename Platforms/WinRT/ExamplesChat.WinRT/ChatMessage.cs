@@ -7,7 +7,7 @@ using System.Text;
 using NetworkCommsDotNet;
 using ProtoBuf;
 
-namespace ExamplesChat.WinRT
+namespace Examples.ExamplesChat.WinRT
 {
     /// <summary>
     /// A wrapper class for the messages that we intend to send and recieve. 

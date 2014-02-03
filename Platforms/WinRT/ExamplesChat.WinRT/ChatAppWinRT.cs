@@ -8,7 +8,7 @@ using NetworkCommsDotNet;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Popups;
 
-namespace ExamplesChat.WinRT
+namespace Examples.ExamplesChat.WinRT
 {   
     /// <summary>
     /// All NetworkComms.Net implementation can be found here and in ChatAppBase

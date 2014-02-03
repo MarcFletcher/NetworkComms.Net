@@ -1,6 +1,6 @@
-﻿using ExamplesWP8Chat.Resources;
+﻿using Examples.ExamplesChat.WP8.Resources;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {
     /// <summary>
     /// Provides access to string resources.

@@ -7,7 +7,7 @@
     <ProjectGuid>{EB20054A-B290-42BA-A353-A449F14542E8}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExamplesChat.WinRT</RootNamespace>
+    <RootNamespace>Examples.ExamplesChat.WinRT</RootNamespace>
     <AssemblyName>ExamplesChat.WinRT</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <FileAlignment>512</FileAlignment>

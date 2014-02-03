@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Windows.UI.Xaml.Data;
 
-namespace ExamplesChat.WinRT.Common
+namespace Examples.ExamplesChat.WinRT.Common
 {
     /// <summary>
     /// Implementation of <see cref="INotifyPropertyChanged"/> to simplify models.

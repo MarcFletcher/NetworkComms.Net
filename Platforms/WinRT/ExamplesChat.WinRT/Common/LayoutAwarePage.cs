@@ -11,7 +11,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 
-namespace ExamplesChat.WinRT.Common
+namespace Examples.ExamplesChat.WinRT.Common
 {
     /// <summary>
     /// Typical implementation of Page that provides several important conveniences:

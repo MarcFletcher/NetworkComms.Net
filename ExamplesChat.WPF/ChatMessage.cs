@@ -7,7 +7,7 @@ using System.Text;
 using NetworkCommsDotNet;
 using ProtoBuf;
 
-namespace ExamplesWPFChat
+namespace Examples.ExamplesChat.WPF
 {
     /// <summary>
     /// A wrapper class for the messages that we intend to send and recieve. 

@@ -8,7 +8,7 @@
     <ProjectGuid>{1041C66C-6920-4D19-A922-C58783587F2F}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExamplesWPFChat</RootNamespace>
+    <RootNamespace>Examples.ExamplesChat.WPF</RootNamespace>
     <AssemblyName>ExamplesWPFChat</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>

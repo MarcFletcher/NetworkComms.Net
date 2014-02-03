@@ -26,7 +26,7 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Linq;
 
-namespace ExamplesConsole
+namespace Examples.ExamplesConsole
 {
     /// <summary>
     /// Advanced test demonstrates how to send and receive more complicated objects.  

@@ -7,7 +7,7 @@ using NetworkCommsDotNet;
 using DPSBase;
 using System.Net;
 
-namespace ExamplesWP8Chat
+namespace Examples.ExamplesChat.WP8
 {
     /// <summary>
     /// In an attempt to keep things as clear as possible all shared implementation across chat examples

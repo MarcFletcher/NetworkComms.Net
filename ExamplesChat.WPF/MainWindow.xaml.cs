@@ -16,7 +16,7 @@ using DPSBase;
 using SevenZipLZMACompressor;
 using System.Windows.Threading;
 
-namespace ExamplesWPFChat
+namespace Examples.ExamplesChat.WPF
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
