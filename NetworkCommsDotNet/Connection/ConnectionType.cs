@@ -1,4 +1,4 @@
-﻿//  Copyright 2011-2013 Marc Fletcher, Matthew Dean
+﻿//  Copyright 2009-2014 Marc Fletcher, Matthew Dean
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by

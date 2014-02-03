@@ -1,4 +1,22 @@
-﻿#if !NETFX_CORE
+﻿//  Copyright 2009-2014 Marc Fletcher, Matthew Dean
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//  A commercial license of this software can also be purchased. 
+//  Please see <http://www.networkcomms.net/licensing/> for details.
+
+#if !NETFX_CORE
 
 using System;
 using System.Collections.Generic;
@@ -140,7 +158,7 @@ namespace NetworkCommsDotNet.Tools
         #region Create Self Signed Certificates
         /// <summary>
         /// Creates a self signed certificate which can be used for peer to peer authentication and 
-        /// saves it to disk using provided certificateFileName
+        /// saves it to disk using provided certificateFileName. Initial implementation used with permission from http://blogs.msdn.com/b/dcook/archive/2008/11/25/creating-a-self-signed-certificate-in-c.aspx
         /// </summary>
         /// <param name="certificateDetails">The certificate details to use.</param>
         /// <param name="certificateFileName">The certificate file name, e.g. certFile.PFX</param>
