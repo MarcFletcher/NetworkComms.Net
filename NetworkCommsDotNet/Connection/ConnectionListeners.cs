@@ -49,7 +49,7 @@ namespace NetworkCommsDotNet
         /// <param name="desiredLocalEndPoint">The desired localEndPoint. For IPEndPoints use IPAddress.Any 
         /// to listen on all <see cref="HostInfo.IP.FilteredLocalAddresses()"/> and port 0 to randomly select an available port.</param>
         /// <returns>A list of all listeners used.</returns>
-        public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint) where T : EndPoint
+        public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint, bool makeDiscoverable = false) where T : EndPoint
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
             if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "desiredLocalEndPoint cannot be null.");
@@ -76,9 +76,9 @@ namespace NetworkCommsDotNet
                 for (int i = 0; i < localListenIPEndPoints.Count; i++)
                 {
                     if (connectionType == ConnectionType.TCP)
-                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, makeDiscoverable));
                     else if (connectionType == ConnectionType.UDP)
-                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions));
+                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions, makeDiscoverable));
                 }
 
                 //Start listening on all selected listeners
@@ -119,7 +119,7 @@ namespace NetworkCommsDotNet
 
                 //Initialise the listener list
                 for (int i = 0; i < localListenBTEndPoints.Count; i++)
-                    listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled));
+                    listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, makeDiscoverable));
 
                 //Start listening on all selected listeners
                 //We do this is a separate step in case there is an exception
@@ -156,7 +156,7 @@ namespace NetworkCommsDotNet
         /// of 0 to dynamically select a port.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
         /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        public static void StartListening<T>(ConnectionListenerBase listener, T desiredLocalEndPoint, bool useRandomPortFailOver) where T : EndPoint
+        public static void StartListening<T>(ConnectionListenerBase listener, T desiredLocalEndPoint, bool useRandomPortFailOver = false) where T : EndPoint
         {
             #region Input Validation
             if (listener == null) throw new ArgumentNullException("listener", "Provided listener cannot be null.");

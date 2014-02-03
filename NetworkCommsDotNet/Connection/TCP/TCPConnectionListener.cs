@@ -66,8 +66,8 @@ namespace NetworkCommsDotNet
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol)
-            :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, bool isDiscoverable = false)
+            :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
         {
 #if !WINDOWS_PHONE && !NETFX_CORE
             SSLOptions = new SSLOptions();
@@ -85,8 +85,8 @@ namespace NetworkCommsDotNet
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="sslOptions">The SSLOptions to use with this listener</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions)
-            : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions, bool isDiscoverable = false)
+            : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
         {
             this.SSLOptions = sslOptions;
         }

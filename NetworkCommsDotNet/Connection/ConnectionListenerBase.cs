@@ -55,6 +55,11 @@ namespace NetworkCommsDotNet
         public bool IsListening { get; protected set; }
 
         /// <summary>
+        /// True if this listenner will be advertised via peer discovery
+        /// </summary>
+        public bool IsDiscoverable { get; protected set; }
+
+        /// <summary>
         /// The local IPEndPoint that this listener is associated with.
         /// </summary>
         public EndPoint LocalListenEndPoint { get; protected set; }
@@ -70,7 +75,8 @@ namespace NetworkCommsDotNet
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         protected ConnectionListenerBase(ConnectionType connectionType,
             SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol)
+            ApplicationLayerProtocolStatus applicationLayerProtocol,
+            bool isDiscoverable)
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not valid when calling this method.", "connectionType");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided send receive option may not be null.");
@@ -98,6 +104,7 @@ namespace NetworkCommsDotNet
             this.ConnectionType = connectionType;
             this.SendReceiveOptions = sendReceiveOptions;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
+            this.IsDiscoverable = isDiscoverable;
         }
 
         /// <summary>

@@ -522,9 +522,9 @@ namespace NetworkCommsDotNet
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
         /// If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         [Obsolete("Depreciated, please use Connection.StartListening.")]
-        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true, bool isDiscoverable = false)
         {
-            UDPConnectionListener listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions);
+            UDPConnectionListener listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions, isDiscoverable);
             Connection.StartListening(listener, newLocalEndPoint, useRandomPortFailOver);
         }
 

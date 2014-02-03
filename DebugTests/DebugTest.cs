@@ -69,7 +69,7 @@ namespace DebugTests
 
                 List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>() { 
                     new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions,
-                        ApplicationLayerProtocolStatus.Enabled)};
+                        ApplicationLayerProtocolStatus.Enabled, true)};
 
                 List<EndPoint> listeningEndPoints = new List<EndPoint>() { new BluetoothEndPoint(BluetoothAddress.None, Guid.Empty, 0)};
 

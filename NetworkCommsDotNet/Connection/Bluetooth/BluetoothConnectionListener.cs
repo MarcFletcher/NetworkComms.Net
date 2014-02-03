@@ -39,8 +39,8 @@ namespace NetworkCommsDotNet
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         public BluetoothConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol)
-            : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, bool isDiscoverable)
+            : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
         {
 
         }

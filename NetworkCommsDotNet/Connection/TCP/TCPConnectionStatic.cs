@@ -233,9 +233,9 @@ namespace NetworkCommsDotNet
         /// <param name="newLocalEndPoint">The localEndPoint to listen for connections on.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         [Obsolete("Depreciated, please use Connection.StartListening.")]
-        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true)
+        public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true, bool makeDiscoverable = false)
         {
-            TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+            TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, makeDiscoverable);
             Connection.StartListening(listener, newLocalEndPoint, useRandomPortFailOver);
         }
 

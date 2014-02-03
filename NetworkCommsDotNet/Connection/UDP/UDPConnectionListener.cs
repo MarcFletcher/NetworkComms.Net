@@ -56,8 +56,8 @@ namespace NetworkCommsDotNet
         /// <param name="udpOptions">The UDPOptions to use with this listener</param>
         public UDPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, 
-            UDPOptions udpOptions)
-            :base(ConnectionType.UDP, sendReceiveOptions, applicationLayerProtocol)
+            UDPOptions udpOptions, bool isDiscoverable = false)
+            :base(ConnectionType.UDP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && udpOptions != UDPOptions.None)
                 throw new ArgumentException("If the application layer protocol has been disabled the provided UDPOptions can only be UDPOptions.None.");
