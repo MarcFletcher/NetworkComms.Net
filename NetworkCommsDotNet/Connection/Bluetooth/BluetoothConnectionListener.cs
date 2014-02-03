@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet
             {
                 ServiceRecordBuilder bldr = new ServiceRecordBuilder();
                 bldr.AddServiceClass((desiredLocalListenEndPoint as BluetoothEndPoint).Service);
-                bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
+                bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsBTAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
                 listenerInstance = new BluetoothListener(desiredLocalListenEndPoint as BluetoothEndPoint, bldr.ServiceRecord);
                 
                 listenerInstance.Start();
