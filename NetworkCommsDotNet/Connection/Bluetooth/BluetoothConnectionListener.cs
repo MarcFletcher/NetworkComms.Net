@@ -10,6 +10,8 @@ using InTheHand.Net;
 using System.Net.Sockets;
 using DPSBase;
 using System.Threading;
+using InTheHand.Net.Bluetooth;
+using InTheHand.Net.Bluetooth.AttributeIds;
 
 namespace NetworkCommsDotNet
 {
@@ -18,6 +20,11 @@ namespace NetworkCommsDotNet
     /// </summary>
     public class BluetoothConnectionListener : ConnectionListenerBase
     {
+        public static class NetworkCommsBTAttributeId
+        {
+            public const ServiceAttributeId NetworkCommsEndPoint = unchecked((ServiceAttributeId)0xda9799e8);
+        }
+
         /// <summary>
         /// The local Bluetooth listener
         /// </summary>
@@ -46,8 +53,11 @@ namespace NetworkCommsDotNet
 
             try
             {
-
-                listenerInstance = new BluetoothListener(desiredLocalListenEndPoint as BluetoothEndPoint);
+                ServiceRecordBuilder bldr = new ServiceRecordBuilder();
+                bldr.AddServiceClass((desiredLocalListenEndPoint as BluetoothEndPoint).Service);
+                bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
+                listenerInstance = new BluetoothListener(desiredLocalListenEndPoint as BluetoothEndPoint, bldr.ServiceRecord);
+                
                 listenerInstance.Start();
                 listenerInstance.BeginAcceptBluetoothClient(BluetoothConnectionReceivedAsync, null);
             }

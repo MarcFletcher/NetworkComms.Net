@@ -7,6 +7,11 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 
+#if NET35 || NET4
+using InTheHand.Net.Sockets;
+using InTheHand.Net.Bluetooth;
+#endif
+
 namespace NetworkCommsDotNet.PeerDiscovery
 {
     /// <summary>
@@ -320,6 +325,52 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
             throw new NotImplementedException("Peer discovery has not yet been implemented for TCP.");
         }
+
+#if NET35 || NET4
+
+        public static List<EndPoint> DiscoverPeersBT(int discoverTimeout)
+        {
+            List<EndPoint> result = null;
+            object locker = new object();
+            bool cancelled = false;
+
+            AutoResetEvent completeEv = new AutoResetEvent(false);
+            EventHandler<DiscoverDevicesEventArgs> callBack = (sender, e) =>
+                {
+                    lock (locker)
+                    {
+                        if (!cancelled)
+                        {
+                            foreach (var dev in e.Devices)
+                            {
+                                int i = 0;
+                            }
+                        }
+                    }
+
+                    completeEv.Set();
+                };
+
+            BluetoothComponent com = new InTheHand.Net.Bluetooth.BluetoothComponent();
+            com.DiscoverDevicesComplete += callBack;            
+            com.DiscoverDevicesAsync(255, false, false, false, true, com);
+
+            if (!completeEv.WaitOne(discoverTimeout))
+            {
+                lock (locker)
+                {
+                    if (result == null)
+                    {
+                        cancelled = true;
+                        result = new List<EndPoint>();
+                    }
+                }
+            }
+
+            return result;
+        }
+               
+#endif
 
         #region Incoming Comms Handlers
         /// <summary>
