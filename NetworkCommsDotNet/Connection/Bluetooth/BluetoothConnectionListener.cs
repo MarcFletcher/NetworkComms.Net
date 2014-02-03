@@ -55,9 +55,11 @@ namespace NetworkCommsDotNet
             {
                 ServiceRecordBuilder bldr = new ServiceRecordBuilder();
                 bldr.AddServiceClass((desiredLocalListenEndPoint as BluetoothEndPoint).Service);
-                bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsBTAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
+                if (IsDiscoverable)
+                    bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsBTAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
+
                 listenerInstance = new BluetoothListener(desiredLocalListenEndPoint as BluetoothEndPoint, bldr.ServiceRecord);
-                
+
                 listenerInstance.Start();
                 listenerInstance.BeginAcceptBluetoothClient(BluetoothConnectionReceivedAsync, null);
             }
@@ -68,7 +70,14 @@ namespace NetworkCommsDotNet
                 {
                     try
                     {
-                        listenerInstance = new BluetoothListener(new BluetoothEndPoint((desiredLocalListenEndPoint as BluetoothEndPoint).Address, Guid.NewGuid()));
+                        Guid service = Guid.NewGuid();
+
+                        ServiceRecordBuilder bldr = new ServiceRecordBuilder();
+                        bldr.AddServiceClass(service);
+                        if (IsDiscoverable)
+                            bldr.AddCustomAttribute(new ServiceAttribute(NetworkCommsBTAttributeId.NetworkCommsEndPoint, ServiceElement.CreateNumericalServiceElement(ElementType.UInt8, 1)));
+
+                        listenerInstance = new BluetoothListener(new BluetoothEndPoint((desiredLocalListenEndPoint as BluetoothEndPoint).Address, service), bldr.ServiceRecord);
                         listenerInstance.Start();
                         listenerInstance.BeginAcceptBluetoothClient(BluetoothConnectionReceivedAsync, null);
                     }

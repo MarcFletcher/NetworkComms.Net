@@ -104,6 +104,8 @@ namespace NetworkCommsDotNet
 #else
             this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
 #endif
+            if (IsDiscoverable)
+                PeerDiscovery.PeerDiscovery.EnableDiscoverable(PeerDiscovery.PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             this.IsListening = true;
         }

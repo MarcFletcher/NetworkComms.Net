@@ -45,6 +45,33 @@ namespace NetworkCommsDotNet.PeerDiscovery
         public static int MaxTargetLocalIPPort { get; set; }
 
         /// <summary>
+        /// Backing field for DefaultIPDiscoveryMethod
+        /// </summary>
+        private static DiscoveryMethod _defaultIPDiscoveryMethod = DiscoveryMethod.UDPBroadcast;
+        /// <summary>
+        /// The default discovery method to use for IP type connections (UDP and TCP). By default this is DiscoveryMethod.UDPBroadcast.
+        /// </summary>
+        public static DiscoveryMethod DefaultIPDiscoveryMethod
+        {
+            get
+            {
+                return _defaultIPDiscoveryMethod;
+            }
+            set
+            {
+                if (value == DiscoveryMethod.UDPBroadcast || value == DiscoveryMethod.TCPPortScan)
+                    _defaultIPDiscoveryMethod = value;
+                else
+                    throw new ArgumentException("DefaultIPDiscoveryMethod must be either DiscoveryMethod.UDPBroadcast or DiscoveryMethod.TCPPortScan", "DefaultIPDiscoveryMethod");
+            }
+        }
+
+        /// <summary>
+        /// The service on which discovery will run for bluetooth
+        /// </summary>
+        public static Guid BluetoothDiscoveryService { get; set; }
+
+        /// <summary>
         /// The event delegate which can optionally be used when a peer is successfully discovered.
         /// </summary>
         /// <param name="peerEndPoint"></param>
@@ -90,6 +117,8 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
             MinTargetLocalIPPort = 10000;
             MaxTargetLocalIPPort = 10020;
+
+            BluetoothDiscoveryService = new Guid("3a768eea-cbda-4926-a82d-831cb89092ac");
         }
 
         #region Local Configuration
@@ -103,7 +132,7 @@ namespace NetworkCommsDotNet.PeerDiscovery
             lock (_syncRoot)
             {
                 if (_discoveryListeners.ContainsKey(discoveryMethod))
-                    throw new ArgumentException("Peer is already discoverable for the provided connectionType", "connectionType");
+                    return;
 
                 //Based on the connection type select all local endPoints and then enable discoverable
                 if (discoveryMethod == DiscoveryMethod.TCPPortScan || discoveryMethod == DiscoveryMethod.UDPBroadcast)
@@ -136,6 +165,20 @@ namespace NetworkCommsDotNet.PeerDiscovery
 
                     _discoveryListeners.Add(discoveryMethod, listeners);
                 }
+#if NET35 || NET4
+                else if (discoveryMethod == DiscoveryMethod.BluetoothSDP)
+                {
+                    List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
+
+                    foreach (BluetoothRadio radio in BluetoothRadio.AllRadios)
+                    {
+                        radio.Mode = RadioMode.Discoverable;
+                        listeners.AddRange(Connection.StartListening(ConnectionType.Bluetooth, new BluetoothEndPoint(radio.LocalAddress, BluetoothDiscoveryService)));
+                    }
+                    
+                    _discoveryListeners.Add(discoveryMethod, listeners);
+                }
+#endif
                 else
                     throw new NotImplementedException("This feature has not been implemented for the provided connection type.");
 
@@ -172,8 +215,17 @@ namespace NetworkCommsDotNet.PeerDiscovery
             else if (discoveryMethod == DiscoveryMethod.BluetoothSDP)
             {
                 lock (_syncRoot)
+                {
                     foreach (BluetoothRadio radio in BluetoothRadio.AllRadios)
-                        radio.Mode = RadioMode.Discoverable;
+                        if (radio.LocalAddress == (localDiscoveryEndPoint as BluetoothEndPoint).Address)
+                            radio.Mode = RadioMode.Discoverable;
+
+                    _discoveryListeners.Add(discoveryMethod, Connection.StartListening(ConnectionType.Bluetooth, localDiscoveryEndPoint));
+
+                    //Add the packet handlers if required
+                    if (!NetworkComms.GlobalIncomingPacketHandlerExists<byte[]>(discoveryPacketType, PeerDiscoveryHandler))
+                        NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                }
             }
 #endif
         }
@@ -199,8 +251,16 @@ namespace NetworkCommsDotNet.PeerDiscovery
             else if (discoveryMethod == DiscoveryMethod.BluetoothSDP)
             {
                 lock (_syncRoot)
+                {
                     foreach (BluetoothRadio radio in BluetoothRadio.AllRadios)
                         radio.Mode = RadioMode.Connectable;
+
+                    if (_discoveryListeners.ContainsKey(discoveryMethod))
+                    {
+                        Connection.StopListening(_discoveryListeners[discoveryMethod]);
+                        _discoveryListeners.Remove(discoveryMethod);
+                    }
+                }
             }
 #endif
         }
@@ -212,15 +272,15 @@ namespace NetworkCommsDotNet.PeerDiscovery
         {
             lock (_syncRoot)
             {
-                foreach (DiscoveryMethod currentType in _discoveryListeners.Keys)
-                    Connection.StopListening(_discoveryListeners[currentType]);
-
-                _discoveryListeners = new Dictionary<DiscoveryMethod, List<ConnectionListenerBase>>();
-
 #if NET35 || NET4
                 foreach (BluetoothRadio radio in BluetoothRadio.AllRadios)
                     radio.Mode = RadioMode.Connectable;
 #endif
+
+                foreach (DiscoveryMethod currentType in _discoveryListeners.Keys)
+                    Connection.StopListening(_discoveryListeners[currentType]);
+
+                _discoveryListeners = new Dictionary<DiscoveryMethod, List<ConnectionListenerBase>>();
             }
         }
 
