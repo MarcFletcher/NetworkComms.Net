@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("NetworkComms.Net")]
-[assembly: AssemblyCopyright("Copyright MarcF MattD ©  2014")]
+[assembly: AssemblyCopyright("Copyright MarcF MattD © 2009 - 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

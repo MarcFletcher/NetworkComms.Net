@@ -57,10 +57,6 @@
       <Project>{220024a8-7abf-42a6-a476-0684c1e65110}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
-    <ProjectReference Include="..\PeerDiscovery\PeerDiscovery.csproj">
-      <Project>{6b2adbd5-c35e-4e8e-9678-cceb10afb634}</Project>
-      <Name>PeerDiscovery</Name>
-    </ProjectReference>
     <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{d61ea64f-c690-4f1c-a39f-cadb5f469715}</Project>
       <Name>QuickLZCompressor</Name>

@@ -183,6 +183,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketUnwrappers.cs">
       <Link>Tools\PacketUnwrappers.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PeerDiscovery.cs">
+      <Link>Tools\PeerDiscovery.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PriorityQueue.cs">
       <Link>Tools\PriorityQueue.cs</Link>
     </Compile>

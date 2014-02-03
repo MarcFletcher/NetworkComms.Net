@@ -12,6 +12,8 @@ using InTheHand.Net.Sockets;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth.AttributeIds;
+#elif NETFX_CORE
+using NetworkCommsDotNet.XPlatformHelper;
 #endif
 
 namespace NetworkCommsDotNet.PeerDiscovery
