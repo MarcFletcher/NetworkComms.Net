@@ -39,7 +39,7 @@ namespace DebugTests
 
             //Start listenning
             BluetoothRadio defaultRadio = BluetoothRadio.PrimaryRadio;
-            defaultRadio.Mode = RadioMode.Connectable;
+            defaultRadio.Mode = RadioMode.Discoverable;
             Connection.StartListening(ConnectionType.Bluetooth, new BluetoothEndPoint(defaultRadio.LocalAddress, ServiceGUID));
 
             //Print the address we are listening on to make sure everything
@@ -61,7 +61,9 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0x0011B107A235L), ServiceGUID));
+                    var endpoints = NetworkCommsDotNet.PeerDiscovery.PeerDiscovery.DiscoverPeers(NetworkCommsDotNet.PeerDiscovery.PeerDiscovery.DiscoveryMethod.BluetoothSDP);
+
+                    ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0xE0B9A5FB552BL), ServiceGUID));
                     //GetServerDetails(out targetServerConnectionInfo);
 
                     //There are loads of ways of sending data (see AdvancedSend example for more)

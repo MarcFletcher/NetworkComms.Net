@@ -51,7 +51,7 @@ namespace DebugTests
 
             if (serverMode)
             {
-                PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
+                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                 Console.WriteLine("Now discoverable.");
                 Console.WriteLine("\nListening for UDP messages on:");
@@ -63,7 +63,7 @@ namespace DebugTests
             }
             else
             {
-                PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
+                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
                 Console.WriteLine("Now discoverable.");
                 Console.WriteLine("\nListening for UDP messages on:");
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
@@ -74,7 +74,7 @@ namespace DebugTests
                         Console.WriteLine("Discovered peer at {0}", ((IPEndPoint)endPoint).ToString());
                     };
 
-                PeerDiscovery.DiscoverPeersAsync(ConnectionType.UDP);
+                PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                 //Console.WriteLine("Found clients at:");
                 //foreach (IPEndPoint endPoint in result)
