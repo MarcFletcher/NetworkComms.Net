@@ -45,7 +45,7 @@ namespace ExamplesConsole
             else serverMode = false;
 
             //Both server and client must be discoverable
-            PeerDiscovery.EnableDiscoverable(ConnectionType.UDP);
+            PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             //Write out the network adaptors that are discoverable
             Console.WriteLine("\nDiscoverable on:");
@@ -88,7 +88,7 @@ namespace ExamplesConsole
                         PeerDiscovery.OnPeerDiscovered += PeerDiscovered;
 
                         //Trigger the asynchronous discovery
-                        PeerDiscovery.DiscoverPeersAsync(ConnectionType.UDP);
+                        PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
                         #endregion
                     }
                     else if (selectedOption == 2)
@@ -98,7 +98,7 @@ namespace ExamplesConsole
 
                         //Discover peers asynchronously
                         //This method allows peers 2 seconds to respond after the request has been sent
-                        List<EndPoint> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(ConnectionType.UDP);
+                        List<EndPoint> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                         //Write out a list of discovered peers
                         foreach (IPEndPoint ipEndPoint in discoveredPeerEndPoints)

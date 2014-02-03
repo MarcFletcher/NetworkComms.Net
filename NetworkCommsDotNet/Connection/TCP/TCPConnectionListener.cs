@@ -146,6 +146,8 @@ namespace NetworkCommsDotNet
 #else
             this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
 #endif
+            if (IsDiscoverable)
+                PeerDiscovery.PeerDiscovery.EnableDiscoverable(PeerDiscovery.PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             this.IsListening = true;
         }

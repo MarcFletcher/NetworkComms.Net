@@ -65,10 +65,6 @@
       <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\PeerDiscovery\PeerDiscovery.csproj">
-      <Project>{88b2571f-36b1-4651-9c9f-9cb40bc1f259}</Project>
-      <Name>PeerDiscovery</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{b659339d-a958-4f33-96e6-3a0ccfcbc5c1}</Project>
       <Name>QuickLZCompressor</Name>
