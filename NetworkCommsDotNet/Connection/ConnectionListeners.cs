@@ -25,6 +25,7 @@ using DPSBase;
 
 #if NET35 || NET4
 using InTheHand.Net;
+using InTheHand.Net.Bluetooth;
 #endif
 
 #if NETFX_CORE
@@ -376,8 +377,12 @@ namespace NetworkCommsDotNet
         {
             if (connectionType == ConnectionType.TCP || connectionType == ConnectionType.UDP)
                 return ExistingLocalListenEndPoints(connectionType, new IPEndPoint(IPAddress.Any, 0));
+#if NET35 || NET4
+            else if (connectionType == ConnectionType.Bluetooth)
+                return ExistingLocalListenEndPoints(connectionType, new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.Empty));
+#endif
             else
-                return ExistingLocalListenEndPoints(connectionType, null);
+                throw new ArgumentException("Method ExistingLocalListenEndPoints is not defined for the conneciton type: " + connectionType.ToString(), "connectionType");
         }
 
         /// <summary>
@@ -392,11 +397,15 @@ namespace NetworkCommsDotNet
         public static List<EndPoint> ExistingLocalListenEndPoints(ConnectionType connectionType, EndPoint localEndPointToMatch)
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined may not be used with this override. Please see others.", "connectionType");
+            if (localEndPointToMatch == null) throw new ArgumentNullException("localEndPointToMatch");
 
 #if NET4 || NET35
             if (connectionType == ConnectionType.Bluetooth)
             {
                 InTheHand.Net.BluetoothEndPoint btEndPointToMatch = localEndPointToMatch as InTheHand.Net.BluetoothEndPoint;
+
+                if (btEndPointToMatch == null)
+                    throw new ArgumentException("Local endpoint must be a BluetoothEndPoint for Bluetooth connection type", "localEndPointToMatch");
 
                 List<EndPoint> btResult = new List<EndPoint>();
                 lock (staticConnectionLocker)
@@ -405,16 +414,26 @@ namespace NetworkCommsDotNet
                     {
                         foreach (EndPoint endPoint in listenersDict[connectionType].Keys)
                         {
-                            var btEndPoint = endPoint as InTheHand.Net.BluetoothEndPoint;                            
-                            if (btEndPointToMatch != null && !btEndPointToMatch.HasPort)
+                            var btEndPoint = endPoint as InTheHand.Net.BluetoothEndPoint;
+                            if (btEndPointToMatch.Address == BluetoothAddress.None && btEndPointToMatch.Service == BluetoothService.Empty)
                             {
-                                //Match the IP Address
+                                btResult.Add(btEndPoint);
+                            }
+                            else if (btEndPointToMatch.Address != BluetoothAddress.None && btEndPointToMatch.Service == BluetoothService.Empty)
+                            {
+                                //Match the address
                                 if (btEndPoint.Address.Equals(btEndPointToMatch.Address) &&
                                     listenersDict[connectionType][btEndPoint].IsListening)
                                     btResult.Add(btEndPoint);
-                            }                            
-                            else if ((endPoint.Equals(localEndPointToMatch) || localEndPointToMatch == null) &&
-                                    listenersDict[connectionType][endPoint].IsListening)
+                            }
+                            else if (btEndPointToMatch.Address == BluetoothAddress.None && btEndPointToMatch.Service != BluetoothService.Empty)
+                            {
+                                //Match the service
+                                if (btEndPoint.Service.Equals(btEndPointToMatch.Service) &&
+                                    listenersDict[connectionType][btEndPoint].IsListening)
+                                    btResult.Add(btEndPoint);
+                            }
+                            else if (endPoint.Equals(localEndPointToMatch) && listenersDict[connectionType][endPoint].IsListening)
                             {
                                 btResult.Add(endPoint);
                                 break;
@@ -457,8 +476,7 @@ namespace NetworkCommsDotNet
                                 listenersDict[connectionType][ipEndPoint].IsListening)
                                 result.Add(ipEndPoint);
                         }
-                        else if ((endPoint.Equals(localEndPointToMatch) || localEndPointToMatch == null) &&
-                                listenersDict[connectionType][endPoint].IsListening)
+                        else if (endPoint.Equals(localEndPointToMatch) && listenersDict[connectionType][endPoint].IsListening)
                         {
                             result.Add(endPoint);
                             break;
