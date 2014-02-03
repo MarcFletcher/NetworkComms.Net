@@ -11,6 +11,7 @@
     <AssemblyName>MergedDllBuild</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ILMerge">
+      <HintPath>..\..\..\packages\ilmerge.2.13.0307\ILMerge.exe</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -44,7 +48,43 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{b0732168-5a31-45cb-bd21-f40824e21b7d}</Project>
+      <Name>DPSBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{220024a8-7abf-42a6-a476-0684c1e65110}</Project>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PeerDiscovery\PeerDiscovery.csproj">
+      <Project>{6b2adbd5-c35e-4e8e-9678-cceb10afb634}</Project>
+      <Name>PeerDiscovery</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
+      <Project>{d61ea64f-c690-4f1c-a39f-cadb5f469715}</Project>
+      <Name>QuickLZCompressor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
+      <Project>{e6c67475-9ee3-475e-bab7-4ab54a0a4d7d}</Project>
+      <Name>SevenZipLZMACompressor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
+      <Project>{775281eb-1028-4cb7-b2f0-a013ce6fa1ed}</Project>
+      <Name>SharpZipLibCompressor</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\networkcomms.net.snk">
+      <Link>networkcomms.net.snk</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="app.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>MergedDllBuild.exe</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
