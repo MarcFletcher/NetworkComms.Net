@@ -370,7 +370,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                                     udpRogueSenders.Add(applicationLayerProtocol, new Dictionary<IPEndPoint, UDPConnection>());
 
                                 IPAddress anyRemoteIP = AnyRemoteIPAddress(ipEndPoint.AddressFamily);
-                                udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), bestLocalEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                                udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint] = new UDPConnection(new ConnectionInfo(ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), bestLocalEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
                             }
 
                             connectionsToUse = new List<UDPConnection> { udpRogueSenders[applicationLayerProtocol][bestLocalEndPoint] };
@@ -421,7 +421,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                             {
                                 IPAddress anyRemoteIP = AnyRemoteIPAddress(currentLocalIPEndPoint.AddressFamily);
 
-                                udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint] = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), currentLocalIPEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
+                                udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint] = new UDPConnection(new ConnectionInfo(ConnectionType.UDP, new IPEndPoint(anyRemoteIP, 0), currentLocalIPEndPoint, applicationLayerProtocol), sendReceiveOptions, UDPConnection.DefaultUDPOptions, false);
                             }
 
                             connectionsToUse.Add(udpRogueSenders[applicationLayerProtocol][currentLocalIPEndPoint]);

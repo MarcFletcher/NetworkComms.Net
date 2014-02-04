@@ -27,6 +27,7 @@ using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.UDP;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace DebugTests
 {
@@ -52,12 +53,16 @@ namespace DebugTests
 
             if (serverMode)
             {
-                NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("Data", (header, connection, data) =>
+                NetworkComms.PacketHandlerCallBackDelegate<byte[]> callback = (header, connection, data) =>
                 {
                     Console.WriteLine("Received data (" + data.Length + ") from " + connection.ToString());
-                });
+                };
 
-                ConnectionListenerBase listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPOptions.None);
+                //NetworkComms.AppendGlobalIncomingPacketHandler("Data", callback);
+
+                ConnectionListenerBase listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+                listener.AppendIncomingPacketHandler("Data", callback);
+
                 Connection.StartListening(listener, new IPEndPoint(localIPAddress, 10000), true);
 
                 Console.WriteLine("\nListening for UDP messages on:");
@@ -78,7 +83,7 @@ namespace DebugTests
 
                 customOptions.UseNestedPacket = true;
 
-                Connection conn = UDPConnection.GetConnection(serverInfo, UDPOptions.None, customOptions);
+                Connection conn = TCPConnection.GetConnection(serverInfo, customOptions);
                 conn.SendObject("Data", sendArray);
 
                 Console.WriteLine("Sent data to server.");
@@ -86,8 +91,6 @@ namespace DebugTests
                 Console.WriteLine("\nClient complete. Press any key to quit.");
                 Console.ReadKey(true);
             }
-
-            NetworkComms.Shutdown();
         }
     }
 }

@@ -107,6 +107,11 @@ namespace NetworkCommsDotNet
         public bool ServerSide { get; internal set; }
 
         /// <summary>
+        /// If this connection is <see cref="ServerSide"/> references the listener that was used.
+        /// </summary>
+        public ConnectionListenerBase ConnectionListener { get; internal set; }
+
+        /// <summary>
         /// The DateTime corresponding to the creation time of this connection object
         /// </summary>
         public DateTime ConnectionEstablishedTime { get; private set; }
@@ -472,45 +477,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Create a connectionInfo object for a new connection.
         /// </summary>
-        /// <param name="serverSide">True if this connection is being created serverSide</param>
-        /// <param name="connectionType">The type of connection</param>
-        /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
-        /// <param name="applicationLayerProtocol">If enabled NetworkComms.Net uses a custom 
-        /// application layer protocol to provide useful features such as inline serialisation, 
-        /// transparent packet transmission, remote peer handshake and information etc. We strongly 
-        /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, EndPoint remoteEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
-        {
-            if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
-                throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
-
-            this.ServerSide = serverSide;
-            this.ConnectionType = connectionType;
-            this.RemoteEndPoint = remoteEndPoint;
-
-            switch (this.RemoteEndPoint.AddressFamily)
-            {
-                case AddressFamily.InterNetwork:
-                    this.LocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                    break;
-                case AddressFamily.InterNetworkV6:
-                    this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-                    break;
-#if NET4 || NET35
-                case (AddressFamily)32:
-                    this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
-                    break;
-#endif
-            }
-
-            this.ConnectionCreationTime = DateTime.Now;
-            this.ApplicationLayerProtocol = applicationLayerProtocol;
-        }
-
-        /// <summary>
-        /// Create a connectionInfo object for a new connection.
-        /// </summary>
-        /// <param name="serverSide">True if this connection is being created serverSide</param>
         /// <param name="connectionType">The type of connection</param>
         /// <param name="remoteEndPoint">The remoteEndPoint of this connection</param>
         /// <param name="localEndPoint">The localEndpoint of this connection</param>
@@ -518,15 +484,22 @@ namespace NetworkCommsDotNet
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        internal ConnectionInfo(bool serverSide, ConnectionType connectionType, EndPoint remoteEndPoint, EndPoint localEndPoint, ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled)
+        /// <param name="connectionListener">The listener associated with this connection if server side</param>
+        internal ConnectionInfo(ConnectionType connectionType, EndPoint remoteEndPoint, EndPoint localEndPoint, 
+            ApplicationLayerProtocolStatus applicationLayerProtocol = ApplicationLayerProtocolStatus.Enabled, 
+            ConnectionListenerBase connectionListener = null)
         {
             if (localEndPoint == null)
                 throw new ArgumentNullException("localEndPoint", "localEndPoint may not be null");
 
+            if (remoteEndPoint == null)
+                throw new ArgumentNullException("remoteEndPoint", "remoteEndPoint may not be null");
+
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Undefined)
                 throw new ArgumentException("A value of ApplicationLayerProtocolStatus.Undefined is invalid when creating instance of ConnectionInfo.", "applicationLayerProtocol");
 
-            this.ServerSide = serverSide;
+            this.ServerSide = (connectionListener!=null);
+            this.ConnectionListener = connectionListener;
             this.ConnectionType = connectionType;
             this.RemoteEndPoint = remoteEndPoint;
             this.LocalEndPoint = localEndPoint;

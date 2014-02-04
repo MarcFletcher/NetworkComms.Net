@@ -104,6 +104,10 @@ namespace NetworkCommsDotNet.Connections
             else
                 ConnectionDefaultSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
 
+            //Add any listener specific packet handlers if required
+            if (connectionInfo.ConnectionListener != null)
+                connectionInfo.ConnectionListener.AddListenerPacketHandlersToConnection(this);
+
             if (NetworkComms.commsShutdown) throw new ConnectionSetupException("Attempting to create new connection after global NetworkComms.Net shutdown has been initiated.");
 
             if (ConnectionInfo.ConnectionType == ConnectionType.Undefined || ConnectionInfo.RemoteEndPoint == null)

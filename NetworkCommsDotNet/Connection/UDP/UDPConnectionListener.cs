@@ -76,7 +76,7 @@ namespace NetworkCommsDotNet.Connections.UDP
 
             try
             {
-                UDPConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), desiredLocalListenIPEndPoint, ApplicationLayerProtocol), SendReceiveOptions, UDPOptions, true);
+                UDPConnection = new UDPConnection(new ConnectionInfo(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), desiredLocalListenIPEndPoint, ApplicationLayerProtocol, this), ListenerDefaultSendReceiveOptions, UDPOptions, true);
             }
             catch (SocketException)
             {
@@ -84,7 +84,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                 {
                     try
                     {
-                        UDPConnection = new UDPConnection(new ConnectionInfo(true, ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(desiredLocalListenIPEndPoint.Address, 0), ApplicationLayerProtocol), SendReceiveOptions, UDPOptions, true);
+                        UDPConnection = new UDPConnection(new ConnectionInfo(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(desiredLocalListenIPEndPoint.Address, 0), ApplicationLayerProtocol, this), ListenerDefaultSendReceiveOptions, UDPOptions, true);
                     }
                     catch (SocketException)
                     {

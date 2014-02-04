@@ -220,6 +220,17 @@ namespace NetworkCommsDotNet.Connections
         }
 
         /// <summary>
+        /// Append a connection specific packet handler using the connection default SendReceiveOptions
+        /// </summary>
+        /// <typeparam name="incomingObjectType">The type of incoming object</typeparam>
+        /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
+        /// <param name="packetHandlerDelgatePointer">The delegate to be executed when a packet of packetTypeStr is received</param>
+        public void AppendIncomingPacketHandler<incomingObjectType>(string packetTypeStr, NetworkComms.PacketHandlerCallBackDelegate<incomingObjectType> packetHandlerDelgatePointer)
+        {
+            AppendIncomingPacketHandler<incomingObjectType>(packetTypeStr, packetHandlerDelgatePointer, ConnectionDefaultSendReceiveOptions);
+        }
+
+        /// <summary>
         /// Append a connection specific packet handler
         /// </summary>
         /// <typeparam name="incomingObjectType">The type of incoming object</typeparam>
@@ -282,6 +293,66 @@ namespace NetworkCommsDotNet.Connections
         }
 
         /// <summary>
+        /// Append a connection specific packet handler which has already been wrapped by IPacketTypeHandlerDelegateWrapper
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type for which this handler will be executed</param>
+        /// <param name="packetHandlerDelgateWrapper">The IPacketTypeHandlerDelegateWrapper to be executed when a packet of packetTypeStr is received</param>
+        /// <param name="options">The <see cref="SendReceiveOptions"/> to be used for the provided packet type</param>
+        internal void AppendIncomingPacketHandler(string packetTypeStr, IPacketTypeHandlerDelegateWrapper packetHandlerDelgateWrapper, SendReceiveOptions options)
+        {
+            if (packetTypeStr == null) throw new ArgumentNullException("packetTypeStr", "Provided packetType string cannot be null.");
+            if (packetHandlerDelgateWrapper == null) throw new ArgumentNullException("packetHandlerDelgateWrapper", "Provided packetHandlerDelgateWrapper cannot be null.");
+            if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot be null.");
+
+            //If we are adding a handler for an unmanaged packet type the data serializer must be NullSerializer
+            //Checks for unmanaged packet types
+            if (packetTypeStr == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged))
+            {
+                if (options.DataSerializer != DPSManager.GetDataSerializer<NullSerializer>())
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options serializer was not NullSerializer.");
+
+                if (options.DataProcessors.Count > 0)
+                    throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
+            }
+
+            lock (delegateLocker)
+            {
+                if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
+                {
+                    //Make sure if we already have an existing entry that it matches with the provided
+                    if (!incomingPacketUnwrappers[packetTypeStr].Options.OptionsCompatible(options))
+                        throw new PacketHandlerException("The provided SendReceiveOptions are not compatible with existing SendReceiveOptions already specified for this packetTypeStr.");
+                }
+                else
+                    incomingPacketUnwrappers.Add(packetTypeStr, new PacketTypeUnwrapper(packetTypeStr, options));
+
+                //Ad the handler to the list
+                if (incomingPacketHandlers.ContainsKey(packetTypeStr))
+                {
+                    //Make sure we avoid duplicates
+                    bool delegateAlreadyExists = false;
+                    foreach (var handler in incomingPacketHandlers[packetTypeStr])
+                    {
+                        if (handler == packetHandlerDelgateWrapper)
+                        {
+                            delegateAlreadyExists = true;
+                            break;
+                        }
+                    }
+
+                    if (delegateAlreadyExists)
+                        throw new PacketHandlerException("This specific packet handler delegate already exists for the provided packetTypeStr.");
+
+                    incomingPacketHandlers[packetTypeStr].Add(packetHandlerDelgateWrapper);
+                }
+                else
+                    incomingPacketHandlers.Add(packetTypeStr, new List<IPacketTypeHandlerDelegateWrapper>() { packetHandlerDelgateWrapper });
+
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Added connection specific incoming packetHandler for '" + packetTypeStr + "' packetType with " + ConnectionInfo);
+            }
+        }
+
+        /// <summary>
         /// Append a connection specific unmanaged packet handler
         /// </summary>
         /// <param name="packetHandlerDelgatePointer">The delegate to be executed when an unmanaged packet is received</param>
@@ -302,7 +373,7 @@ namespace NetworkCommsDotNet.Connections
         }
 
         /// <summary>
-        /// Returns true if a connection specific unmanaged packet handler exists , on this connection.
+        /// Returns true if a connection specific unmanaged packet handler exists, on this connection.
         /// </summary>
         /// <returns>True if an unmanaged packet handler exists</returns>
         public bool IncomingUnmanagedPacketHandlerExists()

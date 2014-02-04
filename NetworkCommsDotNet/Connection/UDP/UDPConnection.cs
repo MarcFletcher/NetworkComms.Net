@@ -385,7 +385,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                     IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.DisplayName.ToString()), int.Parse(args.RemotePort));
                     IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.DisplayName.ToString()), int.Parse(sender.Information.LocalPort));
 
-                    ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol);
+                    ConnectionInfo desiredConnection = new ConnectionInfo(ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol, ConnectionInfo.ConnectionListener);
                     try
                     {
                         //Look for an existing connection, if one does not exist we will create it
@@ -407,7 +407,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                 if (connection != null && !possibleHandshakeUDPDatagram.DatagramHandled)
                 {
                     //We pass the data off to the specific connection
-                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                    //Lock on the packetbuilder locker as we may receive UDP packets in parallel from this host
                     lock (connection.packetBuilder.Locker)
                     {
                         connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
@@ -437,7 +437,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (SocketException)
             {
-                //Recieve may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
+                //Receive may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
                 //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
                 CloseConnection(true, 28);
             }
@@ -482,7 +482,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                     connection = this;
                 else
                 {
-                    ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol);
+                    ConnectionInfo desiredConnection = new ConnectionInfo(ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol, ConnectionInfo.ConnectionListener);
                     try
                     {
                         //Look for an existing connection, if one does not exist we will create it
@@ -504,7 +504,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                 if (connection != null && !possibleHandshakeUDPDatagram.DatagramHandled)
                 {
                     //We pass the data off to the specific connection
-                    //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                    //Lock on the packetbuilder locker as we may receive UDP packets in parallel from this host
                     lock (connection.packetBuilder.Locker)
                     {
                         connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
@@ -536,7 +536,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (SocketException)
             {
-                //Recieve may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
+                //Receive may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
                 //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
                 CloseConnection(true, 28);
             }
@@ -584,7 +584,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                         connection = this;
                     else
                     {
-                        ConnectionInfo desiredConnection = new ConnectionInfo(true, ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol);
+                        ConnectionInfo desiredConnection = new ConnectionInfo(ConnectionType.UDP, remoteEndPoint, udpClient.LocalIPEndPoint, ConnectionInfo.ApplicationLayerProtocol, ConnectionInfo.ConnectionListener);
                         try
                         {
                             //Look for an existing connection, if one does not exist we will create it
@@ -606,7 +606,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                     if (connection != null && !possibleHandshakeUDPDatagram.DatagramHandled)
                     {
                         //We pass the data off to the specific connection
-                        //Lock on the packetbuilder locker as we may recieve udp packets in parallel from this host
+                        //Lock on the packetbuilder locker as we may receive UDP packets in parallel from this host
                         lock (connection.packetBuilder.Locker)
                         {
                             connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
@@ -637,7 +637,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (SocketException)
             {
-                //Recieve may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
+                //Receive may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
                 //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
                 CloseConnection(true, 23);
             }
