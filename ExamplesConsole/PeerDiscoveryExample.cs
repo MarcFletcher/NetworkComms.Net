@@ -99,11 +99,13 @@ namespace Examples.ExamplesConsole
 
                         //Discover peers asynchronously
                         //This method allows peers 2 seconds to respond after the request has been sent
-                        List<EndPoint> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                        Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                         //Write out a list of discovered peers
-                        foreach (IPEndPoint ipEndPoint in discoveredPeerEndPoints)
-                            Console.WriteLine("  ... Discovered server at {0}", ipEndPoint.ToString());
+                        foreach (var idPair in discoveredPeerEndPoints)
+                        {
+                            PeerDiscovered(idPair.Key, idPair.Value);
+                        }
                         #endregion
                     }
                     else if (selectedOption == 3)
@@ -123,24 +125,28 @@ namespace Examples.ExamplesConsole
         /// Execute this method when a peer is discovered asynchronously 
         /// </summary>
         /// <param name="discoveredPeerEndPoints"></param>
-        private static void PeerDiscovered(Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
+        private static void PeerDiscovered(Guid peerId, Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {
-            var textColor = Console.ForegroundColor;
-
             lock (locker)
             {
+                var textColor = Console.ForegroundColor;
+
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine("\n**************************************************************************************");
+                Console.WriteLine("Endpoints discoverd for peer: {0}", peerId);
+                Console.WriteLine("**************************************************************************************");
+                Console.ForegroundColor = textColor;
+
                 foreach (var pair in discoveredPeerEndPoints)
                 {
                     Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.WriteLine("\n**********************************************************");
-                    Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
-                    Console.WriteLine("**********************************************************");
+                    Console.WriteLine("\tEndpoints discoverd of type {0}:", pair.Key);
                     Console.ForegroundColor = textColor;
 
                     foreach (var endPoint in pair.Value)
-                        Console.WriteLine("\t->\t{0}", endPoint.ToString());
+                        Console.WriteLine("\t\t->\t{0}", endPoint.ToString());
                 }
-            }
+            }                        
 
         }
     }
