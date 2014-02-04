@@ -117,25 +117,31 @@ namespace Examples.ExamplesConsole
             NetworkComms.Shutdown();
         }
 
+        static object locker = new object();
+
         /// <summary>
         /// Execute this method when a peer is discovered asynchronously 
         /// </summary>
-        /// <param name="discoveredPeerEndPoints"
+        /// <param name="discoveredPeerEndPoints"></param>
         private static void PeerDiscovered(Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {
             var textColor = Console.ForegroundColor;
 
-            foreach (var pair in discoveredPeerEndPoints)
+            lock (locker)
             {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.WriteLine("\n**********************************************************");
-                Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
-                Console.WriteLine("**********************************************************");
-                Console.ForegroundColor = textColor;
+                foreach (var pair in discoveredPeerEndPoints)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    Console.WriteLine("\n**********************************************************");
+                    Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
+                    Console.WriteLine("**********************************************************");
+                    Console.ForegroundColor = textColor;
 
-                foreach (var endPoint in pair.Value)
-                    Console.WriteLine("\t->\t{1}", endPoint.ToString());
+                    foreach (var endPoint in pair.Value)
+                        Console.WriteLine("\t->\t{0}", endPoint.ToString());
+                }
             }
+
         }
     }
 }

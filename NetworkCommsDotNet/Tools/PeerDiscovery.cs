@@ -201,8 +201,9 @@ namespace NetworkCommsDotNet.Tools
         /// <summary>
         /// The event delegate which can optionally be used when a peer is successfully discovered.
         /// </summary>
-        /// <param name="discoveredListenerEndPoints"
-        public delegate void PeerDiscoveredHandler(Dictionary<ConnectionType, List<EndPoint>> discoveredListenerEndPoints);
+        /// <param name="peerIdentifier"></param>
+        /// <param name="discoveredListenerEndPoints"></param>
+        public delegate void PeerDiscoveredHandler(Guid peerIdentifier, Dictionary<ConnectionType, List<EndPoint>> discoveredListenerEndPoints);
 
         /// <summary>
         /// Triggered when a peer is discovered
@@ -234,7 +235,7 @@ namespace NetworkCommsDotNet.Tools
         /// <summary>
         /// A dictionary which records discovered peers
         /// </summary>
-        private static Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>> _discoveredPeers = new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>();
+        private static Dictionary<Guid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>> _discoveredPeers = new Dictionary<Guid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>>();
         #endregion
 
         static PeerDiscovery()
@@ -461,7 +462,7 @@ namespace NetworkCommsDotNet.Tools
         /// </summary>
         /// <param name="discoveryMethod">The connection type to use for discovering peers.</param>
         /// <returns></returns>
-        public static List<EndPoint> DiscoverPeers(DiscoveryMethod discoveryMethod)
+        public static Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeers(DiscoveryMethod discoveryMethod)
         {
             return DiscoverPeers(discoveryMethod, DefaultDiscoverTimeMS);
         }
@@ -473,17 +474,17 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="discoveryMethod">The connection type to use for discovering peers.</param>
         /// <param name="discoverTimeMS">The wait time, after all requests have been made, in MS before all peers discovered are returned .</param>
         /// <returns></returns>
-        public static List<EndPoint> DiscoverPeers(DiscoveryMethod discoveryMethod, int discoverTimeMS)
+        public static Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeers(DiscoveryMethod discoveryMethod, int discoverTimeMS)
         {
             if (!IsDiscoverable(discoveryMethod))
                 throw new InvalidOperationException("Please ensure this peer is discoverable before attempting to discover other peers.");
 
-            List<EndPoint> result;
+            Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> result;
             lock (_discoverSyncRoot)
             {
                 //Clear the discovered peers cache
-                lock(_syncRoot)
-                    _discoveredPeers = new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>();
+                lock (_syncRoot)
+                    _discoveredPeers = new Dictionary<Guid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>>();
 
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
                     result = DiscoverPeersUDP(discoverTimeMS);
@@ -521,9 +522,9 @@ namespace NetworkCommsDotNet.Tools
                 }, null);
         }
 
-        private static List<EndPoint> DiscoverPeersUDP(int discoverTimeMS)
+        private static Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeersUDP(int discoverTimeMS)
         {
-            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
+            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[0], NetworkComms.DefaultSendReceiveOptions))
             {
                 for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
                     UDPConnection.SendObject<byte[]>(sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
@@ -531,18 +532,30 @@ namespace NetworkCommsDotNet.Tools
 
             Thread.Sleep(discoverTimeMS);
 
-            List<EndPoint> result = new List<EndPoint>();
+            Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> result = new Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>>();
             lock (_syncRoot)
             {
-                foreach (var pair in _discoveredPeers)
-                    foreach (IPEndPoint endPoint in pair.Value.Keys)
-                        result.Add(endPoint);
+                foreach (var idPair in _discoveredPeers)
+                {
+                    if(!result.ContainsKey(idPair.Key))
+                        result.Add(idPair.Key, new Dictionary<ConnectionType,List<EndPoint>>());
+
+                    foreach(var typePair in idPair.Value)
+                    {
+                        if(!result[idPair.Key].ContainsKey(typePair.Key))
+                            result[idPair.Key].Add(typePair.Key, new List<EndPoint>());
+
+                        foreach(var endPoint in typePair.Value)
+                            if(!result[idPair.Key][typePair.Key].Contains(endPoint.Key))
+                                result[idPair.Key][typePair.Key].Add(endPoint.Key);
+                    }
+                }
             }
 
             return result;
         }
 
-        private static List<EndPoint> DiscoverPeersTCP(int discoverTimeMS)
+        private static Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeersTCP(int discoverTimeMS)
         {
             //We have to try and manually connect to all peers and see if they respond
 
@@ -557,41 +570,57 @@ namespace NetworkCommsDotNet.Tools
 
 #if NET35 || NET4
 
-        private static List<EndPoint> DiscoverPeersBT(int discoverTimeout)
+        private static Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeersBT(int discoverTimeout)
         {
             object locker = new object();
-            
+            AutoResetEvent btDiscoverFinished = new AutoResetEvent(false);
+
             EventHandler<DiscoverDevicesEventArgs> callBack = (sender, e) =>
                 {
-                    using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
+                    List<EndPoint> endPointsToSendTo = new List<EndPoint>();
+
+                    foreach (var dev in e.Devices)
+                        foreach (var serviceRecord in dev.GetServiceRecords(BluetoothService.RFCommProtocol))
+                            if (serviceRecord.AttributeIds.Contains(BluetoothConnectionListener.NetworkCommsBTAttributeId.NetworkCommsEndPoint))
+                                endPointsToSendTo.Add(new BluetoothEndPoint(dev.DeviceAddress, serviceRecord.GetAttributeById(UniversalAttributeId.ServiceClassIdList).Value.GetValueAsElementList()[0].GetValueAsUuid()));
+                    
+                    using (Packet sendPacket = new Packet(discoveryPacketType, new byte[0], NetworkComms.DefaultSendReceiveOptions))
                     {
-                        foreach (var dev in e.Devices)
+                        foreach (var remoteEndPoint in endPointsToSendTo)
                         {
-                            foreach (var serviceRecord in dev.GetServiceRecords(BluetoothService.RFCommProtocol))
-                            {
-                                if (serviceRecord.AttributeIds.Contains(BluetoothConnectionListener.NetworkCommsBTAttributeId.NetworkCommsEndPoint))
-                                {
-                                    var remoteEndPoint = new BluetoothEndPoint(dev.DeviceAddress, serviceRecord.GetAttributeById(UniversalAttributeId.ServiceClassIdList).Value.GetValueAsElementList()[0].GetValueAsUuid());
-                                    var connection = BluetoothConnection.GetConnection(new ConnectionInfo(remoteEndPoint));
-                                    connection.SendPacket<byte[]>(sendPacket);
-                                }
-                            }
+                            var connection = BluetoothConnection.GetConnection(new ConnectionInfo(remoteEndPoint));
+                            connection.SendPacket<byte[]>(sendPacket);
                         }
                     }
+
+                    btDiscoverFinished.Set();
                 };
 
             BluetoothComponent com = new InTheHand.Net.Bluetooth.BluetoothComponent();
             com.DiscoverDevicesComplete += callBack;            
             com.DiscoverDevicesAsync(255, false, false, false, true, com);
 
+            btDiscoverFinished.WaitOne();
             Thread.Sleep(discoverTimeout);
             
-            List<EndPoint> result = new List<EndPoint>();
+            Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> result = new Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>>();
             lock (_syncRoot)
             {
-                foreach (var pair in _discoveredPeers)
-                    foreach (EndPoint endPoint in pair.Value.Keys)
-                        result.Add(endPoint);
+                foreach (var idPair in _discoveredPeers)
+                {
+                    if(!result.ContainsKey(idPair.Key))
+                        result.Add(idPair.Key, new Dictionary<ConnectionType,List<EndPoint>>());
+
+                    foreach(var typePair in idPair.Value)
+                    {
+                        if(!result[idPair.Key].ContainsKey(typePair.Key))
+                            result[idPair.Key].Add(typePair.Key, new List<EndPoint>());
+
+                        foreach(var endPoint in typePair.Value)
+                            if(!result[idPair.Key][typePair.Key].Contains(endPoint.Key))
+                                result[idPair.Key][typePair.Key].Add(endPoint.Key);
+                    }
+                }
             }
 
             return result;
@@ -607,9 +636,7 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="connection"></param>
         /// <param name="data"></param>
         private static void PeerDiscoveryHandler(PacketHeader header, Connection connection, byte[] data)
-        {
-            if (data.Length < 4) throw new Exception("Idiot check");
-            
+        {            
             DiscoveryMethod discoveryMethod = DiscoveryMethod.UDPBroadcast;
             if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 discoveryMethod = DiscoveryMethod.TCPPortScan;
@@ -623,17 +650,17 @@ namespace NetworkCommsDotNet.Tools
             {
                 //If the only thing that was sent was an empty list (first int/4bytes is zero) then this is a peer discovery request. 
                 //Send back our listenner info if we have any discoverable listeners
-                if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0 && IsDiscoverable(discoveryMethod))
+                if (data.Length == 0 && IsDiscoverable(discoveryMethod))
                 {                    
                     byte[] responseData = SerializeLocalListennerList();
-
-                    if (responseData.Length != 4)
-                        connection.SendObject(discoveryPacketType, responseData);
+                    connection.SendObject(discoveryPacketType, responseData);
                 }
                 else
                 {
+                    Guid peerIdentifier;
+
                     //If this is the case then we have found listenners on a peer and we need to add them to our known peers
-                    List<PeerListennerEndPoint> remoteListenners = DeserializeRemoteListennerList(data);
+                    List<PeerListennerEndPoint> remoteListenners = DeserializeRemoteListennerList(data, out peerIdentifier);
 
                     Dictionary<ConnectionType, List<EndPoint>> discoveredPeerListeners = new Dictionary<ConnectionType, List<EndPoint>>();
                     foreach (PeerListennerEndPoint peer in remoteListenners)
@@ -646,17 +673,20 @@ namespace NetworkCommsDotNet.Tools
                     
                     //Trigger the discovery event
                     if (OnPeerDiscovered != null)
-                        OnPeerDiscovered(discoveredPeerListeners);
+                        OnPeerDiscovered(peerIdentifier, discoveredPeerListeners);
 
                     foreach (PeerListennerEndPoint peer in remoteListenners)
                     {
                         //This is a peer discovery reply, we need to add this to the tracking dictionary
                         lock (_syncRoot)
                         {
-                            if (_discoveredPeers.ContainsKey(peer.ConnectionType))
-                                _discoveredPeers[peer.ConnectionType][peer.EndPoint] = DateTime.Now;
+                            if (!_discoveredPeers.ContainsKey(peerIdentifier))
+                                _discoveredPeers.Add(peerIdentifier, new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>());
+
+                            if (_discoveredPeers[peerIdentifier].ContainsKey(peer.ConnectionType))
+                                _discoveredPeers[peerIdentifier][peer.ConnectionType][peer.EndPoint] = DateTime.Now;
                             else
-                                _discoveredPeers.Add(peer.ConnectionType, new Dictionary<EndPoint, DateTime>() { { peer.EndPoint, DateTime.Now } });
+                                _discoveredPeers[peerIdentifier].Add(peer.ConnectionType, new Dictionary<EndPoint, DateTime>() { { peer.EndPoint, DateTime.Now } });
                         }
                     }
                 }
@@ -670,11 +700,13 @@ namespace NetworkCommsDotNet.Tools
         private static byte[] SerializeLocalListennerList()
         {
             List<ConnectionListenerBase> allListeners = Connection.AllExistingLocalListeners();
-
+            
             using (MemoryStream ms = new MemoryStream())
             {
+                ms.Write(NetworkComms.NetworkIdentifier.Guid.ToByteArray(), 0, 16);
+
                 int discoverableCount = 0;
-                ms.Seek(sizeof(int), SeekOrigin.Begin);
+                ms.Seek(sizeof(int) + 16, SeekOrigin.Begin);
 
                 foreach (ConnectionListenerBase listener in allListeners)
                 {
@@ -689,7 +721,7 @@ namespace NetworkCommsDotNet.Tools
                     }
                 }
 
-                ms.Seek(0, 0);
+                ms.Seek(16, 0);
                 ms.Write(BitConverter.GetBytes(discoverableCount), 0, sizeof(int));
 
                 ms.Flush();
@@ -698,11 +730,15 @@ namespace NetworkCommsDotNet.Tools
            }            
         }
 
-        private static List<PeerListennerEndPoint> DeserializeRemoteListennerList(byte[] data)
+        private static List<PeerListennerEndPoint> DeserializeRemoteListennerList(byte[] data, out Guid networkIdentifier)
         {
             List<PeerListennerEndPoint> result = new List<PeerListennerEndPoint>();
-
+            
             int offset = 0;
+
+            byte[] idData = new byte[16];
+            Buffer.BlockCopy(data, 0, idData, 0, 16); offset += 16;
+            networkIdentifier = new Guid(idData);
             int numElements = BitConverter.ToInt32(data, offset); offset += sizeof(int);
 
             for (int i = 0; i < numElements; i++)

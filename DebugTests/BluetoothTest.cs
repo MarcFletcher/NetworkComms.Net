@@ -84,7 +84,7 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    var endpoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.BluetoothSDP, 60000);
+                    var endpoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.BluetoothSDP, 1000);
 
                     ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0xE0B9A5FB552BL), ServiceGUID));
 

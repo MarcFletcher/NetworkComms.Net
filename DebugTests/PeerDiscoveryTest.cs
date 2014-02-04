@@ -58,25 +58,25 @@ namespace DebugTests
                 Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 12345), true);
 
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**********************************************************");
+                Console.WriteLine("\n**************************************************************************************");
                 Console.WriteLine("Listening for TCP messages on:");
-                Console.WriteLine("**********************************************************");
+                Console.WriteLine("**************************************************************************************");
                 Console.ForegroundColor = textColor;
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("**********************************************************");
+                Console.WriteLine("**************************************************************************************");
                 Console.WriteLine("These listenners are also discoverable");
-                Console.WriteLine("**********************************************************");
+                Console.WriteLine("**************************************************************************************");
                 Console.ForegroundColor = textColor;
 
                 PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**********************************************************");
+                Console.WriteLine("\n**************************************************************************************");
                 Console.WriteLine("Now discoverable.");
                 Console.WriteLine("Listening for UDP messages on:");
-                Console.WriteLine("**********************************************************");
+                Console.WriteLine("**************************************************************************************");
                 Console.ForegroundColor = textColor;
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)) 
                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
@@ -87,25 +87,38 @@ namespace DebugTests
             else
             {
                 PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine("\n**************************************************************************************");
                 Console.WriteLine("Now discoverable.");
                 Console.WriteLine("\nListening for UDP messages on:");
+                Console.WriteLine("**************************************************************************************");
+                Console.ForegroundColor = textColor;
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-                PeerDiscovery.OnPeerDiscovered += (endpoints) =>
+                object locker = new object();
+
+                PeerDiscovery.OnPeerDiscovered += (id, endpoints) =>
                     {
-                        foreach (var pair in endpoints)
+                        lock (locker)
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkRed;
-                            Console.WriteLine("\n**********************************************************");
-                            Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
-                            Console.WriteLine("**********************************************************");
+                            Console.ForegroundColor = ConsoleColor.DarkGreen;
+                            Console.WriteLine("\n**************************************************************************************");
+                            Console.WriteLine("Endpoints discoverd for peer: {0}", id);
+                            Console.WriteLine("**************************************************************************************");
                             Console.ForegroundColor = textColor;
 
-                            foreach (var endPoint in pair.Value)
-                                Console.WriteLine("\t->\t{1}", endPoint.ToString());
-                        }
-                        
+                            foreach (var pair in endpoints)
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkRed;
+                                Console.WriteLine("\tEndpoints discoverd of type {0}:", pair.Key);
+                                Console.ForegroundColor = textColor;
+
+                                foreach (var endPoint in pair.Value)
+                                    Console.WriteLine("\t\t->\t{0}", endPoint.ToString());
+                            }
+                        }                        
                     };
 
                 PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
