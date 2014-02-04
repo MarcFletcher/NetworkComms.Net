@@ -53,7 +53,9 @@ namespace DebugTests
             ConsoleColor textColor = Console.ForegroundColor;
         
             if (serverMode)
-            {   
+            {
+                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+
                 //Add a discoverable listenner 
                 Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 12345), true);
 
@@ -69,9 +71,7 @@ namespace DebugTests
                 Console.WriteLine("These listenners are also discoverable");
                 Console.WriteLine("**************************************************************************************");
                 Console.ForegroundColor = textColor;
-
-                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
-
+                
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
                 Console.WriteLine("\n**************************************************************************************");
                 Console.WriteLine("Now discoverable.");

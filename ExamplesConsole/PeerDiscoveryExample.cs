@@ -124,6 +124,7 @@ namespace Examples.ExamplesConsole
         /// <summary>
         /// Execute this method when a peer is discovered asynchronously 
         /// </summary>
+        /// <param name="peerId"></param>
         /// <param name="discoveredPeerEndPoints"></param>
         private static void PeerDiscovered(Guid peerId, Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {

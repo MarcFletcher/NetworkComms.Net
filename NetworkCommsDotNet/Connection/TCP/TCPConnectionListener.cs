@@ -66,9 +66,10 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol, bool isDiscoverable = false)
-            :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, bool allowDiscoverable = false)
+            :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
         {
 #if !WINDOWS_PHONE && !NETFX_CORE
             SSLOptions = new SSLOptions();
@@ -85,9 +86,10 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="sslOptions">The SSLOptions to use with this listener</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions, bool isDiscoverable = false)
-            : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions, bool allowDiscoverable = false)
+            : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
         {
             this.SSLOptions = sslOptions;
         }
@@ -147,9 +149,6 @@ namespace NetworkCommsDotNet.Connections.TCP
 #else
             this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
 #endif
-            if (IsDiscoverable)
-                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
-
             this.IsListening = true;
         }
 

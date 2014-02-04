@@ -37,7 +37,7 @@ namespace NetworkCommsDotNet.Connections
 {
     /// <summary>
     /// IP Connection base class for NetworkComms.Net. This contains the functionality and tools shared by any connections
-    /// that use IP related endPoints such as <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
+    /// that use IP related endPoints such as <see cref="NetworkCommsDotNet.Connections.TCP.TCPConnection"/> and <see cref="NetworkCommsDotNet.Connections.UDP.UDPConnection"/>.
     /// </summary>
     public abstract class IPConnection : Connection
     {

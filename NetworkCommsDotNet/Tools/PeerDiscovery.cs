@@ -47,10 +47,22 @@ namespace NetworkCommsDotNet.Tools
     /// </summary>
     public static class PeerDiscovery
     {
+        /// <summary>
+        /// Describes which peer discovery technique should be used
+        /// </summary>
         public enum DiscoveryMethod
         {
+            /// <summary>
+            /// Peer discovery by UDP broadcast. Reconmended for IP networks
+            /// </summary>
             UDPBroadcast,
+            /// <summary>
+            /// Peer discovery by performing a port scan. Can impact performance on the local subnet and so should be used only where UDP broadcast is unsuccessful
+            /// </summary>
             TCPPortScan,
+            /// <summary>
+            /// Peer discovery using the bluetooth SDP protocol.
+            /// </summary>
             BluetoothSDP,
         }
 
@@ -170,7 +182,7 @@ namespace NetworkCommsDotNet.Tools
         /// The maximum port number that will be used when making this peer discoverable. Default 10099
         /// </summary>
         public static int MaxTargetLocalIPPort { get; set; }
-
+        
         /// <summary>
         /// Backing field for DefaultIPDiscoveryMethod
         /// </summary>
@@ -308,10 +320,17 @@ namespace NetworkCommsDotNet.Tools
 #endif
                 else
                     throw new NotImplementedException("This feature has not been implemented for the provided connection type.");
-
+                
                 //Add the packet handlers if required
-                if (!NetworkComms.GlobalIncomingPacketHandlerExists<byte[]>(discoveryPacketType, PeerDiscoveryHandler))
-                    NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                foreach (var byMethodPair in _discoveryListeners)
+                {
+                    foreach(ConnectionListenerBase listener in byMethodPair.Value)
+                    {
+                        if (!listener.IncomingPacketHandlerExists(discoveryPacketType, new NetworkComms.PacketHandlerCallBackDelegate<byte[]>(PeerDiscoveryHandler)))
+                            listener.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                    }
+                }
+                    
             }
         }
 
@@ -328,14 +347,47 @@ namespace NetworkCommsDotNet.Tools
                 lock (_syncRoot)
                 {
                     if (_discoveryListeners.ContainsKey(discoveryMethod))
-                        throw new ArgumentException("Peer is already discoverable for the provided connectionType", "connectionType");
+                        return;
 
-                    //Based on the connection type select all local endPoints and then enable discoverable
-                    _discoveryListeners.Add(discoveryMethod, Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, localDiscoveryEndPoint));
+                    if (!HostInfo.IP.FilteredLocalAddresses().Contains((localDiscoveryEndPoint as IPEndPoint).Address))
+                        throw new ArgumentException("Provided endpoint must use a valid local address", "localDiscoveryEndPoint");
+
+                    if ((localDiscoveryEndPoint as IPEndPoint).Port == 0)
+                    {
+                        IPAddress address = (localDiscoveryEndPoint as IPEndPoint).Address;
+
+                        //Keep trying to listen on an ever increasing port number
+                        for (int tryPort = MinTargetLocalIPPort; tryPort <= MaxTargetLocalIPPort; tryPort++)
+                        {
+                            try
+                            {
+                                List<ConnectionListenerBase> newlisteners = Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, new IPEndPoint(address, tryPort));
+
+                                //Once we are successfully listening we can break
+                                _discoveryListeners.Add(discoveryMethod, newlisteners);
+                                break;
+                            }
+                            catch (Exception) { }
+
+                            if (tryPort == MaxTargetLocalIPPort)
+                                throw new CommsSetupShutdownException("Failed to find local available listen port on address " + address.ToString() + " while trying to make this peer discoverable.");
+                        }
+                    }
+                    else
+                    {
+                        //Based on the connection type select all local endPoints and then enable discoverable
+                        _discoveryListeners.Add(discoveryMethod, Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, localDiscoveryEndPoint));
+                    }
 
                     //Add the packet handlers if required
-                    if (!NetworkComms.GlobalIncomingPacketHandlerExists<byte[]>(discoveryPacketType, PeerDiscoveryHandler))
-                        NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                    foreach (var byMethodPair in _discoveryListeners)
+                    {
+                        foreach (ConnectionListenerBase listener in byMethodPair.Value)
+                        {
+                            if (!listener.IncomingPacketHandlerExists(discoveryPacketType, new NetworkComms.PacketHandlerCallBackDelegate<byte[]>(PeerDiscoveryHandler)))
+                                listener.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                        }
+                    }
                 }
             }
 #if NET35 || NET4
@@ -350,8 +402,14 @@ namespace NetworkCommsDotNet.Tools
                     _discoveryListeners.Add(discoveryMethod, Connection.StartListening(ConnectionType.Bluetooth, localDiscoveryEndPoint));
 
                     //Add the packet handlers if required
-                    if (!NetworkComms.GlobalIncomingPacketHandlerExists<byte[]>(discoveryPacketType, PeerDiscoveryHandler))
-                        NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                    foreach (var byMethodPair in _discoveryListeners)
+                    {
+                        foreach (ConnectionListenerBase listener in byMethodPair.Value)
+                        {
+                            if (!listener.IncomingPacketHandlerExists(discoveryPacketType, new NetworkComms.PacketHandlerCallBackDelegate<byte[]>(PeerDiscoveryHandler)))
+                                listener.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                        }
+                    }
                 }
             }
 #endif

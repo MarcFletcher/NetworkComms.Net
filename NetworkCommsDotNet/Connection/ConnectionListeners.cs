@@ -52,8 +52,9 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
         /// <param name="desiredLocalEndPoint">The desired localEndPoint. For IPEndPoints use IPAddress.Any 
         /// to listen on all <see cref="HostInfo.IP.FilteredLocalAddresses()"/> and port 0 to randomly select an available port.</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
         /// <returns>A list of all listeners used.</returns>
-        public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint, bool makeDiscoverable = false) where T : EndPoint
+        public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint, bool allowDiscoverable = false) where T : EndPoint
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not a valid parameter value.", "connectionType");
             if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "desiredLocalEndPoint cannot be null.");
@@ -80,9 +81,9 @@ namespace NetworkCommsDotNet.Connections
                 for (int i = 0; i < localListenIPEndPoints.Count; i++)
                 {
                     if (connectionType == ConnectionType.TCP)
-                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, makeDiscoverable));
+                        listeners.Add(new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, allowDiscoverable));
                     else if (connectionType == ConnectionType.UDP)
-                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions, makeDiscoverable));
+                        listeners.Add(new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPConnection.DefaultUDPOptions, allowDiscoverable));
                 }
 
                 //Start listening on all selected listeners
@@ -123,7 +124,7 @@ namespace NetworkCommsDotNet.Connections
 
                 //Initialise the listener list
                 for (int i = 0; i < localListenBTEndPoints.Count; i++)
-                    listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, makeDiscoverable));
+                    listeners.Add(new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, allowDiscoverable));
 
                 //Start listening on all selected listeners
                 //We do this is a separate step in case there is an exception

@@ -32,12 +32,12 @@ namespace NetworkCommsDotNet.Connections
         Undefined,
 
         /// <summary>
-        /// A TCP connection type. Used by <see cref="TCPConnection"/>.
+        /// A TCP connection type. Used by <see cref="NetworkCommsDotNet.Connections.TCP.TCPConnection"/>.
         /// </summary>
         TCP,
 
         /// <summary>
-        /// A UDP connection type. Used by <see cref="UDPConnection"/>.
+        /// A UDP connection type. Used by <see cref="NetworkCommsDotNet.Connections.UDP.UDPConnection"/>.
         /// </summary>
         UDP,
 

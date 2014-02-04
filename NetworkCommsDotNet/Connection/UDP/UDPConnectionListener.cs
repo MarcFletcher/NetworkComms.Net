@@ -55,10 +55,11 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="udpOptions">The UDPOptions to use with this listener</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
         public UDPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, 
-            UDPOptions udpOptions, bool isDiscoverable = false)
-            :base(ConnectionType.UDP, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
+            UDPOptions udpOptions, bool allowDiscoverable = false)
+            :base(ConnectionType.UDP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
         {
             if (applicationLayerProtocol == ApplicationLayerProtocolStatus.Disabled && udpOptions != UDPOptions.None)
                 throw new ArgumentException("If the application layer protocol has been disabled the provided UDPOptions can only be UDPOptions.None.");
@@ -105,9 +106,6 @@ namespace NetworkCommsDotNet.Connections.UDP
 #else
             this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
 #endif
-            if (IsDiscoverable)
-                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
-
             this.IsListening = true;
         }
 

@@ -95,10 +95,11 @@ namespace NetworkCommsDotNet.Connections
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
         protected ConnectionListenerBase(ConnectionType connectionType,
             SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol,
-            bool isDiscoverable)
+            bool allowDiscoverable)
         {
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined is not valid when calling this method.", "connectionType");
             if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided send receive option may not be null.");
@@ -126,7 +127,7 @@ namespace NetworkCommsDotNet.Connections
             this.ConnectionType = connectionType;
             this.ListenerDefaultSendReceiveOptions = sendReceiveOptions;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
-            this.IsDiscoverable = isDiscoverable;
+            this.IsDiscoverable = allowDiscoverable;
         }
 
         /// <summary>

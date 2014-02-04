@@ -72,7 +72,7 @@ namespace QuickLZCompressor
         static DataProcessor instance;
 
         /// <summary>
-        /// Instance singleton used to access <see cref="DPSBase.DataProcessor"/> instance.  Obsolete, use instead <see cref="DPSBase.DPSManager.GetDataProcessor{T}"/>
+        /// Instance singleton used to access <see cref="NetworkCommsDotNet.DPSBase.DataProcessor"/> instance.  Obsolete, use instead <see cref="NetworkCommsDotNet.DPSBase.DPSManager.GetDataProcessor{T}"/>
         /// </summary>
         [Obsolete("Instance access via class obsolete, use DPSManager.GetDataProcessor<T>")]
         public static DataProcessor Instance
