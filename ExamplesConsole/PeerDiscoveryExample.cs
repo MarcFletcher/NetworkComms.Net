@@ -120,11 +120,22 @@ namespace Examples.ExamplesConsole
         /// <summary>
         /// Execute this method when a peer is discovered asynchronously 
         /// </summary>
-        /// <param name="peerEndPoint"></param>
-        /// <param name="connectionType"></param>
-        private static void PeerDiscovered(ConnectionType connectionType, EndPoint peerEndPoint)
+        /// <param name="discoveredPeerEndPoints"
+        private static void PeerDiscovered(Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {
-            Console.WriteLine("\n  ... Discovered server at {0}", ((IPEndPoint)peerEndPoint).ToString());
+            var textColor = Console.ForegroundColor;
+
+            foreach (var pair in discoveredPeerEndPoints)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.WriteLine("\n**********************************************************");
+                Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
+                Console.WriteLine("**********************************************************");
+                Console.ForegroundColor = textColor;
+
+                foreach (var endPoint in pair.Value)
+                    Console.WriteLine("\t->\t{1}", endPoint.ToString());
+            }
         }
     }
 }

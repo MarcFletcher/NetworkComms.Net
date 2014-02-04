@@ -201,9 +201,8 @@ namespace NetworkCommsDotNet.Tools
         /// <summary>
         /// The event delegate which can optionally be used when a peer is successfully discovered.
         /// </summary>
-        /// <param name="peerEndPoint"></param>
-        /// <param name="connectionType"></param>
-        public delegate void PeerDiscoveredHandler(ConnectionType connectionType, EndPoint peerEndPoint);
+        /// <param name="discoveredListenerEndPoints"
+        public delegate void PeerDiscoveredHandler(Dictionary<ConnectionType, List<EndPoint>> discoveredListenerEndPoints);
 
         /// <summary>
         /// Triggered when a peer is discovered
@@ -561,7 +560,7 @@ namespace NetworkCommsDotNet.Tools
         private static List<EndPoint> DiscoverPeersBT(int discoverTimeout)
         {
             object locker = new object();
-
+            
             EventHandler<DiscoverDevicesEventArgs> callBack = (sender, e) =>
                 {
                     using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
@@ -591,7 +590,7 @@ namespace NetworkCommsDotNet.Tools
             lock (_syncRoot)
             {
                 foreach (var pair in _discoveredPeers)
-                    foreach (IPEndPoint endPoint in pair.Value.Keys)
+                    foreach (EndPoint endPoint in pair.Value.Keys)
                         result.Add(endPoint);
             }
 
@@ -636,12 +635,21 @@ namespace NetworkCommsDotNet.Tools
                     //If this is the case then we have found listenners on a peer and we need to add them to our known peers
                     List<PeerListennerEndPoint> remoteListenners = DeserializeRemoteListennerList(data);
 
+                    Dictionary<ConnectionType, List<EndPoint>> discoveredPeerListeners = new Dictionary<ConnectionType, List<EndPoint>>();
                     foreach (PeerListennerEndPoint peer in remoteListenners)
                     {
-                        //Trigger the discovery event
-                        if (OnPeerDiscovered != null)
-                            OnPeerDiscovered(peer.ConnectionType, peer.EndPoint);
+                        if (discoveredPeerListeners.ContainsKey(peer.ConnectionType))
+                            discoveredPeerListeners[peer.ConnectionType].Add(peer.EndPoint);
+                        else
+                            discoveredPeerListeners.Add(peer.ConnectionType, new List<EndPoint>() { peer.EndPoint });
+                    }
+                    
+                    //Trigger the discovery event
+                    if (OnPeerDiscovered != null)
+                        OnPeerDiscovered(discoveredPeerListeners);
 
+                    foreach (PeerListennerEndPoint peer in remoteListenners)
+                    {
                         //This is a peer discovery reply, we need to add this to the tracking dictionary
                         lock (_syncRoot)
                         {
@@ -656,7 +664,7 @@ namespace NetworkCommsDotNet.Tools
         }
 
         /// <summary>
-        /// Serializes the local 
+        /// Serializes the local listeners that are discoverable
         /// </summary>
         /// <returns></returns>
         private static byte[] SerializeLocalListennerList()

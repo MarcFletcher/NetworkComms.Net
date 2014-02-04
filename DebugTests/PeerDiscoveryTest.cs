@@ -92,9 +92,20 @@ namespace DebugTests
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-                PeerDiscovery.OnPeerDiscovered += (connectionType, endPoint) =>
+                PeerDiscovery.OnPeerDiscovered += (endpoints) =>
                     {
-                        Console.WriteLine("Discovered peer listenner of type {0} at {1}", connectionType.ToString(), ((IPEndPoint)endPoint).ToString());
+                        foreach (var pair in endpoints)
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            Console.WriteLine("\n**********************************************************");
+                            Console.WriteLine("Endpoints discoverd of type {0}:", pair.Key);
+                            Console.WriteLine("**********************************************************");
+                            Console.ForegroundColor = textColor;
+
+                            foreach (var endPoint in pair.Value)
+                                Console.WriteLine("\t->\t{1}", endPoint.ToString());
+                        }
+                        
                     };
 
                 PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
