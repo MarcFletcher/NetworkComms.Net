@@ -96,7 +96,7 @@ namespace NetworkCommsDotNet.Tools
                     var port = BitConverter.GetBytes(IPEndPoint.Port);
 
                     int offset = 0;
-                    result = new byte[type.Length + address.Length + port.Length];
+                    result = new byte[type.Length + addressLength.Length + address.Length + port.Length];
                     Buffer.BlockCopy(type, 0, result, offset, type.Length); offset += type.Length;
                     Buffer.BlockCopy(addressLength, 0, result, offset, addressLength.Length); offset += addressLength.Length;
                     Buffer.BlockCopy(address, 0, result, offset, address.Length); offset += address.Length;
@@ -524,23 +524,20 @@ namespace NetworkCommsDotNet.Tools
 
         private static List<EndPoint> DiscoverPeersUDP(int discoverTimeMS)
         {
-            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[] { 0 }, NetworkComms.DefaultSendReceiveOptions))
+            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
             {
                 for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
                     UDPConnection.SendObject<byte[]>(sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
             }
 
-            AutoResetEvent eventWait = new AutoResetEvent(false);
-            eventWait.WaitOne(discoverTimeMS);
+            Thread.Sleep(discoverTimeMS);
 
             List<EndPoint> result = new List<EndPoint>();
             lock (_syncRoot)
             {
-                if (_discoveredPeers.ContainsKey(ConnectionType.UDP))
-                {
-                    foreach (IPEndPoint endPoint in _discoveredPeers[ConnectionType.UDP].Keys)
+                foreach (var pair in _discoveredPeers)
+                    foreach (IPEndPoint endPoint in pair.Value.Keys)
                         result.Add(endPoint);
-                }
             }
 
             return result;
@@ -563,40 +560,26 @@ namespace NetworkCommsDotNet.Tools
 
         private static List<EndPoint> DiscoverPeersBT(int discoverTimeout)
         {
-            List<EndPoint> result = null;
             object locker = new object();
-            bool cancelled = false;
 
             AutoResetEvent completeEv = new AutoResetEvent(false);
             EventHandler<DiscoverDevicesEventArgs> callBack = (sender, e) =>
                 {
-                    lock (locker)
+                    using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
                     {
-                        if (!cancelled)
+                        foreach (var dev in e.Devices)
                         {
-                            result = new List<EndPoint>();
-
-                            foreach (var dev in e.Devices)
+                            foreach (var serviceRecord in dev.GetServiceRecords(BluetoothService.RFCommProtocol))
                             {
-                                foreach (var serviceRecord in dev.GetServiceRecords(BluetoothService.RFCommProtocol))
+                                if (serviceRecord.AttributeIds.Contains(BluetoothConnectionListener.NetworkCommsBTAttributeId.NetworkCommsEndPoint))
                                 {
-                                    if (serviceRecord.AttributeIds.Contains(BluetoothConnectionListener.NetworkCommsBTAttributeId.NetworkCommsEndPoint))
-                                    {
-                                        var remoteEndPoint = new BluetoothEndPoint(dev.DeviceAddress, serviceRecord.GetAttributeById(UniversalAttributeId.ServiceClassIdList).Value.GetValueAsElementList()[0].GetValueAsUuid());
-
-                                        lock (_syncRoot)
-                                        {
-                                            if (_discoveredPeers.ContainsKey(ConnectionType.Bluetooth))
-                                                _discoveredPeers[ConnectionType.Bluetooth][remoteEndPoint] = DateTime.Now;
-                                            else
-                                                _discoveredPeers.Add(ConnectionType.Bluetooth, new Dictionary<EndPoint, DateTime>() { { remoteEndPoint, DateTime.Now } });
-                                        }
-                                    }
+                                    var remoteEndPoint = new BluetoothEndPoint(dev.DeviceAddress, serviceRecord.GetAttributeById(UniversalAttributeId.ServiceClassIdList).Value.GetValueAsElementList()[0].GetValueAsUuid());
+                                    BluetoothConnection.GetConnection(new ConnectionInfo(remoteEndPoint)).SendPacket<byte[]>(sendPacket);
                                 }
                             }
                         }
+
                     }
-                    
 
                     completeEv.Set();
                 };
@@ -605,27 +588,14 @@ namespace NetworkCommsDotNet.Tools
             com.DiscoverDevicesComplete += callBack;            
             com.DiscoverDevicesAsync(255, false, false, false, true, com);
 
-            if (!completeEv.WaitOne(discoverTimeout))
+            completeEv.WaitOne(discoverTimeout);
+            
+            List<EndPoint> result = new List<EndPoint>();
+            lock (_syncRoot)
             {
-                lock (locker)
-                {
-                    if (result == null)
-                    {
-                        cancelled = true;
-                        result = new List<EndPoint>();
-                    }
-                    else
-                    {
-                        lock (_syncRoot)
-                        {
-                            if (_discoveredPeers.ContainsKey(ConnectionType.Bluetooth))
-                            {
-                                foreach (IPEndPoint endPoint in _discoveredPeers[ConnectionType.UDP].Keys)
-                                    result.Add(endPoint);
-                            }
-                        }
-                    }
-                }                
+                foreach (var pair in _discoveredPeers)
+                    foreach (IPEndPoint endPoint in pair.Value.Keys)
+                        result.Add(endPoint);
             }
 
             return result;
@@ -658,7 +628,7 @@ namespace NetworkCommsDotNet.Tools
                     byte[] responseData = SerializeLocalListennerList();
 
                     if (responseData.Length != 4)
-                        connection.SendObject(discoveryPacketType, SerializeLocalListennerList());
+                        connection.SendObject(discoveryPacketType, responseData);
                 }
                 else
                 {

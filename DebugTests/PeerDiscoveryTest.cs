@@ -50,12 +50,34 @@ namespace DebugTests
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
+            ConsoleColor textColor = Console.ForegroundColor;
+        
             if (serverMode)
-            {
+            {   
+                //Add a discoverable listenner 
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 12345), true);
+
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine("\n**********************************************************");
+                Console.WriteLine("Listening for TCP messages on:");
+                Console.WriteLine("**********************************************************");
+                Console.ForegroundColor = textColor;
+                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine("**********************************************************");
+                Console.WriteLine("These listenners are also discoverable");
+                Console.WriteLine("**********************************************************");
+                Console.ForegroundColor = textColor;
+
                 PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine("\n**********************************************************");
                 Console.WriteLine("Now discoverable.");
-                Console.WriteLine("\nListening for UDP messages on:");
+                Console.WriteLine("Listening for UDP messages on:");
+                Console.WriteLine("**********************************************************");
+                Console.ForegroundColor = textColor;
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)) 
                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
