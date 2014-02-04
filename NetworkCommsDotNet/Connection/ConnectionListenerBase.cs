@@ -95,7 +95,7 @@ namespace NetworkCommsDotNet.Connections
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         protected ConnectionListenerBase(ConnectionType connectionType,
             SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol,

@@ -26,6 +26,7 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Tools;
 
 namespace Examples.ExamplesConsole
 {
@@ -120,7 +121,7 @@ namespace Examples.ExamplesConsole
             catch (Exception ex)
             {
                 //If an error was uncaught by the examples we can log the exception to a file here
-                NetworkComms.LogError(ex, "ExampleError");
+                LogTools.LogException(ex, "ExampleError");
                 NetworkComms.Shutdown();
                 Console.WriteLine(ex.ToString());
             }

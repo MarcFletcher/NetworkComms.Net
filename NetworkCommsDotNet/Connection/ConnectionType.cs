@@ -43,7 +43,7 @@ namespace NetworkCommsDotNet.Connections
 
 #if !NET2 && !WINDOWS_PHONE
         /// <summary>
-        /// A Bluetooth RFCOMM connection. Used by <see cref="BluetoothConnection"/> 
+        /// A Bluetooth RFCOMM connection. Used by <see cref="NetworkCommsDotNet.Connections.Bluetooth.BluetoothConnection"/> 
         /// </summary>
         Bluetooth,
 #endif

@@ -94,6 +94,7 @@
     <Compile Include="Tools\HostInfo.cs" />
     <Compile Include="Tools\IPTools.cs" />
     <Compile Include="Tools\CommsThreadPool.cs" />
+    <Compile Include="Tools\LogTools.cs" />
     <Compile Include="Tools\PacketBuilder.cs" />
     <Compile Include="Connection\TCP\TCPConnection.cs" />
     <Compile Include="SendReceiveOptions.cs" />

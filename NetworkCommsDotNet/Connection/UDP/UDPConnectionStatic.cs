@@ -187,7 +187,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                 }
 
                 if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                    NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                    LogTools.LogException(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
 
                 possibleHandshakeUDPDatagram.DatagramHandled = true;
             }
@@ -327,7 +327,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "BestLocalEndPointError");
+                LogTools.LogException(ex, "BestLocalEndPointError");
             }
 
             //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
@@ -522,7 +522,7 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// <param name="newLocalEndPoint">The localEndPoint to listen for packets on</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
         /// If false and a port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true, bool allowDiscoverable = false)
         {

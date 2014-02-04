@@ -302,7 +302,7 @@ namespace DistributedFileSystem
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_DFSIntialise");
+                LogTools.LogException(e, "Error_DFSIntialise");
             }
 
             DFSInitialised = true;
@@ -384,7 +384,7 @@ namespace DistributedFileSystem
                 }
                 catch (Exception e)
                 {
-                    NetworkComms.LogError(e, "RepeaterWorkerError");
+                    LogTools.LogException(e, "RepeaterWorkerError");
                 }
 
                 if (DFSShutdownEvent.WaitOne(linkRequestIntervalSecs * 1000))
@@ -461,7 +461,7 @@ namespace DistributedFileSystem
             {
                 try
                 {
-                    NetworkComms.LogError(new Exception("DFS elapsedTimerThread did not close after 2 seconds."), "DFSShutdownError");
+                    LogTools.LogException(new Exception("DFS elapsedTimerThread did not close after 2 seconds."), "DFSShutdownError");
                     elapsedTimerThread.Abort();
                 }
                 catch (Exception) { }
@@ -494,7 +494,7 @@ namespace DistributedFileSystem
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "DFSElapsedWorkerError");
+                LogTools.LogException(ex, "DFSElapsedWorkerError");
             }
         }
 
@@ -666,7 +666,7 @@ namespace DistributedFileSystem
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "DFS_RemoveItemError");
+                LogTools.LogException(e, "DFS_RemoveItemError");
             }
         }
 
@@ -752,11 +752,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(ex, "CommsError_AddItemToSwarm");
+                //LogTools.LogException(ex, "CommsError_AddItemToSwarm");
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_AddItemToSwarm");
+                LogTools.LogException(ex, "Error_AddItemToSwarm");
             }
 
             //try { GC.Collect(); }
@@ -794,11 +794,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(ex, "CommsError_AddItemToSwarm");
+                //LogTools.LogException(ex, "CommsError_AddItemToSwarm");
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_AddItemToSwarm");
+                LogTools.LogException(ex, "Error_AddItemToSwarm");
             }
 
             //try { GC.Collect(); }
@@ -938,11 +938,11 @@ namespace DistributedFileSystem
                 }
                 catch (CommsException e)
                 {
-                    NetworkComms.LogError(e, "CommsError_DFSConnectionShutdown");
+                    LogTools.LogException(e, "CommsError_DFSConnectionShutdown");
                 }
                 catch (Exception e)
                 {
-                    NetworkComms.LogError(e, "Error_DFSConnectionShutdown");
+                    LogTools.LogException(e, "Error_DFSConnectionShutdown");
                 }
             //}));
         }
@@ -975,11 +975,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
+                //LogTools.LogException(e, "CommsError_IncomingChunkAvailabilityRequest");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_KnownPeersRequest");
+                LogTools.LogException(e, "Error_KnownPeersRequest");
             }
         }
 
@@ -1024,18 +1024,18 @@ namespace DistributedFileSystem
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_3");
+                            LogTools.LogException(ex, "UpdatePeerChunkAvailabilityError_3");
                         }
                     }
                 }
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
+                //LogTools.LogException(e, "CommsError_IncomingChunkAvailabilityRequest");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_KnownPeersUpdate");
+                LogTools.LogException(e, "Error_KnownPeersUpdate");
             }
         }
 
@@ -1118,9 +1118,9 @@ namespace DistributedFileSystem
                             Exception exceptionToLogWith = new Exception("Build completed succesfully. Logging was enabled so saving build log.");
                             string fileName = "DFSItemBuildLog_" + newItem.ItemIdentifier + "_" + NetworkComms.NetworkIdentifier;
                             if (newItem != null)
-                                NetworkComms.LogError(exceptionToLogWith, fileName, newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                                LogTools.LogException(exceptionToLogWith, fileName, newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
                             else
-                                NetworkComms.LogError(exceptionToLogWith, fileName, "newItem==null so no build log was available.");
+                                LogTools.LogException(exceptionToLogWith, fileName, "newItem==null so no build log was available.");
                         }
                     }
                     catch (CommsException e)
@@ -1128,12 +1128,12 @@ namespace DistributedFileSystem
                         //Crap an error has happened, let people know we probably don't have a good file
                         RemoveItem(assemblyConfig.ItemCheckSum);
                         //connection.CloseConnection(true, 30);
-                        //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
+                        //LogTools.LogException(e, "CommsError_IncomingLocalItemBuild");
 
                         if (newItem != null)
-                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuildComms", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                            LogTools.LogException(e, "Error_IncomingLocalItemBuildComms", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
                         else
-                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuildComms", "newItem==null so no build log was available.");
+                            LogTools.LogException(e, "Error_IncomingLocalItemBuildComms", "newItem==null so no build log was available.");
                     }
                     catch (Exception e)
                     {
@@ -1142,9 +1142,9 @@ namespace DistributedFileSystem
                         //connection.CloseConnection(true, 31);
 
                         if (newItem != null)
-                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
+                            LogTools.LogException(e, "Error_IncomingLocalItemBuild", newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
                         else
-                            NetworkComms.LogError(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
+                            LogTools.LogException(e, "Error_IncomingLocalItemBuild", "newItem==null so no build log was available.");
                     }
                     //finally
                     //{
@@ -1164,12 +1164,12 @@ namespace DistributedFileSystem
                     }
                     catch (Exception ex)
                     {
-                        NetworkComms.LogError(ex, "Error_IncomingLocalItemBuildFinal");
+                        LogTools.LogException(ex, "Error_IncomingLocalItemBuildFinal");
                     }
                 });
 
             if (BuildTaskFactory == null)
-                NetworkComms.LogError(new NullReferenceException("BuildTaskFactory is null in IncomingLocalItemBuild"), "IncomingLocalBuildError");
+                LogTools.LogException(new NullReferenceException("BuildTaskFactory is null in IncomingLocalItemBuild"), "IncomingLocalBuildError");
             else
                 //Thread buildThread = new Thread(buildAction);
                 //buildThread.Name = "DFS_" + assemblyConfig.ItemIdentifier + "_Build";
@@ -1197,11 +1197,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(e, "CommsError_IncomingLocalItemBuild");
+                //LogTools.LogException(e, "CommsError_IncomingLocalItemBuild");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_RequestLocalItemBuild");
+                LogTools.LogException(e, "Error_RequestLocalItemBuild");
             }
         }
 
@@ -1290,11 +1290,11 @@ namespace DistributedFileSystem
             {
                 //Something fucked happened.
                 //Console.WriteLine("IncomingChunkInterestRequestError. Error logged.");
-                //NetworkComms.LogError(ex, "CommsError_IncomingChunkInterestRequest");
+                //LogTools.LogException(ex, "CommsError_IncomingChunkInterestRequest");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingChunkInterestRequest");
+                LogTools.LogException(e, "Error_IncomingChunkInterestRequest");
             }
         }
 
@@ -1369,14 +1369,14 @@ namespace DistributedFileSystem
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "Error_IncomingChunkInterestReplyDataInner");
+                    LogTools.LogException(ex, "Error_IncomingChunkInterestReplyDataInner");
                 }
 
                 CheckForChunkDataCacheTimeouts();
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingChunkInterestReplyData");
+                LogTools.LogException(e, "Error_IncomingChunkInterestReplyData");
             }
         }
 
@@ -1442,7 +1442,7 @@ namespace DistributedFileSystem
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingChunkInterestReplyInfo");
+                LogTools.LogException(e, "Error_IncomingChunkInterestReplyInfo");
             }
         }
 
@@ -1482,7 +1482,7 @@ namespace DistributedFileSystem
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingPeerChunkAvailabilityUpdate");
+                LogTools.LogException(e, "Error_IncomingPeerChunkAvailabilityUpdate");
             }
         }
 
@@ -1516,11 +1516,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException)
             {
-                //NetworkComms.LogError(e, "CommsError_IncomingChunkAvailabilityRequest");
+                //LogTools.LogException(e, "CommsError_IncomingChunkAvailabilityRequest");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingChunkAvailabilityRequest");
+                LogTools.LogException(e, "Error_IncomingChunkAvailabilityRequest");
             }
         }
 
@@ -1562,7 +1562,7 @@ namespace DistributedFileSystem
             }
             catch (CommsException e)
             {
-                NetworkComms.LogError(e, "CommsError_IncomingPeerItemRemovalUpdate");
+                LogTools.LogException(e, "CommsError_IncomingPeerItemRemovalUpdate");
             }
             catch (Exception e)
             {
@@ -1570,7 +1570,7 @@ namespace DistributedFileSystem
                 if (itemRemovalUpdate != null)
                     commentStr = "itemCheckSum:" + itemRemovalUpdate.ItemCheckSum + ", swarmWide:"+itemRemovalUpdate.RemoveSwarmWide + ", identifier" + itemRemovalUpdate.SourceNetworkIdentifier;
 
-                NetworkComms.LogError(e, "Error_IncomingPeerItemRemovalUpdate", commentStr);
+                LogTools.LogException(e, "Error_IncomingPeerItemRemovalUpdate", commentStr);
             }
         }
 
@@ -1611,11 +1611,11 @@ namespace DistributedFileSystem
             }
             catch (CommsException e)
             {
-                NetworkComms.LogError(e, "CommsError_IncomingRemoteItemLinkRequest");
+                LogTools.LogException(e, "CommsError_IncomingRemoteItemLinkRequest");
             }
             catch (Exception e)
             {
-                NetworkComms.LogError(e, "Error_IncomingRemoteItemLinkRequest");
+                LogTools.LogException(e, "Error_IncomingRemoteItemLinkRequest");
             }
         }
         #endregion

@@ -219,7 +219,7 @@ namespace NetworkCommsDotNet.Connections
                         IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
                 }
 
-                NetworkComms.LogError(ex, "CommsError");
+                LogTools.LogException(ex, "CommsError");
                 CloseConnection(true, 45);
             }
         }

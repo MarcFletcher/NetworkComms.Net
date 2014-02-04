@@ -22,31 +22,24 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using System.Collections;
-using System.Net.NetworkInformation;
-using System.Diagnostics;
 using System.IO;
-using NetworkCommsDotNet.DPSBase;
+
 using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
 
-#if NETFX_CORE
+#if NET35 || NET4
+using InTheHand.Net;
+using NetworkCommsDotNet.Connections.Bluetooth;
+#elif NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
-using System.Threading.Tasks;
-using Windows.Storage;
-#else
-using System.Net.Sockets;
 #endif
 
 #if !NO_LOGGING
 using NLog;
 using NLog.Config;
-#endif
-
-#if NET35 || NET4
-using InTheHand.Net;
-using NetworkCommsDotNet.Connections.Bluetooth;
 #endif
 
 //Assembly marked as CLSCompliant
@@ -390,7 +383,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "CompleteIncomingItemTaskError");
+                LogTools.LogException(ex, "CompleteIncomingItemTaskError");
 
                 if (item != null)
                 {
@@ -705,7 +698,7 @@ namespace NetworkCommsDotNet
                     {
                         //Change this to just a log because generally a packet of the wrong type is nothing to really worry about
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error.");
-                        LogError(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                        LogTools.LogException(new UnexpectedPacketTypeException("The received packet type '" + packetHeader.PacketType + "' has no configured handler and NetworkComms.Net is not set to ignore unknown packet types. Set NetworkComms.IgnoreUnknownPacketTypes=true to prevent this error."), "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                     }
 
                     return;
@@ -736,7 +729,7 @@ namespace NetworkCommsDotNet
                         catch (Exception ex)
                         {
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
-                            NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                            LogTools.LogException(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
                         }
                     }
 
@@ -747,7 +740,7 @@ namespace NetworkCommsDotNet
             {
                 //If anything goes wrong here all we can really do is log the exception
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occurred in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
-                NetworkComms.LogError(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
+                LogTools.LogException(ex, "PacketHandlerErrorGlobal_" + packetHeader.PacketType);
             }
         }
 
@@ -969,7 +962,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception ex)
             {
-                LogError(ex, "CommsShutdownError");
+                LogTools.LogException(ex, "CommsShutdownError");
             }
 
             try
@@ -983,7 +976,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception ex)
             {
-                LogError(ex, "CommsShutdownError");
+                LogTools.LogException(ex, "CommsShutdownError");
             }
 
             CommsThreadPool.EndShutdown(threadShutdownTimeoutMS);
@@ -1113,140 +1106,9 @@ namespace NetworkCommsDotNet
             }
         }
 #endif
-
-        /// <summary>
-        /// Locker for LogError() which ensures thread safe saves.
-        /// </summary>
-        static object errorLocker = new object();
-
-        /// <summary>
-        /// Appends the provided logString to end of fileName.txt. If the file does not exist it will be created.
-        /// </summary>
-        /// <param name="fileName">The filename to use. The extension .txt will be appended automatically</param>
-        /// <param name="logString">The string to append.</param>
-        public static void AppendStringToLogFile(string fileName, string logString)
-        {
-            try
-            {
-                lock (errorLocker)
-                {
-#if NETFX_CORE
-                    Func<Task> writeTask = new Func<Task>(async () =>
-                        {
-                            StorageFolder folder = ApplicationData.Current.LocalFolder;
-                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
-                            await FileIO.AppendTextAsync(file, logString);
-                        });
-
-                    writeTask().Wait();
-#else
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
-                        sw.WriteLine(logString);
-#endif
-                }
-            }
-            catch (Exception)
-            {
-                //If an error happens here, such as if the file is locked then we lucked out.
-            }
-        }
-
-        /// <summary>
-        /// Logs the provided exception to a file to assist troubleshooting.
-        /// </summary>
-        /// <param name="ex">The exception to be logged</param>
-        /// <param name="fileName">The filename to use. A time stamp and extension .txt will be appended automatically</param>
-        /// <param name="optionalCommentStr">An optional string which will appear at the top of the error file</param>
-        /// <returns>The entire fileName used.</returns>
-        public static string LogError(Exception ex, string fileName, string optionalCommentStr = "")
-        {
-            string entireFileName;
-
-            lock (errorLocker)
-            {
-                
-#if iOS
-                //We need to ensure we add the correct document path for iOS
-                entireFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));
-#elif ANDROID
-                entireFileName = Path.Combine(global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));
-#elif WINDOWS_PHONE
-                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]");
-#elif NETFX_CORE
-                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Environment.CurrentManagedThreadId.ToString() + "]");
-#else
-                using (Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
-                    entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
-#endif
-
-                if (LoggingEnabled) logger.Fatal(entireFileName, ex);
-
-                try
-                {
-#if NETFX_CORE
-                    Func<Task> writeTask = new Func<Task>(async () =>
-                        {
-                            List<string> lines = new List<string>();
-
-                            if (optionalCommentStr != "")
-                            {
-                                lines.Add("Comment: " + optionalCommentStr);
-                                lines.Add("");
-                            }
-
-                            if (ex.GetBaseException() != null)
-                                lines.Add("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                            if (ex.InnerException != null)
-                                lines.Add("Inner Exception Type: " + ex.InnerException.ToString());
-
-                            if (ex.StackTrace != null)
-                            {
-                                lines.Add("");
-                                lines.Add("Stack Trace: " + ex.StackTrace.ToString());
-                            }
-
-                            StorageFolder folder = ApplicationData.Current.LocalFolder;
-                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
-                            await FileIO.WriteLinesAsync(file, lines);
-                        });
-
-                    writeTask().Wait();
-#else
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
-                    {
-                        if (optionalCommentStr != "")
-                        {
-                            sw.WriteLine("Comment: " + optionalCommentStr);
-                            sw.WriteLine("");
-                        }
-
-                        if (ex.GetBaseException() != null)
-                            sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                        if (ex.InnerException != null)
-                            sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
-
-                        if (ex.StackTrace != null)
-                        {
-                            sw.WriteLine("");
-                            sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
-                        }
-                    }
-#endif
-                }
-                catch (Exception)
-                {
-                    //This should never really happen, but just incase.
-                }
-            }
-
-            return entireFileName;
-        }
         #endregion
 
         #region Serializers and Compressors
-        
         /// <summary>
         /// The following are used for internal NetworkComms.Net objects, packet headers, connection establishment etc. 
         /// We generally seem to increase the size of our data if compressing small objects (~50 bytes)

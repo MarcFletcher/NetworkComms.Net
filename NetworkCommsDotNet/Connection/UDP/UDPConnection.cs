@@ -23,6 +23,7 @@ using System.Net;
 using System.IO;
 using System.Threading;
 using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
@@ -414,7 +415,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                            LogTools.LogException(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
                     }
                 }
             }
@@ -453,7 +454,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_UDPConnectionIncomingPacketHandler");
                 CloseConnection(true, 30);
             }
         }
@@ -511,7 +512,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                         if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                         if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                            LogTools.LogException(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
                     }
                 }
 
@@ -552,7 +553,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_UDPConnectionIncomingPacketHandler");
                 CloseConnection(true, 30);
             }
         }
@@ -613,7 +614,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                             if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
 
                             if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                                NetworkComms.LogError(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                                LogTools.LogException(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
                         }
                     }
                 }
@@ -653,7 +654,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_UDPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_UDPConnectionIncomingPacketHandler");
                 CloseConnection(true, 41);
             }
 

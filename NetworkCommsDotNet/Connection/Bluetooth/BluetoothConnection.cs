@@ -25,7 +25,9 @@ using System.Text;
 using System.IO;
 using System.Threading;
 using System.Net.Sockets;
+
 using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using InTheHand.Net.Sockets;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
@@ -299,7 +301,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_BluetoothConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_BluetoothConnectionIncomingPacketHandler");
                 CloseConnection(true, 31);
             }
 
@@ -391,7 +393,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_TCPConnectionIncomingPacketHandler");
                 CloseConnection(true, 39);
             }
 

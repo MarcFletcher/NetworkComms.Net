@@ -38,12 +38,12 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
 
         #region GetConnection
         /// <summary>
-        /// Create a <see cref="TCPConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
+        /// Create a <see cref="BluetoothConnection"/> with the provided connectionInfo. If there is an existing connection that will be returned instead. 
         /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
-        /// <returns>Returns a <see cref="TCPConnection"/></returns>
+        /// <returns>Returns a <see cref="BluetoothConnection"/></returns>
         public static BluetoothConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
             return GetConnection(connectionInfo, null, null, establishIfRequired);
@@ -56,14 +56,14 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">The SendReceiveOptions which will be set as this connections defaults</param>
         /// <param name="establishIfRequired">If true will establish the TCP connection with the remote end point before returning</param>
-        /// <returns>Returns a <see cref="TCPConnection"/></returns>
+        /// <returns>Returns a <see cref="BluetoothConnection"/></returns>
         public static BluetoothConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
         }
 
         /// <summary>
-        /// Internal <see cref="TCPConnection"/> creation which hides the necessary internal calls
+        /// Internal <see cref="BluetoothConnection"/> creation which hides the necessary internal calls
         /// </summary>
         /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
         /// <param name="defaultSendReceiveOptions">Connection default SendReceiveOptions</param>

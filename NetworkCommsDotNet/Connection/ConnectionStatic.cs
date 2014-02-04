@@ -38,7 +38,7 @@ namespace NetworkCommsDotNet.Connections
     #if !NET2 && !WINDOWS_PHONE
     /// <summary>
     /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
-    /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="BluetoothConnection"/>.
+    /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="NetworkCommsDotNet.Connections.Bluetooth.BluetoothConnection"/>.
     /// </summary>
     #else
     /// <summary>
@@ -161,7 +161,7 @@ namespace NetworkCommsDotNet.Connections
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "ConnectionKeepAlivePollError");
+                    LogTools.LogException(ex, "ConnectionKeepAlivePollError");
                 }
             }
         }
@@ -234,7 +234,7 @@ namespace NetworkCommsDotNet.Connections
             {
                 if (!allConnectionsComplete.WaitOne(allConnections.Count * 2500))
                     //This timeout should not really happen so we are going to log an error if it does
-                    NetworkComms.LogError(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
+                    LogTools.LogException(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
             }
         }
 
@@ -250,7 +250,7 @@ namespace NetworkCommsDotNet.Connections
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "CommsShutdownError");
+                LogTools.LogException(ex, "CommsShutdownError");
             }
 
             try
@@ -266,7 +266,7 @@ namespace NetworkCommsDotNet.Connections
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "CommsShutdownError");
+                LogTools.LogException(ex, "CommsShutdownError");
             }
             finally
             {

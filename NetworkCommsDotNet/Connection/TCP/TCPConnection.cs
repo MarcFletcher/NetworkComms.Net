@@ -23,6 +23,7 @@ using System.Threading;
 using System.Net;
 using System.IO;
 using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
@@ -437,7 +438,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_TCPConnectionIncomingPacketHandler");
                 CloseConnection(true, 31);
             }
 
@@ -534,7 +535,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_TCPConnectionIncomingPacketHandler");
+                LogTools.LogException(ex, "Error_TCPConnectionIncomingPacketHandler");
                 CloseConnection(true, 39);
             }
 

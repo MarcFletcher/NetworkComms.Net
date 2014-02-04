@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
@@ -363,7 +364,7 @@ namespace DebugTests
                 catch (CommsException ex)
                 {
                     Interlocked.Increment(ref exceptionCount);
-                    NetworkComms.AppendStringToLogFile("ClientExceptions", ex.ToString());
+                    LogTools.AppendStringToLogFile("ClientExceptions", ex.ToString());
                 }
             }
         }

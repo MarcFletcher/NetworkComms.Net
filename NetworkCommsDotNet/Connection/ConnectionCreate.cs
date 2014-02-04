@@ -433,7 +433,7 @@ namespace NetworkCommsDotNet.Connections
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                            LogTools.LogException(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                         }
 
                         try
@@ -447,7 +447,7 @@ namespace NetworkCommsDotNet.Connections
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                            LogTools.LogException(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                         }
 
                         EndPoint newRemoteEndPoint;

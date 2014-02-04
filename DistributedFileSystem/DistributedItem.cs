@@ -750,7 +750,7 @@ namespace DistributedFileSystem
 
                             AddBuildLogLine("Removed " + request.Key.NetworkIdentifier + " from swarm due to CommsException while requesting a chunk.");
                             //Console.WriteLine("CommsException {0} - Removing requests for peer " + request.Key.NetworkIdentifier, DateTime.Now.ToString("HH:mm:ss.fff"));
-                            //NetworkComms.LogError(ex, "ChunkRequestError");
+                            //LogTools.LogException(ex, "ChunkRequestError");
 
                             //On error remove the chunk requests
                             lock (itemLocker)
@@ -761,7 +761,7 @@ namespace DistributedFileSystem
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "DFSAssembleItemError");
+                            LogTools.LogException(ex, "DFSAssembleItemError");
                             //Console.WriteLine("DFSAssembleItemError");
 
                             //On error remove the chunk requests
@@ -901,7 +901,7 @@ namespace DistributedFileSystem
                     //If we made requests we can wait with a longer timeout, incoming repies should trigger us out sooner if not
                     if (WaitHandle.WaitAny(new WaitHandle[] { itemBuildWait, itemBuildComplete }, 5000) == WaitHandle.WaitTimeout)
                     {
-                        //NetworkComms.LogError(new Exception("Build wait timeout after 4secs. Item complete=" + SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks)), "AssembleWaitTimeout");
+                        //LogTools.LogException(new Exception("Build wait timeout after 4secs. Item complete=" + SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks)), "AssembleWaitTimeout");
                         //Console.WriteLine("      Build wait timeout after 5secs, {0}. Item complete=" + SwarmChunkAvailability.PeerIsComplete(NetworkComms.NetworkNodeIdentifier, TotalNumChunks), DateTime.Now.ToString("HH:mm:ss.fff"));
                     }
                 }

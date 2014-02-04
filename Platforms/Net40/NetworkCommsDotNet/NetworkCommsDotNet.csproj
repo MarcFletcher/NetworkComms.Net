@@ -163,6 +163,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
       <Link>Tools\IPTools.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\LogTools.cs">
+      <Link>Tools\LogTools.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
       <Link>Tools\PacketBuilder.cs</Link>
     </Compile>

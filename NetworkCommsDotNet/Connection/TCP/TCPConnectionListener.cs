@@ -66,7 +66,7 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, bool allowDiscoverable = false)
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
@@ -86,7 +86,7 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="sslOptions">The SSLOptions to use with this listener</param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         public TCPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, SSLOptions sslOptions, bool allowDiscoverable = false)
             : base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
@@ -202,9 +202,9 @@ namespace NetworkCommsDotNet.Connections.TCP
                 {
                     //Can we catch the socketException by looking at the string error text?
                     if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                        NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                        LogTools.LogException(ex, "ConnectionSetupError_SE");
                     else
-                        NetworkComms.LogError(ex, "ConnectionSetupError");
+                        LogTools.LogException(ex, "ConnectionSetupError");
                 }
             }
         }
@@ -254,9 +254,9 @@ namespace NetworkCommsDotNet.Connections.TCP
                         {
                             //Can we catch the socketException by looking at the string error text?
                             if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                                NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                                LogTools.LogException(ex, "ConnectionSetupError_SE");
                             else
-                                NetworkComms.LogError(ex, "ConnectionSetupError");
+                                LogTools.LogException(ex, "ConnectionSetupError");
                         }
                     }
                     #endregion
@@ -273,9 +273,9 @@ namespace NetworkCommsDotNet.Connections.TCP
                 {
                     //Can we catch the socketException by looking at the string error text?
                     if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                        NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                        LogTools.LogException(ex, "ConnectionSetupError_SE");
                     else
-                        NetworkComms.LogError(ex, "ConnectionSetupError");
+                        LogTools.LogException(ex, "ConnectionSetupError");
                 }
             }
             finally

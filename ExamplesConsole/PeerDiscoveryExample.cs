@@ -49,6 +49,7 @@ namespace Examples.ExamplesConsole
             PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
             //Write out the network adaptors that are discoverable
+            Console.WriteLine("\nPeer Identifier: " + NetworkComms.NetworkIdentifier);
             Console.WriteLine("\nDiscoverable on:");
             foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                 Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
@@ -67,7 +68,7 @@ namespace Examples.ExamplesConsole
                     Console.WriteLine("\nPlease select the desired option:");
                     Console.WriteLine("1 - Discover servers asynchronously");
                     Console.WriteLine("2 - Discover servers synchronously");
-                    Console.WriteLine("3 - Close Client\n");
+                    Console.WriteLine("3 - Close Client");
 
                     while (true)
                     {
@@ -76,7 +77,7 @@ namespace Examples.ExamplesConsole
                         Console.WriteLine("Invalid choice. Please try again.");
                     }
 
-                    //Ensure a previous loop does not duplicate the asynchronous event delegate
+                    //Ensure a previous example loop does not duplicate the asynchronous event delegate
                     PeerDiscovery.OnPeerDiscovered -= PeerDiscovered;
 
                     if (selectedOption == 1)
@@ -84,8 +85,8 @@ namespace Examples.ExamplesConsole
                         #region Discover Asynchronously
                         Console.WriteLine("\nDiscovering servers asynchronously ... ");
 
-                        //Append the OnPeerDiscovered event (We only want to do this once so we set addedEvent boolean)
-                        //If a peer responds to a discovery request we will just write to the console.
+                        //Append the OnPeerDiscovered event
+                        //The PeerDiscovered delegate will just write to the console.
                         PeerDiscovery.OnPeerDiscovered += PeerDiscovered;
 
                         //Trigger the asynchronous discovery
@@ -99,13 +100,11 @@ namespace Examples.ExamplesConsole
 
                         //Discover peers asynchronously
                         //This method allows peers 2 seconds to respond after the request has been sent
-                        Dictionary<Guid, Dictionary<ConnectionType, List<EndPoint>>> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                        Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 
                         //Write out a list of discovered peers
-                        foreach (var idPair in discoveredPeerEndPoints)
-                        {
-                            PeerDiscovered(idPair.Key, idPair.Value);
-                        }
+                        foreach (ShortGuid networkIdentifier in discoveredPeerEndPoints.Keys)
+                            PeerDiscovered(networkIdentifier, discoveredPeerEndPoints[networkIdentifier]);
                         #endregion
                     }
                     else if (selectedOption == 3)
@@ -119,36 +118,29 @@ namespace Examples.ExamplesConsole
             NetworkComms.Shutdown();
         }
 
+        /// <summary>
+        /// Static locker used to ensure we only write information to the console in a clear fashion
+        /// </summary>
         static object locker = new object();
 
         /// <summary>
-        /// Execute this method when a peer is discovered asynchronously 
+        /// Execute this method when a peer is discovered 
         /// </summary>
-        /// <param name="peerId"></param>
-        /// <param name="discoveredPeerEndPoints"></param>
-        private static void PeerDiscovered(Guid peerId, Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
+        /// <param name="peerIdentifier">The network identifier of the discovered peer</param>
+        /// <param name="discoveredPeerEndPoints">The discoverable endpoints found for the provided peer</param>
+        private static void PeerDiscovered(ShortGuid peerIdentifier, Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {
+            //Lock to ensure we do not write to the console in parallel.
             lock (locker)
             {
-                var textColor = Console.ForegroundColor;
-
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**************************************************************************************");
-                Console.WriteLine("Endpoints discoverd for peer: {0}", peerId);
-                Console.WriteLine("**************************************************************************************");
-                Console.ForegroundColor = textColor;
-
-                foreach (var pair in discoveredPeerEndPoints)
+                Console.WriteLine("\nEndpoints discovered for peer with networkIdentifier {0} ...", peerIdentifier);
+                foreach (ConnectionType connectionType in discoveredPeerEndPoints.Keys)
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.WriteLine("\tEndpoints discoverd of type {0}:", pair.Key);
-                    Console.ForegroundColor = textColor;
-
-                    foreach (var endPoint in pair.Value)
-                        Console.WriteLine("\t\t->\t{0}", endPoint.ToString());
+                    Console.WriteLine("  ... endPoints of type {0}:", connectionType);
+                    foreach (EndPoint endPoint in discoveredPeerEndPoints[connectionType])
+                        Console.WriteLine("    -> {0}", endPoint.ToString());
                 }
             }                        
-
         }
     }
 }

@@ -22,12 +22,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using InTheHand.Net.Sockets;
-using System.Net;
-using InTheHand.Net;
-using System.Net.Sockets;
-using NetworkCommsDotNet.DPSBase;
 using System.Threading;
+using System.Net;
+using System.Net.Sockets;
+
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using InTheHand.Net;
+using InTheHand.Net.Sockets;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Bluetooth.AttributeIds;
 
@@ -56,9 +58,10 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
         /// application layer protocol to provide useful features such as inline serialisation, 
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         public BluetoothConnectionListener(SendReceiveOptions sendReceiveOptions,
-            ApplicationLayerProtocolStatus applicationLayerProtocol, bool isDiscoverable)
-            : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol, isDiscoverable)
+            ApplicationLayerProtocolStatus applicationLayerProtocol, bool allowDiscoverable = false)
+            : base(ConnectionType.Bluetooth, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
         {
 
         }
@@ -176,9 +179,9 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         {
                             //Can we catch the socketException by looking at the string error text?
                             if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                                NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                                LogTools.LogException(ex, "ConnectionSetupError_SE");
                             else
-                                NetworkComms.LogError(ex, "ConnectionSetupError");
+                                LogTools.LogException(ex, "ConnectionSetupError");
                         }
                     }
                     #endregion
@@ -195,9 +198,9 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                 {
                     //Can we catch the socketException by looking at the string error text?
                     if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                        NetworkComms.LogError(ex, "ConnectionSetupError_SE");
+                        LogTools.LogException(ex, "ConnectionSetupError_SE");
                     else
-                        NetworkComms.LogError(ex, "ConnectionSetupError");
+                        LogTools.LogException(ex, "ConnectionSetupError");
                 }
             }
             finally
@@ -207,5 +210,4 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
         }
     }
 }
-
 #endif

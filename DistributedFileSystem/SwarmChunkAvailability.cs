@@ -927,7 +927,7 @@ namespace DistributedFileSystem
             }
             catch (Exception ex)
             {
-                NetworkComms.LogError(ex, "Error_RemovePeerFromSwarm");
+                LogTools.LogException(ex, "Error_RemovePeerFromSwarm");
             }
         }
 
@@ -1011,7 +1011,7 @@ namespace DistributedFileSystem
                     }
                 }
                 else
-                    NetworkComms.LogError(new Exception("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
+                    LogTools.LogException(new Exception("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
             }
         }
 
@@ -1117,7 +1117,7 @@ namespace DistributedFileSystem
                             }
                             catch (Exception ex)
                             {
-                                NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_1");
+                                LogTools.LogException(ex, "UpdatePeerChunkAvailabilityError_1");
                             }
                         }
                     }
@@ -1168,7 +1168,7 @@ namespace DistributedFileSystem
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "UpdatePeerChunkAvailabilityError_2");
+                            LogTools.LogException(ex, "UpdatePeerChunkAvailabilityError_2");
                         }
                     }
                 }
@@ -1427,7 +1427,7 @@ namespace DistributedFileSystem
                             //If a peer has disconnected or fails to respond we just remove them from the list
                             RemovePeerIPEndPointFromSwarm(peer.Key, (IPEndPoint)connInfo.LocalEndPoint);
 
-                            NetworkComms.LogError(ex, "BroadcastItemRemovalError");
+                            LogTools.LogException(ex, "BroadcastItemRemovalError");
                         }
                     }
                 }

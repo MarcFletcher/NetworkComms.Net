@@ -20,14 +20,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DistributedFileSystem;
-using NetworkCommsDotNet;
 using System.Threading;
-using NetworkCommsDotNet.DPSBase;
 using System.Net;
 using System.IO;
+
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections;
+using DistributedFileSystem;
 
 namespace DebugTests
 {
@@ -224,7 +226,7 @@ namespace DebugTests
                         }
                         catch (Exception ex)
                         {
-                            NetworkComms.LogError(ex, "DFSTestCallbackError");
+                            LogTools.LogException(ex, "DFSTestCallbackError");
                             Console.WriteLine("Shutting down due to exception.");
                             shutDown = true;
                         }
@@ -299,7 +301,7 @@ namespace DebugTests
                 catch (Exception ex)
                 {
                     Console.WriteLine("Bad Error!");
-                    NetworkComms.LogError(ex, "DFSTestError_" + NetworkComms.NetworkIdentifier);
+                    LogTools.LogException(ex, "DFSTestError_" + NetworkComms.NetworkIdentifier);
                 }
 
                 #endregion

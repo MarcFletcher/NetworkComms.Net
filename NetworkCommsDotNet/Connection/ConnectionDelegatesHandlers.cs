@@ -185,7 +185,7 @@ namespace NetworkCommsDotNet.Connections
                         catch (Exception ex)
                         {
                             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An unhandled exception was caught while processing a packet handler for a packet type '" + packetHeader.PacketType + "'. Make sure to catch errors in packet handlers. See error log file for more information.");
-                            NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
+                            LogTools.LogException(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
                         }
                     }
                 }
@@ -194,7 +194,7 @@ namespace NetworkCommsDotNet.Connections
             {
                 //If anything goes wrong here all we can really do is log the exception
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal("An exception occured in TriggerPacketHandler() for a packet type '" + packetHeader.PacketType + "'. See error log file for more information.");
-                NetworkComms.LogError(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
+                LogTools.LogException(ex, "PacketHandlerErrorSpecific_" + packetHeader.PacketType);
             }
 
             return true;

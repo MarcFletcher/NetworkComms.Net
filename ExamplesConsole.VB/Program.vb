@@ -17,6 +17,7 @@
 ' Please see <http://www.networkcomms.net/licensing/> for details.
 
 Imports NetworkCommsDotNet
+Imports NetworkCommsDotNet.Tools
 Imports NLog
 Imports NLog.Config
 Imports NLog.Targets
@@ -65,7 +66,7 @@ Module Program
                     Console.WriteLine("Selected an invalid example number. Please restart and try again.")
             End Select
         Catch ex As Exception
-            NetworkComms.LogError(ex, "ExampleError")
+            LogTools.LogException(ex, "ExampleError")
             NetworkComms.Shutdown()
             Console.WriteLine(ex.ToString())
         End Try

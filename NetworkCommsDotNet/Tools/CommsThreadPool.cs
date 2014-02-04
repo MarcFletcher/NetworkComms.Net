@@ -95,7 +95,7 @@ namespace NetworkCommsDotNet.Tools
                 {
                     taskCancellationTokens[pair.Key].Cancel();
                     if (!pair.Value.Wait(threadShutdownTimeoutMS))
-                        NetworkComms.LogError(new DPSBase.CommsSetupShutdownException("Managed threadpool shutdown error"), "ManagedThreadPoolShutdownError");
+                        LogTools.LogException(new DPSBase.CommsSetupShutdownException("Managed threadpool shutdown error"), "ManagedThreadPoolShutdownError");
                 }
             }
 #else
@@ -119,7 +119,7 @@ namespace NetworkCommsDotNet.Tools
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "ManagedThreadPoolShutdownError");
+                    LogTools.LogException(ex, "ManagedThreadPoolShutdownError");
                 }
             }
 #endif
@@ -332,7 +332,7 @@ namespace NetworkCommsDotNet.Tools
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "ManagedThreadPoolShutdownError");
+                    LogTools.LogException(ex, "ManagedThreadPoolShutdownError");
                 }
             }
 
@@ -492,7 +492,7 @@ namespace NetworkCommsDotNet.Tools
                     }
                     catch (Exception ex)
                     {
-                        NetworkComms.LogError(ex, "ManagedThreadPoolCallBackError", "An unhandled exception was caught while processing a callback. Make sure to catch errors in callbacks to prevent this error file being produced.");
+                        LogTools.LogException(ex, "ManagedThreadPoolCallBackError", "An unhandled exception was caught while processing a callback. Make sure to catch errors in callbacks to prevent this error file being produced.");
                     }
                     finally
                     {

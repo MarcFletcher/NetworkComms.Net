@@ -52,7 +52,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="connectionType">The <see cref="ConnectionType"/> to start listening for.</param>
         /// <param name="desiredLocalEndPoint">The desired localEndPoint. For IPEndPoints use IPAddress.Any 
         /// to listen on all <see cref="HostInfo.IP.FilteredLocalAddresses()"/> and port 0 to randomly select an available port.</param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the listeners created will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         /// <returns>A list of all listeners used.</returns>
         public static List<ConnectionListenerBase> StartListening<T>(ConnectionType connectionType, T desiredLocalEndPoint, bool allowDiscoverable = false) where T : EndPoint
         {

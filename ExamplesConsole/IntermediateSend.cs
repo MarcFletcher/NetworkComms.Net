@@ -119,7 +119,7 @@ namespace Examples.ExamplesConsole
 
                         //If an error occurs we need to decide what to do.
                         //In this example we will just log to a file and continue.
-                        NetworkComms.LogError(ex, "IntermediateSendExampleError");
+                        LogTools.LogException(ex, "IntermediateSendExampleError");
                         Console.WriteLine("\nError: CommsException was caught. Please see the log file created for more information.\n");
                     }
                 }

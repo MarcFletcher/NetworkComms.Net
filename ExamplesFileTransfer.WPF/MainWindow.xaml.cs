@@ -37,6 +37,7 @@ using Microsoft.Win32;
 
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 using SevenZipLZMACompressor;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
@@ -323,7 +324,7 @@ namespace Examples.ExamplesFileTransfer.WPF
             {
                 //If an exception occurs we write to the log window and also create an error file
                 AddLineToLog("Exception - " + ex.ToString());
-                NetworkComms.LogError(ex, "IncomingPartialFileDataError");
+                LogTools.LogException(ex, "IncomingPartialFileDataError");
             }
         }
 
@@ -394,7 +395,7 @@ namespace Examples.ExamplesFileTransfer.WPF
             {
                 //If an exception occurs we write to the log window and also create an error file
                 AddLineToLog("Exception - " + ex.ToString());
-                NetworkComms.LogError(ex, "IncomingPartialFileDataInfo");
+                LogTools.LogException(ex, "IncomingPartialFileDataInfo");
             }
         }
 
@@ -545,7 +546,7 @@ namespace Examples.ExamplesFileTransfer.WPF
                         if (!windowClosing && ex.GetType() != typeof(InvalidDataException))
                         {
                             AddLineToLog(ex.Message.ToString());
-                            NetworkComms.LogError(ex, "SendFileError");
+                            LogTools.LogException(ex, "SendFileError");
                         }
                     }
 

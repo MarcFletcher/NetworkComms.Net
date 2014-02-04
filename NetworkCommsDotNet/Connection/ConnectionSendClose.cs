@@ -370,7 +370,7 @@ namespace NetworkCommsDotNet.Connections
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                    LogTools.LogException(ex, "ConnectionSpecificShutdownDelegateError", "Error while executing connection specific shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                 }
 
                 try
@@ -384,7 +384,7 @@ namespace NetworkCommsDotNet.Connections
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
+                    LogTools.LogException(ex, "GlobalConnectionShutdownDelegateError", "Error while executing global connection shutdown delegates for " + ConnectionInfo + ". Ensure any shutdown exceptions are caught in your own code.");
                 }
             }
             catch (Exception ex)
@@ -394,7 +394,7 @@ namespace NetworkCommsDotNet.Connections
                 { /*Ignore the threadabort exception if we had to nuke a thread*/ }
                 else
 #endif
-                    NetworkComms.LogError(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation.ToString() + (closeDueToError ? " due to error." : "."));
+                    LogTools.LogException(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation.ToString() + (closeDueToError ? " due to error." : "."));
 
                 //We try to rethrow where possible but CloseConnection could very likely be called from within networkComms so we just have to be happy with a log here
             }

@@ -55,7 +55,7 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// transparent packet transmission, remote peer handshake and information etc. We strongly 
         /// recommend you enable the NetworkComms.Net application layer protocol.</param>
         /// <param name="udpOptions">The UDPOptions to use with this listener</param>
-        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> should be discoverable via <see cref="Tools.PeerDiscovery"/></param>
+        /// <param name="allowDiscoverable">Determines if the newly created <see cref="ConnectionListenerBase"/> will be discoverable if <see cref="Tools.PeerDiscovery"/> is enabled.</param>
         public UDPConnectionListener(SendReceiveOptions sendReceiveOptions,
             ApplicationLayerProtocolStatus applicationLayerProtocol, 
             UDPOptions udpOptions, bool allowDiscoverable = false)

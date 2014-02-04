@@ -505,7 +505,7 @@ namespace NetworkCommsDotNet.Tools
                 }
                 catch (Exception ex)
                 {
-                    NetworkComms.LogError(ex, "CommsShutdownError");
+                    LogTools.LogException(ex, "CommsShutdownError");
                 }
 #endif
             }
@@ -596,7 +596,7 @@ namespace NetworkCommsDotNet.Tools
                     }
                     catch (Exception ex)
                     {
-                        NetworkComms.LogError(ex, "NetworkLoadWorker");
+                        LogTools.LogException(ex, "NetworkLoadWorker");
 
                         //It may be the interfaces available to the OS have changed so we will reset them here
                         interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();
