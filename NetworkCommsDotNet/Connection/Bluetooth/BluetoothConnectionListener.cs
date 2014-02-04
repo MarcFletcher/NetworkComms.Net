@@ -142,7 +142,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             try
             {
                 var newBTClient = listenerInstance.EndAcceptBluetoothClient(ar);
-                ConnectionInfo newConnectionInfo = new ConnectionInfo(true, ConnectionType.Bluetooth, newBTClient.Client.RemoteEndPoint, ApplicationLayerProtocol);
+                ConnectionInfo newConnectionInfo = new ConnectionInfo(ConnectionType.Bluetooth, newBTClient.Client.RemoteEndPoint, newBTClient.Client.LocalEndPoint, ApplicationLayerProtocol, this);
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New bluetooth connection from " + newConnectionInfo);
 
@@ -151,7 +151,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                     #region Pickup The New Connection
                     try
                     {
-                        BluetoothConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newBTClient, true);
+                        BluetoothConnection.GetConnection(newConnectionInfo, ListenerDefaultSendReceiveOptions, newBTClient, true);
                     }
                     catch (ConfirmationTimeoutException)
                     {

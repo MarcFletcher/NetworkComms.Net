@@ -175,8 +175,9 @@ namespace NetworkCommsDotNet.Connections.TCP
             try
             {
                 IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(args.Socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.LocalPort));
+                IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort));
 
-                ConnectionInfo newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort)), ApplicationLayerProtocol);
+                ConnectionInfo newConnectionInfo = new ConnectionInfo(ConnectionType.TCP, remoteEndPoint, localEndPoint, ApplicationLayerProtocol, this);
                 TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
             }
             catch (ConfirmationTimeoutException)
@@ -220,7 +221,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             try
             {
                 TcpClient newTCPClient = listenerInstance.EndAcceptTcpClient(ar);
-                ConnectionInfo newConnectionInfo = new ConnectionInfo(true, ConnectionType.TCP, (IPEndPoint)newTCPClient.Client.RemoteEndPoint, ApplicationLayerProtocol);
+                ConnectionInfo newConnectionInfo = new ConnectionInfo(ConnectionType.TCP, (IPEndPoint)newTCPClient.Client.RemoteEndPoint, (IPEndPoint)newTCPClient.Client.LocalEndPoint, ApplicationLayerProtocol, this);
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New TCP connection from " + newConnectionInfo);
 
@@ -229,7 +230,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                     #region Pickup The New Connection
                     try
                     {
-                        TCPConnection.GetConnection(newConnectionInfo, SendReceiveOptions, newTCPClient, true, SSLOptions);
+                        TCPConnection.GetConnection(newConnectionInfo, ListenerDefaultSendReceiveOptions, newTCPClient, true, SSLOptions);
                     }
                     catch (ConfirmationTimeoutException)
                     {

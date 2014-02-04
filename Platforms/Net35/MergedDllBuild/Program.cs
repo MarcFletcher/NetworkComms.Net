@@ -29,6 +29,7 @@ namespace MergedDllBuild
     {
         static void Main(string[] args)
         {
+#if !DEBUG
             Version networkCommsVersion = new Version(3, 0, 0);
             string targetPlatform = "v2";
             string msCoreLibDirectory = @"C:\Windows\Microsoft.NET\Framework\v2.0.50727";
@@ -91,6 +92,7 @@ namespace MergedDllBuild
 
             completeMerge.Merge();
             #endregion
+#endif
         }
     }
 }
