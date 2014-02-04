@@ -140,7 +140,7 @@ namespace NetworkCommsDotNet.Tools
 #if NET35 || NET4
                 else if (result.ConnectionType == ConnectionType.Bluetooth)
                 {
-                    byte[] address = new byte[6];
+                    byte[] address = new byte[8];
                     Buffer.BlockCopy(data, offset, address, 0, address.Length); offset += address.Length;
                     byte[] service = new byte[16];
                     Buffer.BlockCopy(data, offset, service, 0, service.Length); offset += service.Length;
@@ -562,7 +562,6 @@ namespace NetworkCommsDotNet.Tools
         {
             object locker = new object();
 
-            AutoResetEvent completeEv = new AutoResetEvent(false);
             EventHandler<DiscoverDevicesEventArgs> callBack = (sender, e) =>
                 {
                     using (Packet sendPacket = new Packet(discoveryPacketType, new byte[4] { 0, 0, 0, 0 }, NetworkComms.DefaultSendReceiveOptions))
@@ -574,21 +573,19 @@ namespace NetworkCommsDotNet.Tools
                                 if (serviceRecord.AttributeIds.Contains(BluetoothConnectionListener.NetworkCommsBTAttributeId.NetworkCommsEndPoint))
                                 {
                                     var remoteEndPoint = new BluetoothEndPoint(dev.DeviceAddress, serviceRecord.GetAttributeById(UniversalAttributeId.ServiceClassIdList).Value.GetValueAsElementList()[0].GetValueAsUuid());
-                                    BluetoothConnection.GetConnection(new ConnectionInfo(remoteEndPoint)).SendPacket<byte[]>(sendPacket);
+                                    var connection = BluetoothConnection.GetConnection(new ConnectionInfo(remoteEndPoint));
+                                    connection.SendPacket<byte[]>(sendPacket);
                                 }
                             }
                         }
-
                     }
-
-                    completeEv.Set();
                 };
 
             BluetoothComponent com = new InTheHand.Net.Bluetooth.BluetoothComponent();
             com.DiscoverDevicesComplete += callBack;            
             com.DiscoverDevicesAsync(255, false, false, false, true, com);
 
-            completeEv.WaitOne(discoverTimeout);
+            Thread.Sleep(discoverTimeout);
             
             List<EndPoint> result = new List<EndPoint>();
             lock (_syncRoot)
@@ -617,6 +614,10 @@ namespace NetworkCommsDotNet.Tools
             DiscoveryMethod discoveryMethod = DiscoveryMethod.UDPBroadcast;
             if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 discoveryMethod = DiscoveryMethod.TCPPortScan;
+#if NET35 || NET4
+            else if (connection.ConnectionInfo.ConnectionType == ConnectionType.Bluetooth)
+                discoveryMethod = DiscoveryMethod.BluetoothSDP;
+#endif
 
             //Ignore discovery packets that came from this peer
             if (!Connection.ExistingLocalListenEndPoints(connection.ConnectionInfo.ConnectionType).Contains(connection.ConnectionInfo.RemoteEndPoint))
@@ -660,7 +661,7 @@ namespace NetworkCommsDotNet.Tools
         /// <returns></returns>
         private static byte[] SerializeLocalListennerList()
         {
-            List<ConnectionListenerBase> allListeners = NetworkCommsDotNet.Connections.Connection.AllExistingLocalListeners();
+            List<ConnectionListenerBase> allListeners = Connection.AllExistingLocalListeners();
 
             using (MemoryStream ms = new MemoryStream())
             {

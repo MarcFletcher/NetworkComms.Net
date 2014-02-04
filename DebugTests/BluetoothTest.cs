@@ -61,13 +61,15 @@ namespace DebugTests
             //Start listenning
             BluetoothRadio defaultRadio = BluetoothRadio.PrimaryRadio;
             defaultRadio.Mode = RadioMode.Discoverable;
-            Connection.StartListening(ConnectionType.Bluetooth, new BluetoothEndPoint(defaultRadio.LocalAddress, ServiceGUID));
+            Connection.StartListening(ConnectionType.Bluetooth, new BluetoothEndPoint(defaultRadio.LocalAddress, ServiceGUID), true);
 
             //Print the address we are listening on to make sure everything
             //worked as expected.
             Console.WriteLine("Listening for messages on:");
             foreach (var localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.Bluetooth))
                 Console.WriteLine("{0}", localEndPoint);
+
+            PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.BluetoothSDP);
 
             //We loop here to allow any number of test messages to be sent and received
             while (true)
@@ -82,70 +84,21 @@ namespace DebugTests
                 {
                     //Once we have a message we need to know where to send it
                     //We have created a small wrapper class to help keep things clean here
-                    var endpoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.BluetoothSDP);
+                    var endpoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.BluetoothSDP, 60000);
 
                     ConnectionInfo targetServerConnectionInfo = new ConnectionInfo(new BluetoothEndPoint(new BluetoothAddress(0xE0B9A5FB552BL), ServiceGUID));
-                    //GetServerDetails(out targetServerConnectionInfo);
 
                     //There are loads of ways of sending data (see AdvancedSend example for more)
                     //but the most simple, which we use here, just uses an IP address (string) and port (integer) 
                     //We pull these values out of the ConnectionInfo object we got above and voila!
                     var connection = BluetoothConnection.GetConnection(targetServerConnectionInfo);
 
-                    connection.SendObject("Message", "Hello world");                    
+                    connection.SendObject("Message", "Hello world");
                 }
             }
 
             //We should always call shutdown on comms if we have used it
             NetworkComms.Shutdown();
-        }
-
-        private static void GetServerDetails(out ConnectionInfo connectionInfo)
-        {
-            ConsoleColor initColor = Console.ForegroundColor;
-
-            Console.WriteLine("Please press 'Enter' to scan for bluetooth devices");
-
-            if (Console.ReadKey(false).Key != ConsoleKey.Enter)
-            {
-                Console.ForegroundColor = initColor;
-                GetServerDetails(out connectionInfo);
-                return;
-            }
-            Console.WriteLine();
-
-            BluetoothClient btc = new BluetoothClient();
-            var devs = btc.DiscoverDevicesInRange().ToList();
-
-            if (devs == null || devs.Count() == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("No other listening devices detected please check that the other device is listening and try again");
-                Console.ForegroundColor = initColor;
-                GetServerDetails(out connectionInfo);
-                return;
-            }
-            else
-            {
-                Console.WriteLine("Please select the device to connect to:");
-                Console.ForegroundColor = ConsoleColor.Blue;
-                int i = 0;
-
-                foreach (var dev in devs)
-                {
-                    Console.WriteLine("\t{0}-{1}", i++, dev.DeviceName);
-                }
-
-                int selection;
-                while (!(int.TryParse(Console.ReadKey(false).Key.ToString(), out selection)) && selection >= i)
-                    continue;
-
-                var selectedDev = devs[selection];
-
-                connectionInfo = new ConnectionInfo(new BluetoothEndPoint(selectedDev.DeviceAddress, BluetoothService.SerialPort));
-                Console.ForegroundColor = initColor;
-                return;
-            }
         }
     }
 }
