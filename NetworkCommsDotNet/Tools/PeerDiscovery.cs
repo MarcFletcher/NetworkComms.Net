@@ -35,6 +35,7 @@ using InTheHand.Net.Bluetooth;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth.AttributeIds;
 using NetworkCommsDotNet.Connections.Bluetooth;
+using System.IO;
 #elif NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
@@ -51,6 +52,107 @@ namespace NetworkCommsDotNet.Tools
             UDPBroadcast,
             TCPPortScan,
             BluetoothSDP,
+        }
+
+        class PeerListennerEndPoint
+        {
+            public ConnectionType ConnectionType { get; private set; }
+            public EndPoint EndPoint { get; private set; }
+
+            public IPEndPoint IPEndPoint { get { return EndPoint as IPEndPoint; } }
+
+#if NET35 || NET4
+            public BluetoothEndPoint BTEndPoint { get { return EndPoint as BluetoothEndPoint; } }
+#endif
+
+            public PeerListennerEndPoint(ConnectionType connectionType, EndPoint endPoint)
+            {
+                if (connectionType == Connections.ConnectionType.Undefined)
+                    throw new ArgumentException("Cannot create a PeerEndPoint if connectioType is Undefined","connectionType");
+
+                if ((connectionType == Connections.ConnectionType.TCP || connectionType == Connections.ConnectionType.UDP) && !(endPoint is IPEndPoint))
+                    throw new ArgumentException("If conneciton type is of an IP type then the provided endPoint must be an IPEndPoint", "endPoint");
+
+#if NET35 || NET4
+                if(connectionType == Connections.ConnectionType.Bluetooth && !(endPoint is BluetoothEndPoint))
+                    throw new ArgumentException("If conneciton type is Bluetooth type then the provided endPoint must be a BluetoothEndPoint", "endPoint");
+#endif
+
+                this.ConnectionType = connectionType;
+                this.EndPoint = endPoint;
+            }
+
+            private PeerListennerEndPoint(){}
+
+            public byte[] Serialize()
+            {
+                byte[] result = null;
+
+                if (ConnectionType == Connections.ConnectionType.UDP || ConnectionType == Connections.ConnectionType.TCP)
+                {
+                    var type = BitConverter.GetBytes((int)ConnectionType);
+                    var address = IPEndPoint.Address.GetAddressBytes();
+                    var addressLength = BitConverter.GetBytes(address.Length);
+                    var port = BitConverter.GetBytes(IPEndPoint.Port);
+
+                    int offset = 0;
+                    result = new byte[type.Length + address.Length + port.Length];
+                    Buffer.BlockCopy(type, 0, result, offset, type.Length); offset += type.Length;
+                    Buffer.BlockCopy(addressLength, 0, result, offset, addressLength.Length); offset += addressLength.Length;
+                    Buffer.BlockCopy(address, 0, result, offset, address.Length); offset += address.Length;
+                    Buffer.BlockCopy(port, 0, result, offset, port.Length); offset += port.Length;
+                }
+#if NET35 || NET4
+                else if (ConnectionType == Connections.ConnectionType.Bluetooth)
+                {
+                    var type = BitConverter.GetBytes((int)ConnectionType);
+                    var address = BTEndPoint.Address.ToByteArray();
+                    var port = BTEndPoint.Service.ToByteArray();
+
+                    int offset = 0;
+                    result = new byte[type.Length + address.Length + port.Length];
+                    Buffer.BlockCopy(type, 0, result, offset, type.Length); offset += type.Length;
+                    Buffer.BlockCopy(address, 0, result, offset, address.Length); offset += address.Length;
+                    Buffer.BlockCopy(port, 0, result, offset, port.Length); offset += port.Length;
+                }
+#endif
+                else
+                    throw new Exception();
+
+                return result;
+            }
+
+            public static PeerListennerEndPoint Deserialize(byte[] data)
+            {
+                PeerListennerEndPoint result = new PeerListennerEndPoint();
+
+                int offset = 0;
+                result.ConnectionType = (Connections.ConnectionType)BitConverter.ToInt32(data, offset); offset += sizeof(int);
+
+                if (result.ConnectionType == ConnectionType.TCP || result.ConnectionType == ConnectionType.UDP)
+                {
+                    byte[] address = new byte[BitConverter.ToInt32(data, offset)]; offset += sizeof(int);
+                    Buffer.BlockCopy(data, offset, address, 0, address.Length); offset += address.Length;
+                    int port = BitConverter.ToInt32(data, offset); offset += sizeof(int);
+
+                    result.EndPoint = new IPEndPoint(new IPAddress(address), port);
+                }
+#if NET35 || NET4
+                else if (result.ConnectionType == ConnectionType.Bluetooth)
+                {
+                    byte[] address = new byte[6];
+                    Buffer.BlockCopy(data, offset, address, 0, address.Length); offset += address.Length;
+                    byte[] service = new byte[16];
+                    Buffer.BlockCopy(data, offset, service, 0, service.Length); offset += service.Length;
+
+                    result.EndPoint = new BluetoothEndPoint(new BluetoothAddress(address), new Guid(service));
+                }
+#endif
+                else
+                    throw new Exception();
+
+                return result;
+            }
         }
 
         #region Public Properties
@@ -101,7 +203,7 @@ namespace NetworkCommsDotNet.Tools
         /// </summary>
         /// <param name="peerEndPoint"></param>
         /// <param name="connectionType"></param>
-        public delegate void PeerDiscoveredHandler(EndPoint peerEndPoint, ConnectionType connectionType);
+        public delegate void PeerDiscoveredHandler(ConnectionType connectionType, EndPoint peerEndPoint);
 
         /// <summary>
         /// Triggered when a peer is discovered
@@ -540,8 +642,8 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="data"></param>
         private static void PeerDiscoveryHandler(PacketHeader header, Connection connection, byte[] data)
         {
-            if (data.Length != 1) throw new ArgumentException("Idiot check exception");
-
+            if (data.Length < 4) throw new Exception("Idiot check");
+            
             DiscoveryMethod discoveryMethod = DiscoveryMethod.UDPBroadcast;
             if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 discoveryMethod = DiscoveryMethod.TCPPortScan;
@@ -549,28 +651,96 @@ namespace NetworkCommsDotNet.Tools
             //Ignore discovery packets that came from this peer
             if (!Connection.ExistingLocalListenEndPoints(connection.ConnectionInfo.ConnectionType).Contains(connection.ConnectionInfo.RemoteEndPoint))
             {
-                if (data[0] == 0 && IsDiscoverable(discoveryMethod))
-                {
-                    //This is a peer discovery request, we just need to let the other peer know we are alive
-                    connection.SendObject(discoveryPacketType, new byte[] { 1 });
+                //If the only thing that was sent was an empty list (first int/4bytes is zero) then this is a peer discovery request. 
+                //Send back our listenner info if we have any discoverable listeners
+                if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0 && IsDiscoverable(discoveryMethod))
+                {                    
+                    byte[] responseData = SerializeLocalListennerList();
+
+                    if (responseData.Length != 4)
+                        connection.SendObject(discoveryPacketType, SerializeLocalListennerList());
                 }
                 else
                 {
-                    //Trigger the discovery event
-                    if (OnPeerDiscovered != null)
-                        OnPeerDiscovered(connection.ConnectionInfo.RemoteEndPoint, connection.ConnectionInfo.ConnectionType);
+                    //If this is the case then we have found listenners on a peer and we need to add them to our known peers
+                    List<PeerListennerEndPoint> remoteListenners = DeserializeRemoteListennerList(data);
 
-                    //This is a peer discovery reply, we need to add this to the tracking dictionary
-                    lock (_syncRoot)
+                    foreach (PeerListennerEndPoint peer in remoteListenners)
                     {
-                        if (_discoveredPeers.ContainsKey(connection.ConnectionInfo.ConnectionType))
-                            _discoveredPeers[connection.ConnectionInfo.ConnectionType][connection.ConnectionInfo.RemoteEndPoint] = DateTime.Now;
-                        else
-                            _discoveredPeers.Add(connection.ConnectionInfo.ConnectionType, new Dictionary<EndPoint, DateTime>() { { connection.ConnectionInfo.RemoteEndPoint, DateTime.Now } });
+                        //Trigger the discovery event
+                        if (OnPeerDiscovered != null)
+                            OnPeerDiscovered(peer.ConnectionType, peer.EndPoint);
+
+                        //This is a peer discovery reply, we need to add this to the tracking dictionary
+                        lock (_syncRoot)
+                        {
+                            if (_discoveredPeers.ContainsKey(peer.ConnectionType))
+                                _discoveredPeers[peer.ConnectionType][peer.EndPoint] = DateTime.Now;
+                            else
+                                _discoveredPeers.Add(peer.ConnectionType, new Dictionary<EndPoint, DateTime>() { { peer.EndPoint, DateTime.Now } });
+                        }
                     }
                 }
             }
         }
+
+        /// <summary>
+        /// Serializes the local 
+        /// </summary>
+        /// <returns></returns>
+        private static byte[] SerializeLocalListennerList()
+        {
+            List<ConnectionListenerBase> allListeners = NetworkCommsDotNet.Connections.Connection.AllExistingLocalListeners();
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int discoverableCount = 0;
+                ms.Seek(sizeof(int), SeekOrigin.Begin);
+
+                foreach (ConnectionListenerBase listener in allListeners)
+                {
+                    if (listener.IsDiscoverable)
+                    {
+                        PeerListennerEndPoint ep = new PeerListennerEndPoint(listener.ConnectionType, listener.LocalListenEndPoint);
+                        byte[] bytes = ep.Serialize();
+
+                        ms.Write(BitConverter.GetBytes(bytes.Length), 0, sizeof(int));
+                        ms.Write(bytes, 0, bytes.Length);
+                        discoverableCount++;
+                    }
+                }
+
+                ms.Seek(0, 0);
+                ms.Write(BitConverter.GetBytes(discoverableCount), 0, sizeof(int));
+
+                ms.Flush();
+
+                return ms.ToArray();
+           }            
+        }
+
+        private static List<PeerListennerEndPoint> DeserializeRemoteListennerList(byte[] data)
+        {
+            List<PeerListennerEndPoint> result = new List<PeerListennerEndPoint>();
+
+            int offset = 0;
+            int numElements = BitConverter.ToInt32(data, offset); offset += sizeof(int);
+
+            for (int i = 0; i < numElements; i++)
+            {
+                int size = BitConverter.ToInt32(data, offset); offset += sizeof(int);
+
+                if (size > data.Length)
+                    throw new Exception();
+
+                byte[] peerData = new byte[size];
+                Buffer.BlockCopy(data, offset, peerData, 0, peerData.Length); offset += peerData.Length;
+                result.Add(PeerListennerEndPoint.Deserialize(peerData));
+            }
+
+            return result;
+        }
+
         #endregion
     }
 }

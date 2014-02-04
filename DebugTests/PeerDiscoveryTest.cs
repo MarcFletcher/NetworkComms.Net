@@ -70,9 +70,9 @@ namespace DebugTests
                 foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
 
-                PeerDiscovery.OnPeerDiscovered += (endPoint, connectionType) =>
+                PeerDiscovery.OnPeerDiscovered += (connectionType, endPoint) =>
                     {
-                        Console.WriteLine("Discovered peer at {0}", ((IPEndPoint)endPoint).ToString());
+                        Console.WriteLine("Discovered peer listenner of type {0} at {1}", connectionType.ToString(), ((IPEndPoint)endPoint).ToString());
                     };
 
                 PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
