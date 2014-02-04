@@ -517,8 +517,35 @@ namespace NetworkCommsDotNet.Connections
                     foreach (EndPoint endPoint in endPointsToUse)
                         result.Add((listenerType)listenersDict[ConnectionType.TCP][endPoint]);
                 }
+#if NET35 || NET4
+                else if (typeof(listenerType) == typeof(BluetoothConnectionListener))
+                {
+                    List<EndPoint> endPointsToUse = ExistingLocalListenEndPoints(ConnectionType.Bluetooth, endPointToMatch);
+                    foreach (EndPoint endPoint in endPointsToUse)
+                        result.Add((listenerType)listenersDict[ConnectionType.Bluetooth][endPoint]);
+                }
+#endif
                 else
                     throw new NotImplementedException("This method has not been implemented for provided type of " + typeof(listenerType));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns a list of all local listeners
+        /// </summary>
+        /// <returns>A list of all local listeners</returns>
+        public static List<ConnectionListenerBase> AllExistingLocalListeners()
+        {
+            List<ConnectionListenerBase> result = new List<ConnectionListenerBase>();
+            lock (staticConnectionLocker)
+            {
+                Dictionary<ConnectionType, List<EndPoint>> endPoints = AllExistingLocalListenEndPoints();
+                
+                foreach (var byConnectionType in listenersDict)
+                    foreach (var byEndPoint in byConnectionType.Value)
+                        result.Add(byEndPoint.Value);
             }
 
             return result;
