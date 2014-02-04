@@ -22,6 +22,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
+using System.IO;
 
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
@@ -35,7 +36,6 @@ using InTheHand.Net.Bluetooth;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth.AttributeIds;
 using NetworkCommsDotNet.Connections.Bluetooth;
-using System.IO;
 #elif NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif

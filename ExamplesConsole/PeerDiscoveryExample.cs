@@ -122,7 +122,7 @@ namespace Examples.ExamplesConsole
         /// </summary>
         /// <param name="peerEndPoint"></param>
         /// <param name="connectionType"></param>
-        private static void PeerDiscovered(EndPoint peerEndPoint, ConnectionType connectionType)
+        private static void PeerDiscovered(ConnectionType connectionType, EndPoint peerEndPoint)
         {
             Console.WriteLine("\n  ... Discovered server at {0}", ((IPEndPoint)peerEndPoint).ToString());
         }
