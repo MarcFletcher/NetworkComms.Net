@@ -743,6 +743,7 @@ namespace NetworkCommsDotNet.Tools
                 }
                 else if (data.Length > 0)
                 {
+                    //This is a peer discovery reply, we may need to add this to the tracking dictionary
                     ShortGuid peerIdentifier;
 
                     //If this is the case then we have found listeners on a peer and we need to add them to our known peers
@@ -757,36 +758,47 @@ namespace NetworkCommsDotNet.Tools
                             discoveredPeerListeners.Add(peer.ConnectionType, new List<EndPoint>() { peer.EndPoint });
                     }
 
-                    bool newlyDiscoveredPeer = false;
+                    bool newlyDiscoveredPeerEndPoint = false;
                     lock (_syncRoot)
                     {
-                        //This is a peer discovery reply, we need to add this to the tracking dictionary
                         if (!_discoveredPeers.ContainsKey(peerIdentifier))
-                        {
-                            newlyDiscoveredPeer = true;
                             _discoveredPeers.Add(peerIdentifier, new Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>());
-                        }
 
                         //If no remote listeners were returned we can only used the remoteEndPoint used to send this reply
                         if (remoteListeners.Count == 0)
-                            _discoveredPeers[peerIdentifier].Add(connection.ConnectionInfo.ConnectionType, new Dictionary<EndPoint, DateTime>() { { connection.ConnectionInfo.RemoteEndPoint, DateTime.Now } });
+                        {
+                            if (!_discoveredPeers[peerIdentifier].ContainsKey(connection.ConnectionInfo.ConnectionType))
+                                _discoveredPeers[peerIdentifier].Add(connection.ConnectionInfo.ConnectionType, new Dictionary<EndPoint, DateTime>());
+
+                            if (!_discoveredPeers[peerIdentifier][connection.ConnectionInfo.ConnectionType].ContainsKey(connection.ConnectionInfo.RemoteEndPoint))
+                            {
+                                newlyDiscoveredPeerEndPoint = true;
+                                _discoveredPeers[peerIdentifier][connection.ConnectionInfo.ConnectionType].Add(connection.ConnectionInfo.RemoteEndPoint, DateTime.Now);
+                            }
+                        }
                         else
                         {
                             foreach (PeerListenerEndPoint peerEndPoint in remoteListeners)
                             {
-                                if (_discoveredPeers[peerIdentifier].ContainsKey(peerEndPoint.ConnectionType))
-                                    _discoveredPeers[peerIdentifier][peerEndPoint.ConnectionType][peerEndPoint.EndPoint] = DateTime.Now;
-                                else
+                                if (!_discoveredPeers[peerIdentifier].ContainsKey(peerEndPoint.ConnectionType))
+                                {
+                                    newlyDiscoveredPeerEndPoint = true;
                                     _discoveredPeers[peerIdentifier].Add(peerEndPoint.ConnectionType, new Dictionary<EndPoint, DateTime>() { { peerEndPoint.EndPoint, DateTime.Now } });
+                                }
+                                else if (!_discoveredPeers[peerIdentifier][peerEndPoint.ConnectionType].ContainsKey(peerEndPoint.EndPoint))
+                                {
+                                    newlyDiscoveredPeerEndPoint = true;
+                                    _discoveredPeers[peerIdentifier][peerEndPoint.ConnectionType].Add(peerEndPoint.EndPoint, DateTime.Now);
+                                }
                             }
                         }
                     }
 
-                    //Trigger the discovery event if it has been set AND this is the first time this peer was discovered
-                    //If a peer is discoverable on multiple adaptors which we have access too we may receive numerous
-                    //discovery reports. We are only interested in triggering on the first one.
+                    //Trigger the discovery event if it has been set AND this is the first time a new peer end point was discovered
+                    //If a peer is discoverable on multiple adaptors which we have access too we may receive numerous (duplicate)
+                    //discovery reports. We are only interested in triggering on the first one, not subsequent identical copies.
                     //This ensures the synchronous and asynchronous methods execute in a similar fashion
-                    if (OnPeerDiscovered != null && newlyDiscoveredPeer)
+                    if (OnPeerDiscovered != null && newlyDiscoveredPeerEndPoint)
                         OnPeerDiscovered(peerIdentifier, discoveredPeerListeners);
                 }
             }
