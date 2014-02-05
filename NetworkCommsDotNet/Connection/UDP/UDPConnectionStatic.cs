@@ -439,6 +439,9 @@ namespace NetworkCommsDotNet.Connections.UDP
                 }
                 catch (SocketException) { /* Ignore any socket exceptions */ }
             }
+
+            //Dispose of the packet
+            packetToSend.Dispose();
         }
 
         /// <summary>

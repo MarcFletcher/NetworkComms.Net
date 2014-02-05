@@ -1,6 +1,21 @@
-Version 2.4 - Released TBC
+Version 3.0 - Final Release TBC
 
- - Unmanaged connection support.
+- Bluetooth connections (only for .net 3.5 upwards, excluding Windows Phone 8 and WinRT).
+- Unmanaged connections -  Interface with other network libraries, legacy hardware devices, etc.
+- Support for WinRT - Use NetworkComms.Net in your windows store applications.
+- Peer discovery - Easily discover NetworkComms.Net peers in the local network.
+- SSL connections  - Introduces asymmetric encryption (excluding Windows Phone 8 and WinRT).
+- Other security features:
+	\ Ability to restrict incoming IP ranges based on CIDR matches.
+	\ Automatically pad encrypted data preventing traffic analysis side channel attacks.
+	\ Nested packets that allow headers to be encrypted.
+	\ DOS protection which can ban remote clients based on set criteria, such as malformed data.
+- Strong named assemblies.
+- All features are now granular allowing configuration at the global, connection or listener specific level.
+- Protobuf serializer moved in to extension. Allows for more generalised serializer support.
+- Significant API changes. See updated examples before upgrading from v2.x.
+- Large number of tools which can be used to simplify adding network related functionality to your applications.
+- Several minor usage and performance improvements.
 
 Version 2.3 - Released 11/06/13
 

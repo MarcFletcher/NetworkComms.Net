@@ -1204,7 +1204,7 @@ namespace DistributedFileSystem
             {
                 if (ItemDataStream != null)
                 {
-                    ItemDataStream.Close();
+                    ItemDataStream.Dispose(true);
 
                     //Delete the disk file if it exists
                     if (File.Exists(ItemIdentifier + ".DFSItemData"))

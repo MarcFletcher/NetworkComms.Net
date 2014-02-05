@@ -62,7 +62,10 @@ namespace NetworkCommsDotNet.Connections
         /// </summary>
         /// <param name="sendingPacketType">The sending packet type</param>
         /// <param name="objectToSend">The object to send</param>
-        public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend) { SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions); }
+        public void SendObject<sendObjectType>(string sendingPacketType, sendObjectType objectToSend) 
+        { 
+            SendObject(sendingPacketType, objectToSend, ConnectionDefaultSendReceiveOptions); 
+        }
 
         /// <summary>
         /// Send an object using the connection default <see cref="SendReceiveOptions"/>
@@ -698,7 +701,7 @@ namespace NetworkCommsDotNet.Connections
 
                         StreamTools.StreamSendWrapper[] streamsToSend = new StreamTools.StreamSendWrapper[] 
                         { 
-                            new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(new byte[] { 0 }))) 
+                            new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(new byte[] { 0 }), true)) 
                         }; 
 
                         SendStreams(streamsToSend, maxSendTimePerKB, 1);
@@ -756,7 +759,7 @@ namespace NetworkCommsDotNet.Connections
             DateTime startTime = DateTime.Now;
 
             StreamTools.StreamSendWrapper[] streamsToSend = new StreamTools.StreamSendWrapper[] 
-            { new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(headerBytes))),
+            { new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(headerBytes), true)),
                 packet.PacketData};
 
             long totalBytesToSend = 0;

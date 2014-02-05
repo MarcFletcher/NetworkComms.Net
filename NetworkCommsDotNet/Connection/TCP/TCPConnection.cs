@@ -696,10 +696,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                 {
                     //Write each stream
                     timings[i] = streamsToSend[i].ThreadSafeStream.CopyTo(sendingStream, streamsToSend[i].Start, streamsToSend[i].Length, NetworkComms.SendBufferSizeBytes, maxSendTimePerKB, MinSendTimeoutMS);
-
-                    //Finish by checking if the stream needs closing
-                    if (streamsToSend[i].ThreadSafeStream.CloseStreamAfterSend)
-                        streamsToSend[i].ThreadSafeStream.Close();
+                    streamsToSend[i].ThreadSafeStream.Dispose();
                 }
                 else
                     timings[i] = 0;

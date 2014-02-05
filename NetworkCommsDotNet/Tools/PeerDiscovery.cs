@@ -600,11 +600,17 @@ namespace NetworkCommsDotNet.Tools
         /// <returns></returns>
         private static Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeersUDP(int discoverTimeMS)
         {
-            using (Packet sendPacket = new Packet(discoveryPacketType, new byte[0], NetworkComms.DefaultSendReceiveOptions))
+            SendReceiveOptions nullOptions = new SendReceiveOptions<NullSerializer>();
+            StreamTools.StreamSendWrapper sendStream =
+                new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(new byte[0])));
+
+            using (Packet sendPacket = new Packet(discoveryPacketType, sendStream, nullOptions))
             {
                 for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
-                    UDPConnection.SendObject<byte[]>(sendPacket, new IPEndPoint(IPAddress.Broadcast, port), NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+                    UDPConnection.SendObject<byte[]>(sendPacket, new IPEndPoint(IPAddress.Broadcast, port), nullOptions, ApplicationLayerProtocolStatus.Enabled);
             }
+
+            sendStream.ThreadSafeStream.Dispose(true);
 
             AutoResetEvent sleep = new AutoResetEvent(false);
             sleep.WaitOne(discoverTimeMS);

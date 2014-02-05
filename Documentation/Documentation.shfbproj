@@ -36,15 +36,13 @@
     <ContentPlacement>BelowNamespaces</ContentPlacement>
     <DocumentationSources>
       <DocumentationSource sourceFile="..\DistributedFileSystem\DistributedFileSystem.csproj" />
-      <DocumentationSource sourceFile="..\DPSBase\DPSBase.csproj" />
-      <DocumentationSource sourceFile="..\ExamplesConsole\ExamplesConsole.csproj" />
-      <DocumentationSource sourceFile="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj" />
-      <DocumentationSource sourceFile="..\QuickLZCompressor\QuickLZCompressor.csproj" />
-      <DocumentationSource sourceFile="..\RemoteProcedureCalls\RemoteProcedureCalls.csproj" />
-      <DocumentationSource sourceFile="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj" />
-      <DocumentationSource sourceFile="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj" />
-    </DocumentationSources>
-    <ProjectSummary>Networking made easy, out of the box. Creating client-server applications in C# &amp;#39%3bshould&amp;#39%3b be a piece of cake. Without requiring any knowledge of networking, this high performance, lightweight, thread safe, general purpose, open source, communication library makes that possible. Please see our very short console examples to find out how. Please see http://www.networkcomms.net/licensing/ for licensing information.</ProjectSummary>
+<DocumentationSource sourceFile="..\Platforms\Net40\DPSBase\DPSBase.csproj" />
+<DocumentationSource sourceFile="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj" subFolders="True" />
+<DocumentationSource sourceFile="..\QuickLZCompressor\QuickLZCompressor.csproj" />
+<DocumentationSource sourceFile="..\RemoteProcedureCalls\RemoteProcedureCalls.csproj" />
+<DocumentationSource sourceFile="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj" />
+<DocumentationSource sourceFile="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj" /></DocumentationSources>
+    <ProjectSummary>Networking made easy, out of the box. Creating client-server applications in .net &amp;#39%3bshould&amp;#39%3b be a piece of cake. Without requiring any knowledge of networking, this high performance, lightweight, thread safe, general purpose, open source, communication library makes that possible. Please see our very short console examples to find out how. Please see http://www.networkcomms.net/licensing/ for licensing information.</ProjectSummary>
     <RootNamespaceTitle>NetworkComms.Net</RootNamespaceTitle>
     <ComponentConfigurations>
       <ComponentConfig id="Code Block Component" enabled="True">
@@ -80,15 +78,23 @@
       </ComponentConfig>
     </ComponentConfigurations>
     <NamespaceSummaries>
-      <NamespaceSummaryItem name="DPSBase" isDocumented="True">Abstract classes for defining data serialization and processing techniques as well as basic implementations of both.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="ExamplesConsole" isDocumented="False">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Library providing methods to send and receive objects. Features include transmission using TCP or UDP over IPv4 or IPv6, object serialization, data compression and encryption.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="(global)" isDocumented="False" />
-<NamespaceSummaryItem name="DistributedFileSystem" isDocumented="True">An extension that provides high performance torrent style data distribution.</NamespaceSummaryItem></NamespaceSummaries>
+      <NamespaceSummaryItem name="DPSBase" isDocumented="False">Abstract classes for defining data serialization and processing techniques as well as basic implementations of both.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="ExamplesConsole" isDocumented="False">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Base library providing methods to track connections, global configurations, send and receive objects.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SevenZipLZMACompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using the 7zip LZMA algorithm</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="(global)" isDocumented="False" />
+      <NamespaceSummaryItem name="DistributedFileSystem" isDocumented="True">An extension that provides high performance torrent style data distribution.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Examples.ExamplesConsole" isDocumented="False" />
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections" isDocumented="True">Provides base connection functionality and defines structure of connection listeners.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.TCP" isDocumented="True">Implements all aspects of TCP connections.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.UDP" isDocumented="True">Implements all aspects of UDP connections.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.DPSBase" isDocumented="True">Provides base functionality required to convert custom objects into byte streams. Includes data processing interfaces which can be used to modify the serialised byte streams.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Tools" isDocumented="True">Large number of tools which can be used to simplify adding network related functionality to your own application</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.Bluetooth" isDocumented="True">Implements all aspects of Bluetooth connections.</NamespaceSummaryItem>
+    </NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcomms.net</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />
@@ -108,7 +114,7 @@
     <MSHelpViewerSdkLinkType>Msdn</MSHelpViewerSdkLinkType>
     <CatalogVersion>100</CatalogVersion>
     <CatalogProductId>VS</CatalogProductId>
-    <FooterText>We welcome any and all feedback on our network library.</FooterText>
+    <FooterText>We welcome any and all feedback on our .net c# network library.</FooterText>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in
        order for Visual Studio to perform the build.  The others are optional
