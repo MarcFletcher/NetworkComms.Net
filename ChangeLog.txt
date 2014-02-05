@@ -1,7 +1,7 @@
 Version 3.0 - Final Release TBC
 
 - Bluetooth connections (only for .net 3.5 upwards, excluding Windows Phone 8 and WinRT).
-- Unmanaged connections -  Interface with other network libraries, legacy hardware devices, etc.
+- Unmanaged connections -  Interface with other network libraries, embedded controllers, legacy hardware devices, etc.
 - Support for WinRT - Use NetworkComms.Net in your windows store applications.
 - Peer discovery - Easily discover NetworkComms.Net peers in the local network.
 - SSL connections  - Introduces asymmetric encryption (excluding Windows Phone 8 and WinRT).
