@@ -82,7 +82,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DPSBase\DPSBase.csproj">
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
+      <Name>DPSBase</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

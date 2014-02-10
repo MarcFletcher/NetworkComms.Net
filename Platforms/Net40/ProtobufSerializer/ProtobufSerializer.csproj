@@ -1,37 +1,34 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{9A8E342F-2EB6-44ED-A305-A6E0074540C0}</ProjectGuid>
+    <ProjectGuid>{62977BE8-428B-4683-A098-4E3F588B3F7E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NetworkCommsDotNet.DPSBase</RootNamespace>
-    <AssemblyName>DPSBase</AssemblyName>
+    <RootNamespace>ProtobufSerializer</RootNamespace>
+    <AssemblyName>ProtobufSerializer</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET4</DefineConstants>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NET4</DefineConstants>
+    <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DocumentationFile>bin\Release\DPSBase.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -40,6 +37,9 @@
     <AssemblyOriginatorKeyFile>networkcomms.net.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -49,43 +49,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\DPSBase\BinaryFormaterSerializer.cs">
-      <Link>BinaryFormaterSerializer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\DataPadder.cs">
-      <Link>DataPadder.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\DataProcessor.cs">
-      <Link>DataProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\DataSerializer.cs">
-      <Link>DataSerializer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\DataSerializerProcessorAttribute.cs">
-      <Link>DataSerializerProcessorAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\DPSManager.cs">
-      <Link>DPSManager.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\Exception.cs">
-      <Link>Exception.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\ExplicitSerializer.cs">
-      <Link>ExplicitSerializer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\NullSerializer.cs">
-      <Link>NullSerializer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\RijndaelPSKEncrypter.cs">
-      <Link>RijndaelPSKEncrypter.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\StreamTools.cs">
-      <Link>StreamTools.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\DPSBase\XPlatformHelper\Logger.cs">
-      <Link>XPlatformHelper\Logger.cs</Link>
+    <Compile Include="..\..\..\ProtobufSerializer\ProtobufSerializer.cs">
+      <Link>ProtobufSerializer.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
+      <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
+      <Name>DPSBase</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="networkcomms.net.snk" />

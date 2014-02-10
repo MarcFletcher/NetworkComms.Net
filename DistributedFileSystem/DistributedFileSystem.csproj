@@ -112,11 +112,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Platforms\Net40\DPSBase\DPSBase.csproj">
       <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
-      <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
+      <Name>DPSBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
-      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{62977be8-428b-4683-a098-4e3f588b3f7e}</Project>
+      <Name>ProtobufSerializer</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

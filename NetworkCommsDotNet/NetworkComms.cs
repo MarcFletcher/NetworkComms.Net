@@ -133,8 +133,7 @@ namespace NetworkCommsDotNet
 #endif
 
             //Initialise the core extensions
-            DPSManager.AddDataSerializer<ProtobufSerializer>();
-
+            DPSManager.AddDataSerializer<ExplicitSerializer>();
             DPSManager.AddDataSerializer<NullSerializer>();
             DPSManager.GetDataProcessor<DataPadder>();
 
@@ -151,9 +150,15 @@ namespace NetworkCommsDotNet
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
 
-            DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
-                new List<DataProcessor>() { },
-                new Dictionary<string, string>());
+            //Use the Protobuf serializer if it was found. Otherwise use out explicit serializer
+            if (DPSManager.GetDataSerializer(1) != null)
+                DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer(1),
+                    new List<DataProcessor>() { },
+                    new Dictionary<string, string>());
+            else
+                DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
+                    new List<DataProcessor>() { },
+                    new Dictionary<string, string>());
         }
 
         #region NetworkComms.Net Instance Information

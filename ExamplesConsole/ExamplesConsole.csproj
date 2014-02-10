@@ -93,23 +93,27 @@
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\DPSBase\DPSBase.csproj">
       <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
-      <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
+      <Name>DPSBase</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
-      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{62977be8-428b-4683-a098-4e3f588b3f7e}</Project>
+      <Name>ProtobufSerializer</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>
-      <Name>QuickLZCompressor %28Net40\Extensions\QuickLZCompressor%29</Name>
+      <Name>QuickLZCompressor</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
       <Project>{a95d9802-2e43-41c4-aa68-c78aaafece10}</Project>
-      <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
+      <Name>SevenZipLZMACompressor</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
       <Project>{f27f6581-d3ff-4ef1-8dc6-8df8e53e4132}</Project>
-      <Name>SharpZipLibCompressor %28Net40\Extensions\SharpZipLibCompressor%29</Name>
+      <Name>SharpZipLibCompressor</Name>
     </ProjectReference>
     <ProjectReference Include="..\RemoteProcedureCalls\RemoteProcedureCalls.csproj">
       <Project>{BFB67E36-9DF1-473D-B5DC-D94C5199C624}</Project>
