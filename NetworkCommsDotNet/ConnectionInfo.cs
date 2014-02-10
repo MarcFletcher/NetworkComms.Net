@@ -19,7 +19,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using ProtoBuf;
 using System.Net;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
@@ -29,6 +28,7 @@ using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
+using System.IO;
 #endif
 
 #if NET4 || NET35
@@ -67,24 +67,19 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Contains any information related to the configuration of a <see cref="Connection"/> object.
     /// </summary>
-    [ProtoContract]
-    public class ConnectionInfo : IEquatable<ConnectionInfo>
+    public class ConnectionInfo : IEquatable<ConnectionInfo>, IExplicitlySerialize
     {
         /// <summary>
         /// The type of this connection
         /// </summary>
-        [ProtoMember(1)]
         public ConnectionType ConnectionType { get; internal set; }
 
         /// <summary>
         /// We store our unique peer identifier as a string so that it can be easily serialised.
         /// </summary>
-        [ProtoMember(2)]
         string NetworkIdentifierStr;
 
-        [ProtoMember(3)]
         string localEndPointAddressStr; //Only set on serialise
-        [ProtoMember(4)]
         int localEndPointPort; //Only set on serialise
 
         bool hashCodeCacheSet = false;
@@ -93,7 +88,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// True if the <see cref="RemoteEndPoint"/> is connectable.
         /// </summary>
-        [ProtoMember(5)]
         public bool IsConnectable { get; private set; }
 
         /// <summary>
@@ -168,7 +162,6 @@ namespace NetworkCommsDotNet
         /// useful features such as inline serialisation, transparent packet transmission, 
         /// remote peer information etc. Default: ApplicationLayerProtocolStatus.Enabled
         /// </summary>
-        [ProtoMember(6)]
         public ApplicationLayerProtocolStatus ApplicationLayerProtocol { get; private set; }
 
         #region Internal Usages
@@ -506,50 +499,7 @@ namespace NetworkCommsDotNet
             this.ConnectionCreationTime = DateTime.Now;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
         }
-
-        [ProtoBeforeSerialization]
-        private void OnSerialise()
-        {
-            lock (internalLocker)
-            {
-                if (LocalEndPoint as IPEndPoint != null)
-                {
-                    localEndPointAddressStr = LocalIPEndPoint.Address.ToString();
-                    localEndPointPort = LocalIPEndPoint.Port;
-                }
-
-#if NET4 || NET35
-                if (LocalEndPoint as InTheHand.Net.BluetoothEndPoint != null)
-                {
-                    localEndPointAddressStr = LocalBTEndPoint.Address.ToString();
-                    localEndPointPort = LocalBTEndPoint.Port;
-                }
-#endif
-            }
-        }
-
-        [ProtoAfterDeserialization]
-        private void OnDeserialise()
-        {   
-#if NET4 || NET35
-            if (ConnectionType == ConnectionType.Bluetooth)
-            {
-                BluetoothAddress btAddress;
-                if(!BluetoothAddress.TryParse(localEndPointAddressStr, out btAddress))
-                    throw new ArgumentException("Failed to parse BluetoothAddress from localEndPointAddressStr", "localEndPointAddressStr");
-
-                LocalEndPoint = new BluetoothEndPoint(btAddress, BluetoothService.SerialPort, localEndPointPort);
-                return;
-            }
-#endif
-
-            IPAddress ipAddress;
-            if (!IPAddress.TryParse(localEndPointAddressStr, out ipAddress))
-                throw new ArgumentException("Failed to parse IPAddress from localEndPointAddressStr", "localEndPointAddressStr");
-
-            LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
-        }
-
+        
         /// <summary>
         /// Marks the connection as establishing
         /// </summary>
@@ -776,5 +726,113 @@ namespace NetworkCommsDotNet
 
             return returnString.Trim();
         }
+
+        #region IExplicitlySerialize Members
+
+        public void Serialize(Stream outputStream)
+        {
+            List<byte[]> data = new List<byte[]>();
+
+            lock (internalLocker)
+            {
+                if (LocalEndPoint as IPEndPoint != null)
+                {
+                    localEndPointAddressStr = LocalIPEndPoint.Address.ToString();
+                    localEndPointPort = LocalIPEndPoint.Port;
+                }
+
+#if NET4 || NET35
+                if (LocalEndPoint as InTheHand.Net.BluetoothEndPoint != null)
+                {
+                    localEndPointAddressStr = LocalBTEndPoint.Address.ToString();
+                    localEndPointPort = LocalBTEndPoint.Port;
+                }
+#endif
+                byte[] conTypeData = BitConverter.GetBytes((int)ConnectionType);
+
+                data.Add(conTypeData);
+
+                byte[] netIDData = Encoding.UTF8.GetBytes(NetworkIdentifierStr);
+                byte[] netIDLengthData = BitConverter.GetBytes(netIDData.Length);
+
+                data.Add(netIDLengthData);
+                data.Add(netIDData);
+
+                byte[] localEPAddreessData = Encoding.UTF8.GetBytes(localEndPointAddressStr);
+                byte[] localEPAddreessLengthData = BitConverter.GetBytes(localEPAddreessData.Length);
+
+                data.Add(localEPAddreessLengthData);
+                data.Add(localEPAddreessData);
+
+                byte[] isConnectableData = BitConverter.GetBytes(IsConnectable);
+
+                data.Add(isConnectableData);
+
+                byte[] AppLayerEnabledData = BitConverter.GetBytes((int)ApplicationLayerProtocol);
+
+                data.Add(AppLayerEnabledData);
+            }
+
+            foreach (byte[] datum in data)
+                outputStream.Write(datum, 0, datum.Length);            
+        }
+
+        public void Deserialize(System.IO.Stream inputStream)
+        {
+        /*
+        [ProtoMember(1)]
+        public ConnectionType ConnectionType { get; internal set; }
+        [ProtoMember(2)]
+        string NetworkIdentifierStr;
+        [ProtoMember(3)]
+        string localEndPointAddressStr; //Only set on serialise
+        [ProtoMember(4)]
+        int localEndPointPort; //Only set on serialise
+        [ProtoMember(5)]
+        public bool IsConnectable { get; private set; }
+        [ProtoMember(6)]
+        public ApplicationLayerProtocolStatus ApplicationLayerProtocol { get; private set; }           
+        */
+            byte[] conTypeData = new byte[sizeof(int)]; inputStream.Read(conTypeData, 0, conTypeData.Length); 
+            
+            ConnectionType = (ConnectionType)BitConverter.ToInt32(conTypeData, 0);
+            
+            byte[] netIDLengthData = new byte[sizeof(int)]; inputStream.Read(netIDLengthData, 0, netIDLengthData.Length);
+            byte[] netIDData = new byte[BitConverter.ToInt32(netIDLengthData, 0)]; inputStream.Read(netIDData, 0, netIDData.Length); 
+            
+            NetworkIdentifierStr = new String(Encoding.UTF8.GetChars(netIDData));
+
+            byte[] localEPAddreessLengthData = new byte[sizeof(int)]; inputStream.Read(localEPAddreessLengthData, 0, sizeof(int));
+            byte[] localEPAddreessData = new byte[BitConverter.ToInt32(localEPAddreessLengthData, 0)]; inputStream.Read(localEPAddreessData, 0, localEPAddreessData.Length); 
+            
+            localEndPointAddressStr = new String(Encoding.UTF8.GetChars(localEPAddreessData));
+            
+            byte[] isConnectableData = new byte[sizeof(int)]; inputStream.Read(isConnectableData, 0, sizeof(bool));
+            
+            IsConnectable = BitConverter.ToBoolean(isConnectableData, 0);
+
+            byte[] AppLayerEnabledData = new byte[sizeof(int)]; inputStream.Read(AppLayerEnabledData, 0, sizeof(int));
+
+            ApplicationLayerProtocol = (ApplicationLayerProtocolStatus)BitConverter.ToInt32(AppLayerEnabledData, 0);
+            
+#if NET4 || NET35
+            if (ConnectionType == ConnectionType.Bluetooth)
+            {
+                BluetoothAddress btAddress;
+                if(!BluetoothAddress.TryParse(localEndPointAddressStr, out btAddress))
+                    throw new ArgumentException("Failed to parse BluetoothAddress from localEndPointAddressStr", "localEndPointAddressStr");
+
+                LocalEndPoint = new BluetoothEndPoint(btAddress, BluetoothService.SerialPort, localEndPointPort);
+                return;
+            }
+#endif
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(localEndPointAddressStr, out ipAddress))
+                throw new ArgumentException("Failed to parse IPAddress from localEndPointAddressStr", "localEndPointAddressStr");
+
+            LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
+        }
+
+        #endregion
     }
 }
