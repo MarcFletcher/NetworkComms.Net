@@ -228,6 +228,7 @@ namespace NetworkCommsDotNet
 
         #region IExplicitlySerialize Members
 
+        /// <inheritdoc />
         public void Serialize(Stream outputStream)
         {
             _packetHeader.Serialize(outputStream);
@@ -235,6 +236,7 @@ namespace NetworkCommsDotNet
             outputStream.Write(_payloadObjectBytes, 0, _payloadObjectBytes.Length);
         }
 
+        /// <inheritdoc />
         public void Deserialize(Stream inputStream)
         {
             var packetHeaderConstructor = typeof(PacketHeader).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
@@ -250,5 +252,16 @@ namespace NetworkCommsDotNet
         }
 
         #endregion
+
+        /// <summary>
+        /// Deserializes from a memory stream to a <see cref="Packet"/> object
+        /// </summary>
+        /// <param name="inputStream">The memory stream containing the serialized <see cref="Packet"/></param>
+        /// <param name="result">The deserialized <see cref="Packet"/></param>
+        public static void Deserialize(Stream inputStream, out Packet result)
+        {
+            result = new Packet();
+            result.Deserialize(inputStream);
+        }
     }
 }

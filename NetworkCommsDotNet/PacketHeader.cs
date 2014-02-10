@@ -251,6 +251,7 @@ namespace NetworkCommsDotNet
 
         #region IExplicitlySerialize Members
 
+        /// <inheritdoc />
         public void Serialize(Stream outputStream)
         {
             List<byte[]> data = new List<byte[]>();
@@ -279,6 +280,7 @@ namespace NetworkCommsDotNet
                 outputStream.Write(datum, 0, datum.Length);
         }
 
+        /// <inheritdoc />
         public void Deserialize(Stream inputStream)
         {
             longItems = new Dictionary<PacketHeaderLongItems, long>();
@@ -317,5 +319,16 @@ namespace NetworkCommsDotNet
         }
 
         #endregion
+
+        /// <summary>
+        /// Deserializes from a memory stream to a <see cref="PacketHeader"/> object
+        /// </summary>
+        /// <param name="inputStream">The memory stream containing the serialized <see cref="PacketHeader"/></param>
+        /// <param name="result">The deserialized <see cref="PacketHeader"/></param>
+        public static void Deserialize(Stream inputStream, out PacketHeader result)
+        {
+            result = new PacketHeader();
+            result.Deserialize(inputStream);
+        }
     }
 }

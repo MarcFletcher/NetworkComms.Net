@@ -729,6 +729,7 @@ namespace NetworkCommsDotNet
 
         #region IExplicitlySerialize Members
 
+        /// <inheritdoc />
         public void Serialize(Stream outputStream)
         {
             List<byte[]> data = new List<byte[]>();
@@ -781,6 +782,7 @@ namespace NetworkCommsDotNet
                 outputStream.Write(datum, 0, datum.Length);            
         }
 
+        /// <inheritdoc />
         public void Deserialize(System.IO.Stream inputStream)
         {
             byte[] conTypeData = new byte[sizeof(int)]; inputStream.Read(conTypeData, 0, conTypeData.Length); 
@@ -827,6 +829,11 @@ namespace NetworkCommsDotNet
             LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
         }
 
+        /// <summary>
+        /// Deserializes from a memory stream to a <see cref="ConnectionInfo"/> object
+        /// </summary>
+        /// <param name="ms">The memory stream containing the serialized <see cref="ConnectionInfo"/></param>
+        /// <param name="result">The deserialized <see cref="ConnectionInfo"/></param>
         public static void Deserialize(MemoryStream ms, out ConnectionInfo result)
         {
             result = new ConnectionInfo();

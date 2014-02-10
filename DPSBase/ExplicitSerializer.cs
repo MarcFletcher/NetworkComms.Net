@@ -6,19 +6,35 @@ using System.Text;
 
 namespace NetworkCommsDotNet.DPSBase
 {
+    /// <summary>
+    /// Interface defining serialize/deserialize methods 
+    /// </summary>
     public interface IExplicitlySerialize
     {
+        /// <summary>
+        /// Serializes the current <see cref="IExplicitlySerialize"/> object to the provided <see cref="System.IO.Stream"/>
+        /// </summary>
+        /// <param name="outputStream">The stream to serialize to</param>
         void Serialize(Stream outputStream);
+
+        /// <summary>
+        /// Deserializes from a <see cref="System.IO.Stream"/> to the current <see cref="IExplicitlySerialize"/> object
+        /// </summary>
+        /// <param name="inputStream">The <see cref="System.IO.Stream"/> to deserialize from</param>
         void Deserialize(Stream inputStream);
     }
 
-    [DataSerializerProcessor(3)]
+    /// <summary>
+    /// Serializer that will only serialize objects implementing the <see cref="IExplicitlySerialize"/> interface
+    /// </summary>
+    [DataSerializerProcessor(3)]    
     public class ExplicitSerializer : DataSerializer
     {
         Type explicitlySerializableType = typeof(IExplicitlySerialize);
 
         private ExplicitSerializer() { }
 
+        /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream outputStream, object objectToSerialise, Dictionary<string, string> options)
         {
             if (outputStream == null)
@@ -32,7 +48,7 @@ namespace NetworkCommsDotNet.DPSBase
 
             (objectToSerialise as IExplicitlySerialize).Serialize(outputStream);
         }
-
+        /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
             if (inputStream == null)
