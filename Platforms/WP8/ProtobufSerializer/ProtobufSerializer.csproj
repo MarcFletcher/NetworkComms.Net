@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{69544DA2-22F5-417B-80E4-0FFB3851662C}</ProjectGuid>
+    <ProjectGuid>{3B3BE1CB-5C8F-4473-B953-CF0ABC5CE800}</ProjectGuid>
     <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SevenZipLZMACompressor</RootNamespace>
-    <AssemblyName>SevenZipLZMACompressor</AssemblyName>
+    <RootNamespace>ProtobufSerializer</RootNamespace>
+    <AssemblyName>ProtobufSerializer</AssemblyName>
     <TargetFrameworkIdentifier>WindowsPhone</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v8.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
@@ -39,7 +39,6 @@
     <NoConfig>true</NoConfig>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>Bin\Release\SevenZipLZMACompressor.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -84,57 +83,23 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\Common\CommandLineParser.cs">
-      <Link>Common\CommandLineParser.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\Common\CRC.cs">
-      <Link>Common\CRC.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\Common\InBuffer.cs">
-      <Link>Common\InBuffer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\Common\OutBuffer.cs">
-      <Link>Common\OutBuffer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LzmaBase.cs">
-      <Link>LzmaBase.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LZMACompressor.cs">
-      <Link>LZMACompressor.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LzmaDecoder.cs">
-      <Link>LzmaDecoder.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LzmaEncoder.cs">
-      <Link>LzmaEncoder.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LZ\LzBinTree.cs">
-      <Link>LZ\LzBinTree.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LZ\LzInWindow.cs">
-      <Link>LZ\LzInWindow.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\LZ\LzOutWindow.cs">
-      <Link>LZ\LzOutWindow.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\RangeCoder\RangeCoder.cs">
-      <Link>RangeCoder\RangeCoder.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\RangeCoder\RangeCoderBit.cs">
-      <Link>RangeCoder\RangeCoderBit.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs">
-      <Link>RangeCoder\RangeCoderBitTree.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\SevenZipLZMACompressor\SevenZipHelper.cs">
-      <Link>SevenZipHelper.cs</Link>
+    <Compile Include="..\..\..\ProtobufSerializer\ProtobufSerializer.cs">
+      <Link>ProtobufSerializer.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{E00BA640-8886-4FEE-8484-19CE7FB3D9BF}</Project>
-      <Name>DPSBase %28WP8\Core\DPSBase%29</Name>
+    <Reference Include="protobuf-net">
+      <HintPath>..\..\..\packages\protobuf-net.2.0.0.668\lib\windowsphone8\protobuf-net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{C9872F18-12FB-4933-B2AF-F86710D4E1D8}</Project>
+      <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).$(TargetFrameworkVersion).Overrides.targets" />

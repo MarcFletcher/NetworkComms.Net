@@ -4,6 +4,10 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 
+#if NETFX_CORE
+using System.Linq;
+#endif
+
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
@@ -54,11 +58,16 @@ namespace NetworkCommsDotNet.DPSBase
             if (inputStream == null)
                 throw new ArgumentNullException("inputStream");
 
+#if NETFX_CORE
+            var constructor = (from ctor in resultType.GetTypeInfo().DeclaredConstructors
+                             where ctor.GetParameters().Length == 0
+                             select ctor).FirstOrDefault();
+#else
             var constructor = resultType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 
             if (constructor == null || !explicitlySerializableType.IsAssignableFrom(resultType))
                 throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a paramerterless constrcutor or does not implement IExplicitlySerialize","resultType");
-
+#endif
             var result = constructor.Invoke(new object[] { }) as IExplicitlySerialize;
             result.Deserialize(inputStream);
 

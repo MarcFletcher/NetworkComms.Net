@@ -240,10 +240,7 @@ namespace NetworkCommsDotNet
         /// <inheritdoc />
         public void Deserialize(Stream inputStream)
         {
-            var packetHeaderConstructor = typeof(PacketHeader).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
-            _packetHeader = (PacketHeader)packetHeaderConstructor.Invoke(new object[] { });
-
-            _packetHeader.Deserialize(inputStream);
+            PacketHeader.Deserialize(inputStream, out _packetHeader);
 
             byte[] payloadLengthData = new byte[sizeof(int)];
             inputStream.Read(payloadLengthData, 0, sizeof(int));

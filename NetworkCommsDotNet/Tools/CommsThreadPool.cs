@@ -95,7 +95,7 @@ namespace NetworkCommsDotNet.Tools
                 {
                     taskCancellationTokens[pair.Key].Cancel();
                     if (!pair.Value.Wait(threadShutdownTimeoutMS))
-                        LogTools.LogException(new DPSBase.CommsSetupShutdownException("Managed threadpool shutdown error"), "ManagedThreadPoolShutdownError");
+                        LogTools.LogException(new CommsSetupShutdownException("Managed threadpool shutdown error"), "ManagedThreadPoolShutdownError");
                 }
             }
 #else

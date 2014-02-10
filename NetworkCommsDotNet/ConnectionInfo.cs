@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
+using System.IO;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections;
@@ -28,7 +29,6 @@ using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Tools.XPlatformHelper;
 #else
 using System.Net.Sockets;
-using System.IO;
 #endif
 
 #if NET4 || NET35

@@ -101,17 +101,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{c12bbc4c-371a-42d8-bea1-03ea64611f6c}</Project>
-      <Name>DPSBase %28WinRT\Core\DPSBase%29</Name>
-    </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{c7ef8b65-1903-4dcb-bd87-f93634716982}</Project>
-      <Name>NetworkCommsDotNet %28WinRT\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{91b8a67b-9b83-4cea-9607-1364db3d27ca}</Project>
-      <Name>SevenZipLZMACompressor %28WinRT\Core\SevenZipLZMACompressor%29</Name>
+      <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

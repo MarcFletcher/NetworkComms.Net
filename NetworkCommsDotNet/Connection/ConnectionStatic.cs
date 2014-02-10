@@ -258,7 +258,7 @@ namespace NetworkCommsDotNet.Connections
                 shutdownWorkerThreads = true;
 #if NETFX_CORE
                 if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Wait(threadShutdownTimeoutMS))
-                    throw new DPSBase.CommsSetupShutdownException("Connection keep alive worker failed to shutdown");
+                    throw new CommsSetupShutdownException("Connection keep alive worker failed to shutdown");
 #else
                 if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Join(threadShutdownTimeoutMS))
                     connectionKeepAliveWorker.Abort();

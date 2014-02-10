@@ -291,7 +291,7 @@ namespace NetworkCommsDotNet.Tools
 #else
             using (System.Security.Cryptography.HashAlgorithm md5 =
 #if WINDOWS_PHONE
-                new DPSBase.MD5Managed())
+                new Tools.MD5Managed())
 #else
  System.Security.Cryptography.MD5.Create())
 #endif
@@ -372,7 +372,7 @@ namespace NetworkCommsDotNet.Tools
                 return Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
 #else
 #if WINDOWS_PHONE
-                using(var md5 = new DPSBase.MD5Managed())
+                using(var md5 = new Tools.MD5Managed())
                 {
 #else
                     using (var md5 = System.Security.Cryptography.MD5.Create())
