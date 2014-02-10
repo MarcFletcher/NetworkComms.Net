@@ -161,17 +161,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{E00BA640-8886-4FEE-8484-19CE7FB3D9BF}</Project>
-      <Name>DPSBase %28WP8\Core\DPSBase%29</Name>
-    </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{C9872F18-12FB-4933-B2AF-F86710D4E1D8}</Project>
       <Name>NetworkCommsDotNet</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{69544DA2-22F5-417B-80E4-0FFB3851662C}</Project>
-      <Name>SevenZipLZMACompressor %28WP8\Core\SevenZipLZMACompressor%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
