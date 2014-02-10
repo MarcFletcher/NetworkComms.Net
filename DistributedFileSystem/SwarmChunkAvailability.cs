@@ -30,6 +30,7 @@ using NetworkCommsDotNet.Connections.UDP;
 using NetworkCommsDotNet.Connections.TCP;
 using System.Threading;
 using System.Net;
+using System.IO;
 
 namespace DistributedFileSystem
 {
@@ -263,8 +264,13 @@ namespace DistributedFileSystem
         /// <summary>
         /// All ConnectionInfos corresponding with this peer
         /// </summary>
-        [ProtoMember(4)]
         private List<ConnectionInfo> PeerConnectionInfo { get; set; }
+
+        /// <summary>
+        /// Protobuf cannopt serialize ConnectionInfo so we provide a backing field and use the ProtoBeforeSerialization and ProtoAfterSerialization methodology to serialize by hand
+        /// </summary>
+        [ProtoMember(4)]
+        private List<byte[]> _peerConnectionInfoSerialized { get; set; }
 
         /// <summary>
         /// Used to maintain peer status
@@ -558,6 +564,38 @@ namespace DistributedFileSystem
         public override string ToString()
         {
             return "PeerInfo - " + PeerNetworkIdentifier + " ["+NumberOfConnectionInfos+"]";
+        }
+
+        [ProtoBeforeSerialization]
+        private void BeforeSerialise()
+        {
+            _peerConnectionInfoSerialized = new List<byte[]>();
+
+            foreach (ConnectionInfo info in PeerConnectionInfo)
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    info.Serialize(ms);
+                    ms.Flush();
+                    _peerConnectionInfoSerialized.Add(ms.ToArray());
+                }
+            }
+        }
+
+        [ProtoAfterDeserialization]
+        private void AfterSerialise()
+        {
+            PeerConnectionInfo = new List<ConnectionInfo>();
+
+            foreach (byte[] info in _peerConnectionInfoSerialized)
+            {
+                using (MemoryStream ms = new MemoryStream(info))
+                {
+                    ConnectionInfo result;
+                    ConnectionInfo.Deserialize(ms, out result);
+                    PeerConnectionInfo.Add(result);
+                }
+            }
         }
     }
 

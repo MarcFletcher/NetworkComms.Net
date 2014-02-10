@@ -819,6 +819,12 @@ namespace NetworkCommsDotNet
             LocalEndPoint = new IPEndPoint(ipAddress, localEndPointPort);
         }
 
+        public static void Deserialize(MemoryStream ms, out ConnectionInfo result)
+        {
+            result = new ConnectionInfo();
+            result.Deserialize(ms);            
+        }
+
         #endregion
     }
 }
