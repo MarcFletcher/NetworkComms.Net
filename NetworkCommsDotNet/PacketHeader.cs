@@ -19,7 +19,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using ProtoBuf;
 using System.IO;
 using NetworkCommsDotNet.DPSBase;
 
@@ -93,12 +92,9 @@ namespace NetworkCommsDotNet
     /// Contains information required to send, receive and correctly rebuild any objects sent via NetworkComms.Net.
     /// Any data sent via NetworkCommsDotNet is always preceded by a packetHeader.
     /// </summary>
-    [ProtoContract]
-    public sealed class PacketHeader
+    public sealed class PacketHeader : IExplicitlySerialize
     {
-        [ProtoMember(1)]
         Dictionary<PacketHeaderLongItems, long> longItems;
-        [ProtoMember(2)]
         Dictionary<PacketHeaderStringItems, string> stringItems;
         
         /// <summary>
@@ -251,6 +247,73 @@ namespace NetworkCommsDotNet
         {
             stringItems[option] = Value;
         }
+        #endregion
+
+        #region IExplicitlySerialize Members
+
+        public void Serialize(Stream outputStream)
+        {
+            List<byte[]> data = new List<byte[]>();
+
+            byte[] longItemsLengthData = BitConverter.GetBytes(longItems.Count); data.Add(longItemsLengthData);
+
+            foreach (var pair in longItems)
+            {
+                byte[] keyData = BitConverter.GetBytes((int)pair.Key); data.Add(keyData);
+                byte[] valData = BitConverter.GetBytes(pair.Value); data.Add(valData);
+            }
+
+            byte[] stringItemsLengthData = BitConverter.GetBytes(stringItems.Count); data.Add(stringItemsLengthData);
+
+            foreach (var pair in stringItems)
+            {
+                byte[] keyData = BitConverter.GetBytes((int)pair.Key); data.Add(keyData);
+                byte[] valData = Encoding.UTF8.GetBytes(pair.Value);
+                byte[] valLengthData = BitConverter.GetBytes(valData.Length);
+
+                data.Add(valLengthData);
+                data.Add(valData);
+            }
+
+            foreach (byte[] datum in data)
+                outputStream.Write(datum, 0, datum.Length);
+        }
+
+        public void Deserialize(Stream inputStream)
+        {
+            longItems = new Dictionary<PacketHeaderLongItems, long>();
+            stringItems = new Dictionary<PacketHeaderStringItems, string>();
+
+            byte[] longItemsLengthData = new byte[sizeof(int)]; inputStream.Read(longItemsLengthData, 0, sizeof(int));
+            int longItemsLength = BitConverter.ToInt32(longItemsLengthData, 0);
+
+            for(int i = 0; i < longItemsLength; i++)
+            {
+                byte[] keyData = new byte[sizeof(int)]; inputStream.Read(keyData, 0, sizeof(int));
+                PacketHeaderLongItems key = (PacketHeaderLongItems)BitConverter.ToInt32(keyData, 0);
+
+                byte[] valData = new byte[sizeof(long)]; inputStream.Read(valData, 0, sizeof(long));
+                long val = BitConverter.ToInt64(valData, 0);
+
+                longItems.Add(key, val);
+            }
+
+            byte[] stringItemsLengthData = new byte[sizeof(int)]; inputStream.Read(stringItemsLengthData, 0, sizeof(int));
+            int stringItemsLength = BitConverter.ToInt32(stringItemsLengthData, 0);
+
+            for (int i = 0; i < stringItemsLength; i++)
+            {
+                byte[] keyData = new byte[sizeof(int)]; inputStream.Read(keyData, 0, sizeof(int));
+                PacketHeaderStringItems key = (PacketHeaderStringItems)BitConverter.ToInt32(keyData, 0);
+
+                byte[] valLengthData = new byte[sizeof(int)]; inputStream.Read(valLengthData, 0, sizeof(int));
+                int valLength = BitConverter.ToInt32(valLengthData, 0);
+
+                byte[] valData = new byte[valLength]; inputStream.Read(valData, 0, valData.Length);
+                string val = new String(Encoding.UTF8.GetChars(valData));
+            }
+        }
+
         #endregion
     }
 }

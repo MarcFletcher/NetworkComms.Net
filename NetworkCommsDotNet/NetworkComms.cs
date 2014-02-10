@@ -148,7 +148,7 @@ namespace NetworkCommsDotNet
             DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
 #endif
 
-            InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
+            InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
 

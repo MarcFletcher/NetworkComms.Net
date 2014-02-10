@@ -779,20 +779,6 @@ namespace NetworkCommsDotNet
 
         public void Deserialize(System.IO.Stream inputStream)
         {
-        /*
-        [ProtoMember(1)]
-        public ConnectionType ConnectionType { get; internal set; }
-        [ProtoMember(2)]
-        string NetworkIdentifierStr;
-        [ProtoMember(3)]
-        string localEndPointAddressStr; //Only set on serialise
-        [ProtoMember(4)]
-        int localEndPointPort; //Only set on serialise
-        [ProtoMember(5)]
-        public bool IsConnectable { get; private set; }
-        [ProtoMember(6)]
-        public ApplicationLayerProtocolStatus ApplicationLayerProtocol { get; private set; }           
-        */
             byte[] conTypeData = new byte[sizeof(int)]; inputStream.Read(conTypeData, 0, conTypeData.Length); 
             
             ConnectionType = (ConnectionType)BitConverter.ToInt32(conTypeData, 0);

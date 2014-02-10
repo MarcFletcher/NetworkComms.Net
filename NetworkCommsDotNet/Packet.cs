@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using NetworkCommsDotNet.DPSBase;
 using System.IO;
-using ProtoBuf;
+using System.Reflection;
 
 namespace NetworkCommsDotNet
 {
@@ -56,20 +56,17 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Wrapper for <see cref="PacketHeader"/> and packetData.
     /// </summary>
-    [ProtoContract]
-    public class Packet : IDisposable, IPacket
+    public class Packet : IDisposable, IPacket, IExplicitlySerialize
     {
         /// <summary>
         /// If we serialise a whole packet we include the packet header
         /// </summary>
-        [ProtoMember(1)]
         PacketHeader _packetHeader;
 
         /// <summary>
         /// And the payload object as byte[]. We cannot use type T here because we do not know the type of T
         /// on deserialisation until we have the nested packet header.
         /// </summary>
-        [ProtoMember(2)]
         internal byte[] _payloadObjectBytes;
 
         StreamTools.StreamSendWrapper payloadStream;
@@ -228,5 +225,30 @@ namespace NetworkCommsDotNet
         {
             payloadStream.Dispose();
         }
+
+        #region IExplicitlySerialize Members
+
+        public void Serialize(Stream outputStream)
+        {
+            _packetHeader.Serialize(outputStream);
+            outputStream.Write(BitConverter.GetBytes(_payloadObjectBytes.Length), 0, sizeof(int));
+            outputStream.Write(_payloadObjectBytes, 0, _payloadObjectBytes.Length);
+        }
+
+        public void Deserialize(Stream inputStream)
+        {
+            var packetHeaderConstructor = typeof(PacketHeader).GetConstructor(BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            _packetHeader = (PacketHeader)packetHeaderConstructor.Invoke(new object[] { });
+
+            _packetHeader.Deserialize(inputStream);
+
+            byte[] payloadLengthData = new byte[sizeof(int)];
+            inputStream.Read(payloadLengthData, 0, sizeof(int));
+
+            _payloadObjectBytes = new byte[BitConverter.ToInt32(payloadLengthData, 0)];
+            inputStream.Read(_payloadObjectBytes, 0, _payloadObjectBytes.Length);
+        }
+
+        #endregion
     }
 }
