@@ -74,6 +74,9 @@
     <Compile Include="..\..\..\DPSBase\Exception.cs">
       <Link>Exception.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\DPSBase\ExplicitSerializer.cs">
+      <Link>ExplicitSerializer.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\DPSBase\NullSerializer.cs">
       <Link>NullSerializer.cs</Link>
     </Compile>
