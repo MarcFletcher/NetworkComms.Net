@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Controls;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.DPSBase;
 
 namespace Examples.ExamplesChat.WP8
 {   
@@ -59,6 +60,7 @@ namespace Examples.ExamplesChat.WP8
             this.CurrentMessageInputBox = currentMessageInputBox;
             this.ChatHistory = chatHistory;
             this.ChatHistoryScroller = chatHistoryScroller;
+            this.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
         }
 
         #region GUI Interface Overrides

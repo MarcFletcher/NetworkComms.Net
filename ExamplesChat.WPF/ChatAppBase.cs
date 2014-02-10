@@ -74,6 +74,11 @@ namespace Examples.ExamplesChat.WPF
         public ConnectionType ConnectionType { get; set; }
 
         /// <summary>
+        /// The serializer to use
+        /// </summary>
+        public DataSerializer Serializer { get; set; }
+
+        /// <summary>
         /// The IP address of the server 
         /// </summary>
         public string ServerIPAddress { get; set; }
@@ -136,6 +141,11 @@ namespace Examples.ExamplesChat.WPF
                 //e.g. When a connection is closed execute the method 'HandleConnectionClosed'
                 NetworkComms.AppendGlobalConnectionCloseHandler(HandleConnectionClosed);
             }
+            #endregion
+
+            #region Set serializer
+            //Set the default send recieve options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(Serializer, NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
             #endregion
 
             #region Optional Encryption

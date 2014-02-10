@@ -155,7 +155,9 @@ namespace NetworkCommsDotNet.Tools
 
             foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
             {
-                if (!hName.DisplayName.StartsWith("169.254"))
+                IPAddress temp;
+
+                if (!hName.DisplayName.StartsWith("169.254") && IPAddress.TryParse(hName.DisplayName, out temp))
                 {
                      if (RestrictLocalAddressRanges != null)
                     {

@@ -26,6 +26,7 @@ using System.Windows.Documents;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.DPSBase;
 
 namespace Examples.ExamplesChat.WPF
 {
@@ -66,6 +67,7 @@ namespace Examples.ExamplesChat.WPF
             this.Scroller = scroller;
             this.MessagesFrom = messagesFrom;
             this.MessagesText = messagesText;
+            this.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
         }
 
         /// <summary>

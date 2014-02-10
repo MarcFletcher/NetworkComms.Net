@@ -1,7 +1,7 @@
 ﻿<Window x:Class="Examples.ExamplesChat.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetworkComms.Net WPF Chat Example" Height="374" Width="513" Background="#FF7CA0FF" Closing="Window_Closing">
+        Title="NetworkComms.Net WPF Chat Example" Height="424" Width="530" Background="#FF7CA0FF" Closing="Window_Closing">
     <Grid>
 
         <Grid.RowDefinitions>
@@ -33,7 +33,7 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="135" />
+                <ColumnDefinition Width="150" />
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0" Name="chatGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="7,0,3,0">
@@ -44,6 +44,8 @@
             
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="25"/>
+                    <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
@@ -70,10 +72,25 @@
                 </Grid>
 
                 <Grid Grid.Row="3">
+                    <Label Content="Serialization Method:" HorizontalAlignment="center" Margin="0,0,0,0" VerticalAlignment="Top"/>
+                </Grid>
+
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <RadioButton Grid.Column="0" Name="UseProtobuf" Content="Protobuf" IsChecked="True" HorizontalAlignment="right" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseProtobuf_Checked"/>
+                    <RadioButton Grid.Column="1" Name="UseExplicit" Content="Explicit" IsChecked="False" HorizontalAlignment="left" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseExplicit_Checked"/>
+                </Grid>
+
+
+                <Grid Grid.Row="5">
                     <CheckBox Content="Use Encryption" Height="16" HorizontalAlignment="center" Margin="0,0,0,0" Name="useEncryptionBox" VerticalAlignment="Top" IsChecked="False" Checked="UseEncryptionBox_CheckedUnchecked" Unchecked="UseEncryptionBox_CheckedUnchecked"/>
                 </Grid>
                 
-                <Grid Grid.Row="4">
+                <Grid Grid.Row="6">
                     <Label Content="Messages from:" Height="28" HorizontalAlignment="center" Margin="0,0,0,0" Name="label3" VerticalAlignment="Top" Width="98" />
                     <TextBox HorizontalAlignment="Stretch" Margin="3,24,5,0" Name="messagesFrom" VerticalAlignment="Stretch" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
                 </Grid>

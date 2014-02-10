@@ -187,6 +187,31 @@ namespace Examples.ExamplesChat.WPF
         {
             chatApplication.LocalName = localName.Text.Trim();
         }
+
+        private void UseProtobuf_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseExplicit != null && this.UseExplicit.IsChecked != null && !(bool)this.UseExplicit.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseProtobuf.IsChecked = true;
+                this.UseExplicit.IsChecked = false;
+                chatApplication.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
+                chatApplication.RefreshNetworkCommsConfiguration();
+            }
+        }
+
+        private void UseExplicit_Checked(object sender, RoutedEventArgs e)
+        {
+            if (this.UseProtobuf != null && this.UseProtobuf.IsChecked != null && !(bool)this.UseProtobuf.IsChecked)
+            {
+                //Update the application and connectionType
+                this.UseProtobuf.IsChecked = false;
+                this.UseExplicit.IsChecked = true;
+                chatApplication.Serializer = DPSManager.GetDataSerializer<ExplicitSerializer>();
+                chatApplication.RefreshNetworkCommsConfiguration();
+            }
+        }
+
         #endregion
     }
 }

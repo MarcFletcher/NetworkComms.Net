@@ -53,13 +53,14 @@ namespace Examples.ExamplesChat.WP8
             LocalServerEnabled.IsChecked = chatApplication.LocalServerEnabled;
             
             if (chatApplication.ConnectionType == ConnectionType.TCP)
-            {
                 this.TCPRadioButton.IsChecked = true;
-            }
             else
-            {
                 this.UDPRadioButton.IsChecked = true;
-            }
+
+            if (chatApplication.Serializer.GetType() == typeof(ProtobufSerializer))
+                this.ProtobufRadioButton.IsChecked = true;
+            else
+                this.ExplicitRadioButton.IsChecked = true;
         }
         
         /// <summary>
@@ -93,6 +94,14 @@ namespace Examples.ExamplesChat.WP8
 
             //To finish update the configuration with any changes
             chatApplication.RefreshNetworkCommsConfiguration();
+        }
+
+        private void SerializationMethod_Checked(object sender, RoutedEventArgs e)
+        {
+            if ((sender as RadioButton).Content.ToString() == "Protobuf" && (bool)(sender as RadioButton).IsChecked)
+                (App.Current as App).ChatApplication.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
+            else
+                (App.Current as App).ChatApplication.Serializer = DPSManager.GetDataSerializer<ExplicitSerializer>();
         }
     }
 }

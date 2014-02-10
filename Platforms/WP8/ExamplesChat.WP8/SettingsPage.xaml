@@ -44,6 +44,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="Remote Server IP Address" Grid.Column="0" VerticalAlignment="Center"/>
@@ -55,13 +56,19 @@
 
                 <TextBlock Text="Connection Type" Grid.Column="0" Grid.Row="3" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="1,19,191,19"/>
                 <StackPanel Grid.Column="1" Grid.Row="3" >
-                    <RadioButton x:Name="TCPRadioButton" Margin="50,0,0,0" Padding="0,0,0,0" Content="TCP"  HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
-                    <RadioButton x:Name="UDPRadioButton" Margin="50,-10,0,0" Padding="0,0,0,0" Content="UDP" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
+                    <RadioButton x:Name="TCPRadioButton" Margin="25,0,0,0" Padding="0,0,0,0" Content="TCP"  HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
+                    <RadioButton x:Name="UDPRadioButton" Margin="25,-30,0,0" Padding="0,0,0,0" Content="UDP" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="connectionTypeGroup" Checked="ConnectionType_Checked"/>
+                </StackPanel>
+                
+                <TextBlock Text="Serialization Method" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="1,19,191,19"/>
+                <StackPanel Grid.Column="1" Grid.Row="4" >
+                    <RadioButton x:Name="ProtobufRadioButton" Margin="25,0,0,0" Padding="0,0,0,0" Content="Protobuf"  HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="serializationGroup" Checked="SerializationMethod_Checked"/>
+                    <RadioButton x:Name="ExplicitRadioButton" Margin="25,-30,0,0" Padding="0,0,0,0" Content="Explicit" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="serializationGroup" Checked="SerializationMethod_Checked"/>
                 </StackPanel>
 
-                <TextBlock x:Name="UseEncryptionLabel" Text="Enable Encryption" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center"/>
-                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
-                <TextBlock x:Name="EncryptionWarningTextBox" Text=""  Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="5" Margin="0,-5,0,20" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.75" />
+                <TextBlock x:Name="UseEncryptionLabel" Text="Enable Encryption" Grid.Column="0" Grid.Row="5" VerticalAlignment="Center"/>
+                <ToggleButton x:Name="UseEncryptionCheckBox" Grid.Column="1" Grid.Row="5" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
+                <TextBlock x:Name="EncryptionWarningTextBox" Text=""  Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="6" Margin="0,-5,0,20" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.75" />
 
                 <TextBlock Text="Enable Local Server" Grid.Column="0" Grid.Row="6" VerticalAlignment="Center"/>
                 <ToggleButton x:Name="LocalServerEnabled" Grid.Column="1" Grid.Row="6" HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="false"/>
