@@ -764,6 +764,10 @@ namespace NetworkCommsDotNet
                 data.Add(localEPAddreessLengthData);
                 data.Add(localEPAddreessData);
 
+                byte[] localPortData = BitConverter.GetBytes(localEndPointPort);
+
+                data.Add(localPortData);
+
                 byte[] isConnectableData = BitConverter.GetBytes(IsConnectable);
 
                 data.Add(isConnectableData);
@@ -792,7 +796,11 @@ namespace NetworkCommsDotNet
             byte[] localEPAddreessData = new byte[BitConverter.ToInt32(localEPAddreessLengthData, 0)]; inputStream.Read(localEPAddreessData, 0, localEPAddreessData.Length); 
             
             localEndPointAddressStr = new String(Encoding.UTF8.GetChars(localEPAddreessData));
-            
+
+            byte[] localPortData = new byte[sizeof(int)]; inputStream.Read(localPortData, 0, sizeof(int));
+
+            localEndPointPort = BitConverter.ToInt32(localPortData, 0);
+
             byte[] isConnectableData = new byte[sizeof(int)]; inputStream.Read(isConnectableData, 0, sizeof(bool));
             
             IsConnectable = BitConverter.ToBoolean(isConnectableData, 0);
