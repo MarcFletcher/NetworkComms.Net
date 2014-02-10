@@ -194,10 +194,6 @@
       <Project>{9A8E342F-2EB6-44ED-A305-A6E0074540C0}</Project>
       <Name>DPSBase %28Net40\Core\DPSBase%29</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{A95D9802-2E43-41C4-AA68-C78AAAFECE10}</Project>
-      <Name>SevenZipLZMACompressor %28Net40\Core\SevenZipLZMACompressor%29</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="networkcomms.net.snk" />

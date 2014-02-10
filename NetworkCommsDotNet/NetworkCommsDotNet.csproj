@@ -117,10 +117,6 @@
       <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
       <Name>DPSBase %28Net20\Core\DPSBase%29</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{7473F5FC-A9BE-454E-9BB4-2C8876304AB0}</Project>
-      <Name>SevenZipLZMACompressor %28Net20\Core\SevenZipLZMACompressor%29</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

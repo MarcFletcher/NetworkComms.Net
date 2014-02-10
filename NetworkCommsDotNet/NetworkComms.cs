@@ -136,7 +136,6 @@ namespace NetworkCommsDotNet
             DPSManager.AddDataSerializer<ProtobufSerializer>();
 
             DPSManager.AddDataSerializer<NullSerializer>();
-            DPSManager.AddDataProcessor<SevenZipLZMACompressor.LZMACompressor>();
             DPSManager.GetDataProcessor<DataPadder>();
 
 #if !FREETRIAL
@@ -153,7 +152,7 @@ namespace NetworkCommsDotNet
                 new Dictionary<string, string>());
 
             DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
-                new List<DataProcessor>() { DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>() },
+                new List<DataProcessor>() { },
                 new Dictionary<string, string>());
         }
 
