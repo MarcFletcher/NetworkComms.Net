@@ -237,7 +237,7 @@ namespace NetworkCommsDotNet
 
         public void Deserialize(Stream inputStream)
         {
-            var packetHeaderConstructor = typeof(PacketHeader).GetConstructor(BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            var packetHeaderConstructor = typeof(PacketHeader).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
             _packetHeader = (PacketHeader)packetHeaderConstructor.Invoke(new object[] { });
 
             _packetHeader.Deserialize(inputStream);

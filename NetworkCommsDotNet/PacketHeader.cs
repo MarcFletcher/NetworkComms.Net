@@ -311,6 +311,8 @@ namespace NetworkCommsDotNet
 
                 byte[] valData = new byte[valLength]; inputStream.Read(valData, 0, valData.Length);
                 string val = new String(Encoding.UTF8.GetChars(valData));
+
+                stringItems.Add(key, val);
             }
         }
 

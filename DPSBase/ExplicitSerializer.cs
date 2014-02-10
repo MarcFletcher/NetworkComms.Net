@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace NetworkCommsDotNet.DPSBase
@@ -15,6 +16,8 @@ namespace NetworkCommsDotNet.DPSBase
     public class ExplicitSerializer : DataSerializer
     {
         Type explicitlySerializableType = typeof(IExplicitlySerialize);
+
+        private ExplicitSerializer() { }
 
         protected override void SerialiseDataObjectInt(Stream outputStream, object objectToSerialise, Dictionary<string, string> options)
         {
@@ -35,9 +38,9 @@ namespace NetworkCommsDotNet.DPSBase
             if (inputStream == null)
                 throw new ArgumentNullException("inputStream");
 
-            var constructor = resultType.GetConstructor(System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            var constructor = resultType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 
-            if (constructor == null || explicitlySerializableType.IsAssignableFrom(resultType))
+            if (constructor == null || !explicitlySerializableType.IsAssignableFrom(resultType))
                 throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a paramerterless constrcutor or does not implement IExplicitlySerialize","resultType");
 
             var result = constructor.Invoke(new object[] { }) as IExplicitlySerialize;
