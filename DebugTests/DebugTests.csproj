@@ -108,10 +108,6 @@
       <Project>{5cb68f8c-6002-45d2-9c5f-ae7cf455eb6e}</Project>
       <Name>DistributedFileSystem</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Platforms\Net40\DPSBase\DPSBase.csproj">
-      <Project>{9a8e342f-2eb6-44ed-a305-a6e0074540c0}</Project>
-      <Name>DPSBase</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet</Name>
@@ -123,10 +119,6 @@
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>
       <Name>QuickLZCompressor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Platforms\Net40\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{a95d9802-2e43-41c4-aa68-c78aaafece10}</Project>
-      <Name>SevenZipLZMACompressor</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
       <Project>{f27f6581-d3ff-4ef1-8dc6-8df8e53e4132}</Project>

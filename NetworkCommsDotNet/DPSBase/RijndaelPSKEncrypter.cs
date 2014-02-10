@@ -27,6 +27,7 @@ using Windows.Storage.Streams;
 using Windows.Security.Cryptography;
 #else
 using System.Security.Cryptography;
+using NetworkCommsDotNet.Tools;
 #endif
 
 #if ANDROID

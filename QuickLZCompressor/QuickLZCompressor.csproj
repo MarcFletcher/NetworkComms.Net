@@ -70,12 +70,6 @@
     <EmbeddedResource Include="Dlls\quicklz150_64_1.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
       <Visible>False</Visible>
       <ProductName>Microsoft .NET Framework 4 %28x86 and x64%29</ProductName>
@@ -99,6 +93,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="networkcomms.net.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -28,8 +28,6 @@ using MarshalByRefObject = System.Object;
 using System.Threading.Tasks;
 #endif
 
-//Assembly marked as CLSCompliant
-[assembly: CLSCompliant(true)]
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>

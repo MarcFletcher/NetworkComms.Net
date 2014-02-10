@@ -22,6 +22,7 @@ using System.Text;
 using NetworkCommsDotNet.DPSBase;
 using System.IO;
 using System.Reflection;
+using NetworkCommsDotNet.Tools;
 
 namespace NetworkCommsDotNet
 {

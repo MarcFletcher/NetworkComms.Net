@@ -95,13 +95,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{B0732168-5A31-45CB-BD21-F40824E21B7D}</Project>
-      <Name>DPSBase</Name>
-    </ProjectReference>
+    <None Include="networkcomms.net.snk" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="networkcomms.net.snk" />
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{220024a8-7abf-42a6-a476-0684c1e65110}</Project>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

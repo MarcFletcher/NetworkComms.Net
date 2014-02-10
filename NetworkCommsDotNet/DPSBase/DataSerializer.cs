@@ -22,6 +22,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Reflection;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
 using System.Linq;

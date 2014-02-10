@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using NetworkCommsDotNet.Tools;
 
 #if NETFX_CORE
 using Windows.Security.Cryptography;

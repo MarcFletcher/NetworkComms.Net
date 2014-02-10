@@ -22,6 +22,7 @@
     <DefineConstants>TRACE;DEBUG;NET35</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +32,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -124,6 +126,81 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Connection\UDP\UDPOptions.cs">
       <Link>Connection\UDP\UDPOptions.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\BinaryFormaterSerializer.cs">
+      <Link>DPSBase\BinaryFormaterSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\DataPadder.cs">
+      <Link>DPSBase\DataPadder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\DataProcessor.cs">
+      <Link>DPSBase\DataProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\DataSerializer.cs">
+      <Link>DPSBase\DataSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\DataSerializerProcessorAttribute.cs">
+      <Link>DPSBase\DataSerializerProcessorAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\DPSManager.cs">
+      <Link>DPSBase\DPSManager.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\ExplicitSerializer.cs">
+      <Link>DPSBase\ExplicitSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\NullSerializer.cs">
+      <Link>DPSBase\NullSerializer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\RijndaelPSKEncrypter.cs">
+      <Link>DPSBase\RijndaelPSKEncrypter.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\Common\CommandLineParser.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\Common\CommandLineParser.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\Common\CRC.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\Common\CRC.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\Common\InBuffer.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\Common\InBuffer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\Common\OutBuffer.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\Common\OutBuffer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LzmaBase.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LzmaBase.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LZMACompressor.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LZMACompressor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LzmaDecoder.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LzmaDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LzmaEncoder.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LzmaEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LZ\LzBinTree.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LZ\LzBinTree.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LZ\LzInWindow.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LZ\LzInWindow.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\LZ\LzOutWindow.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\LZ\LzOutWindow.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoder.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBit.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBit.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\SevenZipHelper.cs">
+      <Link>DPSBase\SevenZipLZMACompressor\SevenZipHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Exception.cs">
+      <Link>Exception.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\NetworkComms.cs">
       <Link>NetworkComms.cs</Link>
     </Compile>
@@ -163,6 +240,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\LogTools.cs">
       <Link>Tools\LogTools.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\MD5.cs">
+      <Link>Tools\MD5.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\PacketBuilder.cs">
       <Link>Tools\PacketBuilder.cs</Link>
     </Compile>
@@ -187,13 +267,43 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\SSLTools.cs">
       <Link>Tools\SSLTools.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\StreamTools.cs">
+      <Link>Tools\StreamTools.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\AddressFamily.cs">
+      <Link>Tools\XPlatformHelper\AddressFamily.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\DateTimeExtenensions.cs">
+      <Link>Tools\XPlatformHelper\DateTimeExtenensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\EndPoint.cs">
+      <Link>Tools\XPlatformHelper\EndPoint.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPAddress.cs">
+      <Link>Tools\XPlatformHelper\IPAddress.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPEndPoint.cs">
+      <Link>Tools\XPlatformHelper\IPEndPoint.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPv6Address.cs">
+      <Link>Tools\XPlatformHelper\IPv6Address.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\Logger.cs">
+      <Link>Tools\XPlatformHelper\Logger.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketAddress.cs">
+      <Link>Tools\XPlatformHelper\SocketAddress.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketError.cs">
+      <Link>Tools\XPlatformHelper\SocketError.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketException.cs">
+      <Link>Tools\XPlatformHelper\SocketException.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\WaitCallback.cs">
+      <Link>Tools\XPlatformHelper\WaitCallback.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{B0732168-5A31-45CB-BD21-F40824E21B7D}</Project>
-      <Name>DPSBase</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="networkcomms.net.snk" />

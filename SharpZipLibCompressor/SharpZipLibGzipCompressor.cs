@@ -22,6 +22,7 @@ using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
 using NetworkCommsDotNet.DPSBase;
 using System.IO;
+using NetworkCommsDotNet.Tools;
 
 #if ANDROID
 using PreserveAttribute = Android.Runtime.PreserveAttribute;

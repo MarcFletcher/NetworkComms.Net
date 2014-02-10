@@ -39,6 +39,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\NetworkCommsDotNet.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -49,6 +50,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -84,6 +86,31 @@
     <Compile Include="Connection\UDP\UDPConnectionListener.cs" />
     <Compile Include="Connection\UDP\UDPConnectionStatic.cs" />
     <Compile Include="Connection\UDP\UDPOptions.cs" />
+    <Compile Include="DPSBase\BinaryFormaterSerializer.cs" />
+    <Compile Include="DPSBase\DataPadder.cs" />
+    <Compile Include="DPSBase\DataProcessor.cs" />
+    <Compile Include="DPSBase\DataSerializer.cs" />
+    <Compile Include="DPSBase\DataSerializerProcessorAttribute.cs" />
+    <Compile Include="DPSBase\DPSManager.cs" />
+    <Compile Include="DPSBase\ExplicitSerializer.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\Common\CommandLineParser.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\Common\CRC.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\Common\InBuffer.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\Common\OutBuffer.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LzmaBase.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LZMACompressor.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LzmaDecoder.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LzmaEncoder.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LZ\LzBinTree.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LZ\LzInWindow.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\LZ\LzOutWindow.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoder.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBit.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs" />
+    <Compile Include="DPSBase\SevenZipLZMACompressor\SevenZipHelper.cs" />
+    <Compile Include="DPSBase\NullSerializer.cs" />
+    <Compile Include="DPSBase\RijndaelPSKEncrypter.cs" />
+    <Compile Include="Exception.cs" />
     <Compile Include="RuntimeEnvironment.cs" />
     <Compile Include="Tools\Adler32.cs" />
     <Compile Include="Connection\ConnectionSendClose.cs" />
@@ -92,6 +119,7 @@
     <Compile Include="Tools\IPTools.cs" />
     <Compile Include="Tools\CommsThreadPool.cs" />
     <Compile Include="Tools\LogTools.cs" />
+    <Compile Include="Tools\MD5.cs" />
     <Compile Include="Tools\PacketBuilder.cs" />
     <Compile Include="Connection\TCP\TCPConnection.cs" />
     <Compile Include="SendReceiveOptions.cs" />
@@ -111,12 +139,18 @@
     <Compile Include="Tools\ShortGUID.cs" />
     <Compile Include="Connection\UDP\UDPConnection.cs" />
     <Compile Include="Tools\SSLTools.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{A38225E2-BEF8-4EA4-8AC9-4A5B4F5EA85D}</Project>
-      <Name>DPSBase</Name>
-    </ProjectReference>
+    <Compile Include="Tools\StreamTools.cs" />
+    <Compile Include="Tools\XPlatformHelper\AddressFamily.cs" />
+    <Compile Include="Tools\XPlatformHelper\DateTimeExtenensions.cs" />
+    <Compile Include="Tools\XPlatformHelper\EndPoint.cs" />
+    <Compile Include="Tools\XPlatformHelper\IPAddress.cs" />
+    <Compile Include="Tools\XPlatformHelper\IPEndPoint.cs" />
+    <Compile Include="Tools\XPlatformHelper\IPv6Address.cs" />
+    <Compile Include="Tools\XPlatformHelper\Logger.cs" />
+    <Compile Include="Tools\XPlatformHelper\SocketAddress.cs" />
+    <Compile Include="Tools\XPlatformHelper\SocketError.cs" />
+    <Compile Include="Tools\XPlatformHelper\SocketException.cs" />
+    <Compile Include="Tools\XPlatformHelper\WaitCallback.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
