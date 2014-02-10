@@ -74,6 +74,7 @@
     <Compile Include="DataSerializer.cs" />
     <Compile Include="DataSerializerProcessorAttribute.cs" />
     <Compile Include="Exception.cs" />
+    <Compile Include="ExplicitSerializer.cs" />
     <Compile Include="MD5.cs" />
     <Compile Include="NullSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
