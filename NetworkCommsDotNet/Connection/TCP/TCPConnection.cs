@@ -178,7 +178,7 @@ namespace NetworkCommsDotNet.Connections.TCP
 #if WINDOWS_PHONE || NETFX_CORE
                 //We now connect to our target
                 socket = new StreamSocket();
-                socket.Control.NoDelay = EnableNagleAlgorithmForNewConnections;
+                socket.Control.NoDelay = !EnableNagleAlgorithmForNewConnections;
 
                 CancellationTokenSource cancelAfterTimeoutToken = new CancellationTokenSource(NetworkComms.ConnectionEstablishTimeoutMS);
 
@@ -249,15 +249,14 @@ namespace NetworkCommsDotNet.Connections.TCP
             var stream = socket.InputStream.AsStreamForRead();
             stream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), stream);   
 #elif NETFX_CORE
-            var stream = socket.InputStream.AsStreamForRead();
-
-            Func<Task> tFunc = new Func<Task>(async () =>
-            {
-                var count = await stream.ReadAsync(dataBuffer, 0, dataBuffer.Length);
-                await IncomingTCPPacketHandler(stream, count);
+            Task readTask = new Task(async () =>
+            {                
+                var buffer = Windows.Security.Cryptography.CryptographicBuffer.CreateFromByteArray(dataBuffer);
+                var readBuffer = await socket.InputStream.ReadAsync(buffer, buffer.Capacity, InputStreamOptions.Partial);                
+                await IncomingTCPPacketHandler(readBuffer);
             });
-
-            tFunc();
+            
+            readTask.Start();
 #else
             lock (delegateLocker)
             {
@@ -286,7 +285,7 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// </summary>
         /// <param name="ar">The call back state object</param>
 #if NETFX_CORE
-        private async Task IncomingTCPPacketHandler(Stream stream, int count)
+        private async Task IncomingTCPPacketHandler(IBuffer buffer)
 #else
         private void IncomingTCPPacketHandler(IAsyncResult ar)
 #endif
@@ -305,8 +304,9 @@ namespace NetworkCommsDotNet.Connections.TCP
 #if WINDOWS_PHONE
                 Stream stream = ar.AsyncState as Stream;
                 totalBytesRead = stream.EndRead(ar) + totalBytesRead;
-#elif NETFX_CORE
-                totalBytesRead = count + totalBytesRead;
+#elif NETFX_CORE                
+                buffer.CopyTo(0, dataBuffer, totalBytesRead, (int)buffer.Length);
+                totalBytesRead = (int)buffer.Length + totalBytesRead;                   
 #else
                 Stream stream;
                 if (SSLOptions.SSLEnabled)
@@ -412,8 +412,8 @@ namespace NetworkCommsDotNet.Connections.TCP
                     }
 
 #if NETFX_CORE
-                    count = await stream.ReadAsync(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead);
-                    IncomingTCPPacketHandler(stream, count).RunSynchronously();
+                    IBuffer newBuffer = Windows.Security.Cryptography.CryptographicBuffer.CreateFromByteArray(dataBuffer);
+                    var task = IncomingTCPPacketHandler(await socket.InputStream.ReadAsync(newBuffer, totalBytesRead == 0 ? newBuffer.Capacity : (uint)totalBytesRead, InputStreamOptions.Partial));
 #else
                     stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
 #endif

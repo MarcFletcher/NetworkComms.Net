@@ -39,7 +39,7 @@
         
         <Grid x:Name="ContentPanel" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="10*"/>
+                <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="1*" MinWidth="350"/>
             </Grid.ColumnDefinitions>
 
@@ -58,7 +58,7 @@
                 <TextBox x:Name="currentMessageInputBox" Grid.Row="1" Grid.Column="0" TextWrapping="Wrap" KeyUp="CurrentMessageInputBox_KeyUp" />
             </Grid>
 
-            <Grid x:Name="SettingsPanel" Grid.Column="1" Margin="48,96,48,96">
+            <Grid x:Name="SettingsPanel" Grid.Column="1" Margin="48,96,12,96">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1*"/>
                     <ColumnDefinition Width="2*"/>

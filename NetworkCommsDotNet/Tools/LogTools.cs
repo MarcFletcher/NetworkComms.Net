@@ -33,14 +33,16 @@ namespace NetworkCommsDotNet.Tools
                 lock (errorLocker)
                 {
 #if NETFX_CORE
-                    Func<Task> writeTask = new Func<Task>(async () =>
+                    Task writeTask = new Task(async () =>
                         {
                             StorageFolder folder = ApplicationData.Current.LocalFolder;
                             StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
                             await FileIO.AppendTextAsync(file, logString);
                         });
 
-                    writeTask().Wait();
+                    writeTask.ConfigureAwait(false);
+                    writeTask.Start();
+                    writeTask.Wait(); 
 #else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
                         sw.WriteLine(logString);
@@ -86,7 +88,7 @@ namespace NetworkCommsDotNet.Tools
                 try
                 {
 #if NETFX_CORE
-                    Func<Task> writeTask = new Func<Task>(async () =>
+                    Task writeTask = new Task(async () =>
                         {
                             List<string> lines = new List<string>();
 
@@ -113,7 +115,9 @@ namespace NetworkCommsDotNet.Tools
                             await FileIO.WriteLinesAsync(file, lines);
                         });
 
-                    writeTask().Wait();
+                    writeTask.ConfigureAwait(false);
+                    writeTask.Start();
+                    writeTask.Wait(); 
 #else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
                     {

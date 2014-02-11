@@ -43,18 +43,28 @@ namespace NetworkCommsDotNet.Tools.XPlatformHelper
                     {
                         string toWrite;
                         if (threadId != null)
-                                toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + threadId + " - " + level + "] - " + message;
+                                toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + threadId + " - " + level + "] - " + message + "\n";
                             else
-                                toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + level + "] - " + message;
+                                toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + level + "] - " + message + "\n";
 #if NETFX_CORE
-                        Func<System.Threading.Tasks.Task> writeFunc = new Func<System.Threading.Tasks.Task>(async () =>
+                        System.Threading.Tasks.Task writeTask = new System.Threading.Tasks.Task(async () =>
                             {
-                                Windows.Storage.StorageFolder folder = Windows.Storage.ApplicationData.Current.LocalFolder;
-                                Windows.Storage.StorageFile file = await folder.CreateFileAsync(LogFileLocation, Windows.Storage.CreationCollisionOption.OpenIfExists);
-                                await Windows.Storage.FileIO.AppendTextAsync(file, toWrite);
+                                while (true)
+                                {
+                                    try
+                                    {
+                                        Windows.Storage.StorageFolder folder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                                        Windows.Storage.StorageFile file = await folder.CreateFileAsync(LogFileLocation, Windows.Storage.CreationCollisionOption.OpenIfExists);
+                                        await Windows.Storage.FileIO.AppendTextAsync(file, toWrite);
+                                        break;
+                                    }
+                                    catch (Exception) { }
+                                }
                             });
 
-                        writeFunc().Wait();
+                        writeTask.ConfigureAwait(false);
+                        writeTask.Start();
+                        writeTask.Wait(); 
 #else
                         using (var sw = new StreamWriter(LogFileLocation, true))
                                 sw.WriteLine(toWrite);
