@@ -26,6 +26,9 @@ using NetworkCommsDotNet;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Popups;
 using NetworkCommsDotNet.Connections;
+using Windows.UI.Xaml;
+using Windows.UI.Core;
+using Windows.ApplicationModel.Core;
 
 namespace Examples.ExamplesChat.WinRT
 {   
@@ -71,9 +74,12 @@ namespace Examples.ExamplesChat.WinRT
         {
             //To ensure we can succesfully append to the text box from any thread
             //we need to wrap the append within an invoke action.
-            ChatHistory.Text += message + "\n";
-            ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
-            ChatHistoryScroller.UpdateLayout();
+            ChatHistory.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    ChatHistory.Text += message + "\n";
+                    ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
+                    ChatHistoryScroller.UpdateLayout();
+                }).AsTask();            
         }
 
         /// <summary>
@@ -81,9 +87,12 @@ namespace Examples.ExamplesChat.WinRT
         /// </summary>
         public override void ClearChatHistory()
         {
-            ChatHistory.Text = "";
-            ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
-            ChatHistoryScroller.UpdateLayout();
+            ChatHistory.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    ChatHistory.Text = "";
+                    ChatHistoryScroller.ScrollToVerticalOffset(ChatHistoryScroller.ScrollableHeight);
+                    ChatHistoryScroller.UpdateLayout();
+                }).AsTask();
         }
 
         /// <summary>
@@ -91,7 +100,10 @@ namespace Examples.ExamplesChat.WinRT
         /// </summary>
         public override void ClearInputLine()
         {
-            CurrentMessageInputBox.Text = "";
+            ChatHistory.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    CurrentMessageInputBox.Text = "";
+                }).AsTask();
         }
 
         /// <summary>
@@ -100,15 +112,19 @@ namespace Examples.ExamplesChat.WinRT
         /// <param name="message"></param>
         public override void ShowMessage(string message)
         {
-            MessageDialog md = new MessageDialog(message);
-            md.Commands.Add(new UICommand("Close", new UICommandInvokedHandler((cmd) => { })));
-
-            Func<Task> messageTask = new Func<Task>(async () =>
+            ChatHistory.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
-                    await md.ShowAsync();                             
-                });
 
-            messageTask();
+                    MessageDialog md = new MessageDialog(message);
+                    md.Commands.Add(new UICommand("Close", new UICommandInvokedHandler((cmd) => { })));
+
+                    Func<Task> messageTask = new Func<Task>(async () =>
+                        {
+                            await md.ShowAsync();
+                        });
+
+                    messageTask();
+                }).AsTask();
         }
         #endregion
     }
