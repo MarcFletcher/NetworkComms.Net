@@ -74,6 +74,9 @@ namespace NetworkCommsDotNet.DPSBase
             if (outStream == null) throw new ArgumentNullException("outStream");
 
 #if NETFX_CORE
+            inStream.Seek(0, 0);
+            outStream.Seek(0, 0);
+
             IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
             IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
 
@@ -140,6 +143,9 @@ namespace NetworkCommsDotNet.DPSBase
             if (outStream == null) throw new ArgumentNullException("outStream");
 
 #if NETFX_CORE
+            inStream.Seek(0, 0);
+            outStream.Seek(0, 0);
+            
             IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
             IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
             
