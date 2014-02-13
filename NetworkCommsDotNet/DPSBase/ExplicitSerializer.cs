@@ -51,6 +51,7 @@ namespace NetworkCommsDotNet.DPSBase
                 throw new ArgumentException("objectToSerialize must implement IExplicitlySerialize", "objectToSerialize");
 
             (objectToSerialise as IExplicitlySerialize).Serialize(outputStream);
+            outputStream.Seek(0, 0);
         }
         /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)

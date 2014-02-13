@@ -103,7 +103,7 @@ namespace NetworkCommsDotNet.DPSBase
                 inStream.CopyTo(ms);
                 // encrypt data buffer using symmetric key and derived salt material
                 IBuffer resultBuffer = CryptographicEngine.Encrypt(symmKey, WindowsRuntimeBufferExtensions.GetWindowsRuntimeBuffer(ms), saltMaterial);
-                (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
+                resultBuffer.AsStream().CopyTo(outStream);
                 writtenBytes = outStream.Position;
             }
 #else
