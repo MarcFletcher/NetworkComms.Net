@@ -129,7 +129,6 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <None Include="ExamplesChat.WinRT_TemporaryKey.pfx" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Logo.png" />

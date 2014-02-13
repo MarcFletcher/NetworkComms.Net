@@ -25,6 +25,7 @@ using System.IO;
 using Windows.Security.Cryptography.Core;
 using Windows.Storage.Streams;
 using Windows.Security.Cryptography;
+using System.Runtime.InteropServices.WindowsRuntime;
 #else
 using System.Security.Cryptography;
 using NetworkCommsDotNet.Tools;
@@ -75,7 +76,6 @@ namespace NetworkCommsDotNet.DPSBase
 #if NETFX_CORE
             IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
             IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
-            IBuffer plainBuffer = (new DataReader(inStream.AsInputStream())).ReadBuffer((uint)inStream.Length);
 
             // Derive key material for password size 32 bytes for AES256 algorithm
             KeyDerivationAlgorithmProvider keyDerivationProvider = Windows.Security.Cryptography.Core.KeyDerivationAlgorithmProvider.OpenAlgorithm("PBKDF2_SHA1");
@@ -98,10 +98,14 @@ namespace NetworkCommsDotNet.DPSBase
             // create symmetric key from derived password key
             CryptographicKey symmKey = symProvider.CreateSymmetricKey(keyMaterial);
 
-            // encrypt data buffer using symmetric key and derived salt material
-            IBuffer resultBuffer = CryptographicEngine.Encrypt(symmKey, plainBuffer, saltMaterial);
-            (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
-            writtenBytes = outStream.Position;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                inStream.CopyTo(ms);
+                // encrypt data buffer using symmetric key and derived salt material
+                IBuffer resultBuffer = CryptographicEngine.Encrypt(symmKey, WindowsRuntimeBufferExtensions.GetWindowsRuntimeBuffer(ms), saltMaterial);
+                (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
+                writtenBytes = outStream.Position;
+            }
 #else
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
             var key = pdb.GetBytes(32);
@@ -135,11 +139,10 @@ namespace NetworkCommsDotNet.DPSBase
 
             if (outStream == null) throw new ArgumentNullException("outStream");
 
-            #if NETFX_CORE
+#if NETFX_CORE
             IBuffer pwBuffer = CryptographicBuffer.ConvertStringToBinary(options[PasswordOption], BinaryStringEncoding.Utf8);
             IBuffer saltBuffer = CryptographicBuffer.CreateFromByteArray(SALT);
-            IBuffer cryptBuffer = (new DataReader(inStream.AsInputStream())).ReadBuffer((uint)inStream.Length);
-
+            
             // Derive key material for password size 32 bytes for AES256 algorithm
             KeyDerivationAlgorithmProvider keyDerivationProvider = Windows.Security.Cryptography.Core.KeyDerivationAlgorithmProvider.OpenAlgorithm("PBKDF2_SHA1");
             // using salt and 1000 iterations
@@ -161,10 +164,14 @@ namespace NetworkCommsDotNet.DPSBase
             // create symmetric key from derived password key
             CryptographicKey symmKey = symProvider.CreateSymmetricKey(keyMaterial);
 
-            // encrypt data buffer using symmetric key and derived salt material
-            IBuffer resultBuffer = CryptographicEngine.Decrypt(symmKey, cryptBuffer, saltMaterial);
-            (new DataWriter(outStream.AsOutputStream())).WriteBuffer(resultBuffer);
-            writtenBytes = outStream.Position;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                inStream.CopyTo(ms);
+                // encrypt data buffer using symmetric key and derived salt material
+                IBuffer resultBuffer = CryptographicEngine.Decrypt(symmKey, WindowsRuntimeBufferExtensions.GetWindowsRuntimeBuffer(ms), saltMaterial);
+                resultBuffer.AsStream().CopyTo(outStream);
+                writtenBytes = outStream.Position;
+            }
 #else
 
             Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(options[PasswordOption], SALT);
