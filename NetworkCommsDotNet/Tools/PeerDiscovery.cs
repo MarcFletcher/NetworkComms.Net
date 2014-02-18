@@ -59,7 +59,8 @@ namespace NetworkCommsDotNet.Tools
 
             /// <summary>
             /// Peer discovery using a TCP port scan. Very slow and adversely affects performance on the local network. 
-            /// Should only be used with network configurations where UDP broadcast is unsuccessful.
+            /// Should only be used with network configurations where UDP broadcast is unsuccessful. Only IPv4 networks
+            /// are included in a TCP Port scan.
             /// </summary>
             TCPPortScan,
 
@@ -254,6 +255,11 @@ namespace NetworkCommsDotNet.Tools
         /// Dictionary which records discovered peers
         /// </summary>
         private static Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>> _discoveredPeers = new Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>>();
+
+        /// <summary>
+        /// A custom thread pool for performing a TCPPortScan
+        /// </summary>
+        private static CommsThreadPool _tcpPortScanThreadPool = new CommsThreadPool(0, 500, 5000, new TimeSpan(0, 0, 5));
         #endregion
 
         static PeerDiscovery()
@@ -645,15 +651,175 @@ namespace NetworkCommsDotNet.Tools
         /// <returns></returns>
         private static Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> DiscoverPeersTCP(int discoverTimeMS)
         {
-            //We have to try and manually connect to all peers and see if they respond
-
+            #region Determine All Possible Peers/Port Combinations
             //Get a list of all IPEndPoint that we should try and connect to
             //This requires the network and peer portion of current IP addresses
+            List<IPEndPoint> allIPEndPointsToConnect = new List<IPEndPoint>();
 
-            //We can only do TCP discovery for IPv4 ranges. Doing it for IPv6 would be a BAD
-            //idea due to the shear volume of addresses
+            //We want to ignore IP's that have been auto assigned
+            //169.254.0.0
+            IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
+            //255.255.0.0
+            IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
 
-            throw new NotImplementedException("Peer discovery has not yet been implemented for TCP.");
+            //Look at all possible addresses
+            foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                bool interfaceValid = false;
+                var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
+
+                //Check if this adaptor is allowed
+                if (HostInfo.RestrictLocalAdaptorNames != null)
+                {
+                    foreach (var currentName in HostInfo.RestrictLocalAdaptorNames)
+                    {
+                        if (iFace.Name == currentName)
+                        {
+                            interfaceValid = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                    interfaceValid = true;
+
+                //If the interface is not allowed move to the next adaptor
+                if (!interfaceValid)
+                    continue;
+
+                //If the adaptor is allowed we can now investigate the individual addresses
+                foreach (var address in unicastAddresses)
+                {
+                    //We are only interested in IPV4 ranges. A TCPPortScan on an IPV6 range may take a while
+                    if (address.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
+                        !IPTools.IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                    {
+                        //Check if we have restricted the addresses
+                        bool addressAllowed = true;
+                        if (HostInfo.IP.RestrictLocalAddressRanges != null)
+                            addressAllowed = IPRange.Contains(HostInfo.IP.RestrictLocalAddressRanges, address.Address);
+
+                        if (addressAllowed)
+                        {
+                            //Generate all possible IPEndPoints for the current address and subnetmask
+                            //We have a special catch for the loopback address which has a very large range
+                            List<IPAddress> addressesInRange;
+                            if (address.Address.Equals(IPAddress.Loopback))
+                                addressesInRange = new List<IPAddress>() { IPAddress.Loopback };
+                            else
+                            {
+                                IPRange range = new IPRange(address.Address, address.IPv4Mask);
+                                addressesInRange = range.AllAddressesInRange();
+                            }
+
+                            foreach (IPAddress currentAddressInRange in addressesInRange)
+                            {
+                                for (int port = MinTargetLocalIPPort; port <= MaxTargetLocalIPPort; port++)
+                                    allIPEndPointsToConnect.Add(new IPEndPoint(currentAddressInRange, port));
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region Send Discovery Packet & Wait
+            //For each address send the discovery packet
+            SendReceiveOptions nullOptions = new SendReceiveOptions<NullSerializer>();
+            StreamTools.StreamSendWrapper sendStream =
+                new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(new byte[0])));
+
+            int previousConnectionTimeout = NetworkComms.ConnectionEstablishTimeoutMS;
+            NetworkComms.ConnectionEstablishTimeoutMS = 1000;
+
+            AutoResetEvent allSendsCompleteEvent = new AutoResetEvent(false);
+            long interlockedCompletedCount = 0;
+            object _syncRoot = new object();
+            List<Connection> allConnections = new List<Connection>();
+
+            using (Packet sendPacket = new Packet(discoveryPacketType, sendStream, nullOptions))
+            {
+                foreach (IPEndPoint remoteEndPoint in allIPEndPointsToConnect)
+                {
+                    //The longest wait for the port scan is the TCP connect timeout
+                    //The thread pool will start a large number of threads (each of which does very little)
+                    // to greatly speed this up
+                    _tcpPortScanThreadPool.EnqueueItem(QueueItemPriority.Normal, (state) =>
+                    {
+                        try
+                        {
+                            try
+                            {
+                                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(remoteEndPoint));
+                                conn.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+
+                                lock (_syncRoot) allConnections.Add(conn);
+
+                                conn.SendObject(sendPacket.PacketHeader.PacketType, sendPacket);
+                            }
+                            catch (CommsException)
+                            {
+                            }
+
+                            lock (_syncRoot)
+                            {
+                                interlockedCompletedCount++;
+                                if (interlockedCompletedCount == allIPEndPointsToConnect.Count)
+                                    allSendsCompleteEvent.Set();
+                            }
+                        }
+                        catch (Exception) { }
+                    }, null);
+                }
+
+                allSendsCompleteEvent.WaitOne();
+            }
+
+            NetworkComms.ConnectionEstablishTimeoutMS = previousConnectionTimeout;
+            
+            sendStream.ThreadSafeStream.Dispose(true);
+
+            AutoResetEvent sleep = new AutoResetEvent(false);
+            //We wait at least 1 second so that connected peers can respond
+            //If we do not wait and close all connections immediately we may miss some replies
+            sleep.WaitOne(Math.Max(discoverTimeMS, 500));
+
+            //Close any connections we may have established
+            foreach (Connection conn in allConnections)
+            {
+                try
+                {
+                    conn.CloseConnection(false);
+                }
+                catch (CommsException) { }
+            }
+            #endregion
+
+            #region Return Discovered Peers
+            Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> result = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>>();
+            lock (_syncRoot)
+            {
+                foreach (var idPair in _discoveredPeers)
+                {
+                    if (!result.ContainsKey(idPair.Key))
+                        result.Add(idPair.Key, new Dictionary<ConnectionType, List<EndPoint>>());
+
+                    foreach (var typePair in idPair.Value)
+                    {
+                        if (!result[idPair.Key].ContainsKey(typePair.Key))
+                            result[idPair.Key].Add(typePair.Key, new List<EndPoint>());
+
+                        foreach (var endPoint in typePair.Value)
+                            if (!result[idPair.Key][typePair.Key].Contains(endPoint.Key))
+                                result[idPair.Key][typePair.Key].Add(endPoint.Key);
+                    }
+                }
+            }
+
+            Console.WriteLine("{0} connections", allConnections.Count);
+
+            return result;
+            #endregion
         }
 
 #if NET35 || NET4

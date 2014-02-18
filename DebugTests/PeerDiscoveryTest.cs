@@ -32,109 +32,117 @@ namespace DebugTests
 {
     static class PeerDiscoveryTest
     {
-        static byte[] sendArray = new byte[] { 3, 45, 200, 10, 9, 8, 7, 45, 96, 123 };
-
-        static bool serverMode;
-
         public static void RunExample()
         {
-            NetworkComms.ConnectionEstablishTimeoutMS = 600000;
+            HostInfo.IP.RestrictLocalAddressRanges = new IPRange[] { new IPRange("127.0.0.1/32"), new IPRange("192.168.0.0/24") };
 
-            IPAddress localIPAddress = IPAddress.Parse("::1");
+            Console.WriteLine("Peer Discovery Example ...\n");
 
             Console.WriteLine("Please select mode:");
             Console.WriteLine("1 - Server (Discoverable)");
-            Console.WriteLine("2 - Client (Locates clients)");
+            Console.WriteLine("2 - Client (Discovers servers)");
 
             //Read in user choice
+            bool serverMode;
             if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
             else serverMode = false;
 
-            ConsoleColor textColor = Console.ForegroundColor;
-        
+            //Both server and client must be discoverable
+            PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.TCPPortScan);
+
+            //Write out the network adaptors that are discoverable
+            Console.WriteLine("\nPeer Identifier: " + NetworkComms.NetworkIdentifier);
+            Console.WriteLine("\nDiscoverable on:");
+            foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
+
             if (serverMode)
             {
-                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
-
-                //Add a discoverable listenner 
-                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 12345), true);
-
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**************************************************************************************");
-                Console.WriteLine("Listening for TCP messages on:");
-                Console.WriteLine("**************************************************************************************");
-                Console.ForegroundColor = textColor;
-                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("**************************************************************************************");
-                Console.WriteLine("These listenners are also discoverable");
-                Console.WriteLine("**************************************************************************************");
-                Console.ForegroundColor = textColor;
-                
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**************************************************************************************");
-                Console.WriteLine("Now discoverable.");
-                Console.WriteLine("Listening for UDP messages on:");
-                Console.WriteLine("**************************************************************************************");
-                Console.ForegroundColor = textColor;
-                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP)) 
-                   Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
-
+                //The server does nothing else now but wait to be discovered.
                 Console.WriteLine("\nPress any key to quit.");
                 ConsoleKeyInfo key = Console.ReadKey(true);
             }
             else
             {
-                PeerDiscovery.EnableDiscoverable(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                while (true)
+                {
+                    int selectedOption = 0;
+                    Console.WriteLine("\nPlease select the desired option:");
+                    Console.WriteLine("1 - Discover servers asynchronously");
+                    Console.WriteLine("2 - Discover servers synchronously");
+                    Console.WriteLine("3 - Close Client");
 
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine("\n**************************************************************************************");
-                Console.WriteLine("Now discoverable.");
-                Console.WriteLine("\nListening for UDP messages on:");
-                Console.WriteLine("**************************************************************************************");
-                Console.ForegroundColor = textColor;
-                foreach (IPEndPoint localEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
-                    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
-
-                object locker = new object();
-
-                PeerDiscovery.OnPeerDiscovered += (id, endpoints) =>
+                    while (true)
                     {
-                        lock (locker)
-                        {
-                            Console.ForegroundColor = ConsoleColor.DarkGreen;
-                            Console.WriteLine("\n**************************************************************************************");
-                            Console.WriteLine("Endpoints discoverd for peer: {0}", id);
-                            Console.WriteLine("**************************************************************************************");
-                            Console.ForegroundColor = textColor;
+                        bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
+                        if (parseSucces && selectedOption <= 3 && selectedOption > 0) break;
+                        Console.WriteLine("Invalid choice. Please try again.");
+                    }
 
-                            foreach (var pair in endpoints)
-                            {
-                                Console.ForegroundColor = ConsoleColor.DarkRed;
-                                Console.WriteLine("\tEndpoints discoverd of type {0}:", pair.Key);
-                                Console.ForegroundColor = textColor;
+                    //Ensure a previous example loop does not duplicate the asynchronous event delegate
+                    PeerDiscovery.OnPeerDiscovered -= PeerDiscovered;
 
-                                foreach (var endPoint in pair.Value)
-                                    Console.WriteLine("\t\t->\t{0}", endPoint.ToString());
-                            }
-                        }                        
-                    };
+                    if (selectedOption == 1)
+                    {
+                        #region Discover Asynchronously
+                        Console.WriteLine("\nDiscovering servers asynchronously ... ");
 
-                PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
+                        //Append the OnPeerDiscovered event
+                        //The PeerDiscovered delegate will just write to the console.
+                        PeerDiscovery.OnPeerDiscovered += PeerDiscovered;
 
-                //Console.WriteLine("Found clients at:");
-                //foreach (IPEndPoint endPoint in result)
-                //    Console.WriteLine("{0}:{1}", endPoint.Address, endPoint.Port);
+                        //Trigger the asynchronous discovery
+                        PeerDiscovery.DiscoverPeersAsync(PeerDiscovery.DiscoveryMethod.TCPPortScan);
+                        #endregion
+                    }
+                    else if (selectedOption == 2)
+                    {
+                        #region Discover Synchronously
+                        Console.WriteLine("\nDiscovering servers synchronously ... ");
 
-                Console.WriteLine("\nClient complete. Press any key to quit.");
-                Console.ReadKey(true);
+                        //Discover peers asynchronously
+                        //This method allows peers 2 seconds to respond after the request has been sent
+                        Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.TCPPortScan);
+
+                        //Write out a list of discovered peers
+                        foreach (ShortGuid networkIdentifier in discoveredPeerEndPoints.Keys)
+                            PeerDiscovered(networkIdentifier, discoveredPeerEndPoints[networkIdentifier]);
+                        #endregion
+                    }
+                    else if (selectedOption == 3)
+                        break;
+                    else
+                        throw new Exception("Unable to determine selected option.");
+                }
             }
+
+            //We should always call shutdown when our application closes.
+            NetworkComms.Shutdown();
         }
 
-        private static void ServerDataHandler(PacketHeader header, Connection connection, byte[] data)
+        /// <summary>
+        /// Static locker used to ensure we only write information to the console in a clear fashion
+        /// </summary>
+        static object locker = new object();
+
+        /// <summary>
+        /// Execute this method when a peer is discovered 
+        /// </summary>
+        /// <param name="peerIdentifier">The network identifier of the discovered peer</param>
+        /// <param name="discoveredPeerEndPoints">The discoverable endpoints found for the provided peer</param>
+        private static void PeerDiscovered(ShortGuid peerIdentifier, Dictionary<ConnectionType, List<EndPoint>> discoveredPeerEndPoints)
         {
-            Console.WriteLine("Received data (" + data.Length + ") from " + connection.ToString());
+            //Lock to ensure we do not write to the console in parallel.
+            lock (locker)
+            {
+                Console.WriteLine("\nEndpoints discovered for peer with networkIdentifier {0} ...", peerIdentifier);
+                foreach (ConnectionType connectionType in discoveredPeerEndPoints.Keys)
+                {
+                    Console.WriteLine("  ... endPoints of type {0}:", connectionType);
+                    foreach (EndPoint endPoint in discoveredPeerEndPoints[connectionType])
+                        Console.WriteLine("    -> {0}", endPoint.ToString());
+                }
+            }
         }
     }
 }

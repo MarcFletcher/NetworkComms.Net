@@ -246,6 +246,54 @@ namespace NetworkCommsDotNet.Tools
         }
 
         /// <summary>
+        /// Initialise an IPRange using the provided address and subnet mask.
+        /// </summary>
+        /// <param name="address">The address range to create</param>
+        /// <param name="subnetmask">The subnet mask that specifies the network-identifying portion of the address</param>
+        public IPRange(IPAddress address, IPAddress subnetmask)
+        {
+            addressBytes = address.GetAddressBytes();
+            byte[] subnetmaskBytes = subnetmask.GetAddressBytes();
+
+            for (int i = 0; i < subnetmaskBytes.Length; i++)
+            {
+                if (subnetmaskBytes[i] == 255)
+                    numAddressBits += 8;
+                else
+                {
+                    //Count the remaining bits
+                    int byteToCount = subnetmaskBytes[i];
+                    int bitCount = 0;
+                    bool foundBitSet = false;
+                    while (byteToCount != 0)
+                    {
+                        if ((byteToCount & 1) == 1)
+                        {
+                            foundBitSet = true;
+                            bitCount++;
+                        }
+                        else if (foundBitSet)
+                            //If we come across a zero after already seeing set bits the net mask is invalid
+                            throw new ArgumentException("Invalid subnet mask provided. Please check and try again.", "subnetmask");
+
+                        byteToCount >>= 1;
+                    }
+
+                    numAddressBits += bitCount;
+
+                    //All following bytes should be 0 for a valid mask
+                    for (int n = i + 1; n < subnetmaskBytes.Length; n++)
+                    {
+                        if (subnetmaskBytes[n] != 0)
+                            throw new ArgumentException("Invalid subnet mask provided. Please check and try again.", "subnetmask");
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
         /// Returns true if this IPRange contains the provided IPAddress
         /// </summary>
         /// <param name="ipAddress">The IPAddress to check</param>
@@ -316,6 +364,97 @@ namespace NetworkCommsDotNet.Tools
 
             //If we have made it here the provided IPAddress in within this IPRange
             return true;
+        }
+
+        /// <summary>
+        /// Returns a list of all IPAddresses in the specified range
+        /// </summary>
+        /// <returns></returns>
+        public List<IPAddress> AllAddressesInRange()
+        {
+            //Determine the first and last addresses
+            byte[] firstAddressBytes = new byte[addressBytes.Length];
+            byte[] lastAddressBytes = new byte[addressBytes.Length];
+
+            for(int i=0; i<addressBytes.Length; i++)
+            {
+                if (numAddressBits >= (i+1)*8)
+                {
+                    firstAddressBytes[i] = addressBytes[i];
+                    lastAddressBytes[i] = addressBytes[i];
+                }
+                else
+                {
+                    int numRemainingAddressBits = numAddressBits - (i * 8);
+
+                    if (numRemainingAddressBits > 0)
+                    {
+                        firstAddressBytes[i] = (byte)(addressBytes[i] & (byte)~(255 >> numRemainingAddressBits));
+                        lastAddressBytes[i] = (byte)(addressBytes[i] | (byte)(255 >> numRemainingAddressBits));
+                    }
+                    else
+                    {
+                        firstAddressBytes[i] = 0;
+                        lastAddressBytes[i] = 255;
+                    }
+                }
+            }
+
+            IPAddress firstAddress = new IPAddress(firstAddressBytes);
+            IPAddress lastAddress = new IPAddress(lastAddressBytes);
+
+            //Now fill in  all of the gaps
+            return AllAddressesBetween(firstAddress, lastAddress);
+        }
+
+        /// <summary>
+        /// Returns all IPAddresses that are between the provided addresses
+        /// </summary>
+        /// <param name="firstAddress"></param>
+        /// <param name="lastAddress"></param>
+        /// <returns></returns>
+        public static List<IPAddress> AllAddressesBetween(IPAddress firstAddress, IPAddress lastAddress)
+        {
+            List<IPAddress> result = new List<IPAddress>();
+
+            byte[] firstAddressBytes = firstAddress.GetAddressBytes();
+            byte[] lastAddressBytes = lastAddress.GetAddressBytes();
+
+            RecursivePopulate(firstAddressBytes, lastAddressBytes, new byte[0], result);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Recursively populates the result list by looping over all address byte levels
+        /// </summary>
+        /// <param name="firstAddressBytes"></param>
+        /// <param name="lastAddressBytes"></param>
+        /// <param name="knownBytes"></param>
+        /// <param name="result"></param>
+        private static void RecursivePopulate(byte[] firstAddressBytes, byte[] lastAddressBytes, byte[] knownBytes, List<IPAddress> result)
+        {
+            if (result == null) throw new ArgumentNullException("result can not be null");
+
+            if (knownBytes.Length == firstAddressBytes.Length)
+            {
+                //Catch the very first address at the bottom of the least significant byte
+                if (knownBytes[knownBytes.Length - 1] != 0)
+                    result.Add(new IPAddress(knownBytes));
+            }
+            else
+            {
+                for (int currentByte = firstAddressBytes[knownBytes.Length]; currentByte <= lastAddressBytes[knownBytes.Length]; currentByte++)
+                {
+                    byte[] newKnownBytes = new byte[knownBytes.Length + 1];
+                    for (int i = 0; i < knownBytes.Length; i++)
+                        newKnownBytes[i] = knownBytes[i];
+
+                    newKnownBytes[knownBytes.Length] = (byte)currentByte;
+
+                    RecursivePopulate(firstAddressBytes, lastAddressBytes, newKnownBytes, result);
+                }
+            }
         }
 
         /// <summary>
