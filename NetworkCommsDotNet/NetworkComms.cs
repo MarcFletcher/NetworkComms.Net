@@ -227,7 +227,7 @@ namespace NetworkCommsDotNet
         public static int MaxReceiveBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// Initial receive data buffer size for a packet. Default is 1KB. CAUTION: Changing the default value can lead to performance degradation.
+        /// Initial receive data buffer size for reading data. Keeping this small reduces the static size of connection objects which each have an internal buffer. Default is 512 bytes. CAUTION: Changing the default value can lead to performance degradation.
         /// </summary>
         public static int InitialRecieveBufferSizeBytes { get; set; }
 

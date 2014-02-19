@@ -89,7 +89,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             if (connectionInfo.ConnectionType != ConnectionType.TCP)
                 throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
 
-            dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
 
             //We don't guarantee that the tcpClient has been created yet
 #if WINDOWS_PHONE || NETFX_CORE
@@ -422,7 +422,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                         if (packetBuilder.TotalBytesExpected == 0)
                             dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
                         else
-                        //Otherwise this can only be a suplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                        //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
                             dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
@@ -495,13 +495,11 @@ namespace NetworkCommsDotNet.Connections.TCP
                         if (packetBuilder.TotalBytesExpected == 0)
                             dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
                         else
-                        //Otherwise this can only be a suplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                        //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
                             dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
                         }
-
-                        totalBytesRead = 0;
                     }
 
                     //We block here until there is data to read
