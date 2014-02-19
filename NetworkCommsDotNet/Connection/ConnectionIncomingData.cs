@@ -39,12 +39,7 @@ namespace NetworkCommsDotNet.Connections
         /// The <see cref="PacketBuilder"/> for this connection
         /// </summary>
         protected PacketBuilder packetBuilder;
-
-        /// <summary>
-        /// The current incoming data buffer
-        /// </summary>
-        protected byte[] dataBuffer;
-
+                
         /// <summary>
         /// The total bytes read so far within dataBuffer
         /// </summary>

@@ -89,8 +89,7 @@ namespace NetworkCommsDotNet.Connections
                         " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "defaultSendReceiveOptions");
             }
 
-            SendTimesMSPerKBCache = new CommsMath();
-            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+            SendTimesMSPerKBCache = new CommsMath();            
             packetBuilder = new PacketBuilder();
 
             //Initialise the sequence counter using the global value

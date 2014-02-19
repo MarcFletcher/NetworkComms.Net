@@ -50,6 +50,11 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
         NetworkStream btClientNetworkStream;
 
         /// <summary>
+        /// The current incoming data buffer
+        /// </summary>
+        byte[] dataBuffer;
+
+        /// <summary>
         /// Bluetooth connection constructor
         /// </summary>
         private BluetoothConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, BluetoothClient btClient)
@@ -57,6 +62,8 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
         {
             if (btClient != null)
                 this.btClient = btClient;
+
+            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
         }
 
         /// <inheritdoc />

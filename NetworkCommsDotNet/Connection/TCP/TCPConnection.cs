@@ -66,6 +66,11 @@ namespace NetworkCommsDotNet.Connections.TCP
         Stream connectionStream;
 
         /// <summary>
+        /// The current incoming data buffer
+        /// </summary>
+        byte[] dataBuffer;
+
+        /// <summary>
         /// The SSL options associated with this connection.
         /// </summary>
         public SSLOptions SSLOptions { get; private set; }
@@ -83,6 +88,8 @@ namespace NetworkCommsDotNet.Connections.TCP
         {
             if (connectionInfo.ConnectionType != ConnectionType.TCP)
                 throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
+
+            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
 
             //We don't guarantee that the tcpClient has been created yet
 #if WINDOWS_PHONE || NETFX_CORE
