@@ -489,8 +489,20 @@ namespace NetworkCommsDotNet.Connections.TCP
                     if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
                         dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                     else
+                    {
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
+                        //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
+                        if (packetBuilder.TotalBytesExpected == 0)
+                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                        else
+                        //Otherwise this can only be a suplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                        {
+                            long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                        }
+
+                        totalBytesRead = 0;
+                    }
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length
