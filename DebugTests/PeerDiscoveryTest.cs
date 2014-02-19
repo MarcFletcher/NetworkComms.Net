@@ -34,7 +34,7 @@ namespace DebugTests
     {
         public static void RunExample()
         {
-            HostInfo.IP.RestrictLocalAddressRanges = new IPRange[] { new IPRange("127.0.0.1/32"), new IPRange("192.168.0.0/24") };
+            HostInfo.IP.RestrictLocalAddressRanges = new IPRange[] { new IPRange("127.0.0.1/32"), new IPRange("10.211.55.3/24") };
 
             Console.WriteLine("Peer Discovery Example ...\n");
 

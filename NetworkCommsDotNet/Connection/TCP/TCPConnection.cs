@@ -413,7 +413,7 @@ namespace NetworkCommsDotNet.Connections.TCP
 
 #if NETFX_CORE
                     IBuffer newBuffer = Windows.Security.Cryptography.CryptographicBuffer.CreateFromByteArray(dataBuffer);
-                    var task = IncomingTCPPacketHandler(await socket.InputStream.ReadAsync(newBuffer, totalBytesRead == 0 ? newBuffer.Capacity : (uint)totalBytesRead, InputStreamOptions.Partial));
+                    var task = IncomingTCPPacketHandler(await socket.InputStream.ReadAsync(newBuffer, newBuffer.Capacity - (uint)totalBytesRead, InputStreamOptions.Partial));
 #else
                     stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
 #endif

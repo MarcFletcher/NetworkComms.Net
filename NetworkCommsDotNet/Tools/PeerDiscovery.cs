@@ -259,7 +259,7 @@ namespace NetworkCommsDotNet.Tools
         /// <summary>
         /// A custom thread pool for performing a TCPPortScan
         /// </summary>
-        private static CommsThreadPool _tcpPortScanThreadPool = new CommsThreadPool(0, 500, 5000, new TimeSpan(0, 0, 5));
+        private static CommsThreadPool _tcpPortScanThreadPool = new CommsThreadPool(0, Environment.ProcessorCount * 60, Environment.ProcessorCount * 60, new TimeSpan(0, 0, 5));
         #endregion
 
         static PeerDiscovery()
@@ -737,10 +737,20 @@ namespace NetworkCommsDotNet.Tools
             object _syncRoot = new object();
             List<Connection> allConnections = new List<Connection>();
 
+            //Get unconnected TCP connections
+            foreach (IPEndPoint remoteEndPoint in allIPEndPointsToConnect)
+            {
+                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(remoteEndPoint), false);
+                conn.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
+                allConnections.Add(conn);
+            }
+
             using (Packet sendPacket = new Packet(discoveryPacketType, sendStream, nullOptions))
             {
-                foreach (IPEndPoint remoteEndPoint in allIPEndPointsToConnect)
+                foreach (Connection conn in allConnections)
                 {
+                    Connection innerConnection = conn;
+
                     //The longest wait for the port scan is the TCP connect timeout
                     //The thread pool will start a large number of threads (each of which does very little)
                     // to greatly speed this up
@@ -750,11 +760,7 @@ namespace NetworkCommsDotNet.Tools
                         {
                             try
                             {
-                                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(remoteEndPoint));
-                                conn.AppendIncomingPacketHandler<byte[]>(discoveryPacketType, PeerDiscoveryHandler);
-
-                                lock (_syncRoot) allConnections.Add(conn);
-
+                                conn.EstablishConnection();
                                 conn.SendObject(sendPacket.PacketHeader.PacketType, sendPacket);
                             }
                             catch (CommsException)
@@ -815,8 +821,6 @@ namespace NetworkCommsDotNet.Tools
                     }
                 }
             }
-
-            Console.WriteLine("{0} connections", allConnections.Count);
 
             return result;
             #endregion
