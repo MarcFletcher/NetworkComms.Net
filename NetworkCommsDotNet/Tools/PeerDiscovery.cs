@@ -207,7 +207,11 @@ namespace NetworkCommsDotNet.Tools
             }
             set
             {
+#if !NETFX_CORE && !WINDOWS_PHONE
                 if (value == DiscoveryMethod.UDPBroadcast || value == DiscoveryMethod.TCPPortScan)
+#else
+                if (value == DiscoveryMethod.UDPBroadcast)
+#endif
                     _defaultIPDiscoveryMethod = value;
                 else
                     throw new ArgumentException("DefaultIPDiscoveryMethod must be either DiscoveryMethod.UDPBroadcast or DiscoveryMethod.TCPPortScan", "DefaultIPDiscoveryMethod");
@@ -291,7 +295,11 @@ namespace NetworkCommsDotNet.Tools
                     return;
 
                 //Based on the connection type select all local endPoints and then enable discoverable
-                if (discoveryMethod == DiscoveryMethod.TCPPortScan || discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#if !NETFX_CORE && !WINDOWS_PHONE
+                if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
+#else
+                if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#endif
                 {
                     List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
 
@@ -336,7 +344,7 @@ namespace NetworkCommsDotNet.Tools
                 }
 #endif
                 else
-                    throw new NotImplementedException("This feature has not been implemented for the provided connection type.");
+                    throw new NotImplementedException("The requested discovery method has not been implemented on the current platform.");
                 
                 //Add the packet handlers if required
                 foreach (var byMethodPair in _discoveryListeners)
@@ -359,7 +367,11 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="localDiscoveryEndPoint">The local endpoint with which to make this peer discoverable</param>
         public static void EnableDiscoverable(DiscoveryMethod discoveryMethod, EndPoint localDiscoveryEndPoint)
         {
-            if (discoveryMethod == DiscoveryMethod.TCPPortScan || discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#if !NETFX_CORE && !WINDOWS_PHONE
+            if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
+#else
+            if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#endif
             {
                 lock (_syncRoot)
                 {
@@ -430,6 +442,8 @@ namespace NetworkCommsDotNet.Tools
                 }
             }
 #endif
+            else
+                throw new NotImplementedException("The requested discovery method has not been implemented on the current platform.");
         }
 
         /// <summary>
@@ -438,7 +452,11 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="discoveryMethod">The <see cref="DiscoveryMethod"/> to disable discovery for.</param>
         public static void DisableDiscoverable(DiscoveryMethod discoveryMethod)
         {
-            if (discoveryMethod == DiscoveryMethod.TCPPortScan || discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#if !NETFX_CORE && !WINDOWS_PHONE
+            if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
+#else
+            if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+#endif
             {
                 lock (_syncRoot)
                 {
@@ -909,8 +927,11 @@ namespace NetworkCommsDotNet.Tools
         private static void PeerDiscoveryHandler(PacketHeader header, Connection connection, byte[] data)
         {            
             DiscoveryMethod discoveryMethod = DiscoveryMethod.UDPBroadcast;
+
+#if !NETFX_CORE && !WINDOWS_PHONE
             if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 discoveryMethod = DiscoveryMethod.TCPPortScan;
+#endif
 #if NET35 || NET4
             else if (connection.ConnectionInfo.ConnectionType == ConnectionType.Bluetooth)
                 discoveryMethod = DiscoveryMethod.BluetoothSDP;

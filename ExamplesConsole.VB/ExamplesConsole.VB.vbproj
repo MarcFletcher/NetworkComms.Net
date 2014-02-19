@@ -108,7 +108,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
-      <Name>NetworkCommsDotNet %28Net40\Core\NetworkCommsDotNet%29</Name>
+      <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
