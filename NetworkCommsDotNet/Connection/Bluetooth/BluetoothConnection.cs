@@ -151,7 +151,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                 throw new ConnectionSetupException("A connection reference by endPoint should exist before starting an incoming data listener.");
             }
 
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (NetworkComms.ConnectionListenModeUseSync)
                 {

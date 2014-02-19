@@ -58,16 +58,18 @@ namespace NetworkCommsDotNet.Tools
             UDPBroadcast,
 
             /// <summary>
+            /// Peer discovery using the bluetooth SDP protocol.
+            /// </summary>
+            BluetoothSDP,
+
+#if !NETFX_CORE && !WINDOWS_PHONE
+            /// <summary>
             /// Peer discovery using a TCP port scan. Very slow and adversely affects performance on the local network. 
             /// Should only be used with network configurations where UDP broadcast is unsuccessful. Only IPv4 networks
             /// are included in a TCP Port scan.
             /// </summary>
             TCPPortScan,
-
-            /// <summary>
-            /// Peer discovery using the bluetooth SDP protocol.
-            /// </summary>
-            BluetoothSDP,
+#endif
         }
 
         /// <summary>
@@ -649,7 +651,6 @@ namespace NetworkCommsDotNet.Tools
         }
 
 #if !NETFX_CORE && !WINDOWS_PHONE
-
         /// <summary>
         /// Discover peers using TCP port scan
         /// </summary>
@@ -767,7 +768,7 @@ namespace NetworkCommsDotNet.Tools
                             try
                             {
                                 conn.EstablishConnection();
-                                conn.SendObject(sendPacket.PacketHeader.PacketType, sendPacket);
+                                conn.SendPacket<byte[]>(sendPacket);
                             }
                             catch (CommsException)
                             {

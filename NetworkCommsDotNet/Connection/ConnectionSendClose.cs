@@ -58,6 +58,18 @@ namespace NetworkCommsDotNet.Connections
         Dictionary<string, SentPacket> sentPackets = new Dictionary<string, SentPacket>();
 
         /// <summary>
+        /// Send bytes on an unmanaged connection
+        /// </summary>
+        /// <param name="bytesToSend">The bytes to send</param>
+        public void SendUnmanagedBytes(byte[] bytesToSend)
+        {
+            if (ConnectionInfo.ApplicationLayerProtocol != ApplicationLayerProtocolStatus.Disabled)
+                throw new CommunicationException("Attempted to send unmanaged bytes on a managed connection. This method should only be used on connections which have the ApplicationLayerProtocol disabled.");
+
+            SendObject<byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged), bytesToSend);
+        }
+
+        /// <summary>
         /// Send an object using the connection default <see cref="SendReceiveOptions"/>
         /// </summary>
         /// <param name="sendingPacketType">The sending packet type</param>

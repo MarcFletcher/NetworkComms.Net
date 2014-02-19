@@ -39,7 +39,13 @@ namespace NetworkCommsDotNet.Connections
         /// Thread safety locker which is used when accessing <see cref="incomingPacketHandlers"/>, 
         /// <see cref="incomingPacketUnwrappers"/> and <see cref="ConnectionSpecificShutdownDelegate"/>.
         /// </summary>
-        protected object delegateLocker = new object();
+        protected object _syncRoot = new object();
+
+        /// <summary>
+        /// Connection level SyncRoot which can be used to perform multiple thread safe operations on this connection
+        /// external to NetworkComms.Net
+        /// </summary>
+        public object SyncRoot { get { return _syncRoot; } }
 
         /// <summary>
         /// The default <see cref="SendReceiveOptions"/> used for this connection
@@ -72,7 +78,7 @@ namespace NetworkCommsDotNet.Connections
         {
             //Are there connection specific or global packet handlers?
             bool connectionSpecificHandlers = false;
-            lock (delegateLocker) connectionSpecificHandlers = incomingPacketHandlers.ContainsKey(header.PacketType);
+            lock (_syncRoot) connectionSpecificHandlers = incomingPacketHandlers.ContainsKey(header.PacketType);
 
             bool globalHandlers = NetworkComms.GlobalIncomingPacketHandlerExists(header.PacketType);
 
@@ -156,7 +162,7 @@ namespace NetworkCommsDotNet.Connections
 
                 //We take a copy of the handlers list in case it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
-                lock (delegateLocker)
+                lock (_syncRoot)
                     if (incomingPacketHandlers.ContainsKey(packetHeader.PacketType))
                         handlersCopy = new List<IPacketTypeHandlerDelegateWrapper>(incomingPacketHandlers[packetHeader.PacketType]);
 
@@ -210,7 +216,7 @@ namespace NetworkCommsDotNet.Connections
             SendReceiveOptions options = null;
 
             //If we find a global packet unwrapper for this packetType we used those options
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                     options = incomingPacketUnwrappers[packetTypeStr].Options;
@@ -254,7 +260,7 @@ namespace NetworkCommsDotNet.Connections
                     throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
             }
 
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                 {
@@ -315,7 +321,7 @@ namespace NetworkCommsDotNet.Connections
                     throw new ArgumentException("Attempted to add packet handler for an unmanaged packet type when the provided send receive options contains data processors. Data processors may not be used inline with unmanaged packet types.");
             }
 
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketUnwrappers.ContainsKey(packetTypeStr))
                 {
@@ -368,7 +374,7 @@ namespace NetworkCommsDotNet.Connections
         /// <returns>True if a packet handler exists</returns>
         public bool IncomingPacketHandlerExists(string packetTypeStr)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
                 return incomingPacketHandlers.ContainsKey(packetTypeStr);
         }
 
@@ -378,7 +384,7 @@ namespace NetworkCommsDotNet.Connections
         /// <returns>True if an unmanaged packet handler exists</returns>
         public bool IncomingUnmanagedPacketHandlerExists()
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
                 return incomingPacketHandlers.ContainsKey(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged));
         }
 
@@ -390,7 +396,7 @@ namespace NetworkCommsDotNet.Connections
         /// <returns>True if a connection specific packet handler exists for the provided packetType</returns>
         public bool IncomingPacketHandlerExists(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
@@ -410,7 +416,7 @@ namespace NetworkCommsDotNet.Connections
         /// <returns>True if a connection specific unmanaged packet handler exists</returns>
         public bool IncomingUnmanagedPacketHandlerExists(Delegate packetHandlerDelgatePointer)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketHandlers.ContainsKey(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Unmanaged)))
                 {
@@ -430,7 +436,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="packetHandlerDelgatePointer">The delegate to remove</param>
         public void RemoveIncomingPacketHandler(string packetTypeStr, Delegate packetHandlerDelgatePointer)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (incomingPacketHandlers.ContainsKey(packetTypeStr))
                 {
@@ -481,7 +487,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="packetTypeStr">Packet type for which all delegates should be removed</param>
         public void RemoveIncomingPacketHandler(string packetTypeStr)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 //We don't need to check for potentially removing a critical reserved packet handler here because those cannot be removed.
                 if (incomingPacketHandlers.ContainsKey(packetTypeStr))
@@ -506,7 +512,7 @@ namespace NetworkCommsDotNet.Connections
         /// </summary>
         public void RemoveIncomingPacketHandler()
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 incomingPacketHandlers = new Dictionary<string, List<IPacketTypeHandlerDelegateWrapper>>();
 
@@ -520,7 +526,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="handlerToAppend">The delegate to call when a connection is shutdown</param>
         public void AppendShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToAppend)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (ConnectionSpecificShutdownDelegate == null)
                     ConnectionSpecificShutdownDelegate = handlerToAppend;
@@ -537,7 +543,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="handlerToRemove">The delegate to remove for shutdown events</param>
         public void RemoveShutdownHandler(NetworkComms.ConnectionEstablishShutdownDelegate handlerToRemove)
         {
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 ConnectionSpecificShutdownDelegate -= handlerToRemove;
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Removed ConnectionSpecificShutdownDelegate to connection with " + ConnectionInfo);

@@ -128,7 +128,7 @@ namespace NetworkCommsDotNet.Connections
             try
             {
                 bool connectionAlreadyEstablishing = false;
-                lock (delegateLocker)
+                lock (_syncRoot)
                 {
                     if (ConnectionInfo.ConnectionState == ConnectionState.Established) return;
                     else if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown) throw new ConnectionSetupException("Attempting to re-establish a closed connection. Please create a new connection instead.");

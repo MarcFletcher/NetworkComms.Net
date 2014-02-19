@@ -265,7 +265,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             
             readTask.Start();
 #else
-            lock (delegateLocker)
+            lock (_syncRoot)
             {
                 if (NetworkComms.ConnectionListenModeUseSync)
                 {
