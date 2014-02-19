@@ -63,7 +63,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             if (btClient != null)
                 this.btClient = btClient;
 
-            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
         }
 
         /// <inheritdoc />
@@ -78,7 +78,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             NetworkComms.UpdateConnectionReferenceByEndPoint(this, ConnectionInfo.RemoteEndPoint, localEndPoint);
             ConnectionInfo.UpdateLocalEndPointInfo(localEndPoint);
 
-            btClient.Client.ReceiveBufferSize = NetworkComms.ReceiveBufferSizeBytes;
+            btClient.Client.ReceiveBufferSize = NetworkComms.MaxReceiveBufferSizeBytes;
             btClient.Client.SendBufferSize = NetworkComms.SendBufferSizeBytes;
 
             //We are going to be using the networkStream quite a bit so we pull out a reference once here
@@ -230,8 +230,12 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                             if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
                                 dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                             else
-                                //If we have nothing to reuse we allocate a new buffer
-                                dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                            //If we have nothing to reuse we allocate a new buffer. As we are in this loop this can only be a suplementary buffer for THIS packet. 
+                            //Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                            {
+                                long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
+                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            }
 
                             totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
@@ -278,7 +282,16 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                     else
                     {
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                        //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
+                        if (packetBuilder.TotalBytesExpected == 0)
+                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                        else
+                        //Otherwise this can only be a suplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                        {
+                            long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                        }
+
                         totalBytesRead = 0;
                     }
 
@@ -339,7 +352,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                     else
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                        dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length

@@ -64,17 +64,17 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// The networkstream associated with the tcpClient.
         /// </summary>
         Stream connectionStream;
-
-        /// <summary>
-        /// The current incoming data buffer
-        /// </summary>
-        byte[] dataBuffer;
-
+        
         /// <summary>
         /// The SSL options associated with this connection.
         /// </summary>
         public SSLOptions SSLOptions { get; private set; }
 #endif
+
+        /// <summary>
+        /// The current incoming data buffer
+        /// </summary>
+        byte[] dataBuffer;
 
         /// <summary>
         /// TCP connection constructor
@@ -89,7 +89,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             if (connectionInfo.ConnectionType != ConnectionType.TCP)
                 throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
 
-            dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
 
             //We don't guarantee that the tcpClient has been created yet
 #if WINDOWS_PHONE || NETFX_CORE
@@ -135,7 +135,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             //NOTE: This did not seem to work reliably so was replaced with the keepAlive packet feature
             //this.tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
-            tcpClient.ReceiveBufferSize = NetworkComms.ReceiveBufferSizeBytes;
+            tcpClient.ReceiveBufferSize = NetworkComms.MaxReceiveBufferSizeBytes;
             tcpClient.SendBufferSize = NetworkComms.SendBufferSizeBytes;
 
             //This disables the 'nagle algorithm'
@@ -361,8 +361,12 @@ namespace NetworkCommsDotNet.Connections.TCP
                             if (packetBuilder.TotalPartialPacketCount > 0 && packetBuilder.NumUnusedBytesMostRecentPartialPacket() > 0)
                                 dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                             else
-                                //If we have nothing to reuse we allocate a new buffer
-                                dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                            //If we have nothing to reuse we allocate a new buffer. As we are in this loop this can only be a suplementary buffer for THIS packet. 
+                            //Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                            {
+                                long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
+                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            }
 
                             totalBytesRead = stream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
 
@@ -414,7 +418,16 @@ namespace NetworkCommsDotNet.Connections.TCP
                     else
                     {
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                        //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
+                        if (packetBuilder.TotalBytesExpected == 0)
+                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                        else
+                        //Otherwise this can only be a suplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
+                        {
+                            long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                        }
+
                         totalBytesRead = 0;
                     }
 
@@ -477,7 +490,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                         dataBuffer = packetBuilder.RemoveMostRecentPartialPacket(ref bufferOffset);
                     else
                         //If we have nothing to reuse we allocate a new buffer
-                        dataBuffer = new byte[NetworkComms.ReceiveBufferSizeBytes];
+                        dataBuffer = new byte[NetworkComms.MaxReceiveBufferSizeBytes];
 
                     //We block here until there is data to read
                     //When we read data we read until method returns or we fill the buffer length

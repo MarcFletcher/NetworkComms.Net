@@ -77,53 +77,55 @@ namespace NetworkCommsDotNet
 
 #if NETFX_CORE
             CurrentRuntimeEnvironment = RuntimeEnvironment.Windows_RT;
-            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
 #elif SILVERLIGHT || WINDOWS_PHONE
             CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
-            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
 #elif iOS
             CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_iOS;
-            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
 #elif ANDROID
             CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_Android;
-            SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
 #elif NET2
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net2;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net2;
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 80000;
             }
 #elif NET35
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net35;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net35;
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 80000;
             }
 #else
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net4;
                 //Mono send buffer smaller as different large object heap limit
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 8000;
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
             }
             else
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Native_Net4;
-                SendBufferSizeBytes = ReceiveBufferSizeBytes = 80000;
-            }
+                SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 80000;
+            }            
 #endif
+            //Set the initial size of a read buffer for a packet to 512 bytes
+            InitialRecieveBufferSizeBytes = 512;
 
             //We want to instantiate our own thread pool here
 #if NETFX_CORE
@@ -220,9 +222,14 @@ namespace NetworkCommsDotNet
         public static bool ConnectionListenModeUseSync { get; set; }
 
         /// <summary>
-        /// Receive data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.
+        /// Maximum data buffer size that will be allocated for reading. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.
         /// </summary>
-        public static int ReceiveBufferSizeBytes { get; set; }
+        public static int MaxReceiveBufferSizeBytes { get; set; }
+
+        /// <summary>
+        /// Initial receive data buffer size for a packet. Default is 1KB. CAUTION: Changing the default value can lead to performance degradation.
+        /// </summary>
+        public static int InitialRecieveBufferSizeBytes { get; set; }
 
         /// <summary>
         /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.

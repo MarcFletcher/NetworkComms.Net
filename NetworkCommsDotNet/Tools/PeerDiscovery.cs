@@ -256,10 +256,12 @@ namespace NetworkCommsDotNet.Tools
         /// </summary>
         private static Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>> _discoveredPeers = new Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>>();
 
+#if !NETFX_CORE && !WINDOWS_PHONE
         /// <summary>
         /// A custom thread pool for performing a TCPPortScan
         /// </summary>
         private static CommsThreadPool _tcpPortScanThreadPool = new CommsThreadPool(0, Environment.ProcessorCount * 60, Environment.ProcessorCount * 60, new TimeSpan(0, 0, 5));
+#endif
         #endregion
 
         static PeerDiscovery()
@@ -565,8 +567,10 @@ namespace NetworkCommsDotNet.Tools
 
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
                     result = DiscoverPeersUDP(discoverTimeMS);
+#if !NETFX_CORE && !WINDOWS_PHONE
                 else if (discoveryMethod == DiscoveryMethod.TCPPortScan)
                     result = DiscoverPeersTCP(discoverTimeMS);
+#endif
 #if NET35 || NET4
                 else if (discoveryMethod == DiscoveryMethod.BluetoothSDP)
                     result = DiscoverPeersBT(discoverTimeMS);
@@ -643,6 +647,8 @@ namespace NetworkCommsDotNet.Tools
 
             return result;
         }
+
+#if !NETFX_CORE && !WINDOWS_PHONE
 
         /// <summary>
         /// Discover peers using TCP port scan
@@ -825,6 +831,8 @@ namespace NetworkCommsDotNet.Tools
             return result;
             #endregion
         }
+
+#endif
 
 #if NET35 || NET4
         /// <summary>
