@@ -60,6 +60,10 @@
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{62977be8-428b-4683-a098-4e3f588b3f7e}</Project>
+      <Name>ProtobufSerializer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
       <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>
       <Name>QuickLZCompressor</Name>

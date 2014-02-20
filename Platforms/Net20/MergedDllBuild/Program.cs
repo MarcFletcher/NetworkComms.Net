@@ -41,8 +41,6 @@ namespace MergedDllBuild
             List<string> coreAssembles = new List<string>();
             coreAssembles.Add("NetworkCommsDotNet.dll");
             coreAssembles.Add("protobuf-net.dll");
-            coreAssembles.Add("DPSBase.dll");
-            coreAssembles.Add("SevenZipLZMACompressor.dll");
             coreAssembles.Add("NLog.dll");
 
             coreMerge.SetInputAssemblies(coreAssembles.ToArray());
@@ -59,7 +57,7 @@ namespace MergedDllBuild
             coreMerge.Log = true;
             coreMerge.LogFile = @"MergedCore\MergeLog.txt";
 
-            coreMerge.Merge();
+            //coreMerge.Merge();
             #endregion
 
             #region Merge Complete
@@ -69,8 +67,6 @@ namespace MergedDllBuild
             List<string> completeAssembles = new List<string>();
             completeAssembles.Add("NetworkCommsDotNet.dll");
             completeAssembles.Add("protobuf-net.dll");
-            completeAssembles.Add("DPSBase.dll");
-            completeAssembles.Add("SevenZipLZMACompressor.dll");
             completeAssembles.Add("NLog.dll");
             completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
             completeAssembles.Add("SharpZipLibCompressor.dll");
@@ -90,7 +86,7 @@ namespace MergedDllBuild
             completeMerge.Log = true;
             completeMerge.LogFile = @"MergedComplete\MergeLog.txt";
 
-            completeMerge.Merge();
+            //completeMerge.Merge();
             #endregion
 #endif
         }
