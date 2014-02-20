@@ -122,9 +122,7 @@ namespace Examples.ExamplesConsole
 
                 Console.WriteLine("\nIdentifier - {0}", NetworkComms.NetworkIdentifier);
 
-                SendReceiveOptions nullCompressionSRO = new SendReceiveOptions(DPSManager.GetDataSerializer<ProtobufSerializer>(),
-                            new List<DataProcessor>(),
-                            new Dictionary<string, string>());
+                SendReceiveOptions nullCompressionSRO = new SendReceiveOptions<NullSerializer>();
 
                 //Add options which will require receive confirmations and also include packet construction time
                 //in the packet header.

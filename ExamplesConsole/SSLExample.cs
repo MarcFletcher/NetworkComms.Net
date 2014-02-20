@@ -52,6 +52,11 @@ namespace Examples.ExamplesConsole
         static SSLOptions connectionSSLOptions;
 
         /// <summary>
+        /// The SendReceiveOptions used for sending
+        /// </summary>
+        static SendReceiveOptions sendingSendReceiveOptions;
+
+        /// <summary>
         /// Run example
         /// </summary>
         public static void RunExample()
@@ -132,7 +137,7 @@ namespace Examples.ExamplesConsole
                         //Get a connection to the target server using the connection SSL options we configured earlier
                         //If there is a problem with the SSL handshake this will throw a CommsSetupShutdownException
                         TCPConnection connection = TCPConnection.GetConnection(targetServerConnectionInfo,
-                            NetworkComms.DefaultSendReceiveOptions,
+                            sendingSendReceiveOptions,
                             connectionSSLOptions);
 
                         //Send our message of the encrypted connection
@@ -201,6 +206,32 @@ namespace Examples.ExamplesConsole
             {
                 Console.WriteLine(" ... selected no.");
                 connectionSSLOptions = new SSLOptions("networkcomms.net", true);
+            }
+            else
+                throw new Exception("Unable to determine selected option.");
+
+            //Select if the dataPadder will be enabled
+            Console.WriteLine("\nWhen sending encrypted data"+
+            " the quantity of traffic can give away a significant amount of information. To prevent this"+
+            " traffic analysis attack we have included a data processor which if enabled ensures every packet sent"+
+            " is of a fixed size. Do you want to enable this padding data processor? " + "\n1 - Yes\n2 - No");
+            while (true)
+            {
+                bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOption);
+                if (parseSucces && selectedOption <= 2) break;
+                Console.WriteLine("Invalid choice. Please try again.");
+            }
+
+            if (selectedOption == 1)
+            {
+                Console.WriteLine(" ... selected yes.");
+                sendingSendReceiveOptions = new SendReceiveOptions<ProtobufSerializer, DataPadder>();
+                DataPadder.AddPaddingOptions(sendingSendReceiveOptions.Options, 1024, DataPadder.DataPaddingType.Random, true);
+            }
+            else if (selectedOption == 2)
+            {
+                Console.WriteLine(" ... selected no.");
+                sendingSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
             }
             else
                 throw new Exception("Unable to determine selected option.");

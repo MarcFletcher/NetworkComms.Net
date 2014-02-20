@@ -67,7 +67,7 @@ namespace NetworkCommsDotNet.DPSBase
             var constructor = resultType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 
             if (constructor == null || !explicitlySerializableType.IsAssignableFrom(resultType))
-                throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a paramerterless constrcutor or does not implement IExplicitlySerialize","resultType");
+                throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a parameterless constructor or does not implement IExplicitlySerialize","resultType");
 #endif
             var result = constructor.Invoke(new object[] { }) as IExplicitlySerialize;
             result.Deserialize(inputStream);

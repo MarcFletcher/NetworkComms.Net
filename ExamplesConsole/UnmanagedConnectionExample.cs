@@ -69,8 +69,7 @@ namespace Examples.ExamplesConsole
             //Choose between unmanaged TCP or UDP
             SelectConnectionType();
 
-            //Add a packet handler for dealing with incoming connections.  Function will be called when a packet is received with the specified type.  We also here specify the type of object
-            //we are expecting to receive.  In this case we expect an int[] for packet type ArrayTestPacketInt
+            //Add a packet handler for dealing with incoming unmanaged data
             NetworkComms.AppendGlobalIncomingUnmanagedPacketHandler((header, connection, array) =>
                 {
                     Console.WriteLine("\nReceived unmanaged byte[] from " + connection.ToString());
@@ -79,7 +78,7 @@ namespace Examples.ExamplesConsole
                         Console.WriteLine(i.ToString() + " - " + array[i].ToString());
                 });
 
-            //Create suitable send receive options
+            //Create suitable send receive options for use with unmanaged connections
             SendReceiveOptions optionsToUse = new SendReceiveOptions<NullSerializer>();
 
             //Get the local IPEndPoints we intend to listen on
@@ -87,16 +86,18 @@ namespace Examples.ExamplesConsole
             List<IPEndPoint> localIPEndPoints = (from current in HostInfo.IP.FilteredLocalAddresses()
                                                select new IPEndPoint(current, 0)).ToList();
 
-            //Create suitable listeners
+            //Create suitable listeners depending on the desired connectionType
             List<ConnectionListenerBase> listeners;
             if (connectionTypeToUse == ConnectionType.TCP)
             {
                 //For each localIPEndPoint get a TCP listener
+                //We need to set the ApplicationLayerProtocolStatus to Disabled
                 listeners = (from current in localIPEndPoints
                              select (ConnectionListenerBase)new TCPConnectionListener(optionsToUse, ApplicationLayerProtocolStatus.Disabled)).ToList();
             }
             else
             {
+                //We need to set the ApplicationLayerProtocolStatus to Disabled
                 listeners = (from current in localIPEndPoints
                              select (ConnectionListenerBase)new UDPConnectionListener(optionsToUse, ApplicationLayerProtocolStatus.Disabled, UDPConnection.DefaultUDPOptions)).ToList();
             }
@@ -141,7 +142,7 @@ namespace Examples.ExamplesConsole
                     connectionToUse = UDPConnection.GetConnection(connectionInfo, UDPOptions.None, optionsToUse);
 
                 //Send the object
-                connectionToUse.SendObject("Unmanaged", byteDataToSend);
+                connectionToUse.SendUnmanagedBytes(byteDataToSend);
 
                 //***************************************************************//
                 //                End of interesting stuff                       //
