@@ -50,12 +50,13 @@ namespace Examples.ExamplesChat.WinRT
         public MainPage()
         {
             this.InitializeComponent();
-            
-            //Set the localName text to the hostname
-            localNameBox.Text = HostInfo.HostName;
 
             //Initialise the chat application
             chatApplication = new ChatAppWinRT(currentMessageInputBox, chatBox, chatBoxScroller);
+
+            //Set the localName text to the hostname
+            chatApplication.LocalName = HostInfo.HostName + "_WinRT";
+            localNameBox.Text = HostInfo.HostName + "_WinRT";
 
             //Print out some usage instructions
             chatApplication.PrintUsageInstructions();

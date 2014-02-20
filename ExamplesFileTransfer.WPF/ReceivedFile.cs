@@ -58,6 +58,9 @@ namespace Examples.ExamplesFileTransfer.WPF
         public double CompletedPercent
         {
             get { return (double)ReceivedBytes / SizeBytes; }
+
+            //This set is required for the application to work
+            set { throw new Exception("An attempt to modify read-only value."); }
         }
 
         /// <summary>
