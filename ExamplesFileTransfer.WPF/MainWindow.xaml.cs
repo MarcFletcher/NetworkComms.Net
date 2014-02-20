@@ -38,7 +38,7 @@ using Microsoft.Win32;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-using SevenZipLZMACompressor;
+using NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
 

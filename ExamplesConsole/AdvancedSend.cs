@@ -298,7 +298,7 @@ namespace Examples.ExamplesConsole
                 if (selectedCompressor == 1)
                 {
                     Console.WriteLine(" ... selected LZMA compressor.\n");
-                    dataProcessors.Add(DPSManager.GetDataProcessor<SevenZipLZMACompressor.LZMACompressor>());
+                    dataProcessors.Add(DPSManager.GetDataProcessor<NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor.LZMACompressor>());
                 }
                 else if (selectedCompressor == 2)
                 {

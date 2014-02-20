@@ -29,7 +29,7 @@ using PreserveAttribute = Android.Runtime.PreserveAttribute;
 using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
-namespace SevenZipLZMACompressor
+namespace NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor
 {
     /// <summary>
     /// Compressor utilizing LZMA algorithm from <see href="http://www.7-zip.org/">7zip</see>

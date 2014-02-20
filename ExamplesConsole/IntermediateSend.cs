@@ -26,7 +26,7 @@ using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Tools;
-using SevenZipLZMACompressor;
+using NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor;
 using NetworkCommsDotNet.Connections.TCP;
 
 namespace Examples.ExamplesConsole

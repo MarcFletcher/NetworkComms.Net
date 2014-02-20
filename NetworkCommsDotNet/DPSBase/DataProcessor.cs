@@ -32,7 +32,7 @@ namespace NetworkCommsDotNet.DPSBase
     /// Provides methods that process data in a <see cref="System.IO.Stream"/> into another <see cref="System.IO.Stream"/>.  Can be used to provide features such as data compression or encryption
     /// </summary>
     /// <example>
-    /// <code source="..\DPSBase\RijndaelPSKEncrypter.cs" lang="cs" title="Implementation Example" />
+    /// <code source="..\NetworkCommsDotNet\DPSBase\RijndaelPSKEncrypter.cs" lang="cs" title="Implementation Example" />
     /// </example>
     public abstract class DataProcessor
     {

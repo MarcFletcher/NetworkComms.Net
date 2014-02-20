@@ -31,7 +31,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
-using SevenZipLZMACompressor;
+using NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor;
 using System.Windows.Threading;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Tools;
