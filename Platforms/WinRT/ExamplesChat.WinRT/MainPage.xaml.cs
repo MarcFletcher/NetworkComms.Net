@@ -42,6 +42,9 @@ namespace Examples.ExamplesChat.WinRT
     /// </summary>
     public sealed partial class MainPage : ExamplesChat.WinRT.Common.LayoutAwarePage
     {
+        /// <summary>
+        /// An instance of the chat application
+        /// </summary>
         ChatAppWinRT chatApplication;
 
         public MainPage()
@@ -121,17 +124,32 @@ namespace Examples.ExamplesChat.WinRT
             pageState["ServerEnabled"] = (bool)enableServerBox.IsChecked;
         }
 
+        /// <summary>
+        /// If the key pressed is enter then send the completed message
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CurrentMessageInputBox_KeyUp(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key == Windows.System.VirtualKey.Enter)
                 chatApplication.SendMessage(currentMessageInputBox.Text);
         }
 
+        /// <summary>
+        /// Update the remote IP information when focus is lost
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void remoteIPBox_LostFocus(object sender, RoutedEventArgs e)
         {
            chatApplication.ServerIPAddress = remoteIPBox.Text.Trim();
         }
 
+        /// <summary>
+        /// Update the remote port information when focus is lost
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void remotePortBox_LostFocus(object sender, RoutedEventArgs e)
         {
             int portNumber;
@@ -141,11 +159,21 @@ namespace Examples.ExamplesChat.WinRT
                 remotePortBox.Text = "";
         }
 
+        /// <summary>
+        /// Update the local name information when focus is lost
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void localNameBox_LostFocus(object sender, RoutedEventArgs e)
         {            
             chatApplication.LocalName = localNameBox.Text.Trim();
         }
 
+        /// <summary>
+        /// Switch to TCP mode when the TCP radio button is highlighted
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TCPRadioButton_Checked(object sender, RoutedEventArgs e)
         {
             if (TCPRadioButton != null && TCPRadioButton.IsChecked != null && (bool)TCPRadioButton.IsChecked)
@@ -156,6 +184,11 @@ namespace Examples.ExamplesChat.WinRT
             }
         }
 
+        /// <summary>
+        /// Switch to UDP mode when the UDP radio button is highlighted
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UDPRadioButton_Checked(object sender, RoutedEventArgs e)
         {
             if (UDPRadioButton != null && UDPRadioButton.IsChecked != null && (bool)UDPRadioButton.IsChecked)
@@ -166,13 +199,23 @@ namespace Examples.ExamplesChat.WinRT
             }
         }
 
+        /// <summary>
+        /// Enable encryption if it is selected
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void encryptionBox_Checked(object sender, RoutedEventArgs e)
         {
             chatApplication.EncryptionEnabled = (bool)encryptionBox.IsChecked;
             chatApplication.RefreshNetworkCommsConfiguration();
         }
 
-        private void enableServerBox_Checked(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Enable and disable the local server mode when selected
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void enableServerBox_CheckedUnChecked(object sender, RoutedEventArgs e)
         {
             chatApplication.LocalServerEnabled = (bool)enableServerBox.IsChecked;
             chatApplication.RefreshNetworkCommsConfiguration();

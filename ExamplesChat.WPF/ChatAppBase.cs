@@ -144,7 +144,7 @@ namespace Examples.ExamplesChat.WPF
             #endregion
 
             #region Set serializer
-            //Set the default send recieve options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
+            //Set the default send receive options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
             NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(Serializer, NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
             #endregion
 

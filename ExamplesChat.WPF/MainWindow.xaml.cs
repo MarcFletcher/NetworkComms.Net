@@ -152,6 +152,9 @@ namespace Examples.ExamplesChat.WPF
         {
             chatApplication.LocalServerEnabled = (bool)enableLocalServer.IsChecked;
             chatApplication.RefreshNetworkCommsConfiguration();
+
+            this.UseProtobuf.IsEnabled = !chatApplication.LocalServerEnabled;
+            this.UseExplicit.IsEnabled = !chatApplication.LocalServerEnabled;
         }
 
         /// <summary>
@@ -197,6 +200,7 @@ namespace Examples.ExamplesChat.WPF
                 this.UseExplicit.IsChecked = false;
                 chatApplication.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
                 chatApplication.RefreshNetworkCommsConfiguration();
+                chatApplication.AppendLineToChatHistory("Serializer changed to protobuf serializer.");
             }
         }
 
@@ -209,6 +213,7 @@ namespace Examples.ExamplesChat.WPF
                 this.UseExplicit.IsChecked = true;
                 chatApplication.Serializer = DPSManager.GetDataSerializer<ExplicitSerializer>();
                 chatApplication.RefreshNetworkCommsConfiguration();
+                chatApplication.AppendLineToChatHistory("Serializer changed to explicit serializer.");
             }
         }
 

@@ -370,7 +370,10 @@ namespace NetworkCommsDotNet.DPSBase
         /// be used when transmitting data using NetworkCommsDotNet</remarks>
         public static void GetSerializerDataProcessorsFromIdentifier(long id, out DataSerializer serializer, out List<DataProcessor> dataProcessors)
         {
-            serializer = GetDataSerializer((byte)(id >> 56));
+            byte serializerId = (byte)(id >> 56);
+            serializer = GetDataSerializer(serializerId);
+            if (serializer == null)
+                throw new SerialisationException("Unable to locate a serializer with id=" + serializerId.ToString() + ". Please ensure the desired serializer is available and try again.");
 
             dataProcessors = new List<DataProcessor>();
 
@@ -380,7 +383,14 @@ namespace NetworkCommsDotNet.DPSBase
                 byte processorId = (byte)((id & (mask << (8 * i))) >> (8 * i));
 
                 if (processorId != 0)
-                    dataProcessors.Add(GetDataProcessor(processorId));
+                {
+                    DataProcessor selectedProcessor = GetDataProcessor(processorId);
+
+                    if (selectedProcessor == null)
+                        throw new SerialisationException("Unable to locate a data processor with id=" + processorId.ToString() + ". Please ensure the desired data processor is available and try again.");
+
+                    dataProcessors.Add(selectedProcessor);
+                }
             }
         }
 

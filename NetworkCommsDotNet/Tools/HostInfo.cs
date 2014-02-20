@@ -58,7 +58,9 @@ namespace NetworkCommsDotNet.Tools
             get
             {
 #if WINDOWS_PHONE || NETFX_CORE
-                return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
+                return Windows.Networking.Proximity.PeerFinder.DisplayName;
+                //The below appears to returns nonsense
+                //return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
 #else
                 return Dns.GetHostName();
 #endif

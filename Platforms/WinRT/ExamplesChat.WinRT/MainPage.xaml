@@ -92,7 +92,7 @@
                 <CheckBox Grid.Row="4" Grid.Column="1" x:Name="encryptionBox" Checked="encryptionBox_Checked"/>
 
                 <TextBlock  Grid.Row="5" Grid.Column="0" x:Name="enableServerLabel" Text="Enable Local Server" VerticalAlignment="Center"/>
-                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="enableServerBox" Checked="enableServerBox_Checked"/>
+                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="enableServerBox" Checked="enableServerBox_CheckedUnChecked" Unchecked="enableServerBox_CheckedUnChecked"/>
                 
             </Grid>
         </Grid>
