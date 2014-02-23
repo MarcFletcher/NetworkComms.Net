@@ -298,7 +298,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="returnPacketTimeOutMilliSeconds">A timeout in milliseconds after which if not reply is received will throw 
         /// an ExpectedReturnTimeoutException.</param>
         /// <returns></returns>
-        public returnObjectType SendReceiveObject<sendObjectType, returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) 
+        public returnObjectType SendReceiveObject<returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds) 
         { 
             return SendReceiveObject<object, returnObjectType>(sendingPacketTypeStr, expectedReturnPacketTypeStr, returnPacketTimeOutMilliSeconds, null, null, null); 
         }
