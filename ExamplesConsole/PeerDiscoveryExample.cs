@@ -98,7 +98,7 @@ namespace Examples.ExamplesConsole
                         #region Discover Synchronously
                         Console.WriteLine("\nDiscovering servers synchronously ... ");
 
-                        //Discover peers asynchronously
+                        //Discover peers synchronously
                         //This method allows peers 2 seconds to respond after the request has been sent
                         Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> discoveredPeerEndPoints = PeerDiscovery.DiscoverPeers(PeerDiscovery.DiscoveryMethod.UDPBroadcast);
 

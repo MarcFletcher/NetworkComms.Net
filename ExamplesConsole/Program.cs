@@ -167,6 +167,8 @@ namespace Examples.ExamplesConsole
 
                 logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
                 logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+
+                //Enable logging using the provided configuration
                 NetworkComms.EnableLogging(logConfig);
 
                 //Incase we run the DFS test we will also enable logging for that
