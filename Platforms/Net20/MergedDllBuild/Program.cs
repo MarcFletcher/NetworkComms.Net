@@ -34,59 +34,69 @@ namespace MergedDllBuild
             string targetPlatform = "v2";
             string msCoreLibDirectory = @"C:\Windows\Microsoft.NET\Framework\v2.0.50727";
 
+            bool coreBuildEnabled = false;
+            bool completeBuildEnabled = true;
+
             #region Merge Core
-            Directory.CreateDirectory("MergedCore");
-            ILMerge coreMerge = new ILMerge();
+            if (coreBuildEnabled)
+            {
+                Directory.CreateDirectory("MergedCore");
+                ILMerge coreMerge = new ILMerge();
 
-            List<string> coreAssembles = new List<string>();
-            coreAssembles.Add("NetworkCommsDotNet.dll");
-            coreAssembles.Add("protobuf-net.dll");
-            coreAssembles.Add("NLog.dll");
+                List<string> coreAssembles = new List<string>();
+                coreAssembles.Add("NetworkCommsDotNet.dll");
+                coreAssembles.Add("protobuf-net.dll");
+                coreAssembles.Add("NLog.dll");
 
-            coreMerge.SetInputAssemblies(coreAssembles.ToArray());
-            coreMerge.Version = networkCommsVersion;
+                coreMerge.SetInputAssemblies(coreAssembles.ToArray());
+                coreMerge.Version = networkCommsVersion;
 
-            coreMerge.TargetKind = ILMerge.Kind.Dll;
-            coreMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
-            coreMerge.XmlDocumentation = true;
+                coreMerge.TargetKind = ILMerge.Kind.Dll;
+                coreMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
+                coreMerge.XmlDocumentation = true;
 
-            coreMerge.KeyFile = "networkcomms.net.snk";
+                coreMerge.KeyFile = "networkcomms.net.snk";
 
-            coreMerge.OutputFile = @"MergedCore\NetworkCommsDotNetCore.dll";
+                coreMerge.OutputFile = @"MergedCore\NetworkCommsDotNetCore.dll";
 
-            coreMerge.Log = true;
-            coreMerge.LogFile = @"MergedCore\MergeLog.txt";
+                coreMerge.Log = true;
+                coreMerge.LogFile = @"MergedCore\MergeLog.txt";
 
-            //coreMerge.Merge();
+                coreMerge.Merge();
+            }
             #endregion
 
             #region Merge Complete
-            Directory.CreateDirectory("MergedComplete");
-            ILMerge completeMerge = new ILMerge();
+            if (completeBuildEnabled)
+            {
+                Directory.CreateDirectory("MergedComplete");
+                ILMerge completeMerge = new ILMerge();
 
-            List<string> completeAssembles = new List<string>();
-            completeAssembles.Add("NetworkCommsDotNet.dll");
-            completeAssembles.Add("protobuf-net.dll");
-            completeAssembles.Add("NLog.dll");
-            completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
-            completeAssembles.Add("SharpZipLibCompressor.dll");
-            completeAssembles.Add("QuickLZCompressor.dll");
+                List<string> completeAssembles = new List<string>();
+                completeAssembles.Add("NetworkCommsDotNet.dll");
+                completeAssembles.Add("protobuf-net.dll");
+                completeAssembles.Add("ProtobufSerializer.dll");
+                completeAssembles.Add("NLog.dll");
+                completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
+                completeAssembles.Add("SharpZipLibCompressor.dll");
+                completeAssembles.Add("QuickLZCompressor.dll");
 
-            completeMerge.SetInputAssemblies(completeAssembles.ToArray());
-            completeMerge.Version = networkCommsVersion;
+                completeMerge.SetInputAssemblies(completeAssembles.ToArray());
+                completeMerge.Version = networkCommsVersion;
 
-            completeMerge.TargetKind = ILMerge.Kind.Dll;
-            completeMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
-            completeMerge.XmlDocumentation = true;
+                completeMerge.TargetKind = ILMerge.Kind.Dll;
+                completeMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
+                completeMerge.XmlDocumentation = true;
 
-            completeMerge.KeyFile = "networkcomms.net.snk";
+                //completeMerge.KeyFile = "networkcomms.net.snk";
 
-            completeMerge.OutputFile = @"MergedComplete\NetworkCommsDotNetComplete.dll";
+                completeMerge.OutputFile = @"MergedComplete\NetworkCommsDotNetComplete.dll";
 
-            completeMerge.Log = true;
-            completeMerge.LogFile = @"MergedComplete\MergeLog.txt";
+                completeMerge.Log = true;
+                completeMerge.LogFile = @"MergedComplete\MergeLog.txt";
 
-            //completeMerge.Merge();
+                completeMerge.Merge();
+            }
             #endregion
 #endif
         }

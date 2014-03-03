@@ -72,6 +72,7 @@
     <Compile Include="NumConnectionLoadTest.cs" />
     <Compile Include="NestedPacketTest.cs" />
     <Compile Include="PeerDiscoveryTest.cs" />
+    <Compile Include="SelfConnectTest.cs" />
     <Compile Include="SSLTest.cs" />
     <Compile Include="ThreadPoolTest.cs" />
     <Compile Include="Program.cs" />
