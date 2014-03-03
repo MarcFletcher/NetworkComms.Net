@@ -57,8 +57,10 @@ namespace RemoteProcedureCalls
             public Type InterfaceType { get; private set; }
             public DateTime LastAccess { get; private set; }
             public int TimeOut { get; private set; }
-            public RPCObjectType Type { get; private set; }
-
+            public RPCObjectType Type { get; private set; }            
+            public List<Connection> RegisteredClients { get; private set; }
+            public Dictionary<EventInfo, List<EventHandler>> RPCObjectEventHandlers { get; private set; }
+        
             public RPCStorageWrapper(object RPCObject, Type interfaceType, RPCObjectType Type, int timeout = int.MaxValue)
             {
                 this.TimeOut = timeout;
@@ -66,6 +68,8 @@ namespace RemoteProcedureCalls
                 this.LastAccess = DateTime.Now;
                 InterfaceType = interfaceType;
                 this.Type = Type;
+                RegisteredClients = new List<Connection>();
+                RPCObjectEventHandlers = new Dictionary<EventInfo, List<EventHandler>>();
             }
         }
 
@@ -166,11 +170,9 @@ namespace RemoteProcedureCalls
                         + " is not an interface");
 
                 string instanceId = BitConverter.ToString(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
-
+                
                 if (!RPCObjects.ContainsKey(instanceId))
                 {
-                    //Need to add code HERE to deal with events
-
                     RPCObjects.Add(instanceId, new RPCStorageWrapper(instance, typeof(I), RPCStorageWrapper.RPCObjectType.Public));
                 }
 
@@ -225,13 +227,13 @@ namespace RemoteProcedureCalls
         /// <summary>
         /// Disables RPC calls for the supplied named public object supplied
         /// </summary>
-        /// <param name="instanceName">Instance to disable RPC for</param>
-        public static void RemovePublicRPCObject(object instanceName)
+        /// <param name="instance">Instance to disable RPC for</param>
+        public static void RemovePublicRPCObject(object instance)
         {
             lock (locker)
             {
                 var keys = (from obj in RPCObjects
-                            where obj.Value.RPCObject == instanceName && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Public
+                            where obj.Value.RPCObject == instance && obj.Value.Type == RPCStorageWrapper.RPCObjectType.Public
                             select obj.Key).ToList();
 
                 RemoveRPCObjects(keys);
@@ -288,10 +290,85 @@ namespace RemoteProcedureCalls
                 }
 
                 foreach (var key in keysToRemove)
+                {
+                    var wrapper = RPCObjects[key];
+                    
+                    foreach (var pair in wrapper.RPCObjectEventHandlers)
+                    {
+                        var removeMethod = pair.Key.GetRemoveMethod();
+
+                        foreach (var handler in pair.Value)
+                        {
+                            try
+                            {
+                                removeMethod.Invoke(wrapper.RPCObject, new object[] { handler });
+                            }
+                            catch (Exception) { }
+                        }
+                    }
+
                     RPCObjects.Remove(key);
+                }
             }
         }
 
+        private static Dictionary<EventInfo, EventHandler> AddEventHandlersToInstance<I>(object instance, Connection clientConnection, string instanceId)
+        {
+            var events = typeof(I).GetEvents();
+            var addedHandlers = new Dictionary<EventInfo, EventHandler>();
+
+            foreach(var ev in events)
+            {
+                var addMethod = ev.GetAddMethod();
+
+                var evGenerator = typeof(RemoteProcedureCalls.Server).GetMethod("GenerateEvent", BindingFlags.NonPublic | BindingFlags.Static);
+                evGenerator = evGenerator.MakeGenericMethod(ev.EventHandlerType.GetGenericArguments());
+
+                var handler = evGenerator.Invoke(null, new object[] { clientConnection, instanceId, typeof(I), ev.Name });
+
+                addMethod.Invoke(instance, new object[] { handler });
+                addedHandlers.Add(ev, handler as EventHandler);
+            }
+            
+            //If the connection is closed make sure we remove all event handlers associated with that connection so that we don't get exceptions
+            //on the event fire
+            clientConnection.AppendShutdownHandler((connection) =>
+                {
+                    foreach (var ev in events)
+                    {
+                        var removeMethod = ev.GetRemoveMethod();
+
+                        try
+                        {
+                            removeMethod.Invoke(instance, new object[] { addedHandlers[ev] });
+                        }
+                        catch (Exception) { }
+
+                        try
+                        {
+                            RPCObjects[instanceId].RPCObjectEventHandlers[ev].Remove(addedHandlers[ev]);
+                        }
+                        catch (Exception) { }
+                    }
+                });
+
+            return addedHandlers;
+        }
+
+        private static EventHandler<A> GenerateEvent<A>(Connection clientConnection, string instanceId, Type interfaceType, string eventName) where A : EventArgs
+        {
+            return new EventHandler<A>((sender, args) =>
+            {
+                var packetType = "NetworkCommsRPCEventListenner-" + interfaceType.Name + "-" + instanceId;
+                RemoteCallWrapper callWrapper = new RemoteCallWrapper();
+                callWrapper.name = eventName;
+                callWrapper.instanceId = instanceId;
+                callWrapper.args = new List<RPCArgumentBase>() { RPCArgumentBase.CreateDynamic(sender), RPCArgumentBase.CreateDynamic(args) };
+
+                clientConnection.SendObject(packetType, callWrapper);
+            });
+        }
+        
         #region RPC Network comms handlers
 
         private static void NewInstanceRPCHandler<T, I>(PacketHeader header, Connection connection, string instanceName) where T : I, new()
@@ -302,9 +379,20 @@ namespace RemoteProcedureCalls
 
                 if (!RPCObjects.ContainsKey(instanceId))
                 {
-                    //Need to add code HERE to deal with events
+                    var instance = new T();
+                    var handlers = AddEventHandlersToInstance<I>(instance, connection, instanceId);
+                    var wrapper = new RPCStorageWrapper(instance, typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]);
+                    wrapper.RegisteredClients.Add(connection);
 
-                    RPCObjects.Add(instanceId, new RPCStorageWrapper(new T(), typeof(I), RPCStorageWrapper.RPCObjectType.Private, timeoutByInterfaceType[typeof(I)]));
+                    foreach (var evPair in handlers)
+                    {
+                        if (wrapper.RPCObjectEventHandlers.ContainsKey(evPair.Key))
+                            wrapper.RPCObjectEventHandlers[evPair.Key].Add(evPair.Value);
+                        else
+                            wrapper.RPCObjectEventHandlers.Add(evPair.Key, new List<EventHandler>() { evPair.Value });
+                    }
+
+                    RPCObjects.Add(instanceId, wrapper);
                 }
 
                 if (!addedHandlers.ContainsKey(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID"))
@@ -337,7 +425,21 @@ namespace RemoteProcedureCalls
                     instanceId = String.Empty;
                 else
                 {
-                    var nothing = RPCObjects[instanceId].RPCObject;
+                    var instanceWrapper = RPCObjects[instanceId];
+
+                    if (!instanceWrapper.RegisteredClients.Contains(connection))
+                    {
+                        var handlers = AddEventHandlersToInstance<I>(instanceWrapper.RPCObject, connection, instanceId);
+                        instanceWrapper.RegisteredClients.Add(connection);
+                        
+                        foreach (var evPair in handlers)
+                        {
+                            if (instanceWrapper.RPCObjectEventHandlers.ContainsKey(evPair.Key))
+                                instanceWrapper.RPCObjectEventHandlers[evPair.Key].Add(evPair.Value);
+                            else
+                                instanceWrapper.RPCObjectEventHandlers.Add(evPair.Key, new List<EventHandler>() { evPair.Value });
+                        }
+                    }
                 }
 
                 connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", instanceId);
@@ -352,7 +454,21 @@ namespace RemoteProcedureCalls
                     instanceId = String.Empty;
                 else
                 {
-                    var nothing = RPCObjects[instanceId].RPCObject;
+                    var instanceWrapper = RPCObjects[instanceId];
+
+                    if (!instanceWrapper.RegisteredClients.Contains(connection))
+                    {
+                        var handlers = AddEventHandlersToInstance<I>(instanceWrapper.RPCObject, connection, instanceId);
+                        instanceWrapper.RegisteredClients.Add(connection);
+
+                        foreach (var evPair in handlers)
+                        {
+                            if (instanceWrapper.RPCObjectEventHandlers.ContainsKey(evPair.Key))
+                                instanceWrapper.RPCObjectEventHandlers[evPair.Key].Add(evPair.Value);
+                            else
+                                instanceWrapper.RPCObjectEventHandlers.Add(evPair.Key, new List<EventHandler>() { evPair.Value });
+                        }
+                    }
                 }
 
                 connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", instanceId);

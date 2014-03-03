@@ -33,6 +33,7 @@ using NetworkCommsDotNet.Connections.UDP;
 #if NET35 || NET4
 using InTheHand.Net;
 using NetworkCommsDotNet.Connections.Bluetooth;
+using System.Linq;
 #elif NETFX_CORE
 using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
@@ -161,6 +162,23 @@ namespace NetworkCommsDotNet
                 DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
                     new List<DataProcessor>() { },
                     new Dictionary<string, string>());
+
+#if NET35 || NET4
+            //We may change the bluetooth radio mode during the program. Make sure that on comms shutdown the radios are correctly 
+            //set back to their original modes.
+            if (InTheHand.Net.Bluetooth.BluetoothRadio.AllRadios.Length != 0)
+            {
+                var originalModes = InTheHand.Net.Bluetooth.BluetoothRadio.AllRadios.ToDictionary(rad => rad.LocalAddress, rad => rad.Mode);
+
+                NetworkComms.OnCommsShutdown += (sender, args) =>
+                {
+                    foreach (var radio in InTheHand.Net.Bluetooth.BluetoothRadio.AllRadios)
+                    {
+                        radio.Mode = originalModes[radio.LocalAddress];
+                    }
+                }; 
+            }
+#endif
         }
 
         #region NetworkComms.Net Instance Information

@@ -28,6 +28,8 @@ using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Examples.ExamplesConsole
 {
@@ -150,6 +152,24 @@ namespace Examples.ExamplesConsole
                 set;
             }
 
+            event EventHandler<MathEventArgs> EchoEvent;
+
+            void TriggerEchoEventAfterDelay(int timeout, string toEcho);
+        }
+
+        [ProtoContract]
+        public class MathEventArgs : EventArgs
+        {
+            [ProtoMember(1)]
+            public string EchoValue { get; private set; }
+
+            private MathEventArgs() : base() { }
+
+            public MathEventArgs(string toEcho)
+                : base()
+            {
+                EchoValue = toEcho;
+            }
         }
 
         /// <summary>
@@ -257,6 +277,35 @@ namespace Examples.ExamplesConsole
                     { 
                         lastResult = value; 
                     }
+                }
+
+                private EventHandler<MathEventArgs> echoEvent;
+                private object locker = new object();
+                public event EventHandler<MathEventArgs> EchoEvent
+                {
+                    add
+                    {
+                        lock (locker)
+                        {
+                            echoEvent += value;
+                        }
+                    }
+                    remove
+                    {
+                        lock (locker)
+                        {
+                            echoEvent -= value;
+                        }
+                    }
+                }
+
+                public void TriggerEchoEventAfterDelay(int timeout, string toEcho)
+                {
+                    Task.Factory.StartNew(() =>
+                        {
+                            Thread.Sleep(timeout);
+                            echoEvent(this, new MathEventArgs(toEcho));
+                        });
                 }
             }
 
@@ -406,7 +455,14 @@ namespace Examples.ExamplesConsole
                     else
                         connection = UDPConnection.GetConnection(connectionInfo, UDPOptions.None);
 
+                    //Get the remote object
                     IMath remoteObject = SelectRemoteObject(connection, out instanceId);
+                    //Add a handler to the object's event to demonstrate remote triggering of events
+                    remoteObject.EchoEvent += (sender, args) =>
+                        {
+                            Console.WriteLine("Echo event recieved saying {0}", args.EchoValue);
+                        };
+
                     Console.WriteLine("\nRemote object has been selected. RPC object instanceId: {0}", instanceId);
 
                     while (true)
@@ -511,13 +567,13 @@ namespace Examples.ExamplesConsole
             private static object DoMath(IMath remoteObject)
             {
                 Console.WriteLine("\nWhat operation would you like to perform?\nMultiply - 1\nAdd - 2\nSubtract - 3\nDivide - 4\nEcho - 5\nGet Server Instance of MathClass - 6\nThrow Exception Remotely - 7\n" + 
-                    "Get last result using property - 8\nGet last result multiplied by an int using an indexer - 9\n");
+                    "Get last result using property - 8\nGet last result multiplied by an int using an indexer - 9\nTrigger an echo event after a delay - 0\n");
 
                 int selectedOperation;
                 while (true)
                 {
                     bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedOperation);
-                    if (parseSucces && selectedOperation <= 9 && selectedOperation > 0) break;
+                    if (parseSucces && selectedOperation <= 9 && selectedOperation >= 0) break;
                     Console.WriteLine("Invalid operation choice. Please try again.");
                 }
 
@@ -576,6 +632,16 @@ namespace Examples.ExamplesConsole
                         Console.WriteLine("Please enter an integer to multiply by");
                         if (!int.TryParse(Console.ReadLine(), out temp)) break;
                         return remoteObject[temp];                        
+                    case 0:
+                        int delay;
+                        string echoVal;
+                        Console.WriteLine("You selected to trigger an echo event after a delay");
+                        Console.WriteLine("Please enter the number of milliseconds to delay");
+                        if (!int.TryParse(Console.ReadLine(), out delay)) break;
+                        Console.WriteLine("Please enter string to echo");
+                        echoVal = Console.ReadLine();
+                        remoteObject.TriggerEchoEventAfterDelay(delay, echoVal);
+                        return "Will echo " + echoVal + " in " + delay + "ms\n";                    
                 }
 
                 throw new Exception("How have you managed to get execution to this point? Maybe you entered something that was BAD");

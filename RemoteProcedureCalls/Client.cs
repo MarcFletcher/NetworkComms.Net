@@ -52,6 +52,11 @@ namespace RemoteProcedureCalls
         Connection ServerConnection { get; }
 
         /// <summary>
+        /// The send recieve options used when communicating with the server
+        /// </summary>
+        SendReceiveOptions SendRecieveOptions { get; set; }
+                           
+        /// <summary>
         /// The timeout for all RPC calls made with this proxy in ms
         /// </summary>
         int RPCTimeout { get; set;  }
@@ -87,7 +92,7 @@ namespace RemoteProcedureCalls
         /// <param name="instanceName">The object identifier to use for this proxy</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToPrivateInstance<T>(Connection connection, string instanceName, out string instanceId) where T : class
+        public static T CreateProxyToPrivateInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
         {
             //Make sure the type is an interface
             if (!typeof(T).IsInterface)
@@ -99,7 +104,7 @@ namespace RemoteProcedureCalls
             if (instanceId == String.Empty)
                 throw new RPCException("Server not listening for new instances of type " + typeof(T).ToString());
 
-            return Cache<T>.CreateInstance(instanceId, connection);
+            return Cache<T>.CreateInstance(instanceId, connection, options);
         }
 
         /// <summary>
@@ -111,7 +116,7 @@ namespace RemoteProcedureCalls
         /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToPublicNamedInstance<T>(Connection connection, string instanceName, out string instanceId) where T : class
+        public static T CreateProxyToPublicNamedInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
         {
             //Make sure the type is an interface
             if (!typeof(T).IsInterface)
@@ -123,7 +128,7 @@ namespace RemoteProcedureCalls
             if (instanceId == String.Empty)
                 throw new RPCException("Named instance does not exist");
 
-            return Cache<T>.CreateInstance(instanceId, connection);
+            return Cache<T>.CreateInstance(instanceId, connection, options);
         }
 
         /// <summary>
@@ -133,7 +138,7 @@ namespace RemoteProcedureCalls
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceId">Unique identifier for the instance on the server</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToIdInstance<T>(Connection connection, string instanceId) where T : class
+        public static T CreateProxyToIdInstance<T>(Connection connection, string instanceId, SendReceiveOptions options = null) where T : class
         {
             //Make sure the type is an interface
             if (!typeof(T).IsInterface)
@@ -145,7 +150,7 @@ namespace RemoteProcedureCalls
             if (instanceId == String.Empty)
                 throw new RPCException("Instance with given Id not found");
 
-            return Cache<T>.CreateInstance(instanceId, connection);
+            return Cache<T>.CreateInstance(instanceId, connection, options);
         }
 
         //We use this to get the private method. Should be able to get it dynamically
@@ -159,37 +164,35 @@ namespace RemoteProcedureCalls
         {
             private static readonly Type Type;
 
-            public static T CreateInstance(string instanceId, Connection connection)
+            public static T CreateInstance(string instanceId, Connection connection, SendReceiveOptions options)
             {
                 //Create the instance
-                var res = (T)Activator.CreateInstance(Type, instanceId, connection, typeof(T), Client.DefaultRPCTimeout);
+                var res = (T)Activator.CreateInstance(Type, instanceId, connection, options, typeof(T), Client.DefaultRPCTimeout);
 
-                //Dictionary<string, FieldInfo> eventFields = new Dictionary<string,FieldInfo>();
+                Dictionary<string, FieldInfo> eventFields = new Dictionary<string, FieldInfo>();
 
-                //foreach (var ev in typeof(T).GetEvents())
-                //    eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
+                foreach (var ev in typeof(T).GetEvents())
+                    eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
 
-                ////Add the packet handler to deal with incoming event firing
-                //connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + Type.Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
-                //    {
-                //        try
-                //        {
-                //            //Let's do some basic checks on the data we've been sent
-                //            if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
-                //                return;
+                //Add the packet handler to deal with incoming event firing
+                connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + typeof(T).Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                    {
+                        try
+                        {
+                            //Let's do some basic checks on the data we've been sent
+                            if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
+                                return;
 
-                //            var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
+                            var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
 
-                //            List<object> args = new List<object>();
+                            var sender = eventCallWrapper.args[0].UntypedValue;
+                            var args = eventCallWrapper.args[1].UntypedValue;
 
-                //            for (int i = 0; i < eventCallWrapper.args.Count; i++)
-                //                args.Add(eventCallWrapper.args[i]);
+                            del.DynamicInvoke(sender, args);
+                        }
+                        catch (Exception) { }
 
-                //            del.DynamicInvoke(args);
-                //        }
-                //        catch (Exception) { }
-
-                //    }, NetworkComms.DefaultSendReceiveOptions);
+                    }, NetworkComms.DefaultSendReceiveOptions);
 
                 return res;
             }
@@ -221,6 +224,7 @@ namespace RemoteProcedureCalls
                 //Define private fields for the IRPCClient interface
                 var serverInstanceId = type.DefineField("serverInstanceID", typeof(string), FieldAttributes.Private);
                 var networkConnection = type.DefineField("serverConnection", typeof(Connection), FieldAttributes.Private);
+                var sendRecieveOptions = type.DefineField("sendRecieveOptions", typeof(SendReceiveOptions), FieldAttributes.Private);
                 var rpcTimeout = type.DefineField("rpcTimeout", typeof(int), FieldAttributes.Private);
                 var implementedInterface = type.DefineField("implementedInterface", typeof(Type), FieldAttributes.Private);
                 
@@ -230,7 +234,7 @@ namespace RemoteProcedureCalls
                 MethodInfo invokeMethod = typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
 
                 //Give the type an empty constructor
-                var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection), typeof(Type), typeof(int) });
+                var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection), typeof(SendReceiveOptions), typeof(Type), typeof(int) });
                 il = ctor.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
@@ -240,9 +244,12 @@ namespace RemoteProcedureCalls
                 il.Emit(OpCodes.Stfld, networkConnection);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_3);
-                il.Emit(OpCodes.Stfld, implementedInterface);
+                il.Emit(OpCodes.Stfld, sendRecieveOptions);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_S, 4);
+                il.Emit(OpCodes.Stfld, implementedInterface);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_S, 5);
                 il.Emit(OpCodes.Stfld, rpcTimeout);
                 il.Emit(OpCodes.Ret);
                                
@@ -411,6 +418,9 @@ namespace RemoteProcedureCalls
                             break;
                         case "ImplementedInterface":
                             underlyingField = implementedInterface;
+                            break;
+                        case "SendRecieveOptions":
+                            underlyingField = sendRecieveOptions;
                             break;
                         default:
                             throw new RPCException("Error initialising IRPCClient property");
@@ -648,144 +658,143 @@ namespace RemoteProcedureCalls
 
                 if (typeof(T).GetEvents().Count() != 0)
                 {
-                    throw new InvalidOperationException("RPC events are not supported at this time");
+                    //throw new InvalidOperationException("RPC events are not supported at this time");
 
-                    //foreach (var handler in typeof(T).GetEvents())
-                    //{
-                    //    //Implement the event
-                    //    var evImpl = type.DefineEvent(handler.Name, handler.Attributes, handler.EventHandlerType);
-                    //    //And then the underlying field
-                    //    var eventField = type.DefineField(handler.Name, handler.EventHandlerType, FieldAttributes.Private);
+                    foreach (var handler in typeof(T).GetEvents())
+                    {
+                        //Implement the event
+                        var evImpl = type.DefineEvent(handler.Name, handler.Attributes, handler.EventHandlerType);
+                        //And then the underlying field
+                        var eventField = type.DefineField(handler.Name, handler.EventHandlerType, FieldAttributes.Private);
 
-                    //    //Get the methods for adding and removing delegates
-                    //    var delegateCombineMethod = typeof(Delegate).GetMethod("Combine", new Type[] { typeof(Delegate), typeof(Delegate) });
-                    //    var delegateRemoveMethod = typeof(Delegate).GetMethod("Remove", new Type[] { typeof(Delegate), typeof(Delegate) });
+                        //Get the methods for adding and removing delegates
+                        var delegateCombineMethod = typeof(Delegate).GetMethod("Combine", new Type[] { typeof(Delegate), typeof(Delegate) });
+                        var delegateRemoveMethod = typeof(Delegate).GetMethod("Remove", new Type[] { typeof(Delegate), typeof(Delegate) });
 
-                    //    //This is used to keep things thread safe
-                    //    var compareExchange = typeof(Interlocked).GetMethods().Where(info => info.Name == "CompareExchange" && info.IsGenericMethod).First().MakeGenericMethod(handler.EventHandlerType);
+                        //This is used to keep things thread safe
+                        var compareExchange = typeof(Interlocked).GetMethods().Where(info => info.Name == "CompareExchange" && info.IsGenericMethod).First().MakeGenericMethod(handler.EventHandlerType);
 
-                    //    //We will then define the add method
+                        //We will then define the add method
+                        #region Event Add Method
 
-                    //    #region Event Add Method
+                        MethodBuilder method = type.DefineMethod("add_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
+                        method.DefineParameter(0, ParameterAttributes.Retval, null);
+                        method.DefineParameter(1, ParameterAttributes.In, "value");
 
-                    //    MethodBuilder method = type.DefineMethod("add_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
-                    //    method.DefineParameter(0, ParameterAttributes.Retval, null);
-                    //    method.DefineParameter(1, ParameterAttributes.In, "value");
+                        evImpl.SetAddOnMethod(method);
 
-                    //    evImpl.SetAddOnMethod(method);
+                        il = method.GetILGenerator();
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(typeof(bool));
 
-                    //    il = method.GetILGenerator();
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(typeof(bool));
+                        Label loop = il.DefineLabel();
 
-                    //    Label loop = il.DefineLabel();
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, eventField);
+                        il.Emit(OpCodes.Stloc_0);
 
-                    //    il.Emit(OpCodes.Ldarg_0);
-                    //    il.Emit(OpCodes.Ldfld, eventField);
-                    //    il.Emit(OpCodes.Stloc_0);
+                        il.EmitWriteLine("Built");
 
-                    //    il.EmitWriteLine("Built");
+                        il.MarkLabel(loop);// loop start (head: IL_0007)
 
-                    //    il.MarkLabel(loop);// loop start (head: IL_0007)
+                        il.Emit(OpCodes.Ldloc_0);
+                        il.Emit(OpCodes.Stloc_1);
+                        il.Emit(OpCodes.Ldloc_1);
+                        il.Emit(OpCodes.Ldarg_1);
 
-                    //    il.Emit(OpCodes.Ldloc_0);
-                    //    il.Emit(OpCodes.Stloc_1);
-                    //    il.Emit(OpCodes.Ldloc_1);
-                    //    il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Call, delegateCombineMethod);
+                        il.Emit(OpCodes.Castclass, handler.EventHandlerType);
 
-                    //    il.Emit(OpCodes.Call, delegateCombineMethod);
-                    //    il.Emit(OpCodes.Castclass, handler.EventHandlerType);
+                        il.Emit(OpCodes.Stloc_2);
+                        il.Emit(OpCodes.Ldarg_0);
 
-                    //    il.Emit(OpCodes.Stloc_2);
-                    //    il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldflda, eventField);
 
-                    //    il.Emit(OpCodes.Ldflda, eventField);
+                        il.Emit(OpCodes.Ldloc_2);
+                        il.Emit(OpCodes.Ldloc_1);
 
-                    //    il.Emit(OpCodes.Ldloc_2);
-                    //    il.Emit(OpCodes.Ldloc_1);
+                        // How to do this?
+                        //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
+                        //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
+                        il.Emit(OpCodes.Call, compareExchange);
 
-                    //    // How to do this?
-                    //    //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
-                    //    //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
-                    //    il.Emit(OpCodes.Call, compareExchange);
+                        il.Emit(OpCodes.Stloc_0);
+                        il.Emit(OpCodes.Ldloc_0);
+                        il.Emit(OpCodes.Ldloc_1);
+                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Stloc_3);
+                        il.Emit(OpCodes.Ldloc_3);
+                        il.Emit(OpCodes.Brtrue_S, loop);
+                        // end loop
+                        il.Emit(OpCodes.Ret);
 
-                    //    il.Emit(OpCodes.Stloc_0);
-                    //    il.Emit(OpCodes.Ldloc_0);
-                    //    il.Emit(OpCodes.Ldloc_1);
-                    //    il.Emit(OpCodes.Ceq);
-                    //    il.Emit(OpCodes.Ldc_I4_0);
-                    //    il.Emit(OpCodes.Ceq);
-                    //    il.Emit(OpCodes.Stloc_3);
-                    //    il.Emit(OpCodes.Ldloc_3);
-                    //    il.Emit(OpCodes.Brtrue_S, loop);
-                    //    // end loop
-                    //    il.Emit(OpCodes.Ret);
+                        #endregion
 
-                    //    #endregion
+                        //Next define the remove method
 
-                    //    //Next define the remove method
+                        #region Event Remove Method
 
-                    //    #region Event Remove Method
+                        method = type.DefineMethod("remove_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
+                        method.DefineParameter(0, ParameterAttributes.Retval, null);
+                        method.DefineParameter(1, ParameterAttributes.In, "value");
 
-                    //    method = type.DefineMethod("remove_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
-                    //    method.DefineParameter(0, ParameterAttributes.Retval, null);
-                    //    method.DefineParameter(1, ParameterAttributes.In, "value");
+                        evImpl.SetRemoveOnMethod(method);
 
-                    //    evImpl.SetRemoveOnMethod(method);
+                        il = method.GetILGenerator();
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(handler.EventHandlerType);
+                        il.DeclareLocal(typeof(bool));
 
-                    //    il = method.GetILGenerator();
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(handler.EventHandlerType);
-                    //    il.DeclareLocal(typeof(bool));
+                        loop = il.DefineLabel();
 
-                    //    loop = il.DefineLabel();
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, eventField);
+                        il.Emit(OpCodes.Stloc_0);
 
-                    //    il.Emit(OpCodes.Ldarg_0);
-                    //    il.Emit(OpCodes.Ldfld, eventField);
-                    //    il.Emit(OpCodes.Stloc_0);
+                        il.EmitWriteLine("Built");
 
-                    //    il.EmitWriteLine("Built");
+                        il.MarkLabel(loop);// loop start (head: IL_0007)
 
-                    //    il.MarkLabel(loop);// loop start (head: IL_0007)
+                        il.Emit(OpCodes.Ldloc_0);
+                        il.Emit(OpCodes.Stloc_1);
+                        il.Emit(OpCodes.Ldloc_1);
+                        il.Emit(OpCodes.Ldarg_1);
 
-                    //    il.Emit(OpCodes.Ldloc_0);
-                    //    il.Emit(OpCodes.Stloc_1);
-                    //    il.Emit(OpCodes.Ldloc_1);
-                    //    il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Call, delegateCombineMethod);
+                        il.Emit(OpCodes.Castclass, handler.EventHandlerType);
 
-                    //    il.Emit(OpCodes.Call, delegateCombineMethod);
-                    //    il.Emit(OpCodes.Castclass, handler.EventHandlerType);
+                        il.Emit(OpCodes.Stloc_2);
+                        il.Emit(OpCodes.Ldarg_0);
 
-                    //    il.Emit(OpCodes.Stloc_2);
-                    //    il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldflda, eventField);
 
-                    //    il.Emit(OpCodes.Ldflda, eventField);
+                        il.Emit(OpCodes.Ldloc_2);
+                        il.Emit(OpCodes.Ldloc_1);
 
-                    //    il.Emit(OpCodes.Ldloc_2);
-                    //    il.Emit(OpCodes.Ldloc_1);
+                        // How to do this?
+                        //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
+                        //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
+                        il.Emit(OpCodes.Call, compareExchange);
 
-                    //    // How to do this?
-                    //    //IL_001e: call !!0 [mscorlib]System.Threading.Interlocked::CompareExchange<class [mscorlib]System.EventHandler`1<class [mscorlib]System.ConsoleCancelEventArgs>>(!!0&, !!0, !!0)
-                    //    //il.Emit(OpCodes.Call, !!0 compareExchange(!!0&,!!0, !!0));
-                    //    il.Emit(OpCodes.Call, compareExchange);
+                        il.Emit(OpCodes.Stloc_0);
+                        il.Emit(OpCodes.Ldloc_0);
+                        il.Emit(OpCodes.Ldloc_1);
+                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Stloc_3);
+                        il.Emit(OpCodes.Ldloc_3);
+                        il.Emit(OpCodes.Brtrue_S, loop);
+                        // end loop
+                        il.Emit(OpCodes.Ret);
 
-                    //    il.Emit(OpCodes.Stloc_0);
-                    //    il.Emit(OpCodes.Ldloc_0);
-                    //    il.Emit(OpCodes.Ldloc_1);
-                    //    il.Emit(OpCodes.Ceq);
-                    //    il.Emit(OpCodes.Ldc_I4_0);
-                    //    il.Emit(OpCodes.Ceq);
-                    //    il.Emit(OpCodes.Stloc_3);
-                    //    il.Emit(OpCodes.Ldloc_3);
-                    //    il.Emit(OpCodes.Brtrue_S, loop);
-                    //    // end loop
-                    //    il.Emit(OpCodes.Ret);
-
-                    //    #endregion
-                    //}
+                        #endregion
+                    }
 
                 }
 
@@ -804,7 +813,7 @@ namespace RemoteProcedureCalls
         private static object RemoteCallClient(IRPCProxy clientObject, string functionToCall, object[] args)
         {
             var connection = clientObject.ServerConnection;
-
+            
             RemoteCallWrapper wrapper = new RemoteCallWrapper();
             wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
             wrapper.name = functionToCall;
@@ -812,7 +821,10 @@ namespace RemoteProcedureCalls
 
             string packetType = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
 
-            wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
+            if (clientObject.SendRecieveOptions != null)
+                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
+            else
+                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
 
             if (wrapper.Exception != null)
                 throw new RPCException(wrapper.Exception);
