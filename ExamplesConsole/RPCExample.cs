@@ -34,7 +34,7 @@ using System.Threading;
 namespace Examples.ExamplesConsole
 {
     /// <summary>
-    /// An example which demonstrates <see href="http://en.wikipedia.org/wiki/Remote_procedure_call">Remote Procedure Calls</see> using NetworkCommsDotNet
+    /// An example which demonstrates <see href="http://en.wikipedia.org/wiki/Remote_procedure_call">Remote Procedure Calls</see> using NetworkComms.Net
     /// </summary>
     public static class RPCExample
     {
@@ -322,6 +322,7 @@ namespace Examples.ExamplesConsole
                     Task.Factory.StartNew(() =>
                         {
                             Thread.Sleep(timeout);
+                            Console.WriteLine("Triggering echo after delay of {0}.", timeout);
                             echoEvent(this, new MathEventArgs(toEcho));
                         });
                 }
@@ -478,7 +479,7 @@ namespace Examples.ExamplesConsole
                     //Add a handler to the object's event to demonstrate remote triggering of events
                     remoteObject.EchoEvent += (sender, args) =>
                         {
-                            Console.WriteLine("Echo event recieved saying {0}", args.EchoValue);
+                            Console.WriteLine("Echo event received saying {0}", args.EchoValue);
                         };
 
                     Console.WriteLine("\nRemote object has been selected. RPC object instanceId: {0}", instanceId);

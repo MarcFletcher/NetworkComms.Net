@@ -20,12 +20,12 @@ that we can fix it.
 
 Please read the following brief, but important sections:
 
-LICENSING: This library is made freely available under the terms of the GPL. If you are unsure what that
+LICENSING: This library is made available under the terms of the GPLv3. If you are unsure what that
 means please find out. We make our living from writing software so if you intend to NetworkComms.Net for 
 proprietary software we kindly ask you purchase a commercial licence. More information can be found here
-http://www.networkcomms.net/licensing/
+http://www.networkcomms.net/download/
 
 GETTING STARTED: Everything you need to know about getting started with NetworkComms.Net, including a 
 short introduction video can be found here http://www.networkcomms.net/getting-started/
 
-SUPPORT & TUTORIALS: For support and tutorials please start here http://www.networkcomms.net/support/
+SUPPORT & TUTORIALS: For support and tutorials please start here http://www.networkcomms.net/network-library-support/

@@ -82,6 +82,9 @@ namespace MergedDllBuild
                 completeAssembles.Add("QuickLZCompressor.dll");
                 completeAssembles.Add("InTheHand.Net.Personal.dll");
 
+                completeAssembles.Add("DistributedFileSystem.dll");
+                completeAssembles.Add("RemoteProcedureCalls.dll");
+
                 completeMerge.SetInputAssemblies(completeAssembles.ToArray());
                 completeMerge.Version = networkCommsVersion;
 
