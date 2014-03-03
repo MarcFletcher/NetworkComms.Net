@@ -152,19 +152,37 @@ namespace Examples.ExamplesConsole
                 set;
             }
 
+            /// <summary>
+            /// Event that pushes a message to clients
+            /// </summary>
             event EventHandler<MathEventArgs> EchoEvent;
 
+            /// <summary>
+            /// Method echos a string after a given timeout, using RPC events
+            /// </summary>
+            /// <param name="timeout">The time to wait before sending back the echo in ms</param>
+            /// <param name="toEcho">The string to echo</param>
             void TriggerEchoEventAfterDelay(int timeout, string toEcho);
         }
 
+        /// <summary>
+        /// Event args to demonstrate the use of events in RPC
+        /// </summary>
         [ProtoContract]
         public class MathEventArgs : EventArgs
-        {
-            [ProtoMember(1)]
+        {            
+            /// <summary>
+            /// A string representing the message to be sent
+            /// </summary>
+            [ProtoMember(1)]            
             public string EchoValue { get; private set; }
 
             private MathEventArgs() : base() { }
 
+            /// <summary>
+            /// Creates a new MathEventArgs object with a provided message
+            /// </summary>
+            /// <param name="toEcho">The message to echo</param>
             public MathEventArgs(string toEcho)
                 : base()
             {

@@ -290,8 +290,7 @@ namespace NetworkCommsDotNet.Connections
         /// <summary>
         /// Send an empty packet using the connection default <see cref="SendReceiveOptions"/> and wait for a returned object again 
         /// using default <see cref="SendReceiveOptions"/>. Useful to request an object when there is no need to send anything.
-        /// </summary>
-        /// <typeparam name="sendObjectType">The sending object type, i.e. string, int[], etc</typeparam>
+        /// </summary>        
         /// <typeparam name="returnObjectType">The type of return object</typeparam>
         /// <param name="sendingPacketTypeStr">The sending packet type</param>
         /// <param name="expectedReturnPacketTypeStr">The packet type which will be used for the reply</param>

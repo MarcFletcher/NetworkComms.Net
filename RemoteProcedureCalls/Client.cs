@@ -91,6 +91,7 @@ namespace RemoteProcedureCalls
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceName">The object identifier to use for this proxy</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
+        /// <param name="options">SendRecieve options to use</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
         public static T CreateProxyToPrivateInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
         {
@@ -115,6 +116,7 @@ namespace RemoteProcedureCalls
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
+        /// <param name="options">SendRecieve options to use</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
         public static T CreateProxyToPublicNamedInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
         {
@@ -137,6 +139,7 @@ namespace RemoteProcedureCalls
         /// <typeparam name="T">The interface to use for the proxy</typeparam>
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceId">Unique identifier for the instance on the server</param>
+        /// <param name="options">SendRecieve options to use</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
         public static T CreateProxyToIdInstance<T>(Connection connection, string instanceId, SendReceiveOptions options = null) where T : class
         {
