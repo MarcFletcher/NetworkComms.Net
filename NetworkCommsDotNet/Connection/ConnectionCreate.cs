@@ -231,18 +231,25 @@ namespace NetworkCommsDotNet.Connections
                 //Check to see if we have a local listener for matching the local endpoint address
                 //If we are client side we use this local listener in our reply to the server
                 EndPoint selectedExistingLocalListenerEndPoint = null;
-                if (existingLocalListeners != null && existingLocalListeners.Count > 0)
+                if (existingLocalListeners != null && // If we have a suitable local listener
+                    existingLocalListeners.Count > 0 && // If we have a suitable local listener
+                    !existingLocalListeners.Contains(ConnectionInfo.RemoteEndPoint)) //If this is not an application loop back connection
                     selectedExistingLocalListenerEndPoint = (existingLocalListeners.Contains(ConnectionInfo.LocalEndPoint) ? ConnectionInfo.LocalEndPoint : existingLocalListeners[0]);
 
                 //During this exchange we may note an update local listen port
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Sending connnectionInfo to " + ConnectionInfo);
 
+                //Pull-out the parameters we want to send to the server
+                //Doing it here rather than all in the following Send Object line keeps it clearer
+                EndPoint selectedLocalListenerEndPoint = (selectedExistingLocalListenerEndPoint != null ? selectedExistingLocalListenerEndPoint : ConnectionInfo.LocalEndPoint);
+                bool connectable = selectedExistingLocalListenerEndPoint != null;
+
                 //As the client we initiated the connection we now forward our local node identifier to the server
                 //If we are listening we include our local listen port as well
-                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType, 
+                SendObject(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup), new ConnectionInfo(ConnectionInfo.ConnectionType,
                     NetworkComms.NetworkIdentifier,
-                    (selectedExistingLocalListenerEndPoint != null ? selectedExistingLocalListenerEndPoint : ConnectionInfo.LocalEndPoint), 
-                    selectedExistingLocalListenerEndPoint != null), 
+                    selectedLocalListenerEndPoint,
+                    connectable),
                     NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
@@ -397,15 +404,17 @@ namespace NetworkCommsDotNet.Connections
                 }
                 else
                 {
+                    //COMMENT: As of version 3.0.0 we have allowed loop back connections where the identifier is the same
                     //We need to check for a possible GUID clash
-                    //Probability of a clash is approx 0.1% if 1E19 connection are maintained simultaneously (This many connections has not be tested ;))
+                    //Probability of a clash is approx 0.1% if 1E19 connections are maintained simultaneously (This many connections has not be tested ;))
                     //but hey, we live in a crazy world!
-                    if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
-                    {
-                        connectionSetupException = true;
-                        connectionSetupExceptionStr = "Remote peer has same network identifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
-                    }
-                    else if (connectionByEndPoint[0] != this)
+                    //if (remoteConnectionInfo.NetworkIdentifier == NetworkComms.NetworkIdentifier)
+                    //{
+                    //    connectionSetupException = true;
+                    //    connectionSetupExceptionStr = "Remote peer has same network identifier to local, " + remoteConnectionInfo.NetworkIdentifier + ". A real duplication is vanishingly improbable so this exception has probably been thrown because the local and remote application are the same.";
+                    //}
+                    //else 
+                    if (connectionByEndPoint[0] != this)
                     {
                         possibleClashWithExistingConnection = true;
                         existingConnection = connectionByEndPoint[0];

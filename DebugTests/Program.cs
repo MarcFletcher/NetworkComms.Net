@@ -80,7 +80,8 @@ namespace DebugTests
             //ThreadPoolTest.RunExample();
             //SSLTest.RunExample();
             //NestedPacketTest.RunExample();
-            PeerDiscoveryTest.RunExample();
+            //PeerDiscoveryTest.RunExample();
+            SelfConnectTest.RunExample();
 
             //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Documents\Visual Studio 2010\Projects\networkcomms.net\DebugTests\bin\Debug\DebugTests_9GvNYKHC1E-cDqu8qTneew.txt");
             //log.LinesWithMatch(new string[] { "Completed adding connection reference by endPoint" }, "matchLog.txt");
