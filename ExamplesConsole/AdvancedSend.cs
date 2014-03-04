@@ -109,12 +109,21 @@ namespace Examples.ExamplesConsole
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
-            else
+            else if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(BinaryFormaterSerializer))
             {
                 NetworkComms.AppendGlobalIncomingPacketHandler<BinaryFormatterCustomObject>("CustomObject",
                                 (header, connection, customObject) =>
                                 {
                                     Console.WriteLine("\nReceived custom binary formatter object from " + connection);
+                                    Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
+                                });
+            }
+            else 
+            {
+                NetworkComms.AppendGlobalIncomingPacketHandler<JSONSerializerCustomObject>("CustomObject",
+                                (header, connection, customObject) =>
+                                {
+                                    Console.WriteLine("\nReceived custom JSON object from " + connection);
                                     Console.WriteLine(" ... intValue={0}, stringValue={1}", customObject.IntValue, customObject.StringValue);
                                 });
             }
@@ -235,13 +244,14 @@ namespace Examples.ExamplesConsole
             Console.WriteLine("\nPlease select a serializer:\n" +
                 "1 - Protobuf (High Performance, Versatile)\n" +
                 "2 - BinaryFormatter (Quick to Implement, Very Inefficient)\n" +
-                "3 - NullSerializer (High performance pass through serializer for sending byte[] only)\n");
+                "3 - NullSerializer (High performance pass through serializer for sending byte[] only)\n" +
+                "4 - JSON serializer (serializer objects to JSON)");
 
             int selectedSerializer;
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedSerializer);
-                if (parseSucces && selectedSerializer <= 3) break;
+                if (parseSucces && selectedSerializer <= 4) break;
                 Console.WriteLine("Invalid serializer choice. Please try again.");
             }
 
@@ -259,6 +269,11 @@ namespace Examples.ExamplesConsole
             {
                 Console.WriteLine(" ... selected null serializer.\n");
                 dataSerializer = DPSManager.GetDataSerializer<NullSerializer>();
+            }
+            else if(selectedSerializer == 4)
+            {
+                Console.WriteLine(" ... selected JSON serializer.\n");
+                dataSerializer = DPSManager.GetDataSerializer<JSONSerializer>();
             }
             else
                 throw new Exception("Unable to determine selected serializer.");
@@ -357,9 +372,11 @@ namespace Examples.ExamplesConsole
                     "1 - Array of bytes or strings\n");
 
                 if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(ProtobufSerializer))
-                    Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter select on startup.\n");
+                    Console.WriteLine("2 - Custom object (Using protobuf). To use binary formatter or JSON select on startup.\n");
+                else if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(BinaryFormaterSerializer))
+                    Console.WriteLine("2 - Custom object (Using protobuf). To use protobuf or JSON select on startup.\n");
                 else
-                    Console.WriteLine("2 - Custom object (Using binary formatter). To use protobuf select on startup.\n");
+                    Console.WriteLine("2 - Custom object (Using JSON). To use protobuf or binary formatter select on startup.\n");
 
                 int selectedObjectType;
                 while (true)
@@ -496,9 +513,14 @@ namespace Examples.ExamplesConsole
                 ProtobufCustomObject customObject = new ProtobufCustomObject(intValue, stringValue);
                 return customObject;
             }
-            else
+            else if (NetworkComms.DefaultSendReceiveOptions.DataSerializer.GetType() == typeof(BinaryFormaterSerializer))
             {
                 BinaryFormatterCustomObject customObject = new BinaryFormatterCustomObject(intValue, stringValue);
+                return customObject;
+            }
+            else
+            {
+                JSONSerializerCustomObject customObject = new JSONSerializerCustomObject(intValue, stringValue);
                 return customObject;
             }
         }
@@ -547,6 +569,28 @@ namespace Examples.ExamplesConsole
             /// <param name="intValue"></param>
             /// <param name="stringValue"></param>
             public BinaryFormatterCustomObject(int intValue, string stringValue)
+            {
+                this.IntValue = intValue;
+                this.StringValue = stringValue;
+            }
+        }
+
+        /// <summary>
+        /// Custom object used when using JSON serialisation
+        /// </summary>
+        private class JSONSerializerCustomObject
+        {
+            public int IntValue { get; set; }
+            public string StringValue { get; set; }
+
+            public JSONSerializerCustomObject(){}
+
+            /// <summary>
+            /// Constructor object for BinaryFormatterCustomObject
+            /// </summary>
+            /// <param name="intValue"></param>
+            /// <param name="stringValue"></param>
+            public JSONSerializerCustomObject(int intValue, string stringValue)
             {
                 this.IntValue = intValue;
                 this.StringValue = stringValue;

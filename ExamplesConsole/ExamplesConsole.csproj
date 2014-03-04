@@ -91,6 +91,10 @@
       <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
       <Name>DistributedFileSystem</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Platforms\Net40\JSONSerializer\JSONSerializer.csproj">
+      <Project>{70a3f4d5-38de-4a18-9f28-a7d67755bfdc}</Project>
+      <Name>JSONSerializer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet</Name>
