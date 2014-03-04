@@ -187,6 +187,8 @@ namespace NetworkCommsDotNet.Connections
                 //Idiot check
                 if (!listener.IsListening) throw new CommsSetupShutdownException("Listener is not listening after calling StartListening.");
 
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Listener started (" + listener.ConnectionType.ToString() + "-" + (listener.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + " - " + listener.LocalListenEndPoint.ToString() + ").");
+
                 //Idiot check
                 if (listenersDict.ContainsKey(listener.ConnectionType) &&
                     listenersDict[listener.ConnectionType].ContainsKey(listener.LocalListenEndPoint))
@@ -328,6 +330,14 @@ namespace NetworkCommsDotNet.Connections
                 if (listenersDict.ContainsKey(connectionType) &&
                     listenersDict[connectionType].ContainsKey(localEndPointToClose))
                 {
+                    if (NetworkComms.LoggingEnabled)
+                    {
+                        if (listenersDict[connectionType][localEndPointToClose].IsListening)
+                            NetworkComms.Logger.Info("Listener stopping (" + listenersDict[connectionType][localEndPointToClose].ConnectionType.ToString() + "-" + (listenersDict[connectionType][localEndPointToClose].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + " - " + listenersDict[connectionType][localEndPointToClose].LocalListenEndPoint.ToString() + ").");
+                        else
+                            NetworkComms.Logger.Info("Listener stopping (" + listenersDict[connectionType][localEndPointToClose].ConnectionType.ToString() + "-" + (listenersDict[connectionType][localEndPointToClose].ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + " - Not listening when stopped).");
+                    }
+
                     listenersDict[connectionType][localEndPointToClose].StopListening();
                     listenersDict[connectionType].Remove(localEndPointToClose);
 

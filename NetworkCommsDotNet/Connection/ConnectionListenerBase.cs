@@ -124,6 +124,8 @@ namespace NetworkCommsDotNet.Connections
                         " Please provide compatible send receive options in order to successfully instantiate this unmanaged connection.", "sendReceiveOptions");
             }
 
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("Created new connection listener (" + connectionType.ToString() + "-" + (applicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + ").");
+
             this.ConnectionType = connectionType;
             this.ListenerDefaultSendReceiveOptions = sendReceiveOptions;
             this.ApplicationLayerProtocol = applicationLayerProtocol;
@@ -136,10 +138,12 @@ namespace NetworkCommsDotNet.Connections
         /// <returns></returns>
         public override string ToString()
         {
+            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + "] ";
+
             if (IsListening && LocalListenEndPoint != null)
-                return "Listening ("+LocalListenEndPoint.ToString() + ")";
+                return returnString + "Listening - " + LocalListenEndPoint.ToString();
             else
-                return "Not Listening";
+                return returnString + "Not Listening";
         }
 
         #region Start and Stop Listening
