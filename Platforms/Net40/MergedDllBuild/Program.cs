@@ -30,7 +30,7 @@ namespace MergedDllBuild
         static void Main(string[] args)
         {
 #if !DEBUG
-            Version networkCommsVersion = new Version(3, 0, 0);
+            Version networkCommsVersion = new Version(3, 0, 0, 0);
             string targetPlatform = "v4";
             string msCoreLibDirectory = @"C:\Windows\Microsoft.NET\Framework\v4.0.30319";
 
@@ -91,14 +91,14 @@ namespace MergedDllBuild
                 completeMerge.TargetKind = ILMerge.Kind.Dll;
                 completeMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
                 completeMerge.XmlDocumentation = true;
-
-                //completeMerge.KeyFile = "networkcomms.net.snk";
+                
+                completeMerge.KeyFile = "networkcomms.net.snk";
 
                 completeMerge.OutputFile = @"MergedComplete\NetworkCommsDotNetComplete.dll";
 
                 completeMerge.Log = true;
                 completeMerge.LogFile = @"MergedComplete\MergeLog.txt";
-
+                
                 completeMerge.Merge();
             }
             #endregion
