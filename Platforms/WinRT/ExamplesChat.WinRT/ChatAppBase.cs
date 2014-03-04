@@ -129,6 +129,8 @@ namespace Examples.ExamplesChat.WinRT
             {
                 FirstInitialisation = false;
 
+                
+
                 //Configure NetworkComms.Net to handle any incoming packet of type 'ChatMessage'
                 //e.g. If we receive a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);

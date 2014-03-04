@@ -22,7 +22,14 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+
+#if NET4
 using System.Web.Script.Serialization;
+#endif
+
+#if WINDOWS_PHONE || NETFX_CORE
+using System.Runtime.Serialization.Json;
+#endif
 
 #if ANDROID
 using PreserveAttribute = Android.Runtime.PreserveAttribute;
@@ -35,7 +42,9 @@ namespace NetworkCommsDotNet.DPSBase
     [DataSerializerProcessor(4)]
     public class JSONSerializer : DataSerializer
     {
+#if NET4
         JavaScriptSerializer serializer = new JavaScriptSerializer();
+#endif
 
 #if ANDROID || iOS
         [Preserve]
@@ -47,6 +56,7 @@ namespace NetworkCommsDotNet.DPSBase
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream outputStream, object objectToSerialise, Dictionary<string, string> options)
         {
+#if NET4
             if (outputStream == null)
                 throw new ArgumentNullException("outputStream");
 
@@ -55,22 +65,34 @@ namespace NetworkCommsDotNet.DPSBase
 
             outputStream.Seek(0, 0);
 
-            byte[] buffer = Encoding.UTF8.GetBytes(serializer.Serialize(objectToSerialise));
+            byte[] buffer = Encoding.Unicode.GetBytes(serializer.Serialize(objectToSerialise));
 
             outputStream.Write(buffer, 0, buffer.Length);
             outputStream.Seek(0, 0);
+#elif WINDOWS_PHONE || NETFX_CORE
+            outputStream.Seek(0, 0);
+            var serializer = new DataContractJsonSerializer(objectToSerialise.GetType());
+            serializer.WriteObject(outputStream, objectToSerialise);
+            outputStream.Seek(0, 0);
+#endif
+
         }
 
         /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
+#if NET4
             byte[] buffer = new byte[inputStream.Length];
             inputStream.Read(buffer, 0, buffer.Length);
 
-            char[] chars = Encoding.UTF8.GetChars(buffer);
+            char[] chars = Encoding.Unicode.GetChars(buffer);
             string res = new string(chars);
             
             return serializer.Deserialize(res, resultType);
+#elif WINDOWS_PHONE || NETFX_CORE
+            var serializer = new DataContractJsonSerializer(resultType);
+            return serializer.ReadObject(inputStream);
+#endif
         }
 
         #endregion
