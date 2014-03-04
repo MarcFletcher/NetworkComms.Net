@@ -444,7 +444,9 @@ namespace DistributedFileSystem
         /// </summary>
         public static void ShutdownDFS()
         {
-            DFSShutdownEvent.Set();
+            if (DFSShutdownEvent!=null)
+                DFSShutdownEvent.Set();
+
             RemoveAllItemsFromLocalOnly();
             NetworkComms.Shutdown();
 

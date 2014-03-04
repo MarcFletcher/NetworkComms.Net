@@ -218,7 +218,12 @@ namespace NetworkCommsDotNet.Connections.TCP
             try
             {
                 foreach (var endPoint in localEndPoints)
+                {
+                    if (endPoint.Address == IPAddress.Any)
+                        throw new NotSupportedException("IPAddress.Any may not be specified for this depreciated method. Please use Connection.StartListening() instead.");
+
                     StartListening(endPoint, useRandomPortFailOver);
+                }
             }
             catch (Exception)
             {
@@ -237,6 +242,9 @@ namespace NetworkCommsDotNet.Connections.TCP
         [Obsolete("Depreciated, please use Connection.StartListening.")]
         public static void StartListening(IPEndPoint newLocalEndPoint, bool useRandomPortFailOver = true, bool allowDiscoverable = false)
         {
+            if (newLocalEndPoint.Address == IPAddress.Any)
+                throw new NotSupportedException("IPAddress.Any may not be specified for this depreciated method. Please use Connection.StartListening() instead.");
+
             TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, allowDiscoverable);
             Connection.StartListening(listener, newLocalEndPoint, useRandomPortFailOver);
         }
