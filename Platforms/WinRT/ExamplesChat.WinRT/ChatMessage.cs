@@ -25,6 +25,7 @@ using System.Text;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.DPSBase;
+using Newtonsoft.Json;
 
 namespace Examples.ExamplesChat.WinRT
 {
@@ -34,6 +35,7 @@ namespace Examples.ExamplesChat.WinRT
     /// serialise (turn into bytes) this object. At the base level the 
     /// serialisation is performed by protobuf.net.
     /// </summary>
+    [JsonObject(MemberSerialization.OptIn)]
     public class ChatMessage : IExplicitlySerialize
     {
         /// <summary>
@@ -42,6 +44,7 @@ namespace Examples.ExamplesChat.WinRT
         /// The [ProtoMember(1)] attribute informs the serialiser that when
         /// an object of type ChatMessage is serialised we want to include this variable
         /// </summary>
+        [JsonProperty]
         string _sourceIdentifier;
 
         /// <summary>
@@ -55,22 +58,26 @@ namespace Examples.ExamplesChat.WinRT
         /// The [ProtoMember(2)] attribute informs the serialiser that when
         /// an object of type ChatMessage is serialised we want to include this variable 
         /// </summary>
+        [JsonProperty]
         public string SourceName { get; private set; }
 
         /// <summary>
         /// The actual message.
         /// </summary>
+        [JsonProperty]
         public string Message { get; private set; }
 
         /// <summary>
         /// The index of this message. Every message sent by a particular source
         /// has an incrementing index.
         /// </summary>
+        [JsonProperty]
         public long MessageIndex { get; private set; }
 
         /// <summary>
         /// The number of times this message has been relayed.
         /// </summary>
+        [JsonProperty]
         public int RelayCount { get; private set; }
 
         /// <summary>

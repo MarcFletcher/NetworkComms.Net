@@ -154,7 +154,7 @@ namespace Examples.ExamplesChat.WPF
             chatApplication.RefreshNetworkCommsConfiguration();
 
             this.UseProtobuf.IsEnabled = !chatApplication.LocalServerEnabled;
-            this.UseExplicit.IsEnabled = !chatApplication.LocalServerEnabled;
+            this.UseJSON.IsEnabled = !chatApplication.LocalServerEnabled;
         }
 
         /// <summary>
@@ -193,25 +193,25 @@ namespace Examples.ExamplesChat.WPF
 
         private void UseProtobuf_Checked(object sender, RoutedEventArgs e)
         {
-            if (this.UseExplicit != null && this.UseExplicit.IsChecked != null && !(bool)this.UseExplicit.IsChecked)
+            if (this.UseJSON != null && this.UseJSON.IsChecked != null && !(bool)this.UseJSON.IsChecked)
             {
                 //Update the application and connectionType
                 this.UseProtobuf.IsChecked = true;
-                this.UseExplicit.IsChecked = false;
+                this.UseJSON.IsChecked = false;
                 chatApplication.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
                 chatApplication.RefreshNetworkCommsConfiguration();
                 chatApplication.AppendLineToChatHistory("Serializer changed to protobuf serializer.");
             }
         }
 
-        private void UseExplicit_Checked(object sender, RoutedEventArgs e)
+        private void UseJSON_Checked(object sender, RoutedEventArgs e)
         {
             if (this.UseProtobuf != null && this.UseProtobuf.IsChecked != null && !(bool)this.UseProtobuf.IsChecked)
             {
                 //Update the application and connectionType
                 this.UseProtobuf.IsChecked = false;
-                this.UseExplicit.IsChecked = true;
-                chatApplication.Serializer = DPSManager.GetDataSerializer<ExplicitSerializer>();
+                this.UseJSON.IsChecked = true;
+                chatApplication.Serializer = DPSManager.GetDataSerializer<JSONSerializer>();
                 chatApplication.RefreshNetworkCommsConfiguration();
                 chatApplication.AppendLineToChatHistory("Serializer changed to explicit serializer.");
             }

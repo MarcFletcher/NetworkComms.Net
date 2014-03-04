@@ -141,6 +141,11 @@ namespace Examples.ExamplesChat.WinRT
             }
             #endregion
 
+            #region Set serializer
+            //Set the default send recieve options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<JSONSerializer>(), NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
+            #endregion
+
             #region Optional Encryption
             //Configure encryption if requested
             if (EncryptionEnabled && !NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>()))
