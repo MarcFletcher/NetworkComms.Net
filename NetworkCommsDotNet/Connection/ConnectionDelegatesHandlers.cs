@@ -39,7 +39,7 @@ namespace NetworkCommsDotNet.Connections
         /// Thread safety locker which is used when accessing <see cref="incomingPacketHandlers"/>, 
         /// <see cref="incomingPacketUnwrappers"/> and <see cref="ConnectionSpecificShutdownDelegate"/>.
         /// </summary>
-        protected object _syncRoot = new object();
+        private object _syncRoot = new object();
 
         /// <summary>
         /// Connection level SyncRoot which can be used to perform multiple thread safe operations on this connection

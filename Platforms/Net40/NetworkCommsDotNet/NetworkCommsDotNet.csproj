@@ -44,10 +44,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\32feet.NET.3.5.0.0\lib\net\InTheHand.Net.Personal.dll</HintPath>
     </Reference>
-    <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\NLog.2.1.0\lib\net40\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -234,6 +230,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\HostInfo.cs">
       <Link>Tools\HostInfo.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ILogger.cs">
+      <Link>Tools\ILogger.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
       <Link>Tools\IPTools.cs</Link>
     </Compile>
@@ -287,9 +286,6 @@
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPv6Address.cs">
       <Link>Tools\XPlatformHelper\IPv6Address.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\Logger.cs">
-      <Link>Tools\XPlatformHelper\Logger.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketAddress.cs">
       <Link>Tools\XPlatformHelper\SocketAddress.cs</Link>

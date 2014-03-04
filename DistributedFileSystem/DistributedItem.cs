@@ -231,7 +231,7 @@ namespace DistributedFileSystem
 
             if (enableChunkChecksum) BuildChunkCheckSums();
 
-            if (DFS.loggingEnabled) DFS.logger.Debug("... created new original DFS item (" + this.ItemCheckSum + ").");
+            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... created new original DFS item (" + this.ItemCheckSum + ").");
         }
 
         /// <summary>
@@ -334,7 +334,7 @@ namespace DistributedFileSystem
             else
                 AddBuildLogLine("Created DFS item - " + ItemIdentifier);
 
-            if (DFS.loggingEnabled) DFS.logger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
+            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... created new DFS item from assembly config (" + this.ItemCheckSum + ").");
         }
 
         /// <summary>
@@ -422,7 +422,7 @@ namespace DistributedFileSystem
         /// <param name="assembleTimeoutSecs">The maximum time to allow to build this item before throwing a timeout exception.</param>
         public void AssembleItem(int assembleTimeoutSecs)
         {
-            if (DFS.loggingEnabled) DFS.logger.Debug("Started DFS item assemble - "+ItemIdentifier+" (" + this.ItemCheckSum + ").");
+            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Started DFS item assemble - "+ItemIdentifier+" (" + this.ItemCheckSum + ").");
 
             AddBuildLogLine("Started DFS item assemble - " + ItemIdentifier + " (" + this.ItemCheckSum + ").");
 
@@ -494,7 +494,7 @@ namespace DistributedFileSystem
                             {
                                 if (!SwarmChunkAvailability.PeerIsSuperPeer(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier))
                                 {
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " peer from AssembleItem due to potential timeout.");
+                                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " peer from AssembleItem due to potential timeout.");
                                     AddBuildLogLine("Removing " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier + " from AssembleItem due to potential timeout.");
                                     SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier, (IPEndPoint)itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.LocalEndPoint);
                                     timedOutPeers.Add(itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo.NetworkIdentifier);
@@ -502,12 +502,12 @@ namespace DistributedFileSystem
                                 else
                                 {
                                     AddBuildLogLine(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
+                                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk request timeout from super peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + ".");
                                 }
                             }
                             else
                             {
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
                                 AddBuildLogLine(" ... chunk request timeout from peer " + itemBuildTrackerDict[currentTrackerKeys[i]].PeerConnectionInfo + " which has remaining timeouts.");
                             }
 
@@ -776,7 +776,7 @@ namespace DistributedFileSystem
 
                 #endregion
 
-                if (DFS.loggingEnabled) DFS.logger.Trace("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
                 AddBuildLogLine("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
 
                 #region Integrate Chunks
@@ -799,7 +799,7 @@ namespace DistributedFileSystem
                         else
                         {
                             integratedData = true;
-                            if (DFS.loggingEnabled) DFS.logger.Trace("ChunkAvailabilityReply dequeued for chunkIndex=" + incomingReply.ChunkIndex);
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace("ChunkAvailabilityReply dequeued for chunkIndex=" + incomingReply.ChunkIndex);
                             AddBuildLogLine("ChunkAvailabilityReply dequeued for chunkIndex=" + incomingReply.ChunkIndex);
 
                             if (!incomingReply.ChunkDataSet)
@@ -824,7 +824,7 @@ namespace DistributedFileSystem
                                     else if (chunkDiskMD5 != ChunkCheckSums[incomingReply.ChunkIndex] && writeCount >= writeRetryCountMax)
                                     {
                                         AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation during integration after "+writeRetryCountMax+" write attempts.");
-                                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation during integration after " + writeRetryCountMax + " write attempts.");
+                                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation during integration after " + writeRetryCountMax + " write attempts.");
 
                                         throw new InvalidDataException("Chunk index " + incomingReply.ChunkIndex + " data failed validation on read back.");
                                     }
@@ -836,7 +836,7 @@ namespace DistributedFileSystem
                                 if (StreamTools.MD5(incomingReply.ChunkData) != ChunkCheckSums[incomingReply.ChunkIndex])
                                 {
                                         AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " was corrupted before integration.");
-                                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " was corrupted before integration.");
+                                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " was corrupted before integration.");
 
                                         throw new InvalidDataException("Chunk index " + incomingReply.ChunkIndex + " data corrupted before integration.");
                                 }
@@ -845,7 +845,7 @@ namespace DistributedFileSystem
                             }
                             #endregion
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk data integrated in " + (DateTime.Now-startTime).TotalSeconds.ToString("0.0") + " secs ["+writeCount+"].");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk data integrated in " + (DateTime.Now-startTime).TotalSeconds.ToString("0.0") + " secs ["+writeCount+"].");
                             AddBuildLogLine(" ... chunk data integrated in " + (DateTime.Now-startTime).TotalSeconds.ToString("0.0") + " secs ["+writeCount+"].");
 
                             //Record the chunk locally as available
@@ -873,7 +873,7 @@ namespace DistributedFileSystem
                             if (SwarmChunkAvailability.ChunkHealthMetric(incomingReply.ChunkIndex, TotalNumChunks) < 1)
                                 SwarmChunkAvailability.BroadcastLocalAvailability(ItemCheckSum);
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... completed integration for chunk " + incomingReply.ChunkIndex + " for item " + ItemCheckSum + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... completed integration for chunk " + incomingReply.ChunkIndex + " for item " + ItemCheckSum + ".");
                         }
                     }
                     catch (Exception)
@@ -936,12 +936,12 @@ namespace DistributedFileSystem
 
             if (ItemClosed)
             {
-                if (DFS.loggingEnabled) DFS.logger.Debug(" ... aborted DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Debug(" ... aborted DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
                 AddBuildLogLine("Aborted assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
             }
             else
             {
-                if (DFS.loggingEnabled) DFS.logger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Debug(" ... completed DFS item assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
                 AddBuildLogLine("Completed assemble (" + this.ItemCheckSum + ") using " + SwarmChunkAvailability.NumPeersInSwarm() + " peers.");
             }
 
@@ -973,7 +973,7 @@ namespace DistributedFileSystem
 
                 AddBuildLogLine(logString);
 
-                if (DFS.loggingEnabled) DFS.logger.Trace(logString);
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(logString);
 
                 //We want to remove the chunk from the incoming build tracker so that it no longer counts as an outstanding request
                 bool integrateChunk = false;
@@ -992,10 +992,10 @@ namespace DistributedFileSystem
                                 itemBuildTrackerDict[incomingReply.ChunkIndex].RequestIncoming = true;
                                 integrateChunk = true;
 
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming data matches existing request.");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... incoming data matches existing request.");
                             }
                             else
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming data matches existing request but request already incoming.");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... incoming data matches existing request but request already incoming.");
                         }
                         else
                         {
@@ -1012,7 +1012,7 @@ namespace DistributedFileSystem
                             else if (incomingReply.ReplyState == ChunkReplyState.PeerBusy)
                             {
                                 SwarmChunkAvailability.SetIPEndPointBusy(incomingReply.SourceConnectionInfo.NetworkIdentifier, (IPEndPoint)incomingReply.SourceConnectionInfo.RemoteEndPoint);
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... set peer " + incomingReply.SourceConnectionInfo + " as busy.");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... set peer " + incomingReply.SourceConnectionInfo + " as busy.");
                             }
 
                             //If no data was included, regardless of state, we need to remove the request and allow it to be recreated
@@ -1022,7 +1022,7 @@ namespace DistributedFileSystem
                     }
                     else
                     {
-                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... incoming reply does not exist in request list.");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... incoming reply does not exist in request list.");
 
                         //We no longer have the requst for this reply, no worries we can still use it
                         //If the checksums match, it includes data and we don't already have it
@@ -1035,7 +1035,7 @@ namespace DistributedFileSystem
 
                             integrateChunk = true;
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... required chunk so integrating regardless.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... required chunk so integrating regardless.");
                         }
                     }
                     #endregion
@@ -1046,7 +1046,7 @@ namespace DistributedFileSystem
 
                 if (integrateChunk)
                 {
-                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... adding ChunkAvailabilityReply to queue for chunk " + incomingReply.ChunkIndex + " for item " + ItemCheckSum + ".");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... adding ChunkAvailabilityReply to queue for chunk " + incomingReply.ChunkIndex + " for item " + ItemCheckSum + ".");
 
                     if (incomingReply.ChunkData == null)
                         throw new NullReferenceException("Chunk data cannot be null.");
@@ -1064,12 +1064,12 @@ namespace DistributedFileSystem
                         if (StreamTools.MD5(incomingReply.ChunkData) == ChunkCheckSums[incomingReply.ChunkIndex])
                         {
                             AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data was validated.");
                         }
                         else
                         {
                             AddBuildLogLine(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation.");
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... chunk index " + incomingReply.ChunkIndex + " data from peer " + incomingReply.SourceConnectionInfo + " failed validation.");
 
                             throw new InvalidDataException("Chunk index " + incomingReply.ChunkIndex + " data failed validation.");
                         }
@@ -1079,7 +1079,7 @@ namespace DistributedFileSystem
                         chunkDataToIntegrateQueue.Enqueue(incomingReply);
                 }
                 else
-                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... nothing to integrate for item " + ItemCheckSum + ".");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... nothing to integrate for item " + ItemCheckSum + ".");
             }
             catch (Exception)
             {

@@ -270,6 +270,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\HostInfo.cs">
       <Link>Tools\HostInfo.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\ILogger.cs">
+      <Link>Tools\ILogger.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\IPTools.cs">
       <Link>Tools\IPTools.cs</Link>
     </Compile>
@@ -323,9 +326,6 @@
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPv6Address.cs">
       <Link>Tools\XPlatformHelper\IPv6Address.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\Logger.cs">
-      <Link>Tools\XPlatformHelper\Logger.cs</Link>
     </Compile>
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketAddress.cs">
       <Link>Tools\XPlatformHelper\SocketAddress.cs</Link>

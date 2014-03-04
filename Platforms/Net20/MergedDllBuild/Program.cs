@@ -52,7 +52,7 @@ namespace MergedDllBuild
                 List<string> coreAssembles = new List<string>();
                 coreAssembles.Add("NetworkCommsDotNet.dll");
                 coreAssembles.Add("protobuf-net.dll");
-                coreAssembles.Add("NLog.dll");
+                coreAssembles.Add("ProtobufSerializer.dll");
 
                 coreMerge.SetInputAssemblies(coreAssembles.ToArray());
                 coreMerge.Version = networkCommsVersion;
@@ -82,7 +82,6 @@ namespace MergedDllBuild
                 completeAssembles.Add("NetworkCommsDotNet.dll");
                 completeAssembles.Add("protobuf-net.dll");
                 completeAssembles.Add("ProtobufSerializer.dll");
-                completeAssembles.Add("NLog.dll");
                 completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
                 completeAssembles.Add("SharpZipLibCompressor.dll");
                 completeAssembles.Add("QuickLZCompressor.dll");
@@ -94,7 +93,7 @@ namespace MergedDllBuild
                 completeMerge.SetTargetPlatform(targetPlatform, msCoreLibDirectory);
                 completeMerge.XmlDocumentation = true;
 
-                //completeMerge.KeyFile = "networkcomms.net.snk";
+                completeMerge.KeyFile = "networkcomms.net.snk";
 
                 completeMerge.OutputFile = @"MergedComplete\NetworkCommsDotNetComplete.dll";
 

@@ -22,7 +22,6 @@ using System.Linq;
 using System.Text;
 using ProtoBuf;
 using System.Collections.Specialized;
-using NLog;
 using System.Net;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections;

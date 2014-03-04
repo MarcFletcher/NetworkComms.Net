@@ -658,7 +658,7 @@ namespace DistributedFileSystem
                     peerEndPointToNetworkIdentifier.Add(info.LocalEndPoint.ToString(), info.NetworkIdentifier);
             }
 
-            if (DFS.loggingEnabled) DFS.logger.Debug("New swarmChunkAvailability created using " + sourceConnectionInfoList + " possible sources.");
+            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("New swarmChunkAvailability created using " + sourceConnectionInfoList + " possible sources.");
         }
 
         /// <summary>
@@ -932,7 +932,7 @@ namespace DistributedFileSystem
 
                                 peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
 
-                                if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed entire peer from swarm - " + networkIdentifier + ".");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... removed entire peer from swarm - " + networkIdentifier + ".");
                             }
                             else
                             {
@@ -941,22 +941,22 @@ namespace DistributedFileSystem
 
                                 if (removeResult)
                                 {
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... removed peer IPEndPoint from swarm - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
+                                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... removed peer IPEndPoint from swarm - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
                                 }
                                 else
                                 {
-                                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... attempted to removed peer IPEndPoint from swarm but it didn't exist - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
+                                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... attempted to removed peer IPEndPoint from swarm but it didn't exist - " + networkIdentifier + " - " + peerEndPoint.ToString() + ".");
                                 }
                             }
                         }
                         else
                         {
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... remove failed as forceRemove= " + forceRemoveWholePeer + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... remove failed as forceRemove= " + forceRemoveWholePeer + ", peerAvailabilityByNetworkIdentifierDict.Count=" + peerAvailabilityByNetworkIdentifierDict.Count + ", isSuperPeer=" + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].SuperPeer + ", superPeerCount=" + (from current in peerAvailabilityByNetworkIdentifierDict where current.Value.SuperPeer select current.Key).Count());
                         }
                     }
                     else
                     {
-                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer did not exist in peerAvailabilityByNetworkIdentifierDict. Checking for old ipEndPoint references");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... peer did not exist in peerAvailabilityByNetworkIdentifierDict. Checking for old ipEndPoint references");
 
                         //Remove any accidental entries left in the endpoint dict
                         peerEndPointToNetworkIdentifier.Remove(peerEndPoint.ToString());

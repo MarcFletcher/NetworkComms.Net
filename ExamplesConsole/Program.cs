@@ -22,9 +22,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-using NLog;
-using NLog.Config;
-using NLog.Targets;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Tools;
 
@@ -138,44 +135,29 @@ namespace Examples.ExamplesConsole
 
             if (Console.ReadKey(true).Key == ConsoleKey.Y)
             {
+                //For logging you can either use the included LiteLogger or create your own by
+                //implementing ILogger
+
                 //////////////////////////////////////////////////////////////////////
                 //// SIMPLE CONSOLE ONLY LOGGING
-                //// See http://nlog-project.org/ for more information
-                //// Requires that the file NLog.dll is present 
                 //////////////////////////////////////////////////////////////////////
-                //LoggingConfiguration logConfig = new LoggingConfiguration();
-                //ConsoleTarget consoleTarget = new ConsoleTarget();
-                //consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} [${level}] - ${message}";
-                //logConfig.AddTarget("console", consoleTarget);
-                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                //ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleOnly);
                 //NetworkComms.EnableLogging(logConfig);
 
                 //////////////////////////////////////////////////////////////////////
                 //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
-                //// See http://nlog-project.org/ for more information
-                //// Requires that the file NLog.dll is present 
                 //////////////////////////////////////////////////////////////////////
-                LoggingConfiguration logConfig = new LoggingConfiguration();
-                FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/ExamplesConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
-                fileTarget.Layout = "${date:format=HH\\:mm\\:ss\\:fff} [${threadid} - ${level}] - ${message}";
-                ConsoleTarget consoleTarget = new ConsoleTarget();
-                consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
-
-                logConfig.AddTarget("file", fileTarget);
-                logConfig.AddTarget("console", consoleTarget);
-
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
+                string logFileName = "ExamplesConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
+                ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, logFileName);
 
                 //Enable logging using the provided configuration
-                NetworkComms.EnableLogging(logConfig);
+                NetworkComms.EnableLogging(logger);
 
-                //Incase we run the DFS test we will also enable logging for that
-                DistributedFileSystem.DFS.EnableLogging(logConfig);
+                //In case we run the DFS test we will also enable logging for that
+                DistributedFileSystem.DFS.EnableLogging(logger);
 
                 //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier + ".txt." + Environment.NewLine);
+                NetworkComms.Logger.Info("NetworkComms.Net logging enabled. All output directed to console and log file, " + logFileName + Environment.NewLine);
             }
         }
     }

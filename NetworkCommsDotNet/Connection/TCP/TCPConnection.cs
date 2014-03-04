@@ -265,7 +265,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             
             readTask.Start();
 #else
-            lock (_syncRoot)
+            lock (SyncRoot)
             {
                 if (NetworkComms.ConnectionListenModeUseSync)
                 {

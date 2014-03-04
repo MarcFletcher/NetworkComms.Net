@@ -24,14 +24,12 @@ using System.Threading.Tasks;
 using System.IO;
 using NetworkCommsDotNet;
 using System.Threading;
-using NLog;
 using System.Net;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
-using NLog.Config;
 
 namespace DistributedFileSystem
 {
@@ -298,7 +296,7 @@ namespace DistributedFileSystem
                      throw new CommsSetupShutdownException("Local port selected that is not within the valid range.");
                 #endregion
 
-                if (DFS.loggingEnabled) DFS.logger.Info("Initialised DFS");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Info("Initialised DFS");
             }
             catch (Exception e)
             {
@@ -352,7 +350,7 @@ namespace DistributedFileSystem
                     TCPConnection primaryServer = TCPConnection.GetConnection(new ConnectionInfo(linkTargetIP, linkTargetPort));
 
                     DFSLinkRequest availableLinkTargetItems = primaryServer.SendReceiveObject<DFSLinkRequest, DFSLinkRequest>("DFS_ItemLinkRequest", "DFS_ItemLinkRequest", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
-                    if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker could link " + availableLinkTargetItems.AvailableItems.Count+ " items from target.");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace("LinkModeWorker could link " + availableLinkTargetItems.AvailableItems.Count+ " items from target.");
 
                     if (LinkMode == DFSLinkMode.LinkAndRepeat)
                     {
@@ -373,7 +371,7 @@ namespace DistributedFileSystem
                             if (itemsToRequest.Length > 0)
                             {
                                 primaryServer.SendObject("DFS_RequestLocalItemBuild", itemsToRequest.Take(concurrentNumLinkItems).ToArray(), nullCompressionSRO);
-                                if (DFS.loggingEnabled) DFS.logger.Trace("LinkModeWorker made a request to link " + itemsToRequest.Take(concurrentNumLinkItems).Count() + " items.");
+                                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("LinkModeWorker made a request to link " + itemsToRequest.Take(concurrentNumLinkItems).Count() + " items.");
                             }
                         }
                     }
@@ -469,7 +467,7 @@ namespace DistributedFileSystem
                 catch (Exception) { }
             }
 
-            if (loggingEnabled) DFS.logger.Debug("DFS Shutdown.");
+            if (loggingEnabled) DFS._DFSLogger.Debug("DFS Shutdown.");
         }
 
         /// <summary>
@@ -503,28 +501,26 @@ namespace DistributedFileSystem
         #region Logging
         internal static object loggingLocker = new object();
         internal static bool loggingEnabled = false;
-        internal static Logger logger = LogManager.GetCurrentClassLogger();
+        internal static ILogger _DFSLogger;
 
         /// <summary>
         /// Access the networkComms logger externally. Allows logging from external sources
         /// </summary>
-        public static Logger Logger
+        public static ILogger Logger
         {
-            get { return logger; }
+            get { return _DFSLogger; }
         }
 
         /// <summary>
         /// Enable logging in networkComms using the provided logging adaptor
         /// </summary>
-        /// <param name="loggingAdaptor"></param>
-        public static void EnableLogging(LoggingConfiguration loggingAdaptor)
+        /// <param name="logger"></param>
+        public static void EnableLogging(ILogger logger)
         {
             lock (loggingLocker)
             {
                 loggingEnabled = true;
-                LogManager.Configuration = loggingAdaptor;
-                logger = LogManager.GetCurrentClassLogger();
-                LogManager.EnableLogging();
+                _DFSLogger = logger;
             }
         }
 
@@ -536,7 +532,9 @@ namespace DistributedFileSystem
             lock (loggingLocker)
             {
                 loggingEnabled = false;
-                LogManager.DisableLogging();
+
+                if (_DFSLogger != null)
+                    _DFSLogger.Shutdown();
             }
         }
         #endregion
@@ -750,7 +748,7 @@ namespace DistributedFileSystem
                 //Send the config information to the client that wanted the file
                 peerConnection.SendObject("DFS_IncomingLocalItemBuild", new ItemAssemblyConfig(itemToDistribute, completedPacketType), nullCompressionSRO);
 
-                if (DFS.loggingEnabled) DFS.logger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + peerConnection + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + peerConnection + ".");
             }
             catch (CommsException)
             {
@@ -781,12 +779,12 @@ namespace DistributedFileSystem
                     if (!ItemAlreadyInLocalCache(itemToAdd))
                     {
                         swarmedItemsDict.Add(itemToAdd.ItemCheckSum, itemToAdd);
-                        if (DFS.loggingEnabled) DFS.logger.Debug("... added existing item to DFS (" + itemToAdd.ItemCheckSum + ").");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added existing item to DFS (" + itemToAdd.ItemCheckSum + ").");
                     }
                     else
                     {
                         itemToAdd = swarmedItemsDict[itemToAdd.ItemCheckSum];
-                        if (DFS.loggingEnabled) DFS.logger.Debug("... added new item to DFS (" + itemToAdd.ItemCheckSum + ").");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added new item to DFS (" + itemToAdd.ItemCheckSum + ").");
                     }
                 }
 
@@ -876,7 +874,7 @@ namespace DistributedFileSystem
             {
                 if ((DateTime.Now - lastChunkCacheCleanup).TotalSeconds > ChunkCacheDataCleanupIntervalSecs)
                 {
-                    if (DFS.loggingEnabled) DFS.logger.Trace("Starting ChunkDataCache cleanup.");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Starting ChunkDataCache cleanup.");
 
                     int removedCount = 0;
 
@@ -899,7 +897,7 @@ namespace DistributedFileSystem
                             chunkDataCache.Remove(peerKeys[i]);
                     }
 
-                    if (DFS.loggingEnabled) DFS.logger.Trace("Completed ChunkDataCache cleanup having removed " + removedCount + " items.");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Completed ChunkDataCache cleanup having removed " + removedCount + " items.");
 
                     lastChunkCacheCleanup = DateTime.Now;
                 }
@@ -933,10 +931,10 @@ namespace DistributedFileSystem
                         lock (chunkDataCacheLocker)
                             chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
 
-                        if (loggingEnabled) DFS.logger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
+                        if (loggingEnabled) DFS._DFSLogger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
                     }
                     else
-                        if (loggingEnabled) DFS.logger.Trace("DFSConnectionShutdown Global - Disconnection ignored - " + connection + ".");
+                        if (loggingEnabled) DFS._DFSLogger.Trace("DFSConnectionShutdown Global - Disconnection ignored - " + connection + ".");
                 }
                 catch (CommsException e)
                 {
@@ -961,7 +959,7 @@ namespace DistributedFileSystem
             {
                 DistributedItem selectedItem = null;
 
-                if (DFS.loggingEnabled) DFS.logger.Trace(" ... known peers request for item (" + itemCheckSum + ").");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... known peers request for item (" + itemCheckSum + ").");
 
                 lock (globalDFSLocker)
                 {
@@ -1061,7 +1059,7 @@ namespace DistributedFileSystem
                         if (assemblyConfig == null)
                             throw new NullReferenceException("AssemblyConfig should not be null.");
 
-                        if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
 
                         //We check to see if we already have the necessary file locally
                         lock (globalDFSLocker)
@@ -1093,7 +1091,7 @@ namespace DistributedFileSystem
                         //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
                         if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
                         {
-                            if (DFS.loggingEnabled) DFS.logger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildTarget + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildTarget + ".");
 
                             //Copy the result to the disk if required by the build target
                             if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
@@ -1221,7 +1219,7 @@ namespace DistributedFileSystem
                 DateTime startTime = DateTime.Now;
 
                 //Console.WriteLine("... ({0}) received request for chunk {1} from {2}.", DateTime.Now.ToString("HH:mm:ss.fff"), incomingRequest.ChunkIndex, sourceConnectionId);
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestRequest from " + connection + " for " + incomingRequest.ItemCheckSum + ", chunkIndex " + incomingRequest.ChunkIndex + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingChunkInterestRequest from " + connection + " for " + incomingRequest.ItemCheckSum + ", chunkIndex " + incomingRequest.ChunkIndex + ".");
 
                 DistributedItem selectedItem = null;
                 lock (globalDFSLocker)
@@ -1236,7 +1234,7 @@ namespace DistributedFileSystem
                     //Inform peer that we don't actually have the requested item
                     UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
-                    if (DFS.loggingEnabled) DFS.logger.Trace(" ... item not available locally, sent DFS_ItemRemovalUpdate.");
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... item not available locally, sent DFS_ItemRemovalUpdate.");
                 }
                 else
                 {
@@ -1248,7 +1246,7 @@ namespace DistributedFileSystem
                         //If the peer thinks we have a chunk we don't we send them an update so that they are corrected
                         UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
-                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... requested chunk not available, sent DFS_PeerChunkAvailabilityUpdate.");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... requested chunk not available, sent DFS_PeerChunkAvailabilityUpdate.");
                     }
                     else
                     {
@@ -1258,13 +1256,13 @@ namespace DistributedFileSystem
                             //We can return a busy reply if we are currently experiencing high demand
                             connection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, ChunkReplyState.PeerBusy), nullCompressionSRO);
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... peer busy, sent busy response.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... peer busy, sent busy response.");
                         }
                         else
                         {
                             StreamTools.StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
                             long packetSequenceNumber;
                             
@@ -1272,13 +1270,13 @@ namespace DistributedFileSystem
                             var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
                             clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyData", chunkData, nullCompressionSRO, out packetSequenceNumber);
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace("Pushing chunkInfo to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Pushing chunkInfo to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
                             clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetSequenceNumber), nullCompressionSRO);
 
                             lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
 
-                            if (DFS.loggingEnabled) DFS.logger.Trace(" ... IncomingChunkInterestRequest completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... IncomingChunkInterestRequest completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
                         }
                     }
                 }
@@ -1310,7 +1308,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingChunkInterestReplyData from " + connection + " containing " + incomingData.Length + " bytes.");
 
                 if (connection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
                     throw new Exception("IncomingChunkInterestReplyData should only be received using TCP.");
@@ -1349,7 +1347,7 @@ namespace DistributedFileSystem
                         {
                             //If we don't have the info we just need to log the data
                             chunkDataCache[connection.ConnectionInfo.NetworkIdentifier].Add(dataSequenceNumber, new ChunkDataWrapper(dataSequenceNumber, incomingData));
-                            if (DFS.loggingEnabled) DFS.logger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Added ChunkData to chunkDataCache from " + connection + ", sequence number:" + dataSequenceNumber + " , containing " + incomingData.Length + " bytes.");
                         }
                     }
 
@@ -1393,7 +1391,7 @@ namespace DistributedFileSystem
             try
             {
                 ConnectionInfo incomingConnectionInfo = new ConnectionInfo(connection.ConnectionInfo.ConnectionType, incomingReply.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
 
                 DistributedItem item = null;
                 lock (globalDFSLocker)
@@ -1415,7 +1413,7 @@ namespace DistributedFileSystem
                             incomingReply.SetChunkData(chunkDataCache[incomingReply.SourceNetworkIdentifier][incomingReply.DataSequenceNumber].Data);
                             chunkDataCache[incomingReply.SourceNetworkIdentifier].Remove(incomingReply.DataSequenceNumber);
 
-                            if (DFS.loggingEnabled) DFS.logger.Debug("Completed ChunkAvailabilityReply using data in chunkDataCache from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Completed ChunkAvailabilityReply using data in chunkDataCache from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
 
                             if (chunkDataCache[incomingReply.SourceNetworkIdentifier].Count == 0)
                                 chunkDataCache.Remove(incomingReply.SourceNetworkIdentifier);
@@ -1427,7 +1425,7 @@ namespace DistributedFileSystem
                                 chunkDataCache.Add(incomingReply.SourceNetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
 
                             chunkDataCache[incomingReply.SourceNetworkIdentifier].Add(incomingReply.DataSequenceNumber, new ChunkDataWrapper(incomingReply));
-                            if (DFS.loggingEnabled) DFS.logger.Debug("Added ChunkAvailabilityReply to chunkDataCache (awaiting data) from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Added ChunkAvailabilityReply to chunkDataCache (awaiting data) from " + connection + ", sequence number:" + incomingReply.DataSequenceNumber + ".");
                         }
 
                         //We decide if we are going to handle the data within the lock to avoid possible handle contention
@@ -1458,7 +1456,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingPeerChunkAvailabilityUpdate from " + connection + " for item " + updateDetails.ItemCheckSum + "(" + updateDetails.ChunkFlags.NumCompletedChunks() + ").");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingPeerChunkAvailabilityUpdate from " + connection + " for item " + updateDetails.ItemCheckSum + "(" + updateDetails.ChunkFlags.NumCompletedChunks() + ").");
 
                 DistributedItem selectedItem = null;
                 lock (globalDFSLocker)
@@ -1514,7 +1512,7 @@ namespace DistributedFileSystem
                     //connection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), nullCompressionSRO);
                     UDPConnection.SendObject("DFS_PeerChunkAvailabilityUpdate", new PeerChunkAvailabilityUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, selectedItem.SwarmChunkAvailability.PeerChunkAvailability(NetworkComms.NetworkIdentifier)), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
 
-                if (DFS.loggingEnabled) DFS.logger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... replied to IncomingChunkAvailabilityRequest (" + itemCheckSum + ").");
             }
             catch (CommsException)
             {
@@ -1536,7 +1534,7 @@ namespace DistributedFileSystem
         {
             try
             {
-                if (DFS.loggingEnabled) DFS.logger.Trace("IncomingItemRemovalUpdate from " + connection + " for " + itemRemovalUpdate.ItemCheckSum + ". " + (itemRemovalUpdate.RemoveSwarmWide ? "SwamWide" : "Local Only") + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingItemRemovalUpdate from " + connection + " for " + itemRemovalUpdate.ItemCheckSum + ". " + (itemRemovalUpdate.RemoveSwarmWide ? "SwamWide" : "Local Only") + ".");
 
                 lock (globalDFSLocker)
                 {
@@ -1559,7 +1557,7 @@ namespace DistributedFileSystem
                         }
                     }
                     else
-                        if (DFS.loggingEnabled) DFS.logger.Trace(" ... nothing removed as item not present locally.");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... nothing removed as item not present locally.");
                 }
             }
             catch (CommsException e)

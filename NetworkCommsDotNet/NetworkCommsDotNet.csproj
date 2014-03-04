@@ -59,10 +59,6 @@
     <AssemblyOriginatorKeyFile>networkcomms.net.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NLog.2.1.0\lib\net20\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -116,6 +112,7 @@
     <Compile Include="Connection\ConnectionSendClose.cs" />
     <Compile Include="Tools\DOSProtection.cs" />
     <Compile Include="Tools\HostInfo.cs" />
+    <Compile Include="Tools\ILogger.cs" />
     <Compile Include="Tools\IPTools.cs" />
     <Compile Include="Tools\CommsThreadPool.cs" />
     <Compile Include="Tools\LogTools.cs" />
@@ -146,7 +143,6 @@
     <Compile Include="Tools\XPlatformHelper\IPAddress.cs" />
     <Compile Include="Tools\XPlatformHelper\IPEndPoint.cs" />
     <Compile Include="Tools\XPlatformHelper\IPv6Address.cs" />
-    <Compile Include="Tools\XPlatformHelper\Logger.cs" />
     <Compile Include="Tools\XPlatformHelper\SocketAddress.cs" />
     <Compile Include="Tools\XPlatformHelper\SocketError.cs" />
     <Compile Include="Tools\XPlatformHelper\SocketException.cs" />

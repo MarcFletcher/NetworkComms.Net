@@ -16,22 +16,20 @@
 //  A commercial license of this software can also be purchased. 
 //  Please see <http://www.networkcomms.net/licensing/> for details.
 
+using DistributedFileSystem;
+using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
+using ProtoBuf;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NetworkCommsDotNet;
 using System.Collections.Specialized;
-using NLog;
-using System.Threading;
-using System.IO;
-using NLog.Config;
-using NLog.Targets;
-using System.Net;
 using System.Diagnostics;
-using NetworkCommsDotNet.DPSBase;
-using DistributedFileSystem;
-using ProtoBuf;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading;
 
 namespace DebugTests
 {
@@ -50,22 +48,11 @@ namespace DebugTests
 
             if (false)
             {
-                LoggingConfiguration logConfig = new LoggingConfiguration();
-                FileTarget fileTarget = new FileTarget();
-                fileTarget.FileName = "${basedir}/DebugTests_" + NetworkComms.NetworkIdentifier + ".txt";
-                fileTarget.Layout = "${date:format=HH\\:mm\\:ss} [${threadid} - ${level}] - ${message}";
-                ConsoleTarget consoleTarget = new ConsoleTarget();
-                consoleTarget.Layout = "${date:format=HH\\:mm\\:ss} - ${message}";
-
-                logConfig.AddTarget("file", fileTarget);
-                logConfig.AddTarget("console", consoleTarget);
-
-                logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, fileTarget));
-                //logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, consoleTarget));
-                NetworkComms.EnableLogging(logConfig);
+                ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, "DebugTests_" + NetworkComms.NetworkIdentifier + ".txt");
+                NetworkComms.EnableLogging(logger);
 
                 //Incase we run the DFS test we will also enable logging for that
-                //DistributedFileSystem.DFS.EnableLogging(logConfig);
+                DistributedFileSystem.DFS.EnableLogging(logger);
             }
 
             DebugTest.RunExample();

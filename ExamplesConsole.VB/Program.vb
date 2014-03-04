@@ -18,9 +18,6 @@
 
 Imports NetworkCommsDotNet
 Imports NetworkCommsDotNet.Tools
-Imports NLog
-Imports NLog.Config
-Imports NLog.Targets
 
 Module Program
 
@@ -80,43 +77,25 @@ Module Program
         ''If the user wants to enable logging 
         Console.WriteLine("To enable comms logging press 'y'. To leave logging disabled and continue press any other key." + Environment.NewLine)
 
-        If (Console.ReadKey(True).key = ConsoleKey.Y) Then
+        If (Console.ReadKey(True).Key = ConsoleKey.Y) Then
+            'For logging you can either use the included LiteLogger or create your own by
+            'implementing ILogger
+
             ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
             '''' SIMPLE CONSOLE ONLY LOGGING
-            '''' See http:''nlog-project.org' for more information
-            '''' Requires that the file NLog.dll is present 
             ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-            'Dim logConfig = New LoggingConfiguration()
-            '
-            'Dim consoleTarget = New ConsoleTarget()
-            'consoleTarget.Layout = "${date:format=HH\:mm\:ss} - ${message}"
-            '
-            'logConfig.AddTarget("console", consoleTarget)
-            '
-            'logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Debug, consoleTarget))
-            'NetworkComms.EnableLogging(logConfig)
+            'Dim logger = New LiteLogger(LiteLogger.LogMode.ConsoleOnly)
+            'NetworkComms.EnableLogging(logger)
 
             ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
             '''' THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
-            '''' See http:''nlog-project.org' for more information
-            '''' Requires that the file NLog.dll is present 
             ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-            Dim logConfig = New LoggingConfiguration()
-            Dim fileTarget = New FileTarget()
-            fileTarget.FileName = "${basedir}/ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier.ToString() + ".txt"
-            fileTarget.Layout = "${date:format=HH\:mm\:ss} [${threadid} - ${level}] - ${message}"
-            Dim consoleTarget = New ConsoleTarget()
-            consoleTarget.Layout = "${date:format=HH\:mm\:ss} - ${message}"
+            Dim logFileName = "ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier.ToString() + ".txt"
+            Dim logger = New LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, logFileName)
+            NetworkComms.EnableLogging(logger)
 
-            logConfig.AddTarget("file", fileTarget)
-            logConfig.AddTarget("console", consoleTarget)
-
-            logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Trace, fileTarget))
-            logConfig.LoggingRules.Add(New LoggingRule("*", LogLevel.Debug, consoleTarget))
-            NetworkComms.EnableLogging(logConfig)
-
-            ''We can write to our logger from an external program as well
-            NetworkComms.Logger.Info("NetworkCommsDotNet logging enabled. DEBUG level ouput and above directed to console. ALL output also directed to log file, ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier.ToString() + ".txt." + Environment.NewLine)
+            'We can write to our logger from an external program as well
+            NetworkComms.Logger.Info("NetworkComms.Net logging enabled. ALL output directed to console and log file, " + logFileName + Environment.NewLine)
         End If
     End Sub
 
