@@ -135,29 +135,56 @@ namespace Examples.ExamplesConsole
 
             if (Console.ReadKey(true).Key == ConsoleKey.Y)
             {
-                //For logging you can either use the included LiteLogger or create your own by
-                //implementing ILogger
+                //Select the logger to use
+                Console.WriteLine("Please select the logger to use:\n1 - NetworkComms.Net LiteLogger\n2 - External NLog Logger");
 
-                //////////////////////////////////////////////////////////////////////
-                //// SIMPLE CONSOLE ONLY LOGGING
-                //////////////////////////////////////////////////////////////////////
-                //ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleOnly);
-                //NetworkComms.EnableLogging(logConfig);
+                //Parse the user input for the selected logger
+                int selectedLogger;
+                while (true)
+                {
+                    bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedLogger);
+                    if (parseSucces && selectedLogger <= 2 && selectedLogger > 0) break;
+                    Console.WriteLine("Invalid logger choice. Please try again.");
+                }
 
-                //////////////////////////////////////////////////////////////////////
-                //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
-                //////////////////////////////////////////////////////////////////////
-                string logFileName = "ExamplesConsoleLog_"+NetworkComms.NetworkIdentifier+".txt";
-                ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, logFileName);
+                //Set the desired logger
+                ILogger logger;
+                if (selectedLogger == 1)
+                {
+                    Console.WriteLine(" ... selected NetworkComms.Net LiteLogger.\n");
 
-                //Enable logging using the provided configuration
+                    //////////////////////////////////////////////////////////////////////
+                    //// SIMPLE CONSOLE ONLY LOGGING
+                    //////////////////////////////////////////////////////////////////////
+                    //ILogger logger = new LiteLogger(LiteLogger.LogMode.ConsoleOnly);
+                    //NetworkComms.EnableLogging(logConfig);
+
+                    //////////////////////////////////////////////////////////////////////
+                    //// THE FOLLOWING CONFIG LOGS TO BOTH A FILE AND CONSOLE
+                    //////////////////////////////////////////////////////////////////////
+                    string logFileName = "ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier + ".txt";
+                    logger = new LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, logFileName);
+
+                }
+                else if (selectedLogger == 2)
+                {
+                    Console.WriteLine(" ... selected external NLog logger.\n");
+
+                    //We create an instance of the NLogLogger class which uses a default implementation of 
+                    //the ILogger interface provided with NetworkComms.Net
+                    logger = new NLogLogger();
+                }
+                else
+                    throw new Exception("Unable to determine selected connection type.");
+
+                //Enable logging using the selected logger
                 NetworkComms.EnableLogging(logger);
 
                 //In case we run the DFS test we will also enable logging for that
                 DistributedFileSystem.DFS.EnableLogging(logger);
 
-                //We can write to our logger from an external program as well
-                NetworkComms.Logger.Info("NetworkComms.Net logging enabled. All output directed to console and log file, " + logFileName + Environment.NewLine);
+                //We can write to our logger from an external application as well
+                NetworkComms.Logger.Info("NetworkComms.Net logging enabled.");
             }
         }
     }

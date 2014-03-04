@@ -210,7 +210,7 @@ namespace Examples.ExamplesConsole
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedType);
-                if (parseSucces && selectedType <= 2) break;
+                if (parseSucces && selectedType <= 2 && selectedType > 0) break;
                 Console.WriteLine("Invalid connection type choice. Please try again.");
             }
 
@@ -252,7 +252,7 @@ namespace Examples.ExamplesConsole
             while (true)
             {
                 bool parseSucces = int.TryParse(Console.ReadKey(true).KeyChar.ToString(), out selectedSerializer);
-                if (parseSucces && selectedSerializer <= 4) break;
+                if (parseSucces && selectedSerializer <= 4 && selectedSerializer > 0) break;
                 Console.WriteLine("Invalid serializer choice. Please try again.");
             }
 

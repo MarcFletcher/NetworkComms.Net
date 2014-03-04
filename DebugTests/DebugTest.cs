@@ -57,8 +57,6 @@ namespace DebugTests
 
             //If this works we expect the original string to be default(string)
             string originalString = dataSerializer.DeserialiseDataObject<string>(bytes, dataProcessors, processorOptions);
-
-            Console.ReadKey();
         }
     }
 }
