@@ -32,86 +32,33 @@ using NetworkCommsDotNet.Connections.Bluetooth;
 
 namespace DebugTests
 {
+    /// <summary>
+    /// A scrap board class for solving whatever bug is currently causing issues
+    /// </summary>
     static class DebugTest
     {
-        static byte[] sendArray = new byte[] { 3, 45, 200, 10, 9, 8, 7, 45, 96, 123 };
-        static bool serverMode;
-
         public static void RunExample()
         {
-            Console.WriteLine("Please select mode:");
-            Console.WriteLine("1 - Server (Listens for connections)");
-            Console.WriteLine("2 - Client (Creates connections to server)");
+            //Get the serializer and data processors
+            DataSerializer dataSerializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
+            List<DataProcessor> dataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() };
+            Dictionary<string, string> processorOptions = new Dictionary<string,string>();
 
-            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions<ProtobufSerializer>();
+            //Recreate the issue when sending a null object
+            //We initialise an empty stream to pass through the serialisation stages
+            MemoryStream emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
+            object objectToSerialise = new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(emptyStream, true));
 
-            //Read in user choice
-            if (Console.ReadKey(true).Key == ConsoleKey.D1) serverMode = true;
-            else serverMode = false;
+            //Serializer as we do we a real send
+            StreamTools.StreamSendWrapper result = dataSerializer.SerialiseDataObject(objectToSerialise, dataProcessors, processorOptions);
 
-            //IPAddress localIPAddress = IPAddress.Parse("::1");
+            //Get the bytes and deserialize
+            byte[] bytes = result.ThreadSafeStream.ToArray();
 
-            if (serverMode)
-            {
-                NetworkComms.AppendGlobalIncomingPacketHandler<byte[]>("Data", (header, connection, data) =>
-                {
-                    Console.WriteLine("Received data (" + data.Length + ") from " + connection.ToString());
-                });
+            //If this works we expect the original string to be default(string)
+            string originalString = dataSerializer.DeserialiseDataObject<string>(bytes, dataProcessors, processorOptions);
 
-                //Establish handler
-                NetworkComms.AppendGlobalConnectionEstablishHandler((connection) =>
-                {
-                    Console.WriteLine("Connection established - " + connection);
-                });
-
-                //Close handler
-                NetworkComms.AppendGlobalConnectionCloseHandler((connection) =>
-                {
-                    Console.WriteLine("Connection closed - " + connection);
-                });
-
-                List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>() { 
-                    new BluetoothConnectionListener(NetworkComms.DefaultSendReceiveOptions,
-                        ApplicationLayerProtocolStatus.Enabled, true)};
-
-                List<EndPoint> listeningEndPoints = new List<EndPoint>() { new BluetoothEndPoint(BluetoothAddress.None, Guid.Empty, 0)};
-
-                Connection.StartListening(listeners, listeningEndPoints, true);
-
-                //Console.WriteLine("Listening for UDP messages on:");
-                //foreach (IPEndPoint localEndPoint in UDPConnection.ExistingLocalListenEndPoints()) 
-                //    Console.WriteLine("{0}:{1}", localEndPoint.Address, localEndPoint.Port);
-
-                Console.WriteLine("\nPress any key to quit.");
-                ConsoleKeyInfo key = Console.ReadKey(true);
-            }
-            else
-            {
-                
-
-                Console.WriteLine("\nClient complete. Press any key to quit.");
-                Console.ReadKey(true);
-            }
-
-            NetworkComms.Shutdown();
-        }
-
-        public static void Test()
-        {
-            IPRange range = new IPRange("192.168.1.0/24");
-
-            List<string> ipToTest = new List<string>();
-
-            for (int i = 0; i < 256; i++)
-                ipToTest.Add("192.168.1." + i.ToString());
-
-            foreach (string ip in ipToTest)
-            {
-                Console.WriteLine(ip + " - " + (range.Contains(ip) ? "YES" : "NO"));
-            }
-
-            Console.WriteLine("\nPress any key to quit.");
-            Console.ReadKey(true);
+            Console.ReadKey();
         }
     }
 }

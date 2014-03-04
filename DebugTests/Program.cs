@@ -68,7 +68,7 @@ namespace DebugTests
                 //DistributedFileSystem.DFS.EnableLogging(logConfig);
             }
 
-            //DebugTest.RunExample();
+            DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
@@ -81,7 +81,7 @@ namespace DebugTests
             //SSLTest.RunExample();
             //NestedPacketTest.RunExample();
             //PeerDiscoveryTest.RunExample();
-            SelfConnectTest.RunExample();
+            //SelfConnectTest.RunExample();
 
             //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Documents\Visual Studio 2010\Projects\networkcomms.net\DebugTests\bin\Debug\DebugTests_9GvNYKHC1E-cDqu8qTneew.txt");
             //log.LinesWithMatch(new string[] { "Completed adding connection reference by endPoint" }, "matchLog.txt");

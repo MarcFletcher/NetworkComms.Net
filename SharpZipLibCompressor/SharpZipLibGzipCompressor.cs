@@ -94,7 +94,6 @@ namespace SharpZipLibCompressor
                 {
                     var readCount = zip.Read(buffer, 0, buffer.Length);
 
-
                     if (readCount == 0)
                         break;
 
