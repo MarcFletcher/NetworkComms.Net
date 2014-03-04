@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using ILMerging;
 
@@ -30,7 +31,12 @@ namespace MergedDllBuild
         static void Main(string[] args)
         {
 #if !DEBUG
-            Version networkCommsVersion = new Version(3, 0, 0);
+            Version networkCommsVersion =
+                new Version(Assembly.ReflectionOnlyLoad("NetworkCommsDotNet").FullName.
+                    Split(',').
+                    Where(s => s.Split('=').Length == 2).
+                    ToDictionary(s => s.Split('=')[0].Trim(), s => s.Split('=')[1].Trim())["Version"]);
+
             string targetPlatform = "v2";
             string msCoreLibDirectory = @"C:\Windows\Microsoft.NET\Framework\v2.0.50727";
 
