@@ -63,7 +63,7 @@
                 <TextBlock Text="Serialization Method" Grid.Column="0" Grid.Row="4" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="1,19,191,19"/>
                 <StackPanel Grid.Column="1" Grid.Row="4" >
                     <RadioButton x:Name="ProtobufRadioButton" Margin="25,0,0,0" Padding="0,0,0,0" Content="Protobuf"  HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="serializationGroup" Checked="SerializationMethod_Checked"/>
-                    <RadioButton x:Name="ExplicitRadioButton" Margin="25,-30,0,0" Padding="0,0,0,0" Content="Explicit" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="serializationGroup" Checked="SerializationMethod_Checked"/>
+                    <RadioButton x:Name="JSONRadioButton" Margin="25,-30,0,0" Padding="0,0,0,0" Content="JSON" HorizontalAlignment="Left" VerticalAlignment="Center" GroupName="serializationGroup" Checked="SerializationMethod_Checked"/>
                 </StackPanel>
 
                 <TextBlock x:Name="UseEncryptionLabel" Text="Enable Encryption" Grid.Column="0" Grid.Row="5" VerticalAlignment="Center"/>

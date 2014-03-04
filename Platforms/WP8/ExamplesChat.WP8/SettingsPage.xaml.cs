@@ -60,7 +60,7 @@ namespace Examples.ExamplesChat.WP8
             if (chatApplication.Serializer.GetType() == typeof(ProtobufSerializer))
                 this.ProtobufRadioButton.IsChecked = true;
             else
-                this.ExplicitRadioButton.IsChecked = true;
+                this.JSONRadioButton.IsChecked = true;
         }
         
         /// <summary>
@@ -101,7 +101,7 @@ namespace Examples.ExamplesChat.WP8
             if ((sender as RadioButton).Content.ToString() == "Protobuf" && (bool)(sender as RadioButton).IsChecked)
                 (App.Current as App).ChatApplication.Serializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
             else
-                (App.Current as App).ChatApplication.Serializer = DPSManager.GetDataSerializer<ExplicitSerializer>();
+                (App.Current as App).ChatApplication.Serializer = DPSManager.GetDataSerializer<JSONSerializer>();
         }
     }
 }
