@@ -29,6 +29,10 @@
     <ApplicationIcon>NetworkCommsLogo.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NLog.2.1.0\lib\net40\NLog.dll</HintPath>
@@ -103,6 +107,10 @@
     <Resource Include="NetworkCommsLogo.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Platforms\Net40\JSONSerializer\JSONSerializer.csproj">
+      <Project>{70a3f4d5-38de-4a18-9f28-a7d67755bfdc}</Project>
+      <Name>JSONSerializer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
       <Name>NetworkCommsDotNet</Name>

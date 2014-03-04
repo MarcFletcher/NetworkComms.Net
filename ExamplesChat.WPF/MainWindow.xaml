@@ -82,7 +82,7 @@
                     </Grid.ColumnDefinitions>
 
                     <RadioButton Grid.Column="0" Name="UseProtobuf" Content="Protobuf" IsChecked="True" HorizontalAlignment="right" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseProtobuf_Checked"/>
-                    <RadioButton Grid.Column="1" Name="UseExplicit" Content="Explicit" IsChecked="False" HorizontalAlignment="left" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseExplicit_Checked"/>
+                    <RadioButton Grid.Column="1" Name="UseJSON" Content="JSON" IsChecked="False" HorizontalAlignment="left" Margin="5,0,0,0" VerticalAlignment="Top" Checked="UseJSON_Checked"/>
                 </Grid>
 
 

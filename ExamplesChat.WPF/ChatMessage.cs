@@ -26,6 +26,7 @@ using NetworkCommsDotNet;
 using ProtoBuf;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.DPSBase;
+using Newtonsoft.Json;
 
 namespace Examples.ExamplesChat.WPF
 {
@@ -36,6 +37,7 @@ namespace Examples.ExamplesChat.WPF
     /// serialisation is performed by protobuf.net.
     /// </summary>
     [ProtoContract]
+    [JsonObject(MemberSerialization.OptIn)]
     public class ChatMessage : IExplicitlySerialize
     {
         /// <summary>
@@ -45,6 +47,7 @@ namespace Examples.ExamplesChat.WPF
         /// an object of type ChatMessage is serialised we want to include this variable
         /// </summary>
         [ProtoMember(1)]
+        [JsonProperty]
         string _sourceIdentifier;
 
         /// <summary>
@@ -59,12 +62,14 @@ namespace Examples.ExamplesChat.WPF
         /// an object of type ChatMessage is serialised we want to include this variable 
         /// </summary>
         [ProtoMember(2)]
+        [JsonProperty]
         public string SourceName { get; private set; }
 
         /// <summary>
         /// The actual message.
         /// </summary>
         [ProtoMember(3)]
+        [JsonProperty]
         public string Message { get; private set; }
 
         /// <summary>
@@ -72,12 +77,14 @@ namespace Examples.ExamplesChat.WPF
         /// has an incrementing index.
         /// </summary>
         [ProtoMember(4)]
+        [JsonProperty]
         public long MessageIndex { get; private set; }
 
         /// <summary>
         /// The number of times this message has been relayed.
         /// </summary>
         [ProtoMember(5)]
+        [JsonProperty]
         public int RelayCount { get; private set; }
 
         /// <summary>

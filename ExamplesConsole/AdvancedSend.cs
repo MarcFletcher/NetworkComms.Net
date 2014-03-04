@@ -28,6 +28,7 @@ using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
 using ProtoBuf;
+using Newtonsoft.Json;
 
 namespace Examples.ExamplesConsole
 {
@@ -578,12 +579,15 @@ namespace Examples.ExamplesConsole
         /// <summary>
         /// Custom object used when using JSON serialisation
         /// </summary>
+        [JsonObject(MemberSerialization.OptIn)]
         private class JSONSerializerCustomObject
         {
-            public int IntValue { get; set; }
-            public string StringValue { get; set; }
+            [JsonProperty]
+            public int IntValue { get; private set; }
+            [JsonProperty]
+            public string StringValue { get; private set; }
 
-            public JSONSerializerCustomObject(){}
+            private JSONSerializerCustomObject(){}
 
             /// <summary>
             /// Constructor object for BinaryFormatterCustomObject
