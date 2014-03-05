@@ -55,10 +55,16 @@ namespace DebugTests
             {
                 NetworkComms.PacketHandlerCallBackDelegate<byte[]> callback = (header, connection, data) =>
                 {
-                    Console.WriteLine("Received data (" + data.Length + ") from " + connection.ToString());
+                    if (data == null)
+                        Console.WriteLine("Received null array from " + connection.ToString());
+                    else
+                        Console.WriteLine("Received data (" + data + ") from " + connection.ToString());
                 };
 
                 //NetworkComms.AppendGlobalIncomingPacketHandler("Data", callback);
+
+                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
+                RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, "somePassword!!");
 
                 ConnectionListenerBase listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
                 listener.AppendIncomingPacketHandler("Data", callback);
@@ -78,12 +84,19 @@ namespace DebugTests
 
                 SendReceiveOptions customOptions = (SendReceiveOptions)NetworkComms.DefaultSendReceiveOptions.Clone();
                 
-                customOptions.DataProcessors.Add(DPSManager.GetDataProcessor<DataPadder>());
-                DataPadder.AddPaddingOptions(customOptions.Options, 10240, DataPadder.DataPaddingType.Random, false);
+                //customOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
+                //RijndaelPSKEncrypter.AddPasswordToOptions(customOptions.Options, "somePassword!!");
 
-                customOptions.UseNestedPacket = true;
+                customOptions.DataProcessors.Add(DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>());
+
+                //customOptions.DataProcessors.Add(DPSManager.GetDataProcessor<DataPadder>());
+                //DataPadder.AddPaddingOptions(customOptions.Options, 10240, DataPadder.DataPaddingType.Random, false);
+
+                //customOptions.UseNestedPacket = true;
 
                 Connection conn = TCPConnection.GetConnection(serverInfo, customOptions);
+
+                sendArray = null;
                 conn.SendObject("Data", sendArray);
 
                 Console.WriteLine("Sent data to server.");

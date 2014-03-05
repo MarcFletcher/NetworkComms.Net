@@ -121,68 +121,112 @@ namespace NetworkCommsDotNet
             if (options == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions cannot be null.");
             if (options.DataSerializer == null) throw new ArgumentNullException("options", "The provided SendReceiveOptions.DataSerializer cannot be null. Consider using NullSerializer instead.");
 
-            object objectToSerialise;
-            if (options.Options.ContainsKey("UseNestedPacketType") && !isNested)
+            //Check for security critical data processors
+            //There may be performance issues here
+            bool containsSecurityCritialDataProcessors = false;
+            if (!options.Options.ContainsKey("UseNestedPacketType") && //We only need to perform this check if we are not already using a nested packet
+                !isNested) //We do not perform this check within a nested packet
             {
-                //We need to create a nested packet
+                foreach (DataProcessor processor in options.DataProcessors)
+                {
+                    if (processor.IsSecurityCritical)
+                    {
+                        containsSecurityCritialDataProcessors = true;
+                        break;
+                    }
+                }
+            }
+
+            //By default the object to serialise will be the payloadObject
+            object objectToSerialise = payloadObject;
+            bool objectToSerialiseIsNull = false;
+
+            //We only replace the null with an empty stream if this is either in the nested packet
+            //or we will not be nesting
+            if (objectToSerialise == null && 
+                ((!options.Options.ContainsKey("UseNestedPacketType") && 
+                !containsSecurityCritialDataProcessors) || isNested))
+            {
+#if NETFX_CORE
+                var emptyStream = new MemoryStream(new byte[0], 0, 0, false);
+#else
+                var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
+#endif
+                //If the sending object is null we set objectToSerialiseIsNull and create a zero length StreamSendWrapper
+                //The zero length StreamSendWrapper can then be passed to any data serializers
+                objectToSerialiseIsNull = true;
+                objectToSerialise = new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(emptyStream, true));
+            }
+
+            //If we need to nest this packet
+            if ((containsSecurityCritialDataProcessors || options.Options.ContainsKey("UseNestedPacketType")) && !isNested)
+            {
+                //We set the objectToSerialise to a nested packet
                 objectToSerialise = new Packet(sendingPacketTypeStr, requestReturnPacketTypeStr, payloadObject, options, true);
-
-                //Serialise the nested packet
-                this.payloadStream = options.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
-
-                //We only calculate the checkSum if we are going to use it
-                string hashStr = null;
-                if (NetworkComms.EnablePacketCheckSumValidation)
-                    hashStr = StreamTools.MD5(payloadStream.ThreadSafeStream.ToArray(payloadStream.Start, payloadStream.Length));
-
-                //Set the packet header
-                this._packetHeader = new PacketHeader(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.NestedPacket), payloadStream.Length, options, null, hashStr);
-
-                //Add an identifier specifying the serialisers and processors we have used
-                this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
             }
             else if (isNested)
             {
                 //Serialise the payload object into byte[]
-                //We do not use any data processors at this stage as the object will be processed again at the nested packet level.
+                //We do not use any data processors at this stage as the object will be processed again one level higher.
 #if NETFX_CORE
                  _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(payloadObject).ThreadSafeStream.ToArray();
 #else
-                _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(payloadObject).ThreadSafeStream.GetBuffer();
+                _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(objectToSerialise).ThreadSafeStream.GetBuffer();
 #endif
                 //Set the packet header
+                //THe nulls represent internal SendReceiveOptions and no checksum
                 this._packetHeader = new PacketHeader(sendingPacketTypeStr, _payloadObjectBytes.Length, null, requestReturnPacketTypeStr, null);
 
-                //Set the deserialiser option in the nested packet header
+                //Set the deserialiser information in the nested packet header, excluding data processors
                 this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, null));
             }
-            else
-            {
-                objectToSerialise = payloadObject;
-                if (objectToSerialise == null)
-                {
-#if NETFX_CORE
-                var emptyStream = new MemoryStream(new byte[0], 0, 0, false);
-#else
-                    var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
-#endif
-                    objectToSerialise = new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(emptyStream, true));
-                }
 
-                //Set the packet data
-                this.payloadStream = options.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
+            //If we are at the top level packet we can finish off the serialisation
+            if (!isNested)
+            {
+                //Set the payload stream data.
+                if (objectToSerialiseIsNull && options.DataProcessors.Count == 0)
+                    //Only if there are no data processors can we use a zero length array for nulls
+                    //This ensures that should there be any required padding we can include it
+                    this.payloadStream = (StreamTools.StreamSendWrapper)objectToSerialise;
+                else
+                {
+                    if (objectToSerialise is Packet)
+                        //We have to use the internal explicit serializer for nested packets (the nested data is already byte[])
+                        this.payloadStream = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
+                    else
+                        this.payloadStream = options.DataSerializer.SerialiseDataObject(objectToSerialise, options.DataProcessors, options.Options);
+                }
 
                 //We only calculate the checkSum if we are going to use it
                 string hashStr = null;
                 if (NetworkComms.EnablePacketCheckSumValidation)
                     hashStr = StreamTools.MD5(payloadStream.ThreadSafeStream.ToArray(payloadStream.Start, payloadStream.Length));
 
-                //Set the packet header
-                this._packetHeader = new PacketHeader(sendingPacketTypeStr, payloadStream.Length, options, requestReturnPacketTypeStr, hashStr);
+                //Choose the sending and receiving packet type depending on if it is being used with a nested packet
+                string _sendingPacketTypeStr;
+                string _requestReturnPacketTypeStr = null;
+                if (containsSecurityCritialDataProcessors || options.Options.ContainsKey("UseNestedPacketType"))
+                    _sendingPacketTypeStr = Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.NestedPacket);
+                else
+                {
+                    _sendingPacketTypeStr = sendingPacketTypeStr;
+                    _requestReturnPacketTypeStr = requestReturnPacketTypeStr;
+                }
+
+                this._packetHeader = new PacketHeader(_sendingPacketTypeStr, payloadStream.Length, options, _requestReturnPacketTypeStr, hashStr);
 
                 //Add an identifier specifying the serialisers and processors we have used
-                this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
+                if (objectToSerialise is Packet)
+                    this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(NetworkComms.InternalFixedSendReceiveOptions.DataSerializer, options.DataProcessors));
+                else
+                    this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, options.DataProcessors));
             }
+
+            //Set the null data header section if required
+            if (objectToSerialiseIsNull && 
+                ((!containsSecurityCritialDataProcessors && !options.Options.ContainsKey("UseNestedPacketType")) || isNested))
+                this._packetHeader.SetOption(PacketHeaderStringItems.NullDataSection, "");
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
         }

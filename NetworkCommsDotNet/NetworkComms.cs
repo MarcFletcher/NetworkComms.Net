@@ -277,7 +277,7 @@ namespace NetworkCommsDotNet
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unwrapping a " + ReservedPacketType.NestedPacket + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
 
-                    Packet nestedPacket = item.SendReceiveOptions.DataSerializer.DeserialiseDataObject<Packet>((MemoryStream)item.DataStream, item.SendReceiveOptions.DataProcessors, item.SendReceiveOptions.Options);
+                    Packet nestedPacket = NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<Packet>((MemoryStream)item.DataStream, item.SendReceiveOptions.DataProcessors, item.SendReceiveOptions.Options);
 
                     //Add the sequence number to the nested packet header
                     if (item.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
@@ -737,7 +737,13 @@ namespace NetworkCommsDotNet
                         throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
 
                     //Deserialise the object only once
-                    object returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
+                    object returnObject;
+                    
+                    //Detect the null send
+                    if (packetHeader.ContainsOption(PacketHeaderStringItems.NullDataSection))
+                        returnObject = null;
+                    else
+                        returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
 
                     //Pass the data onto the handler and move on.
                     if (LoggingEnabled) _logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count.ToString() + " selected global handlers.");

@@ -86,6 +86,11 @@ namespace NetworkCommsDotNet
         /// Optional packet identifier.
         /// </summary>
         PacketIdentifier,
+
+        /// <summary>
+        /// The data section should be interpreted as a null 
+        /// </summary>
+        NullDataSection,
     }
 
     /// <summary>
@@ -141,17 +146,22 @@ namespace NetworkCommsDotNet
             }
         }
 
-        internal PacketHeader(MemoryStream packetData, SendReceiveOptions sendReceiveOptions)
+        /// <summary>
+        /// Constructor used for deserialisation
+        /// </summary>
+        /// <param name="packetHeaderStream"></param>
+        /// <param name="headedSendReceiveOptions"></param>
+        internal PacketHeader(MemoryStream packetHeaderStream, SendReceiveOptions headedSendReceiveOptions)
         {
             try
             {
-                if (packetData == null) throw new ArgumentNullException("packetData", "Provided MemoryStream parameter cannot be null.");
-                if (sendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
+                if (packetHeaderStream == null) throw new ArgumentNullException("packetData", "Provided MemoryStream parameter cannot be null.");
+                if (headedSendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
 
-                if (packetData.Length == 0)
+                if (packetHeaderStream.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 
-                PacketHeader tempObject = sendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetData, sendReceiveOptions.DataProcessors, sendReceiveOptions.Options);
+                PacketHeader tempObject = headedSendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetHeaderStream, headedSendReceiveOptions.DataProcessors, headedSendReceiveOptions.Options);
                 if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.TotalPayloadSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else

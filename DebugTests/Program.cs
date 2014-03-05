@@ -55,7 +55,7 @@ namespace DebugTests
                 DistributedFileSystem.DFS.EnableLogging(logger);
             }
 
-            DebugTest.RunExample();
+            //DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
@@ -66,7 +66,7 @@ namespace DebugTests
             //NumConnectionLoadTest.RunExample();
             //ThreadPoolTest.RunExample();
             //SSLTest.RunExample();
-            //NestedPacketTest.RunExample();
+            NestedPacketTest.RunExample();
             //PeerDiscoveryTest.RunExample();
             //SelfConnectTest.RunExample();
 
