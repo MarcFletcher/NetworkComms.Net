@@ -91,6 +91,25 @@ namespace NetworkCommsDotNet.DPSBase
         }
 
         /// <summary>
+        /// Returns a boolian stating whether this data processor is security critical
+        /// </summary>
+        public bool IsSecurityCritical
+        {
+            get
+            {
+#if NETFX_CORE
+                var attributes = this.GetType().GetTypeInfo().GetCustomAttributes(typeof(SecurityCriticalDataProcessorAttribute), false).ToArray();
+#else
+                var attributes = this.GetType().GetCustomAttributes(typeof(SecurityCriticalDataProcessorAttribute), false);
+#endif
+                if (attributes != null && attributes.Length > 0)
+                    return (attributes[0] as SecurityCriticalDataProcessorAttribute).IsSecurityCritical;
+                else
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// Processes data held in a stream and outputs it to another stream
         /// </summary>
         /// <param name="inStream">An input stream containing data to be processed</param>

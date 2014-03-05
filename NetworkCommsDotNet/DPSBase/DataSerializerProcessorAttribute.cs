@@ -42,4 +42,25 @@ namespace NetworkCommsDotNet.DPSBase
             this.Identifier = identifier;
         }
     }
+
+    /// <summary>
+    /// Custom attribute used to label data processors as security critical or not
+    /// </summary>
+    [System.AttributeUsage(AttributeTargets.Class)]
+    public class SecurityCriticalDataProcessorAttribute : System.Attribute
+    {
+        /// <summary>
+        /// A booling defining if this data processor is security critical
+        /// </summary>
+        public bool IsSecurityCritical { get; private set; }
+
+        /// <summary>
+        /// Create a new instance of this attribute
+        /// </summary>
+        /// <param name="identifier"></param>
+        public SecurityCriticalDataProcessorAttribute(bool isSecurityCritical)
+        {
+            this.IsSecurityCritical = isSecurityCritical;
+        }
+    }
 }

@@ -44,6 +44,7 @@ namespace NetworkCommsDotNet.DPSBase
     /// <see cref="DataProcessor"/> which encrypts/decrypts data using the Rijndael algorithm and a pre-shared password
     /// </summary>
     [DataSerializerProcessor(4)]
+    [SecurityCriticalDataProcessor(true)]
     public class RijndaelPSKEncrypter : DataProcessor, IDisposable
     {        
         private const string PasswordOption = "RijndaelPSKEncrypter_PASSWORD";
