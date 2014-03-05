@@ -360,6 +360,10 @@ namespace RemoteProcedureCalls
                     if (method.ReturnType.IsValueType && method.ReturnType != typeof(void))
                         il.Emit(OpCodes.Unbox_Any, method.ReturnType);
 
+                    //If the return value is void we need to pop the result from the invoke reflection call
+                    if (method.ReturnType == typeof(void))
+                        il.Emit(OpCodes.Pop);
+
                     //If the return type is a reference type cast back to the correct type
                     if (!method.ReturnType.IsValueType)
                         il.Emit(OpCodes.Castclass, method.ReturnType);
@@ -738,7 +742,6 @@ namespace RemoteProcedureCalls
                         #endregion
 
                         //Next define the remove method
-
                         #region Event Remove Method
 
                         method = type.DefineMethod("remove_" + handler.Name, propertyEventMethodAttributes, null, new Type[] { handler.EventHandlerType });
