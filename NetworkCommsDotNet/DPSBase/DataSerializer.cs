@@ -239,7 +239,7 @@ namespace NetworkCommsDotNet.DPSBase
         public T DeserialiseDataObject<T>(MemoryStream receivedObjectStream, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
         {
             if (receivedObjectStream == null) throw new ArgumentNullException("receivedObjectStream");
-
+            
             //Ensure the stream is at the beginning
             receivedObjectStream.Seek(0, SeekOrigin.Begin);
 
@@ -805,6 +805,9 @@ namespace NetworkCommsDotNet.DPSBase
                         numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
                     else
                     {
+                        if (inputStream.Length < sizeof(int))
+                            throw new SerialisationException("Error deserializing to type " + objType +". Input stream length too short to determine number of elements.");
+
                         byte[] temp = new byte[sizeof(int)];                        
                         inputStream.Seek(inputStream.Length - sizeof(int), SeekOrigin.Begin);
                         inputStream.Read(temp, 0, sizeof(int));
