@@ -168,7 +168,7 @@ namespace DistributedFileSystem
         static int concurrentNumLinkItems = 2;
 
         /// <summary>
-        /// A privte task factory for assembling new local DFS items. If we use the NetworkComms.TaskFactory we can end up deadlocking and prevent incoming packets from being handled.
+        /// A private task factory for assembling new local DFS items. If we use the NetworkComms.TaskFactory we can end up deadlocking and prevent incoming packets from being handled.
         /// </summary>
         internal static TaskFactory BuildTaskFactory;
 
@@ -1115,7 +1115,7 @@ namespace DistributedFileSystem
 
                         if (DFS.loggingEnabled)
                         {
-                            Exception exceptionToLogWith = new Exception("Build completed succesfully. Logging was enabled so saving build log.");
+                            Exception exceptionToLogWith = new Exception("Build completed successfully. Logging was enabled so saving build log.");
                             string fileName = "DFSItemBuildLog_" + newItem.ItemIdentifier + "_" + NetworkComms.NetworkIdentifier;
                             if (newItem != null)
                                 LogTools.LogException(exceptionToLogWith, fileName, newItem.BuildLog().Aggregate(Environment.NewLine, (p, q) => { return p + Environment.NewLine + q; }));
@@ -1149,18 +1149,22 @@ namespace DistributedFileSystem
                     //finally
                     //{
                     //Putting any code here appears to cause a sigsegv fault on leaving the finally in mono
-                    //Just moved the code out to below as it makes no diference
+                    //Just moved the code out to below as it makes no difference
                     //}
 
                     //Regardless of if the item completed we call the necessary packet handlers
-                    //If there was a build error we just pass null data to the handlers so that the errors can get called up the relevevant stack traces.
+                    //If there was a build error we just pass null data to the handlers so that the errors can get called up the relevant stack traces.
                     try
                     {
                         PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem == null ? 0 : newItem.ItemBytesLength);
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
                         itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" : newItem.ItemCheckSum);
 
-                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
+                        //Trigger connection specific handlers
+                        bool connectionSpecificHandlersTriggered = connection.TriggerSpecificPacketHandlers(itemPacketHeader, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
+
+                        //Trigger global handlers
+                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()), connectionSpecificHandlersTriggered);
                     }
                     catch (Exception ex)
                     {
