@@ -350,7 +350,7 @@ namespace DistributedFileSystem
                     //This links any existing local items and retrieves a list of all remote items
                     TCPConnection primaryServer = TCPConnection.GetConnection(new ConnectionInfo(linkTargetIP, linkTargetPort));
 
-                    DFSLinkRequest availableLinkTargetItems = primaryServer.SendReceiveObject<DFSLinkRequest, DFSLinkRequest>("DFS_ItemLinkRequest", "DFS_ItemLinkRequest", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
+                    DFSLinkRequest availableLinkTargetItems = primaryServer.SendReceiveObject<DFSLinkRequest, DFSLinkRequest>("DFS_ItemLinkRequest", "DFS_ItemLinkReply", linkRequestTimeoutSecs * 1000, new DFSLinkRequest(AllLocalDFSItemsWithBuildTime(), false));
                     if (DFS.loggingEnabled) DFS._DFSLogger.Trace("LinkModeWorker could link " + availableLinkTargetItems.AvailableItems.Count+ " items from target.");
 
                     if (LinkMode == DFSLinkMode.LinkAndRepeat)
@@ -1612,7 +1612,13 @@ namespace DistributedFileSystem
 
                 //If this link request is from the original requester then we reply with our own items list
                 if (!linkRequestData.LinkRequestReply)
-                    connection.SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(localItemKeys, true), nullCompressionSRO);
+                {
+                    //If a specific return packet type has been requested we use that
+                    if (packetHeader.RequestedReturnPacketType != null)
+                        connection.SendObject(packetHeader.RequestedReturnPacketType, new DFSLinkRequest(localItemKeys, true), nullCompressionSRO);
+                    else
+                        connection.SendObject("DFS_ItemLinkRequest", new DFSLinkRequest(localItemKeys, true), nullCompressionSRO);
+                }
             }
             catch (CommsException e)
             {
