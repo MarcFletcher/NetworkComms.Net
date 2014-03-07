@@ -42,14 +42,14 @@ namespace NetworkCommsDotNet
         SerializerProcessors,
 
         /// <summary>
+        /// The sequence number for this packet. Each connection maintains a unique counter which is increments on each sent packet. This is a compulsory option.
+        /// </summary>
+        PacketSequenceNumber,
+
+        /// <summary>
         /// The creation time of the packet header.
         /// </summary>
         PacketCreationTime,
-
-        /// <summary>
-        /// The sequence number for this packet. Each connection maintains a unique counter which is increments on each sent packet.
-        /// </summary>
-        PacketSequenceNumber,
     }
 
     /// <summary>
@@ -121,6 +121,9 @@ namespace NetworkCommsDotNet
         /// <param name="checkSumHash">An optional field representing the payload checksum</param>
         public PacketHeader(string packetTypeStr, long payloadPacketSize, SendReceiveOptions sendReceiveOptions = null, string requestedReturnPacketTypeStr = null, string checkSumHash = null)
         {
+            if (packetTypeStr == requestedReturnPacketTypeStr)
+                throw new ArgumentException("The provided packetTypeStr and requestedReturnPacketTypeStr parameters must be different.");
+
             longItems = new Dictionary<PacketHeaderLongItems, long>();
             stringItems = new Dictionary<PacketHeaderStringItems, string>();
 
@@ -196,6 +199,71 @@ namespace NetworkCommsDotNet
         public string PacketType
         {
             get { return stringItems[PacketHeaderStringItems.PacketType]; }
+        }
+
+        /// <summary>
+        /// The sequence number for this packet
+        /// </summary>
+        public long PacketSequenceNumber
+        {
+            get { return longItems[PacketHeaderLongItems.PacketSequenceNumber]; }
+        }
+
+        /// <summary>
+        /// The packet type which should be used for any return packet type. If no return packet type is set returns null.
+        /// </summary>
+        public string RequestedReturnPacketType
+        {
+            get
+            {
+                if (stringItems.ContainsKey(PacketHeaderStringItems.RequestedReturnPacketType))
+                    return stringItems[PacketHeaderStringItems.RequestedReturnPacketType];
+                else
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Optional packet identifier. If no packet identifier is set returns null.
+        /// </summary>
+        public string PacketIdentifier
+        {
+            get
+            {
+                if (stringItems.ContainsKey(PacketHeaderStringItems.PacketIdentifier))
+                    return stringItems[PacketHeaderStringItems.PacketIdentifier];
+                else
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// The network identifier of the packets source peer. If no source network identifier is set returns null. 
+        /// Also see <see cref="Connection.ConnectionInfo.NetworkIdentifier"/>.
+        /// </summary>
+        public string SourceNetworkIdentifier
+        {
+            get
+            {
+                if (stringItems.ContainsKey(PacketHeaderStringItems.SourceNetworkIdentifier))
+                    return stringItems[PacketHeaderStringItems.SourceNetworkIdentifier];
+                else
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// A checksum corresponding to the payload data. If no checksum is set returns null.
+        /// </summary>
+        public string CheckSumHash
+        {
+            get
+            {
+                if (stringItems.ContainsKey(PacketHeaderStringItems.CheckSumHash))
+                    return stringItems[PacketHeaderStringItems.CheckSumHash];
+                else
+                    return null;
+            }
         }
 
         /// <summary>

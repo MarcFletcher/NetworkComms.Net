@@ -78,20 +78,21 @@
     </ComponentConfigurations>
     <NamespaceSummaries>
       <NamespaceSummaryItem name="ExamplesConsole" isDocumented="False">Console examples demonstrating the most common uses of the NetworkComms.Net feature set.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Base library providing methods to track connections, global configurations, send and receive objects.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
-<NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="(global)" isDocumented="False" />
-<NamespaceSummaryItem name="DistributedFileSystem" isDocumented="True">An extension that provides high performance torrent style data distribution.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="Examples.ExamplesConsole" isDocumented="False" />
-<NamespaceSummaryItem name="NetworkCommsDotNet.Connections" isDocumented="True">Provides base connection functionality and defines structure of connection listeners.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.Connections.TCP" isDocumented="True">Implements all aspects of TCP connections.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.Connections.UDP" isDocumented="True">Implements all aspects of UDP connections.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.DPSBase" isDocumented="True">Provides base functionality required to convert custom objects into byte streams. Includes data processing interfaces which can be used to modify the serialised byte streams.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.Tools" isDocumented="True">Large number of tools which can be used to simplify adding network related functionality to your own application</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.Connections.Bluetooth" isDocumented="True">Implements all aspects of Bluetooth connections.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor" isDocumented="True">Data processor that implements the 7Zip LZMA algorithm, usefull for compressioning data.</NamespaceSummaryItem></NamespaceSummaries>
+      <NamespaceSummaryItem name="NetworkCommsDotNet" isDocumented="True">Base library providing methods to track connections, global configurations, send and receive objects.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="QuickLZCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using QuickLZ.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="SharpZipLibCompressor" isDocumented="True">Library implementing a DataProcessor which compresses data using SharpZipLib</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="RemoteProcedureCalls" isDocumented="True">Contains methods for setting up objects to be called from remote clients as well as the methods to access those objects client side.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="(global)" isDocumented="False" />
+      <NamespaceSummaryItem name="DistributedFileSystem" isDocumented="True">An extension that provides high performance torrent style data distribution.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Examples.ExamplesConsole" isDocumented="False" />
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections" isDocumented="True">Provides base connection functionality and defines structure of connection listeners.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.TCP" isDocumented="True">Implements all aspects of TCP connections.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.UDP" isDocumented="True">Implements all aspects of UDP connections.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.DPSBase" isDocumented="True">Provides base functionality required to convert custom objects into byte streams. Includes data processing interfaces which can be used to modify the serialised byte streams.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Tools" isDocumented="True">Large number of tools which can be used to simplify adding network related functionality to your own application</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.Connections.Bluetooth" isDocumented="True">Implements all aspects of Bluetooth connections.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor" isDocumented="True">Data processor that implements the 7Zip LZMA algorithm, usefull for compressioning data.</NamespaceSummaryItem>
+    </NamespaceSummaries>
     <FeedbackEMailAddress>helpfeedback%40networkcomms.net</FeedbackEMailAddress>
     <ApiFilter />
     <HelpAttributes />

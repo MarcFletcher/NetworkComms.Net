@@ -229,6 +229,9 @@ namespace NetworkCommsDotNet.Connections
         /// <returns>The requested return object</returns>
         public returnObjectType SendReceiveObject<sendObjectType, returnObjectType>(string sendingPacketTypeStr, string expectedReturnPacketTypeStr, int returnPacketTimeOutMilliSeconds, sendObjectType sendObject, SendReceiveOptions sendOptions, SendReceiveOptions receiveOptions, out long sentPacketSequenceNumber)
         {
+            if (sendingPacketTypeStr == expectedReturnPacketTypeStr)
+                throw new ArgumentException("The provided sendingPacketTypeStr and expectedReturnPacketTypeStr parameters must be different.");
+
             returnObjectType returnObject = default(returnObjectType);
 
             bool remotePeerDisconnectedDuringWait = false;

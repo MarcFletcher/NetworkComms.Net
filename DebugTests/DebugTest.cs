@@ -29,6 +29,7 @@ using System.IO;
 using InTheHand.Net;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.Bluetooth;
+using NetworkCommsDotNet.Connections.TCP;
 
 namespace DebugTests
 {
@@ -40,23 +41,19 @@ namespace DebugTests
         public static void RunExample()
         {
             //Get the serializer and data processors
-            DataSerializer dataSerializer = DPSManager.GetDataSerializer<ProtobufSerializer>();
-            List<DataProcessor> dataProcessors = new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() };
-            Dictionary<string, string> processorOptions = new Dictionary<string,string>();
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
+                {
+                    Console.WriteLine("Server received - " + message);
+                    connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
+                });
 
-            //Recreate the issue when sending a null object
-            //We initialise an empty stream to pass through the serialisation stages
-            MemoryStream emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
-            object objectToSerialise = new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(emptyStream, true));
+            Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
 
-            //Serializer as we do we a real send
-            StreamTools.StreamSendWrapper result = dataSerializer.SerialiseDataObject(objectToSerialise, dataProcessors, processorOptions);
+            Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
+            var reply = conn.SendReceiveObject<string, string>("Data", "Data-Response", 1000, "hello server");
 
-            //Get the bytes and deserialize
-            byte[] bytes = result.ThreadSafeStream.ToArray();
-
-            //If this works we expect the original string to be default(string)
-            string originalString = dataSerializer.DeserialiseDataObject<string>(bytes, dataProcessors, processorOptions);
+            Console.WriteLine("Client done!");
+            Console.ReadKey();
         }
     }
 }
