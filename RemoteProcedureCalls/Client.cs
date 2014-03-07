@@ -99,7 +99,7 @@ namespace RemoteProcedureCalls
             if (!typeof(I).IsInterface)
                 throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetTypeRequest = typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
+            string packetTypeRequest = typeof(I).Name + "-NEW-INSTANCE-RPC-CONNECTION";
             string packetTypeResponse = packetTypeRequest + "-RESPONSE";
             instanceId = connection.SendReceiveObject<string, string>(packetTypeRequest, packetTypeResponse , RPCInitialisationTimeout, instanceName);
 
@@ -125,7 +125,7 @@ namespace RemoteProcedureCalls
             if (!typeof(I).IsInterface)
                 throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetTypeRequest = typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
+            string packetTypeRequest = typeof(I).Name + "-NEW-RPC-CONNECTION-BY-NAME";
             string packetTypeResponse = packetTypeRequest + "-RESPONSE";
             instanceId = connection.SendReceiveObject<string,string>(packetTypeRequest, packetTypeResponse, RPCInitialisationTimeout, instanceName);
 
@@ -149,7 +149,7 @@ namespace RemoteProcedureCalls
             if (!typeof(I).IsInterface)
                 throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetTypeRequest = typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
+            string packetTypeRequest = typeof(I).Name + "-NEW-RPC-CONNECTION-BY-ID";
             string packetTypeResponse = packetTypeRequest + "-RESPONSE";
             instanceId = connection.SendReceiveObject<string,string>(packetTypeRequest, packetTypeResponse, RPCInitialisationTimeout, instanceId);
 
@@ -181,7 +181,7 @@ namespace RemoteProcedureCalls
                     eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
 
                 //Add the packet handler to deal with incoming event firing
-                connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + typeof(I).Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                connection.AppendIncomingPacketHandler<RemoteCallWrapper>(typeof(I).Name + "-RPC-LISTENER-" + instanceId, (header, internalConnection, eventCallWrapper) =>
                     {
                         try
                         {
@@ -828,7 +828,7 @@ namespace RemoteProcedureCalls
             wrapper.name = functionToCall;
             wrapper.instanceId = clientObject.ServerInstanceID;
 
-            string packetTypeRequest = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
+            string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + NetworkComms.NetworkIdentifier;
             string packetTypeResponse = packetTypeRequest + "-RESPONSE";
 
             if (clientObject.SendRecieveOptions != null)
