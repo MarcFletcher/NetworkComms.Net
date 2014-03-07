@@ -22,6 +22,7 @@ using System.Linq;
 using System.Text;
 using NetworkCommsDotNet;
 using ProtoBuf;
+using NetworkCommsDotNet.Tools;
 
 namespace DistributedFileSystem
 {
@@ -128,10 +129,10 @@ namespace DistributedFileSystem
         public ChunkReplyState ReplyState { get; private set; }
 
         /// <summary>
-        /// The sequence number used to send the chunk data
+        /// The packet identifier used to send the chunk data
         /// </summary>
         [ProtoMember(4)]
-        public long DataSequenceNumber { get; private set; }
+        public string PacketIdentifier { get; private set; }
 
         /// <summary>
         /// The network identifier of the peer that generated this ChunkAvailabilityReply
@@ -172,18 +173,18 @@ namespace DistributedFileSystem
         }
 
         /// <summary>
-        /// Create an ChunkAvailabilityReply which will contain the requested data.
+        /// Create an ChunkAvailabilityReply which will precede the requested data.
         /// </summary>
         /// <param name="sourceNetworkIdentifier">The network identifier of the source of this ChunkAvailabilityReply</param>
         /// <param name="itemCheckSum">The checksum of the DFS item</param>
         /// <param name="chunkIndex">The chunkIndex of the requested item</param>
-        /// <param name="dataSequenceNumber">The packet sequence number used to send the data</param>
-        public ChunkAvailabilityReply(string sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, long dataSequenceNumber)
+        /// <param name="dataSequenceNumber">The packet identifier used to send the data</param>
+        public ChunkAvailabilityReply(ShortGuid sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, string packetIdentifier)
         {
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
-            this.DataSequenceNumber = dataSequenceNumber;
+            this.PacketIdentifier = packetIdentifier;
             this.ReplyState = ChunkReplyState.DataIncluded;
         }
 
@@ -213,9 +214,9 @@ namespace DistributedFileSystem
     class ChunkDataWrapper
     {
         /// <summary>
-        /// The packet sequence number of the chunk data
+        /// The packet identifier of the chunk data
         /// </summary>
-        public long IncomingSequenceNumber { get; private set; }
+        public string IncomingPacketIdentifier { get; private set; }
 
         /// <summary>
         /// The chunk data
@@ -248,11 +249,11 @@ namespace DistributedFileSystem
         /// <summary>
         /// Initialise a ChunkDataWrapper when the data is received before the associated ChunkAvailabilityReply.
         /// </summary>
-        /// <param name="incomingSequenceNumber">The packet sequence number of the chunk data</param>
+        /// <param name="packetIdentifier">The packet identifier of the chunk data</param>
         /// <param name="data">The chunk data</param>
-        public ChunkDataWrapper(long incomingSequenceNumber, byte[] data)
+        public ChunkDataWrapper(string packetIdentifier, byte[] data)
         {
-            this.IncomingSequenceNumber = incomingSequenceNumber;
+            this.IncomingPacketIdentifier = packetIdentifier;
             this.Data = data;
             this.TimeCreated = DateTime.Now;
         }
