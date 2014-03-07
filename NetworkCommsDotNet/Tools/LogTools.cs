@@ -30,6 +30,10 @@ namespace NetworkCommsDotNet.Tools
         {
             try
             {
+                //Catch filenames that are too long
+                if (fileName.Length > 50)
+                    fileName = fileName.Substring(0, 50);
+
                 lock (errorLocker)
                 {
 #if NETFX_CORE
@@ -68,7 +72,9 @@ namespace NetworkCommsDotNet.Tools
 
             lock (errorLocker)
             {
-
+                //Catch filenames that are too long
+                if (fileName.Length > 40)
+                    fileName = fileName.Substring(0, 40);
 #if iOS
                 //We need to ensure we add the correct document path for iOS
                 entireFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));

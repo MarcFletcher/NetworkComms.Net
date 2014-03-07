@@ -94,7 +94,8 @@ namespace DistributedFileSystem
         static DateTime lastChunkCacheCleanup = DateTime.Now;
         static object chunkDataCacheLocker = new object();
         /// <summary>
-        /// Temporary storage for chunk data which is awaiting info
+        /// Temporary storage for chunk data which is awaiting info.
+        /// This stores data based on the peer guid and packet sequence number
         /// </summary>
         static Dictionary<ShortGuid, Dictionary<long, ChunkDataWrapper>> chunkDataCache = new Dictionary<ShortGuid, Dictionary<long, ChunkDataWrapper>>();
 
@@ -1424,7 +1425,7 @@ namespace DistributedFileSystem
                         }
                         else if (incomingReply.ReplyState == ChunkReplyState.DataIncluded)
                         {
-                            //We have beaten the data, we will add the chunkavailability reply instead and wait, letting the incoming data trigger the handle
+                            //We have beaten the data, we will add the chunk availability reply instead and wait, letting the incoming data trigger the handle
                             if (!chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier))
                                 chunkDataCache.Add(incomingReply.SourceNetworkIdentifier, new Dictionary<long,ChunkDataWrapper>());
 
