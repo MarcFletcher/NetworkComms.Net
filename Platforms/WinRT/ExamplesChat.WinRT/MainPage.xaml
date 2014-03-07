@@ -58,13 +58,14 @@
                 <TextBox x:Name="currentMessageInputBox" Grid.Row="1" Grid.Column="0" TextWrapping="Wrap" KeyUp="CurrentMessageInputBox_KeyUp" />
             </Grid>
 
-            <Grid x:Name="SettingsPanel" Grid.Column="1" Margin="48,96,12,96">
+            <Grid x:Name="SettingsPanel" Grid.Column="1" Margin="48,48,12,48">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1*"/>
                     <ColumnDefinition Width="2*"/>
                 </Grid.ColumnDefinitions>
                 
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
@@ -84,15 +85,21 @@
 
                 <TextBlock  Grid.Row="3" Grid.Column="0" x:Name="protocolLabel" Text="Connection Type" VerticalAlignment="Center"/>
                 <StackPanel Grid.Row="3" Grid.Column="1" x:Name="protocolPanel" Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton x:Name="TCPRadioButton" Margin="50,0,0,0" Padding="-70,5,0,0" Content="TCP"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="True" Checked="TCPRadioButton_Checked"/>
-                    <RadioButton x:Name="UDPRadioButton" Margin="50,0,0,0" Padding="-70,5,0,0" Content="UDP"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="False" Checked="UDPRadioButton_Checked"/>
+                    <RadioButton x:Name="TCPRadioButton" Margin="80,0,0,0" Padding="-70,5,0,0" Content="TCP"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="True" Checked="TCPRadioButton_Checked"/>
+                    <RadioButton x:Name="UDPRadioButton" Margin="60,0,0,0" Padding="-70,5,0,0" Content="UDP"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="False" Checked="UDPRadioButton_Checked"/>
                 </StackPanel>
 
-                <TextBlock  Grid.Row="4" Grid.Column="0" x:Name="encryptionLabel" Text="Enable Encryption" VerticalAlignment="Center"/>
-                <CheckBox Grid.Row="4" Grid.Column="1" x:Name="encryptionBox" Checked="encryptionBox_Checked"/>
+                <TextBlock  Grid.Row="4" Grid.Column="0" x:Name="serializerLabel" Text="Connection Type" VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="4" Grid.Column="1" x:Name="serializerPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="ProtobufRadioButton" Margin="80,0,0,0" Padding="-100,5,0,0" Content="Protobuf"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="True" Checked="ProtobufRadioButton_Checked"/>
+                    <RadioButton x:Name="JSONRadioButton" Margin="60,0,0,0" Padding="-70,5,0,0" Content="JSON"  HorizontalAlignment="Left" GroupName="connectionTypeGroup" IsChecked="False" Checked="JSONRadioButton_Checked"/>
+                </StackPanel>
+                
+                <TextBlock  Grid.Row="5" Grid.Column="0" x:Name="encryptionLabel" Text="Enable Encryption" VerticalAlignment="Center"/>
+                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="encryptionBox" Checked="encryptionBox_Checked"/>
 
-                <TextBlock  Grid.Row="5" Grid.Column="0" x:Name="enableServerLabel" Text="Enable Local Server" VerticalAlignment="Center"/>
-                <CheckBox Grid.Row="5" Grid.Column="1" x:Name="enableServerBox" Checked="enableServerBox_CheckedUnChecked" Unchecked="enableServerBox_CheckedUnChecked"/>
+                <TextBlock  Grid.Row="6" Grid.Column="0" x:Name="enableServerLabel" Text="Enable Local Server" VerticalAlignment="Center" Margin="0,29,0,30"/>
+                <CheckBox Grid.Row="6" Grid.Column="1" x:Name="enableServerBox" Checked="enableServerBox_CheckedUnChecked" Unchecked="enableServerBox_CheckedUnChecked"/>
                 
             </Grid>
         </Grid>
