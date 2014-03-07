@@ -207,7 +207,7 @@ namespace RemoteProcedureCalls
 
                 return res;
             }
-
+            
             static Cache()
             {
                 ILGenerator il;
@@ -797,6 +797,7 @@ namespace RemoteProcedureCalls
                 wrapper.instanceId = clientObject.ServerInstanceID;
 
                 connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper);
+                connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-LISTENER-" + clientObject.ServerInstanceID);
             }
         }
     }
