@@ -61,6 +61,9 @@ namespace RemoteProcedureCalls
         /// </summary>
         int RPCTimeout { get; set;  }
 
+        /// <summary>
+        /// Gets a value indicating whether the <see cref="IRPCProxy"/> has been disposed of
+        /// </summary>
         bool IsDisposed { get; }
     }
 
@@ -777,6 +780,10 @@ namespace RemoteProcedureCalls
                 throw new ObjectDisposedException("clientObject", "RPC object has already been disposed of and cannot be reused");
         }
 
+        /// <summary>
+        /// Causes the provided <see cref="IRPCProxy"/> instance to be disposed
+        /// </summary>
+        /// <param name="clientObject">The <see cref="IRPCProxy"/> to dispose</param>
         public static void DestroyRPCClient(IRPCProxy clientObject)
         {
             if (!clientObject.IsDisposed)
