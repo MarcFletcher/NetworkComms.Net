@@ -87,73 +87,76 @@ namespace RemoteProcedureCalls
         /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
         /// use the instance on the server unless they have the instanceId returned by this method
         /// </summary>
-        /// <typeparam name="T">The interface to use for the proxy</typeparam>
+        /// <typeparam name="I">The interface to use for the proxy</typeparam>
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceName">The object identifier to use for this proxy</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
         /// <param name="options">SendRecieve options to use</param>
-        /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToPrivateInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
+        /// <returns>A proxy class for the interface I allowing remote procedure calls</returns>
+        public static I CreateProxyToPrivateInstance<I>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where I : class
         {
             //Make sure the type is an interface
-            if (!typeof(T).IsInterface)
-                throw new InvalidOperationException(typeof(T).Name + " is not an interface");
+            if (!typeof(I).IsInterface)
+                throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetType = typeof(T).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
-            instanceId = connection.SendReceiveObject<string, string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
+            string packetTypeRequest = typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION";
+            string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+            instanceId = connection.SendReceiveObject<string, string>(packetTypeRequest, packetTypeResponse , RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
-                throw new RPCException("Server not listening for new instances of type " + typeof(T).ToString());
+                throw new RPCException("Server not listening for new instances of type " + typeof(I).ToString());
 
-            return Cache<T>.CreateInstance(instanceId, connection, options);
+            return Cache<I>.CreateInstance(instanceId, connection, options);
         }
 
         /// <summary>
         /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is public in sense that any client can use specified name to make 
         /// calls on the same server side object 
         /// </summary>
-        /// <typeparam name="T">The interface to use for the proxy</typeparam>
+        /// <typeparam name="I">The interface to use for the proxy</typeparam>
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceName">The name specified server side to identify object to create proxy to</param>
         /// <param name="instanceId">Outputs the instance Id uniquely identifying this object on the server.  Can be used to re-establish connection to object if connection is dropped</param>
         /// <param name="options">SendRecieve options to use</param>
-        /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToPublicNamedInstance<T>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where T : class
+        /// <returns>A proxy class for the interface I allowing remote procedure calls</returns>
+        public static I CreateProxyToPublicNamedInstance<I>(Connection connection, string instanceName, out string instanceId, SendReceiveOptions options = null) where I : class
         {
             //Make sure the type is an interface
-            if (!typeof(T).IsInterface)
-                throw new InvalidOperationException(typeof(T).Name + " is not an interface");
+            if (!typeof(I).IsInterface)
+                throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
-            instanceId = connection.SendReceiveObject<string,string>(packetType, packetType, RPCInitialisationTimeout, instanceName);
+            string packetTypeRequest = typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME";
+            string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+            instanceId = connection.SendReceiveObject<string,string>(packetTypeRequest, packetTypeResponse, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Named instance does not exist");
 
-            return Cache<T>.CreateInstance(instanceId, connection, options);
+            return Cache<I>.CreateInstance(instanceId, connection, options);
         }
 
         /// <summary>
         /// Creates a remote proxy to an object with a specific identifier implementing the supplied interface with the specified server
         /// </summary>
-        /// <typeparam name="T">The interface to use for the proxy</typeparam>
+        /// <typeparam name="I">The interface to use for the proxy</typeparam>
         /// <param name="connection">The connection over which to perform remote procedure calls</param>
         /// <param name="instanceId">Unique identifier for the instance on the server</param>
         /// <param name="options">SendRecieve options to use</param>
         /// <returns>A proxy class for the interface T allowing remote procedure calls</returns>
-        public static T CreateProxyToIdInstance<T>(Connection connection, string instanceId, SendReceiveOptions options = null) where T : class
+        public static I CreateProxyToIdInstance<I>(Connection connection, string instanceId, SendReceiveOptions options = null) where I : class
         {
             //Make sure the type is an interface
-            if (!typeof(T).IsInterface)
-                throw new InvalidOperationException(typeof(T).Name + " is not an interface");
+            if (!typeof(I).IsInterface)
+                throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
-            string packetType = typeof(T).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
-            instanceId = connection.SendReceiveObject<string,string>(packetType, packetType, RPCInitialisationTimeout, instanceId);
+            string packetTypeRequest = typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID";
+            string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+            instanceId = connection.SendReceiveObject<string,string>(packetTypeRequest, packetTypeResponse, RPCInitialisationTimeout, instanceId);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Instance with given Id not found");
 
-            return Cache<T>.CreateInstance(instanceId, connection, options);
+            return Cache<I>.CreateInstance(instanceId, connection, options);
         }
 
         //We use this to get the private method. Should be able to get it dynamically
@@ -162,23 +165,23 @@ namespace RemoteProcedureCalls
         /// <summary>
         /// Funky class used for dynamically creating the proxy
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        private static class Cache<T> where T : class
+        /// <typeparam name="I"></typeparam>
+        private static class Cache<I> where I : class
         {
             private static readonly Type Type;
 
-            public static T CreateInstance(string instanceId, Connection connection, SendReceiveOptions options)
+            public static I CreateInstance(string instanceId, Connection connection, SendReceiveOptions options)
             {
                 //Create the instance
-                var res = (T)Activator.CreateInstance(Type, instanceId, connection, options, typeof(T), Client.DefaultRPCTimeout);
+                var res = (I)Activator.CreateInstance(Type, instanceId, connection, options, typeof(I), Client.DefaultRPCTimeout);
 
                 Dictionary<string, FieldInfo> eventFields = new Dictionary<string, FieldInfo>();
 
-                foreach (var ev in typeof(T).GetEvents())
+                foreach (var ev in typeof(I).GetEvents())
                     eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
 
                 //Add the packet handler to deal with incoming event firing
-                connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + typeof(T).Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                connection.AppendIncomingPacketHandler<RemoteCallWrapper>("NetworkCommsRPCEventListenner-" + typeof(I).Name + "-" + instanceId, (header, internalConnection, eventCallWrapper) =>
                     {
                         try
                         {
@@ -195,7 +198,7 @@ namespace RemoteProcedureCalls
                         }
                         catch (Exception) { }
 
-                    }, NetworkComms.DefaultSendReceiveOptions);
+                    });
 
                 return res;
             }
@@ -205,23 +208,23 @@ namespace RemoteProcedureCalls
                 ILGenerator il;
 
                 //Make sure the type is an interface
-                if (!typeof(T).IsInterface)
-                    throw new InvalidOperationException(typeof(T).Name + " is not an interface");
+                if (!typeof(I).IsInterface)
+                    throw new InvalidOperationException(typeof(I).Name + " is not an interface");
 
                 //Create a new assembly dynamically
-                AssemblyName an = new AssemblyName("tmp_" + typeof(T).Name);
+                AssemblyName an = new AssemblyName("tmp_" + typeof(I).Name);
                 var asm = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndCollect);
                 string moduleName = Path.ChangeExtension(an.Name, "dll");
                 var module = asm.DefineDynamicModule(moduleName, false);
 
-                string ns = typeof(T).Namespace;
+                string ns = typeof(I).Namespace;
                 if (!string.IsNullOrEmpty(ns)) ns += ".";
 
                 //Define our new type implementing the desired interface
-                var type = module.DefineType(ns + "grp_" + typeof(T).Name, TypeAttributes.Class | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.NotPublic);
+                var type = module.DefineType(ns + "grp_" + typeof(I).Name, TypeAttributes.Class | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.NotPublic);
 
                 //Define the interface implementations
-                type.AddInterfaceImplementation(typeof(T));
+                type.AddInterfaceImplementation(typeof(I));
                 type.AddInterfaceImplementation(typeof(IRPCProxy));
 
                 //Define private fields for the IRPCClient interface
@@ -257,7 +260,7 @@ namespace RemoteProcedureCalls
                 il.Emit(OpCodes.Ret);
                                
                 //Loop through each method in the interface but exclude any event methods
-                foreach (var method in typeof(T).GetMethods().Where(m => (m.Attributes & MethodAttributes.SpecialName) == 0))
+                foreach (var method in typeof(I).GetMethods().Where(m => (m.Attributes & MethodAttributes.SpecialName) == 0))
                 {
                     #region Method
                     
@@ -475,7 +478,7 @@ namespace RemoteProcedureCalls
                 }
 
                 //Next we should implement remote properties
-                foreach (var property in typeof(T).GetProperties())
+                foreach (var property in typeof(I).GetProperties())
                 {
                     var args = property.GetIndexParameters();
                     var propImpl = type.DefineProperty(property.Name, property.Attributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
@@ -663,11 +666,11 @@ namespace RemoteProcedureCalls
                     }
                 }
 
-                if (typeof(T).GetEvents().Count() != 0)
+                if (typeof(I).GetEvents().Count() != 0)
                 {
                     //throw new InvalidOperationException("RPC events are not supported at this time");
 
-                    foreach (var handler in typeof(T).GetEvents())
+                    foreach (var handler in typeof(I).GetEvents())
                     {
                         //Implement the event
                         var evImpl = type.DefineEvent(handler.Name, handler.Attributes, handler.EventHandlerType);
@@ -804,7 +807,7 @@ namespace RemoteProcedureCalls
 
                 }
 
-                Cache<T>.Type = type.CreateType();
+                Cache<I>.Type = type.CreateType();
             }
 
         }
@@ -825,12 +828,13 @@ namespace RemoteProcedureCalls
             wrapper.name = functionToCall;
             wrapper.instanceId = clientObject.ServerInstanceID;
 
-            string packetType = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
+            string packetTypeRequest = clientObject.ImplementedInterface.ToString() + "-RPC-CALL";
+            string packetTypeResponse = packetTypeRequest + "-RESPONSE";
 
             if (clientObject.SendRecieveOptions != null)
-                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
+                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
             else
-                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetType, packetType, clientObject.RPCTimeout, wrapper);
+                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper);
 
             if (wrapper.Exception != null)
                 throw new RPCException(wrapper.Exception);

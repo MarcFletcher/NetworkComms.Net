@@ -411,7 +411,8 @@ namespace RemoteProcedureCalls
                     addedHandlers.Add(typeof(I).ToString() + "-RPC-CALL", callDel);
                 }
 
-                connection.SendObject(typeof(I).ToString() + "-NEW-INSTANCE-RPC-CONNECTION", instanceId);
+                string returnPacketType = header.GetOption(PacketHeaderStringItems.RequestedReturnPacketType);
+                connection.SendObject(returnPacketType, instanceId);
             }
         }
 
@@ -442,7 +443,8 @@ namespace RemoteProcedureCalls
                     }
                 }
 
-                connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-NAME", instanceId);
+                string returnPacketType = header.GetOption(PacketHeaderStringItems.RequestedReturnPacketType);
+                connection.SendObject(returnPacketType, instanceId);
             }
         }
 
@@ -471,7 +473,8 @@ namespace RemoteProcedureCalls
                     }
                 }
 
-                connection.SendObject(typeof(I).ToString() + "-NEW-RPC-CONNECTION-BY-ID", instanceId);
+                string returnPacketType = header.GetOption(PacketHeaderStringItems.RequestedReturnPacketType);
+                connection.SendObject(returnPacketType, instanceId);
             }
         }
 
@@ -513,7 +516,8 @@ namespace RemoteProcedureCalls
                 wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + e.ToString() + "\n\nEND SERVER SIDE EXCEPTION\n\n";
             }
 
-            connection.SendObject(header.PacketType, wrapper);
+            string returnPacketType = header.GetOption(PacketHeaderStringItems.RequestedReturnPacketType);
+            connection.SendObject(returnPacketType, wrapper);
         }
 
         #endregion
