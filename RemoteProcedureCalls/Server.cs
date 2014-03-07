@@ -546,6 +546,10 @@ namespace RemoteProcedureCalls
             catch (Exception e)
             {
                 wrapper.result = null;
+
+                if (e.InnerException != null)
+                    e = e.InnerException;
+
                 wrapper.Exception = "SERVER SIDE EXCEPTION\n\n" + e.ToString() + "\n\nEND SERVER SIDE EXCEPTION\n\n";
             }
 

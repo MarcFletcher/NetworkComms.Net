@@ -233,11 +233,8 @@ namespace RemoteProcedureCalls
                 var sendRecieveOptions = type.DefineField("sendRecieveOptions", typeof(SendReceiveOptions), FieldAttributes.Private);
                 var rpcTimeout = type.DefineField("rpcTimeout", typeof(int), FieldAttributes.Private);
                 var implementedInterface = type.DefineField("implementedInterface", typeof(Type), FieldAttributes.Private);
-                
-                //Get the methods for the reflection invocation.  MOVE OUTSIDE THIS LOOP
-                MethodInfo getTypeMethod = typeof(Type).GetMethod("GetType", new Type[] { typeof(string) });
-                MethodInfo getgetMethod = typeof(Type).GetMethod("GetMethod", new Type[] { typeof(string), typeof(BindingFlags) });
-                MethodInfo invokeMethod = typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) });
+
+                MethodInfo rpcCallMethod = typeof(Client).GetMethod("RemoteCallClient", BindingFlags.Static | BindingFlags.Public);
 
                 //Give the type an empty constructor
                 var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection), typeof(SendReceiveOptions), typeof(Type), typeof(int) });
@@ -315,49 +312,11 @@ namespace RemoteProcedureCalls
                         il.Emit(OpCodes.Stelem_Ref);
                     }
 
-                    //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
-                    LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
-
-                    //Declare an array to hold the parameters for the reflection invocation
-                    LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                    il.Emit(OpCodes.Ldc_I4_S, 3);
-                    il.Emit(OpCodes.Newarr, typeof(object));
-                    il.Emit(OpCodes.Stloc, reflectionParamArray);
-
-                    //Load the client object into first element of array for reflection invocation of method
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Ldc_I4_0);
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Stelem_Ref);
-                                        
-                    //Load the function name to call into second element of array for reflection invocation of method
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(OpCodes.Ldstr, method.Name);
-                    il.Emit(OpCodes.Stelem_Ref);
-
-                    //Load the connection ip into third element of array for reflection invocation of method
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Ldc_I4_2);
                     il.Emit(OpCodes.Ldloc, array);
-                    il.Emit(OpCodes.Stelem_Ref);
 
-                    //The method we want to call is private and static so we need binding flags as such
-                    int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
-                    
-                    //Get the the type for this static class
-                    il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
-                    il.Emit(OpCodes.Call, getTypeMethod);
-
-                    //Get the RemoteCallClient method
-                    il.Emit(OpCodes.Ldstr, "RemoteCallClient");
-                    il.Emit(OpCodes.Ldc_I4, bindingFlags);
-                    il.Emit(OpCodes.Callvirt, getgetMethod);
-                    
-                    //Invoke the method using reflection
-                    il.Emit(OpCodes.Ldloc, zeroPtr);
-                    il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                    il.Emit(OpCodes.Callvirt, invokeMethod);
+                    il.EmitCall(OpCodes.Call, rpcCallMethod, null);
 
                     //If the return type is a value type we need to unbox
                     if (method.ReturnType.IsValueType && method.ReturnType != typeof(void))
@@ -517,49 +476,11 @@ namespace RemoteProcedureCalls
                             il.Emit(OpCodes.Stelem_Ref);
                         }
 
-                        //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
-                        LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
-
-                        //Declare an array to hold the parameters for the reflection invocation
-                        LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                        il.Emit(OpCodes.Ldc_I4_S, 3);
-                        il.Emit(OpCodes.Newarr, typeof(object));
-                        il.Emit(OpCodes.Stloc, reflectionParamArray);
-
-                        //Load the client object into first element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the function name to call into second element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Ldstr, getMethod.Name);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the connection ip into third element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_2);
                         il.Emit(OpCodes.Ldloc, array);
-                        il.Emit(OpCodes.Stelem_Ref);
 
-                        //The method we want to call is private and static so we need binding flags as such
-                        int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
-
-                        //Get the the type for this static class
-                        il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
-                        il.Emit(OpCodes.Call, getTypeMethod);
-
-                        //Get the RemoteCallClient method
-                        il.Emit(OpCodes.Ldstr, "RemoteCallClient");
-                        il.Emit(OpCodes.Ldc_I4, bindingFlags);
-                        il.Emit(OpCodes.Callvirt, getgetMethod);
-
-                        //Invoke the method using reflection
-                        il.Emit(OpCodes.Ldloc, zeroPtr);
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Callvirt, invokeMethod);
+                        il.EmitCall(OpCodes.Call, rpcCallMethod, null);
 
                         //If the return type is a value type we need to unbox
                         if (getMethod.ReturnType.IsValueType)
@@ -613,49 +534,13 @@ namespace RemoteProcedureCalls
                             il.Emit(OpCodes.Stelem_Ref);
                         }
 
-                        //Declare an object that we will not set so as to get an IntPtr.Zero. There must be a better way of doing this but it works
-                        LocalBuilder zeroPtr = il.DeclareLocal(typeof(object));
-
-                        //Declare an array to hold the parameters for the reflection invocation
-                        LocalBuilder reflectionParamArray = il.DeclareLocal(typeof(object[]));
-                        il.Emit(OpCodes.Ldc_I4_S, 3);
-                        il.Emit(OpCodes.Newarr, typeof(object));
-                        il.Emit(OpCodes.Stloc, reflectionParamArray);
-
-                        //Load the client object into first element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the function name to call into second element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Ldstr, setMethod.Name);
-                        il.Emit(OpCodes.Stelem_Ref);
-
-                        //Load the connection ip into third element of array for reflection invocation of method
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Ldc_I4_2);
                         il.Emit(OpCodes.Ldloc, array);
-                        il.Emit(OpCodes.Stelem_Ref);
 
-                        //The method we want to call is private and static so we need binding flags as such
-                        int bindingFlags = (int)(BindingFlags.Static | BindingFlags.NonPublic);
+                        il.EmitCall(OpCodes.Call, rpcCallMethod, null);
 
-                        //Get the the type for this static class
-                        il.Emit(OpCodes.Ldstr, fullyQualifiedClassName);
-                        il.Emit(OpCodes.Call, getTypeMethod);
-
-                        //Get the RemoteCallClient method
-                        il.Emit(OpCodes.Ldstr, "RemoteCallClient");
-                        il.Emit(OpCodes.Ldc_I4, bindingFlags);
-                        il.Emit(OpCodes.Callvirt, getgetMethod);
-
-                        //Invoke the method using reflection
-                        il.Emit(OpCodes.Ldloc, zeroPtr);
-                        il.Emit(OpCodes.Ldloc, reflectionParamArray);
-                        il.Emit(OpCodes.Callvirt, invokeMethod);
+                        il.Emit(OpCodes.Pop);
 
                         //Return
                         il.Emit(OpCodes.Ret);
@@ -819,7 +704,7 @@ namespace RemoteProcedureCalls
         /// <param name="functionToCall"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        private static object RemoteCallClient(IRPCProxy clientObject, string functionToCall, object[] args)
+        public static object RemoteCallClient(IRPCProxy clientObject, string functionToCall, object[] args)
         {
             var connection = clientObject.ServerConnection;
             
