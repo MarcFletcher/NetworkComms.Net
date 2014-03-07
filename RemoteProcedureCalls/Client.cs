@@ -34,7 +34,7 @@ namespace RemoteProcedureCalls
     /// <summary>
     /// Interface for the RPC proxy generated on the client side. All RPC objects returned from Client.CreateRPCProxyTo{X} implement this interface
     /// </summary>
-    public interface IRPCProxy
+    public interface IRPCProxy : IDisposable
     {
         /// <summary>
         /// The interface the proxy implements
@@ -60,6 +60,8 @@ namespace RemoteProcedureCalls
         /// The timeout for all RPC calls made with this proxy in ms
         /// </summary>
         int RPCTimeout { get; set;  }
+
+        bool IsDisposed { get; }
     }
 
     /// <summary>
@@ -233,8 +235,10 @@ namespace RemoteProcedureCalls
                 var sendRecieveOptions = type.DefineField("sendRecieveOptions", typeof(SendReceiveOptions), FieldAttributes.Private);
                 var rpcTimeout = type.DefineField("rpcTimeout", typeof(int), FieldAttributes.Private);
                 var implementedInterface = type.DefineField("implementedInterface", typeof(Type), FieldAttributes.Private);
+                var isDisposed = type.DefineField("isDisposed", typeof(bool), FieldAttributes.Private);
 
                 MethodInfo rpcCallMethod = typeof(Client).GetMethod("RemoteCallClient", BindingFlags.Static | BindingFlags.Public);
+                MethodInfo rpcDestroyMethod = typeof(Client).GetMethod("DestroyRPCClient", BindingFlags.Static | BindingFlags.Public);
 
                 //Give the type an empty constructor
                 var ctor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { typeof(string), typeof(Connection), typeof(SendReceiveOptions), typeof(Type), typeof(int) });
@@ -254,8 +258,118 @@ namespace RemoteProcedureCalls
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_S, 5);
                 il.Emit(OpCodes.Stfld, rpcTimeout);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Stfld, isDisposed);
                 il.Emit(OpCodes.Ret);
-                               
+
+                #region IRPCClient members
+
+                MethodAttributes propertyEventMethodAttributes = MethodAttributes.Public |
+                     MethodAttributes.Virtual |
+                     MethodAttributes.SpecialName |
+                     MethodAttributes.HideBySig;
+
+                //Next we implement local properties of IRPCClient interface
+                foreach (var property in typeof(IRPCProxy).GetProperties())
+                {
+                    var args = property.GetIndexParameters();
+                    var propImpl = type.DefineProperty(property.Name, property.Attributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+
+                    FieldBuilder underlyingField = null;
+
+                    switch (property.Name)
+                    {
+                        case "ServerInstanceID":
+                            underlyingField = serverInstanceId;
+                            break;
+                        case "ServerConnection":
+                            underlyingField = networkConnection;
+                            break;
+                        case "RPCTimeout":
+                            underlyingField = rpcTimeout;
+                            break;
+                        case "ImplementedInterface":
+                            underlyingField = implementedInterface;
+                            break;
+                        case "SendRecieveOptions":
+                            underlyingField = sendRecieveOptions;
+                            break;
+                        case "IsDisposed":
+                            underlyingField = isDisposed;
+                            break;
+                        default:
+                            throw new RPCException("Error initialising IRPCClient property");
+                    }
+
+                    if (property.CanRead)
+                    {
+                        #region Property Get
+
+                        var getMethod = type.DefineMethod("get_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
+                        il = getMethod.GetILGenerator();
+
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, underlyingField);
+
+                        //Return
+                        il.Emit(OpCodes.Ret);
+
+                        propImpl.SetGetMethod(getMethod);
+
+                        #endregion Property Get
+                    }
+
+                    if (property.CanWrite)
+                    {
+                        #region Property Set
+
+                        var argTypes = args.Select(a => a.ParameterType).ToList();
+                        argTypes.Add(property.PropertyType);
+
+                        var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, typeof(void), argTypes.ToArray());
+                        il = setMethod.GetILGenerator();
+
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Stfld, underlyingField);
+
+                        //Return
+                        il.Emit(OpCodes.Ret);
+
+                        propImpl.SetSetMethod(setMethod);
+
+                        #endregion Property Set
+                    }
+                }
+
+                foreach (var method in typeof(IDisposable).GetMethods())
+                {
+                    //Get the method arguements and implement as a public virtual method that we will override
+                    var args = method.GetParameters();
+                    var methodImpl = type.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, Array.ConvertAll(args, arg => arg.ParameterType));
+                    type.DefineMethodOverride(methodImpl, method);
+
+                    //Get the ILGenerator for the method
+                    il = methodImpl.GetILGenerator();
+
+                    //Load "this" onto the evaluation stack
+                    il.Emit(OpCodes.Ldarg_0);
+
+                    //Close the reference on the server side
+                    il.EmitCall(OpCodes.Call, rpcDestroyMethod, null);
+
+                    //Set the connection to null in order to make this object unusable
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Stfld, isDisposed);
+                                        
+                    //return
+                    il.Emit(OpCodes.Ret);
+                }
+
+                #endregion
+
                 //Loop through each method in the interface but exclude any event methods
                 foreach (var method in typeof(I).GetMethods().Where(m => (m.Attributes & MethodAttributes.SpecialName) == 0))
                 {
@@ -360,82 +474,7 @@ namespace RemoteProcedureCalls
 
                     #endregion Method
                 }
-
-                MethodAttributes propertyEventMethodAttributes = MethodAttributes.Public |
-                    MethodAttributes.Virtual |
-                    MethodAttributes.SpecialName |
-                    MethodAttributes.HideBySig;
-
-                //Next we implement local properties of IRPCClient interface
-                foreach (var property in typeof(IRPCProxy).GetProperties())
-                {
-                    var args = property.GetIndexParameters();
-                    var propImpl = type.DefineProperty(property.Name, property.Attributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
-
-                    FieldBuilder underlyingField = null;
-
-                    switch (property.Name)
-                    {
-                        case "ServerInstanceID":
-                            underlyingField = serverInstanceId;
-                            break;
-                        case "ServerConnection":
-                            underlyingField = networkConnection;
-                            break;
-                        case "RPCTimeout":
-                            underlyingField = rpcTimeout;
-                            break;
-                        case "ImplementedInterface":
-                            underlyingField = implementedInterface;
-                            break;
-                        case "SendRecieveOptions":
-                            underlyingField = sendRecieveOptions;
-                            break;
-                        default:
-                            throw new RPCException("Error initialising IRPCClient property");
-                    }
-
-                    if (property.CanRead)
-                    {
-                        #region Property Get
-
-                        var getMethod = type.DefineMethod("get_" + property.Name, propertyEventMethodAttributes, property.PropertyType, Array.ConvertAll(args, p => p.ParameterType));
-                        il = getMethod.GetILGenerator();
-
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, underlyingField);
-
-                        //Return
-                        il.Emit(OpCodes.Ret);
-
-                        propImpl.SetGetMethod(getMethod);
-
-                        #endregion Property Get
-                    }
-                                        
-                    if (property.CanWrite)
-                    {
-                        #region Property Set
-
-                        var argTypes = args.Select(a => a.ParameterType).ToList();
-                        argTypes.Add(property.PropertyType);
-                        
-                        var setMethod = type.DefineMethod("set_" + property.Name, propertyEventMethodAttributes, typeof(void), argTypes.ToArray());
-                        il = setMethod.GetILGenerator();
-
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldarg_1);
-                        il.Emit(OpCodes.Stfld, underlyingField);
-                        
-                        //Return
-                        il.Emit(OpCodes.Ret);
-
-                        propImpl.SetSetMethod(setMethod);
-
-                        #endregion Property Set
-                    }
-                }
-
+                
                 //Next we should implement remote properties
                 foreach (var property in typeof(I).GetProperties())
                 {
@@ -706,31 +745,52 @@ namespace RemoteProcedureCalls
         /// <returns></returns>
         public static object RemoteCallClient(IRPCProxy clientObject, string functionToCall, object[] args)
         {
-            var connection = clientObject.ServerConnection;
-            
-            RemoteCallWrapper wrapper = new RemoteCallWrapper();
-            wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
-            wrapper.name = functionToCall;
-            wrapper.instanceId = clientObject.ServerInstanceID;
+            if (!clientObject.IsDisposed)
+            {
+                var connection = clientObject.ServerConnection;
 
-            string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + NetworkComms.NetworkIdentifier;
-            string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+                RemoteCallWrapper wrapper = new RemoteCallWrapper();
+                wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
+                wrapper.name = functionToCall;
+                wrapper.instanceId = clientObject.ServerInstanceID;
 
-            if (clientObject.SendRecieveOptions != null)
-                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
+                string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + wrapper.instanceId;
+                string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+
+                if (clientObject.SendRecieveOptions != null)
+                    wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
+                else
+                    wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper);
+
+                if (wrapper.Exception != null)
+                    throw new RPCException(wrapper.Exception);
+
+                for (int i = 0; i < args.Length; i++)
+                    args[i] = wrapper.args[i].UntypedValue;
+
+                if (wrapper.result != null)
+                    return wrapper.result.UntypedValue;
+                else
+                    return null;
+            }
             else
-                wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper);
+                throw new ObjectDisposedException("clientObject", "RPC object has already been disposed of and cannot be reused");
+        }
 
-            if (wrapper.Exception != null)
-                throw new RPCException(wrapper.Exception);
+        public static void DestroyRPCClient(IRPCProxy clientObject)
+        {
+            if (!clientObject.IsDisposed)
+            {
+                var connection = clientObject.ServerConnection;
+                string packetTypeRequest = clientObject.ImplementedInterface.Name + "-REMOVE-REFERENCE-" + clientObject.ServerInstanceID;
 
-            for (int i = 0; i < args.Length; i++)
-                args[i] = wrapper.args[i].UntypedValue;
+                RemoteCallWrapper wrapper = new RemoteCallWrapper();
+                wrapper.args = new List<RPCArgumentBase>();
+                wrapper.name = null;
+                wrapper.instanceId = clientObject.ServerInstanceID;
 
-            if (wrapper.result != null)
-                return wrapper.result.UntypedValue;
-            else
-                return null;
+                connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper);
+            }
         }
     }
 }
