@@ -13,8 +13,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-//  A commercial license of this software can also be purchased. 
-//  Please see <http://www.networkcomms.net/licensing/> for details.
+//  Non-GPL versions of this software can also be purchased. 
+//  Please see <http://www.networkcomms.net> for details.
 
 // CommandLineParser.cs
 
