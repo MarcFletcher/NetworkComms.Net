@@ -26,6 +26,7 @@ using NetworkCommsDotNet;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.DPSBase;
 using Newtonsoft.Json;
+using ProtoBuf;
 
 namespace Examples.ExamplesChat.WinRT
 {
@@ -35,6 +36,7 @@ namespace Examples.ExamplesChat.WinRT
     /// serialise (turn into bytes) this object. At the base level the 
     /// serialisation is performed by protobuf.net.
     /// </summary>
+    [ProtoContract]
     [JsonObject(MemberSerialization.OptIn)]
     public class ChatMessage : IExplicitlySerialize
     {
@@ -44,8 +46,9 @@ namespace Examples.ExamplesChat.WinRT
         /// The [ProtoMember(1)] attribute informs the serialiser that when
         /// an object of type ChatMessage is serialised we want to include this variable
         /// </summary>
+        [ProtoMember(1)]
         [JsonProperty]
-        string _sourceIdentifier;
+        public string _sourceIdentifier;
 
         /// <summary>
         /// The source identifier is accessible as a ShortGuid
@@ -58,32 +61,36 @@ namespace Examples.ExamplesChat.WinRT
         /// The [ProtoMember(2)] attribute informs the serialiser that when
         /// an object of type ChatMessage is serialised we want to include this variable 
         /// </summary>
+        [ProtoMember(2)]
         [JsonProperty]
-        public string SourceName { get; private set; }
+        public string SourceName { get; set; }
 
         /// <summary>
         /// The actual message.
         /// </summary>
+        [ProtoMember(3)]
         [JsonProperty]
-        public string Message { get; private set; }
+        public string Message { get; set; }
 
         /// <summary>
         /// The index of this message. Every message sent by a particular source
         /// has an incrementing index.
         /// </summary>
+        [ProtoMember(4)]
         [JsonProperty]
-        public long MessageIndex { get; private set; }
+        public long MessageIndex { get; set; }
 
         /// <summary>
         /// The number of times this message has been relayed.
         /// </summary>
+        [ProtoMember(5)]
         [JsonProperty]
-        public int RelayCount { get; private set; }
+        public int RelayCount { get; set; }
 
         /// <summary>
         /// We must include a private constructor to be used by the deserialisation step.
         /// </summary>
-        private ChatMessage() { }
+        public ChatMessage() { }
 
         /// <summary>
         /// Create a new ChatMessage

@@ -58,6 +58,9 @@ namespace Examples.ExamplesChat.WinRT
             chatApplication.LocalName = HostInfo.HostName + "_WinRT";
             localNameBox.Text = HostInfo.HostName + "_WinRT";
 
+            //Set the initial serializer
+            chatApplication.Serializer = NetworkCommsDotNet.DPSBase.DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
+
             //Print out some usage instructions
             chatApplication.PrintUsageInstructions();
 
@@ -201,6 +204,36 @@ namespace Examples.ExamplesChat.WinRT
         }
 
         /// <summary>
+        /// Switch to JSON serializer when the JSON radio button is highlighted
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void JSONRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (JSONRadioButton != null && JSONRadioButton.IsChecked != null && (bool)JSONRadioButton.IsChecked)
+            {
+                //Update the application and connectionType                
+                chatApplication.Serializer = NetworkCommsDotNet.DPSBase.DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.JSONSerializer>();
+                chatApplication.RefreshNetworkCommsConfiguration();
+            }
+        }
+
+        /// <summary>
+        /// Switch to Protobuf serializer when the Protobuf radio button is highlighted
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ProtobufRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (ProtobufRadioButton != null && ProtobufRadioButton.IsChecked != null && (bool)ProtobufRadioButton.IsChecked)
+            {
+                //Update the application and connectionType                
+                chatApplication.Serializer = NetworkCommsDotNet.DPSBase.DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
+                chatApplication.RefreshNetworkCommsConfiguration();
+            }
+        }
+
+        /// <summary>
         /// Enable encryption if it is selected
         /// </summary>
         /// <param name="sender"></param>
@@ -220,7 +253,6 @@ namespace Examples.ExamplesChat.WinRT
         {
             chatApplication.LocalServerEnabled = (bool)enableServerBox.IsChecked;
             chatApplication.RefreshNetworkCommsConfiguration();
-        }       
-        
+        }        
     }
 }

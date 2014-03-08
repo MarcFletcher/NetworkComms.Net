@@ -85,6 +85,11 @@ namespace Examples.ExamplesChat.WinRT
         public int ServerPort { get; set; }
 
         /// <summary>
+        /// The serializer to use
+        /// </summary>
+        public DataSerializer Serializer { get; set; }
+
+        /// <summary>
         /// The local name used when sending messages
         /// </summary>
         public string LocalName { get; set; }
@@ -143,7 +148,7 @@ namespace Examples.ExamplesChat.WinRT
 
             #region Set serializer
             //Set the default send recieve options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
-            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<JSONSerializer>(), NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(Serializer, NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
             #endregion
 
             #region Optional Encryption
