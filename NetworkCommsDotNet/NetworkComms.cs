@@ -362,14 +362,11 @@ namespace NetworkCommsDotNet
                     item.Connection.CheckSumFailResendHandler(item.DataStream);
                 else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.ConnectionSetup))
                     item.Connection.ConnectionSetupHandler(item.DataStream);
-                else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) &&
-                    (NetworkComms.InternalFixedSendReceiveOptions.DataSerializer.DeserialiseDataObject<byte[]>(item.DataStream,
-                        NetworkComms.InternalFixedSendReceiveOptions.DataProcessors,
-                        NetworkComms.InternalFixedSendReceiveOptions.Options))[0] == 0)
+                else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Request")
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), new byte[1] { 1 }, NetworkComms.InternalFixedSendReceiveOptions);
-                    item.Connection.SendPacket<byte[]>(returnPacket);
+                    using(Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket)+ "-Reply", new byte[0], NetworkComms.InternalFixedSendReceiveOptions))
+                        item.Connection.SendPacket<byte[]>(returnPacket);
                 }
 
                 //We allow users to add their own custom handlers for reserved packet types here

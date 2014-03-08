@@ -477,14 +477,14 @@ namespace NetworkCommsDotNet.Connections
                     try
                     {
                         timer.Start();
-                        byte[] returnValue = SendReceiveObject<byte[],byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket), aliveRespondTimeoutMS, new byte[1] { 0 }, NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
+                        byte[] returnValue = SendReceiveObject<byte[], byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Request", Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Reply", aliveRespondTimeoutMS, new byte[0], NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
                         timer.Stop();
 
                         responseTimeMS = timer.ElapsedMilliseconds;
 
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("ConnectionAliveTest success, response in " + timer.ElapsedMilliseconds.ToString() + "ms.");
 
-                        return returnValue[0] == 1;
+                        return true;
                     }
                     catch (Exception)
                     {

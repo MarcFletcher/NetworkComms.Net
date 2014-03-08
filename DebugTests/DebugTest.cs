@@ -50,9 +50,11 @@ namespace DebugTests
             Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
 
             Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
-            var reply = conn.SendReceiveObject<string, string>("Data", "Data-Response", 1000, "hello server");
+            bool result = conn.ConnectionAlive();
 
-            Console.WriteLine("Client done!");
+            //var reply = conn.SendReceiveObject<string, string>("Data", "Data-Response", 1000, "hello server");
+
+            Console.WriteLine("Client done! {0}", result);
             Console.ReadKey();
         }
     }
