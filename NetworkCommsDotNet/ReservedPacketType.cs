@@ -29,8 +29,7 @@ namespace NetworkCommsDotNet
     {
         Confirmation,
         CheckSumFailResend,
-        AliveTestPacketRequest,
-        AliveTestPacketResponse,
+        AliveTestPacket,
         ConnectionSetup,
         Unmanaged,
         NestedPacket,
