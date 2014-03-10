@@ -228,7 +228,7 @@ namespace NetworkCommsDotNet
                 ((!containsSecurityCritialDataProcessors && !options.Options.ContainsKey("UseNestedPacketType")) || isNested))
                 this._packetHeader.SetOption(PacketHeaderStringItems.NullDataSection, "");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... creating comms packet. PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
+            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... created packet of type " + sendingPacketTypeStr + ". PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
         }
 
         /// <inheritdoc />

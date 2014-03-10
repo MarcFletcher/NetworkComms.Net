@@ -267,7 +267,7 @@ namespace DistributedFileSystem
         private List<ConnectionInfo> PeerConnectionInfo { get; set; }
 
         /// <summary>
-        /// Protobuf cannopt serialize ConnectionInfo so we provide a backing field and use the ProtoBeforeSerialization and ProtoAfterSerialization methodology to serialize by hand
+        /// Protobuf cannot serialize ConnectionInfo so we provide a backing field and use the ProtoBeforeSerialization and ProtoAfterSerialization methodology to serialize by hand
         /// </summary>
         [ProtoMember(4)]
         private List<byte[]> _peerConnectionInfoSerialized { get; set; }
@@ -339,7 +339,21 @@ namespace DistributedFileSystem
             {
                 ValidateNetworkIdentifier(connectionInfo);
 
-                if (SuperPeer) return true;
+                if (SuperPeer)
+                {
+                    //We may have many possible IPEndPoints for a super peer.
+                    //If we have at least one IPEndPoint that is indeed marked as online we only return true for that match
+                    if (IPEndPointOnlineDict.ContainsKey(connectionInfo))
+                        return IPEndPointOnlineDict[connectionInfo];
+                    else
+                    {
+                        if ((from current in IPEndPointOnlineDict where current.Value == true select current).Count() > 0)
+                            return false;
+                        else
+                            //If no IPEndPoints are yet marked as online we return true by default
+                            return true;
+                    }
+                }
 
                 if (IPEndPointOnlineDict.ContainsKey(connectionInfo))
                     return IPEndPointOnlineDict[connectionInfo];
@@ -1033,7 +1047,7 @@ namespace DistributedFileSystem
                         //Finally update the chunk flags
                         peerAvailabilityByNetworkIdentifierDict[connectionInfo.NetworkIdentifier].PeerChunkFlags.UpdateFlags(latestChunkFlags);
 
-                        if (DFS.loggingEnabled) DFS.Logger.Trace("Updated existing chunk flags for "+ connectionInfo);
+                        if (DFS.loggingEnabled) DFS.Logger.Trace("Updated existing chunk flags for " + connectionInfo + " [" + latestChunkFlags.NumCompletedChunks() + "].");
                     }
                     else
                     {
@@ -1068,7 +1082,8 @@ namespace DistributedFileSystem
                     }
                 }
                 else
-                    LogTools.LogException(new Exception("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range."), "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
+                    throw new Exception("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range. Provided connectionInfo: " + connectionInfo + ". EndPointToUse:" + endPointToUse);
+                    //LogTools.LogException("Attempted to AddOrUpdateCachedPeerChunkFlags for client which was not listening or was using port outside the valid DFS range.", "PeerChunkFlagsUpdateError", "IP:" + endPointToUse.Address.ToString() + ", Port:" + endPointToUse.Port);
             }
         }
 
@@ -1237,7 +1252,7 @@ namespace DistributedFileSystem
             if (alivePeersReceivedEvent.WaitOne(responseWaitMS))
             {
                 if (buildLog != null)
-                    buildLog("Completed SwarmChunkAvailability update successfully.");
+                    buildLog("Completed UpdatePeerAvailability update successfully.");
 
                 //If the event was successfully triggered we wait an additional 250ms to give other responses a chance to be handled
                 Thread.Sleep(250);
@@ -1245,7 +1260,7 @@ namespace DistributedFileSystem
             else
             {
                 if (buildLog != null)
-                    buildLog("Completed SwarmChunkAvailability update by timeout.");
+                    buildLog("Completed UpdatePeerAvailability update by timeout.");
             }
         }
 
@@ -1296,6 +1311,9 @@ namespace DistributedFileSystem
         /// <param name="itemCheckSum">The checksum associated with this item</param>
         public void BroadcastLocalAvailability(string itemCheckSum)
         {
+            if (DFS.loggingEnabled)
+                DFS.Logger.Trace("Broadcasting local chunk availability for item " + itemCheckSum);
+
             Dictionary<string, List<ConnectionInfo>> peerConnInfoDict = new Dictionary<string, List<ConnectionInfo>>();
             ChunkFlags localChunkFlags;
 

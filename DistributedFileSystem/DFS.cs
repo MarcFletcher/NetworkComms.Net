@@ -260,6 +260,13 @@ namespace DistributedFileSystem
                 NetworkComms.AppendGlobalConnectionCloseHandler(DFSConnectionShutdown);
                 #endregion
 
+                if (DFS.loggingEnabled)
+                {
+                    DFS.Logger.Info("Starting DFS listeners.");
+                    DFS.Logger.Info("Comms IP filters - " + HostInfo.IP.RestrictLocalAddressRanges.Select((range) => range.ToString()).Aggregate((left,right) => left.ToString() + ", " + right.ToString()).ToString());
+                    DFS.Logger.Info("Detected addresses - " + HostInfo.IP.FilteredLocalAddresses().Select((address) => address.ToString()).Aggregate((left, right) => left.ToString() + ", " + right.ToString()).ToString());
+                }
+
                 #region OpenIncomingPorts
                 try
                 {
@@ -1002,6 +1009,8 @@ namespace DistributedFileSystem
             try
             {
                 DistributedItem currentItem = null;
+                if (DFS.loggingEnabled) DFS.Logger.Trace("Handling 'DFS_KnownPeersUpdate' from " + connection.ToString() + 
+                    " containing " + peerList.PeerEndPoints.Length + " peers.");
 
                 lock (globalDFSLocker)
                 {
@@ -1028,6 +1037,7 @@ namespace DistributedFileSystem
                         }
                         catch (CommsException)
                         {
+                            if (DFS.loggingEnabled) DFS.Logger.Trace("Removing " + peerContactInfo + " from item swarm due to CommsException.");
                             currentItem.AddBuildLogLine("Removing " + peerContactInfo + " from item swarm due to CommsException.");
                         }
                         catch (Exception ex)
@@ -1035,6 +1045,10 @@ namespace DistributedFileSystem
                             LogTools.LogException(ex, "UpdatePeerChunkAvailabilityError_3");
                         }
                     }
+                }
+                else
+                {
+                    if (DFS.loggingEnabled) DFS.Logger.Trace("Received 'DFS_KnownPeersUpdate' data for item which does not exist locally.");
                 }
             }
             catch (CommsException)
@@ -1414,6 +1428,9 @@ namespace DistributedFileSystem
             {
                 ConnectionInfo incomingConnectionInfo = new ConnectionInfo(connection.ConnectionInfo.ConnectionType, incomingReply.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
                 if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
+
+                if (incomingReply.PacketIdentifier == null)
+                    throw new ArgumentNullException("The specified packet identifier cannot be null.");
 
                 DistributedItem item = null;
                 lock (globalDFSLocker)

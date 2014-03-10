@@ -1010,22 +1010,6 @@ namespace NetworkCommsDotNet
 
             commsShutdown = false;
             if (LoggingEnabled) _logger.Info("NetworkComms.Net has shutdown");
-
-#if !WINDOWS_PHONE && !NO_LOGGING && !NETFX_CORE
-            ////Mono bug fix
-            ////Sometimes NLog ends up in a deadlock on close, workaround provided on NLog website
-            //if (Logger != null)
-            //{
-            //    LogManager.Flush();
-            //    Logger.Factory.Flush();
-
-            //    if (NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net2 ||
-            //        NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net35 ||
-            //        NetworkComms.CurrentRuntimeEnvironment == RuntimeEnvironment.Mono_Net4)
-            //        LogManager.Configuration = null;
-            //}
-            DisableLogging();
-#endif
         }
         #endregion
          
@@ -1936,7 +1920,9 @@ namespace NetworkCommsDotNet
         internal static void UpdateConnectionReferenceByEndPoint(Connection connection, EndPoint newRemoteEndPoint, EndPoint newLocalEndPoint)
         {
             if (NetworkComms.LoggingEnabled)
-                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + (newRemoteEndPoint != null ? " Provided new endPoint of " + newRemoteEndPoint.ToString() : ""));
+                NetworkComms.Logger.Trace("Updating connection reference by endPoint. Connection='" + connection.ConnectionInfo + "'." + 
+                    (newRemoteEndPoint != null ? " Provided newRemoteEndPoint of " + newRemoteEndPoint.ToString() + "." : "") +
+                    (newLocalEndPoint !=null ? " Provided newLocalEndPoint of " + newLocalEndPoint.ToString() + "." : ""));
 
             if (!connection.ConnectionInfo.RemoteEndPoint.Equals(newRemoteEndPoint) || !connection.ConnectionInfo.LocalEndPoint.Equals(newLocalEndPoint))
             {

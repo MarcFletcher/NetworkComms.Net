@@ -600,7 +600,9 @@ namespace NetworkCommsDotNet.Tools
                     }
                     catch (Exception ex)
                     {
-                        LogTools.LogException(ex, "NetworkLoadWorker");
+                        //There is no need to log if the exception is due to a change in interfaces
+                        if (ex.GetType() != typeof(NetworkInformationException))
+                            LogTools.LogException(ex, "NetworkLoadWorker");
 
                         //It may be the interfaces available to the OS have changed so we will reset them here
                         interfacesToUse = NetworkInterface.GetAllNetworkInterfaces();

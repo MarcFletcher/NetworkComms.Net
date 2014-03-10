@@ -396,8 +396,15 @@ namespace DistributedFileSystem
             {
                 if (assembleLog == null) assembleLog = new List<string>();
 
+                string threadId = null;
+                try
+                {
+                    threadId = System.Threading.Thread.CurrentThread.ManagedThreadId.ToString();
+                }
+                catch (Exception) { }
+
                 DateTime currentTime = DateTime.Now;
-                assembleLog.Add(currentTime.Hour.ToString() + "." + currentTime.Minute.ToString() + "." + currentTime.Second.ToString() + "." + currentTime.Millisecond.ToString() + " - " + newLine);
+                assembleLog.Add(currentTime.Hour.ToString() + "." + currentTime.Minute.ToString() + "." + currentTime.Second.ToString() + "." + currentTime.Millisecond.ToString() + " [" + (threadId != null ? threadId.ToString() : "NA") + "] - " + newLine);
             }
         }
 
@@ -775,7 +782,6 @@ namespace DistributedFileSystem
                         }
                     }
                 }
-
                 #endregion
 
                 if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Made " + (from current in newRequests select current.Value.Count).Sum() + " new chunk requests from " + newRequests.Count + " peers for item " + ItemIdentifier + ".");
@@ -814,6 +820,9 @@ namespace DistributedFileSystem
                             int writeRetryCountMax = 3;
                             while (true)
                             {
+                                if (incomingReply.ChunkData == null)
+                                    throw new Exception("incomingReply.ChunkData was null.");
+
                                 //Copy the received bytes into the results array
                                 ItemDataStream.Write(incomingReply.ChunkData, ChunkPositionLengthDict[incomingReply.ChunkIndex].Position);
 

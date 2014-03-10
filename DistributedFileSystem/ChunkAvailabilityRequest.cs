@@ -186,7 +186,7 @@ namespace DistributedFileSystem
         /// <param name="sourceNetworkIdentifier">The network identifier of the source of this ChunkAvailabilityReply</param>
         /// <param name="itemCheckSum">The checksum of the DFS item</param>
         /// <param name="chunkIndex">The chunkIndex of the requested item</param>
-        /// <param name="dataSequenceNumber">The packet identifier used to send the data</param>
+        /// <param name="packetIdentifier">The packet identifier used to send the data</param>
         public ChunkAvailabilityReply(ShortGuid sourceNetworkIdentifier, string itemCheckSum, byte chunkIndex, string packetIdentifier)
         {
             this.SourceNetworkIdentifier = sourceNetworkIdentifier;
@@ -202,6 +202,8 @@ namespace DistributedFileSystem
         /// <param name="chunkData">The chunk data</param>
         public void SetChunkData(byte[] chunkData)
         {
+            if (chunkData == null) throw new ArgumentNullException("chunkData cannot be null.");
+
             this.ChunkData = chunkData;
             ChunkDataSet = true;
         }

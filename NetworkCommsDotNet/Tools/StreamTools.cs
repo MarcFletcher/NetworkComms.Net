@@ -91,7 +91,6 @@ namespace NetworkCommsDotNet.Tools
             AutoResetEvent allDataWritten = new AutoResetEvent(false);
             Exception innerException = null;
 
-
 #if NETFX_CORE
             Action readAction = null; Action<int> writeAction = null;
 
@@ -100,6 +99,8 @@ namespace NetworkCommsDotNet.Tools
 
             readAction = new Action(async () =>
             {
+                try
+                {
                 while (true)  {
 
                 int bytesRead = await input.ReadAsync(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize));
@@ -109,64 +110,85 @@ namespace NetworkCommsDotNet.Tools
             readCompleted = new AsyncCallback((IAsyncResult ar) =>
 
             {
-                var streams = ar.AsyncState as Stream[];
-                var input = streams[0];
-                var output = streams[1];
-
-                // input read asynchronously completed
-                int bytesRead = input.EndRead(ar);
-#endif
-                if (!readCanStartSignal.WaitOne(writeWaitTimeMS))
-                    innerException = new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
-
-                if (bytesRead == 0 || innerException != null)
+                try
                 {
-                    allDataWritten.Set();
-                    return;
-                }
+                    var streams = ar.AsyncState as Stream[];
+                    var input = streams[0];
+                    var output = streams[1];
 
-                var temp = bufferA;
-                bufferA = bufferB;
-                bufferB = temp;
+                    // input read asynchronously completed
+                    int bytesRead = input.EndRead(ar);
+#endif
+                    if (!readCanStartSignal.WaitOne(writeWaitTimeMS))
+                        innerException = new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
-                // write asynchronously
+                    if (bytesRead == 0 || innerException != null)
+                    {
+                        allDataWritten.Set();
+                        return;
+                    }
+
+                    var temp = bufferA;
+                    bufferA = bufferB;
+                    bufferB = temp;
+
+                    // write asynchronously
 #if NETFX_CORE
                 writeAction(bytesRead);
 #else
-                output.BeginWrite(bufferB, 0, bytesRead, writeCompleted, streams);
+                    output.BeginWrite(bufferB, 0, bytesRead, writeCompleted, streams);
 #endif
 
-                //start the next read straight away
-                totalBytesCompleted += bytesRead;
-                bytesRemaining = inputLength - totalBytesCompleted;
+                    //start the next read straight away
+                    totalBytesCompleted += bytesRead;
+                    bytesRemaining = inputLength - totalBytesCompleted;
 
 #if NETFX_CORE
                 }
 #else
-                input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
+                    input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
 #endif
-            });
-#if NETFX_CORE
-            writeAction = new Action<int>(async (bytesRead) =>
-            {
-                await output.WriteAsync(bufferB, 0, bytesRead);            
-#else
-            writeCompleted = new AsyncCallback((IAsyncResult ar) =>
-            {
-                var streams = ar.AsyncState as Stream[];
-                var input = streams[0];
-                var output = streams[1];
-      
-                try
-                {
-                    output.EndWrite(ar);
                 }
                 catch (Exception ex)
                 {
                     innerException = ex;
+                    allDataWritten.Set();
+                    return;
                 }
+            });
+
+#if NETFX_CORE
+            writeAction = new Action<int>(async (bytesRead) =>
+            {
+                try
+                {
+                await output.WriteAsync(bufferB, 0, bytesRead);            
+#else
+            writeCompleted = new AsyncCallback((IAsyncResult ar) =>
+            {
+                try
+                {
+                    var streams = ar.AsyncState as Stream[];
+                    var input = streams[0];
+                    var output = streams[1];
+
+                    try
+                    {
+                        output.EndWrite(ar);
+                    }
+                    catch (Exception ex)
+                    {
+                        innerException = ex;
+                    }
 #endif
-                readCanStartSignal.Set();
+                    readCanStartSignal.Set();
+                }
+                catch (Exception ex)
+                {
+                    innerException = ex;
+                    allDataWritten.Set();
+                    return;
+                }
             });
 
 #if NETFX_CORE

@@ -153,7 +153,7 @@ namespace NetworkCommsDotNet.Connections.UDP
                         }
                         catch (Exception)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteIPEndPoint.Address + ":" + connectionInfo.RemoteIPEndPoint.Port.ToString() + ". Will create an isolated udp connection instead.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Failed to determine preferred existing udpClientListener to " + connectionInfo.RemoteIPEndPoint.Address + ":" + connectionInfo.RemoteIPEndPoint.Port.ToString() + ". Will create an isolated UDP connection instead.");
                         }
                     }
 
@@ -325,9 +325,13 @@ namespace NetworkCommsDotNet.Connections.UDP
                 //Set the port to 0 to match all.
                 bestLocalEndPoint.Port = 0;
             }
+            catch (SocketException ex)
+            {
+                throw new ConnectionSetupException("Attempting to determine the best local endPoint to connect to " + ipEndPoint + " resulted in a socket exception.", ex);
+            }
             catch (Exception ex)
             {
-                LogTools.LogException(ex, "BestLocalEndPointError");
+                LogTools.LogException(ex, "BestLocalEndPointError", "Error while attempting to determine the best local end point to contact " + ipEndPoint.ToString());
             }
 
             //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
