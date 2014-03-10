@@ -66,6 +66,12 @@ namespace DistributedFileSystem
         public byte ChunkIndex { get; private set; }
 
         /// <summary>
+        /// The index of the request. Each request made by the DFS increments the request counter.
+        /// </summary>
+        [ProtoMember(2)]
+        public long RequestNumIndex { get; private set; }
+
+        /// <summary>
         /// The time this request was created
         /// </summary>
         public DateTime RequestCreationTime { get; private set; }
@@ -93,7 +99,8 @@ namespace DistributedFileSystem
         /// <param name="itemCheckSum">The checksum of the DFS item</param>
         /// <param name="chunkIndex">The index of the requested chunk</param>
         /// <param name="peerConnectionInfo">The peer contacted for this request</param>
-        public ChunkAvailabilityRequest(string itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo)
+        /// <param name="requestNumIndex">The index of this chunk request</param>
+        public ChunkAvailabilityRequest(string itemCheckSum, byte chunkIndex, ConnectionInfo peerConnectionInfo, long requestNumIndex)
         {
             this.ItemCheckSum = itemCheckSum;
             this.ChunkIndex = chunkIndex;
@@ -101,6 +108,7 @@ namespace DistributedFileSystem
             this.PeerConnectionInfo = peerConnectionInfo;
             this.RequestIncoming = false;
             this.RequestComplete = false;
+            this.RequestNumIndex = requestNumIndex;
         }
     }
 

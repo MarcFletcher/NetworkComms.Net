@@ -485,6 +485,16 @@ namespace DistributedFileSystem
         public bool RemovePeerIPEndPoint(ShortGuid networkIdentifier, IPEndPoint peerIPEndPoint)
         {
             ConnectionInfo connectionInfo = new ConnectionInfo(ConnectionType.TCP, networkIdentifier, peerIPEndPoint, true);
+            return RemovePeerIPEndPoint(connectionInfo);
+        }
+
+        /// <summary>
+        /// Removes the provided connectionInfo from all internal dictionaries. Returns true if connectionInfo exists, otherwise false
+        /// </summary>
+        /// <param name="connectionInfo">The connectionInfo to remove</param>
+        /// <returns></returns>
+        public bool RemovePeerIPEndPoint(ConnectionInfo connectionInfo)
+        {
             lock (syncRoot)
             {
                 if (PeerConnectionInfo.Contains(connectionInfo))
@@ -900,7 +910,7 @@ namespace DistributedFileSystem
 
                 lock (peerLocker)
                 {
-                    //If the have an entry for this peer in peerAvailabilityByNetworkIdentifierDict
+                    //If we have an entry for this peer in peerAvailabilityByNetworkIdentifierDict
                     //We only remove the peer if we have more than one and it is not a super peer
                     if (peerAvailabilityByNetworkIdentifierDict.ContainsKey(networkIdentifier))
                     {
@@ -920,15 +930,26 @@ namespace DistributedFileSystem
                                 //We need to remove all traces of this peer
                                 if (peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1 &&
                                     !peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint.Equals(peerEndPoint))
-                                    throw new Exception("Possible corruption detected in SwarmChunkAvailability - 1 - " + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint + " - " + peerEndPoint);
+                                {
+                                    //This circumstance could happen if multiple threads attempt to remove the same peer endPoint. The first one would succeed, the second
+                                    //one was previously hitting this exception incorrectly.
+                                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... attempted to remove peer from swarm which has one remaining localEndPoint, but which doesn't match the provided peerEndPoint to remove - " + peerEndPoint + ".");
+                                    return;
+                                    //throw new Exception("Possible corruption detected in SwarmChunkAvailability - 1 - " + peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint + " - " + peerEndPoint);
+                                }
 
                                 if (peerEndPointToNetworkIdentifier.ContainsKey(peerEndPoint.ToString()) && peerEndPointToNetworkIdentifier[peerEndPoint.ToString()] != networkIdentifier)
                                     throw new Exception("Possible corruption detected in SwarmChunkAvailability - 2");
 
                                 List<ConnectionInfo> peerConnectionInfos = peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo();
+                                if (peerConnectionInfos.Count != 1)
+                                    throw new Exception("peerConnectionInfos should only contain one entry.");
 
-                                foreach(ConnectionInfo connInfo in peerConnectionInfos)
+                                foreach (ConnectionInfo connInfo in peerConnectionInfos)
+                                {
+                                    peerAvailabilityByNetworkIdentifierDict[networkIdentifier].RemovePeerIPEndPoint(connInfo);
                                     peerEndPointToNetworkIdentifier.Remove(connInfo.LocalEndPoint.ToString());
+                                }
 
                                 peerAvailabilityByNetworkIdentifierDict.Remove(networkIdentifier);
 
@@ -1123,13 +1144,14 @@ namespace DistributedFileSystem
                     {
                         peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key]; 
                     }
-                    catch (KeyNotFoundException)
+                    catch (KeyNotFoundException ex)
                     {
                         //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                         //but it has been removed since we accessed the peerKeys at the start of this method
                         //We could probably be a bit more careful with how we maintain these references but we either catch the
                         //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                         RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                        //LogTools.LogException(ex, "PeerAvailabilityByIdentifierNotFound_1", "Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                         if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                     }
 
@@ -1173,13 +1195,14 @@ namespace DistributedFileSystem
                 {
                     peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key];
                 }
-                catch (KeyNotFoundException)
+                catch (KeyNotFoundException ex)
                 {
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method
                     //We could probably be a bit more careful with how we maintain these references but we either catch the
                     //exception here or NetworkComms.Net will throw one when we try to connect to an old peer.
                     RemovePeerIPEndPointFromSwarm(peer.Key, new IPEndPoint(IPAddress.Any, 0), true);
+                    //LogTools.LogException(ex, "PeerAvailabilityByIdentifierNotFound_2", "Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                     if (buildLog != null) buildLog("Removing " + peer.Key + " from item swarm due to KeyNotFoundException.");
                 }
 

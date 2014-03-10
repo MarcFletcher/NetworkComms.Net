@@ -177,8 +177,14 @@ namespace DistributedFileSystem
         /// <summary>
         /// The total number of completed chunk requests across all DFS items
         /// </summary>
-        public static int TotalNumCompletedChunkRequests { get; private set; }
-        private static object TotalNumCompletedChunkRequestsLocker = new object();
+        public static long TotalNumReturnedChunkRequests { get; private set; }
+        private static object TotalNumReturnedChunkRequestsLocker = new object();
+
+        /// <summary>
+        /// The total number of chunks requests by the local DFS
+        /// </summary>
+        public static long TotalNumRequestedChunks { get { return _totalNumRequestedChunks; } }
+        internal static long _totalNumRequestedChunks;
 
         static DFS()
         {
@@ -1270,7 +1276,9 @@ namespace DistributedFileSystem
 
                             if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
-                            string packetIdentifier = selectedItem.ItemCheckSum + "-" + incomingRequest.ChunkIndex;
+                            //We identify the data using the itemchecksum, the requested chunk index, and to unique identify this request from possible duplicates
+                            //we append the requesting peer request index.
+                            string packetIdentifier = selectedItem.ItemCheckSum + "-" + incomingRequest.ChunkIndex + "-" + incomingRequest.RequestNumIndex;
                             
                             //This is received via UDP but we want to reply using TCP to ensure delivery of the data
                             var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
@@ -1286,7 +1294,7 @@ namespace DistributedFileSystem
 
                             clientTCPConnection.SendObject("DFS_ChunkAvailabilityInterestReplyInfo", new ChunkAvailabilityReply(NetworkComms.NetworkIdentifier, incomingRequest.ItemCheckSum, incomingRequest.ChunkIndex, packetIdentifier), nullCompressionSRO);
 
-                            lock (TotalNumCompletedChunkRequestsLocker) TotalNumCompletedChunkRequests++;
+                            lock (TotalNumReturnedChunkRequestsLocker) TotalNumReturnedChunkRequests++;
 
                             if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... IncomingChunkInterestRequest completed with data in " + (DateTime.Now - startTime).TotalSeconds.ToString("0.0") + " seconds.");
                         }

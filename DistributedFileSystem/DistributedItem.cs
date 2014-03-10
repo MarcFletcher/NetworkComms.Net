@@ -607,7 +607,8 @@ namespace DistributedFileSystem
                                     if (possibleChunkPeers.Length > 0)
                                     {
                                         //We can now add the new request to the build dictionaries
-                                        ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[i], possibleChunkPeers[0]);
+                                        long chunkRequestIndex = Interlocked.Increment(ref DFS._totalNumRequestedChunks);
+                                        ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[i], possibleChunkPeers[0], chunkRequestIndex);
 
                                         if (newRequests.ContainsKey(possibleChunkPeers[0]))
                                             throw new Exception("We should not be choosing a peer we have already chosen in step 1");
@@ -680,7 +681,8 @@ namespace DistributedFileSystem
                                                 peerAvailability.FlagSet(chunkRarity[j])) //If the selected peer has this chunk
                                             {
                                                 //We can now add the new request to the build dictionaries
-                                                ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i]);
+                                                long chunkRequestIndex = Interlocked.Increment(ref DFS._totalNumRequestedChunks);
+                                                ChunkAvailabilityRequest newChunkRequest = new ChunkAvailabilityRequest(ItemCheckSum, chunkRarity[j], currentRequestConnectionInfo[i], chunkRequestIndex);
 
                                                 AddBuildLogLine("NewChunkRequest S2 Idx:" + newChunkRequest.ChunkIndex + ", Target:" + newChunkRequest.PeerConnectionInfo.LocalEndPoint.ToString() + ", Id:" + newChunkRequest.PeerConnectionInfo.NetworkIdentifier);
 
@@ -862,7 +864,8 @@ namespace DistributedFileSystem
                                 else
                                 {
                                     //We pretend we made the request already
-                                    ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo);
+                                    long chunkRequestIndex = Interlocked.Increment(ref DFS._totalNumRequestedChunks);
+                                    ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo, chunkRequestIndex);
                                     request.RequestComplete = true;
                                     request.RequestIncoming = true;
                                     itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);
@@ -1029,7 +1032,8 @@ namespace DistributedFileSystem
                         if (ItemCheckSum == incomingReply.ItemCheckSum && incomingReply.ReplyState == ChunkReplyState.DataIncluded && !SwarmChunkAvailability.PeerHasChunk(NetworkComms.NetworkIdentifier, incomingReply.ChunkIndex))
                         {
                             //We pretend we made the request already
-                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo);
+                            long chunkRequestIndex = Interlocked.Increment(ref DFS._totalNumRequestedChunks);
+                            ChunkAvailabilityRequest request = new ChunkAvailabilityRequest(ItemCheckSum, incomingReply.ChunkIndex, incomingReply.SourceConnectionInfo, chunkRequestIndex);
                             request.RequestIncoming = true;
                             itemBuildTrackerDict.Add(incomingReply.ChunkIndex, request);
 
