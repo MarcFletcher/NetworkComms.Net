@@ -180,6 +180,7 @@ namespace NetworkCommsDotNet
             }
             catch (Exception ex)
             {
+                NetworkCommsDotNet.Tools.LogTools.LogException(ex, "PacketHeaderDeserialisationError", "The header data follows:" + BitConverter.ToString(packetHeaderStream.ToArray())); 
                 throw new SerialisationException("Error deserialising packetHeader. " + ex.ToString());
             }
         }

@@ -68,7 +68,7 @@ namespace DistributedFileSystem
         /// <summary>
         /// The index of the request. Each request made by the DFS increments the request counter.
         /// </summary>
-        [ProtoMember(2)]
+        [ProtoMember(3)]
         public long RequestNumIndex { get; private set; }
 
         /// <summary>

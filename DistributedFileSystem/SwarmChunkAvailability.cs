@@ -929,7 +929,8 @@ namespace DistributedFileSystem
                             {
                                 //We need to remove all traces of this peer
                                 if (peerAvailabilityByNetworkIdentifierDict[networkIdentifier].NumberOfConnectionInfos == 1 &&
-                                    !peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint.Equals(peerEndPoint))
+                                    !peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo()[0].LocalEndPoint.Equals(peerEndPoint) &&
+                                    !forceRemoveWholePeer)
                                 {
                                     //This circumstance could happen if multiple threads attempt to remove the same peer endPoint. The first one would succeed, the second
                                     //one was previously hitting this exception incorrectly.
@@ -942,9 +943,6 @@ namespace DistributedFileSystem
                                     throw new Exception("Possible corruption detected in SwarmChunkAvailability - 2");
 
                                 List<ConnectionInfo> peerConnectionInfos = peerAvailabilityByNetworkIdentifierDict[networkIdentifier].GetConnectionInfo();
-                                if (peerConnectionInfos.Count != 1)
-                                    throw new Exception("peerConnectionInfos should only contain one entry.");
-
                                 foreach (ConnectionInfo connInfo in peerConnectionInfos)
                                 {
                                     peerAvailabilityByNetworkIdentifierDict[networkIdentifier].RemovePeerIPEndPoint(connInfo);
