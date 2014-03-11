@@ -128,22 +128,7 @@ namespace NetworkCommsDotNet
             CommsThreadPool = new CommsThreadPool();
 #else
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount*2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
-#endif
-
-            //Initialise the core extensions
-            DPSManager.AddDataSerializer<ExplicitSerializer>();
-            DPSManager.AddDataSerializer<NullSerializer>();
-            DPSManager.GetDataProcessor<DataPadder>();
-
-#if !FREETRIAL
-            //Only the full version includes the encrypter
-            DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
-#endif
-
-#if !WINDOWS_PHONE && !NETFX_CORE
-            DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
-#endif
-
+#endif            
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
