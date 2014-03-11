@@ -163,6 +163,42 @@ namespace NetworkCommsDotNet.DPSBase
                 return GetDataSerializer(Instance.DataSerializerIdToType[Id]);
             else
             {
+                //if we're after protobuf we'll try and load it manually
+                if (Id == 1 && !Instance.loadCompleted.WaitOne(0))
+                {
+                    Type t = null;
+
+                    t = Type.GetType("NetworkCommsDotNet.DPSBase.ProtobufSerializer");
+
+                    if (t == null)
+                    {
+                        try
+                        {
+                            Assembly protoAss = Assembly.Load("ProtobufSerializer");
+                            t = protoAss.GetType("NetworkCommsDotNet.DPSBase.ProtobufSerializer");
+                        }
+                        catch (Exception) { }
+                    }                    
+
+                    if (t != null)
+                    {
+                        //Make a protobuf serializer
+                        DataSerializer serializer = CreateObjectWithParameterlessCtor(t.AssemblyQualifiedName) as DataSerializer;
+                        //Get the id
+                        var attr = serializer.Identifier;
+
+                        lock (Instance.addRemoveObjectLocker)
+                        {
+                            if (!Instance.SerializersByType.ContainsKey(t.AssemblyQualifiedName))
+                            {
+                                Instance.SerializersByType.Add(t.AssemblyQualifiedName, serializer);
+                                Instance.DataSerializerIdToType.Add(attr, t.AssemblyQualifiedName);
+                                return serializer;
+                            }
+                        }
+                    }
+                }
+
                 //if the id is not present we're going to have to wait for the dynamic load to finish
                 Instance.loadCompleted.WaitOne();
 
@@ -412,6 +448,18 @@ namespace NetworkCommsDotNet.DPSBase
             //This action will perform the load in the background on some client dependent "thread" 
             Action loadAction = new Action(() =>
                 {
+                    //Initialise the core extensions
+                    DPSManager.GetDataSerializer<ExplicitSerializer>();
+                    DPSManager.GetDataSerializer<NullSerializer>();
+                    DPSManager.GetDataProcessor<DataPadder>();
+#if !FREETRIAL
+                    //Only the full version includes the encrypter
+                    DPSManager.GetDataProcessor<RijndaelPSKEncrypter>();
+#endif
+
+#if !WINDOWS_PHONE && !NETFX_CORE
+                    DPSManager.GetDataSerializer<BinaryFormaterSerializer>();
+#endif
 
                     AssemblyLoader loader;
                     ProcessArgument args;
