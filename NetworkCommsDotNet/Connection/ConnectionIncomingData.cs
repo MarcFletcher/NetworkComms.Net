@@ -214,7 +214,7 @@ namespace NetworkCommsDotNet.Connections
                         IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
                 }
 
-                LogTools.LogException(ex, "CommsError");
+                LogTools.LogException(ex, "CommsError", "A fatal exception occurred in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed.");
                 CloseConnection(true, 45);
             }
         }
