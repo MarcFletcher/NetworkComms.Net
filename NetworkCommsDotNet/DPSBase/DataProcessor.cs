@@ -115,7 +115,7 @@ namespace NetworkCommsDotNet.DPSBase
                 {
                     Type typeOfThis = this.GetType();
 
-                    if (!cachedIdentifiers.ContainsKey(typeOfThis))
+                    if (!cachedIsSecurity.ContainsKey(typeOfThis))
                     {
 #if NETFX_CORE
                         var attributes = this.GetType().GetTypeInfo().GetCustomAttributes(typeof(SecurityCriticalDataProcessorAttribute), false).ToArray();
@@ -125,7 +125,7 @@ namespace NetworkCommsDotNet.DPSBase
                         if (attributes != null && attributes.Length > 0)
                             cachedIsSecurity[typeOfThis] = (attributes[0] as SecurityCriticalDataProcessorAttribute).IsSecurityCritical;
                         else
-                            return false;
+                            cachedIsSecurity[typeOfThis] = false;
                     }
 
                     return cachedIsSecurity[typeOfThis];
