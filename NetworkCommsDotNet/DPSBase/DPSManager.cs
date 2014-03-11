@@ -21,6 +21,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 #if WINDOWS_PHONE || NETFX_CORE
 using System.Linq;
@@ -95,13 +97,31 @@ namespace NetworkCommsDotNet.DPSBase
         private Dictionary<byte, string> DataSerializerIdToType = new Dictionary<byte, string>();
         private Dictionary<byte, string> DataProcessorIdToType = new Dictionary<byte, string>();
 
-        static DPSManager instance;
+        private object addRemoveObjectLocker = new object();
 
-        static DPSManager()
+        private ManualResetEvent loadCompleted = new ManualResetEvent(false);
+
+        static object instance = null;
+        static object singletonLocker = new object();
+        private static DPSManager Instance
         {
-            instance = new DPSManager();
+            get
+            {
+                if (instance == null)
+                {
+                    lock (singletonLocker)
+                    {
+                        if (instance == null)
+                        {
+                            instance = new DPSManager();
+                        }
+                    }
+                }
+
+                return instance as DPSManager;
+            }
         }
-        
+                        
         /// <summary>
         /// Retrieves the singleton instance of the <see cref="DataSerializer"/> with <see cref="System.Type"/> T
         /// </summary>
@@ -109,7 +129,7 @@ namespace NetworkCommsDotNet.DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
         public static DataSerializer GetDataSerializer<T>() where T : DataSerializer
         {
-            if (instance.SerializersByType.ContainsKey(typeof(T).AssemblyQualifiedName))
+            if (Instance.SerializersByType.ContainsKey(typeof(T).AssemblyQualifiedName))
                 return GetDataSerializer(typeof(T).AssemblyQualifiedName);
             else
                 return null;            
@@ -122,15 +142,15 @@ namespace NetworkCommsDotNet.DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataSerializer"/></returns>
         public static DataSerializer GetDataSerializer(byte Id)
         {
-            if (instance.DataSerializerIdToType.ContainsKey(Id))
-                return GetDataSerializer(instance.DataSerializerIdToType[Id]);
+            if (Instance.DataSerializerIdToType.ContainsKey(Id))
+                return GetDataSerializer(Instance.DataSerializerIdToType[Id]);
             else
                 return null;
         }
 
         private static DataSerializer GetDataSerializer(string t)
         {
-            var serializer = instance.SerializersByType[t];
+            var serializer = Instance.SerializersByType[t];
 
             if (serializer == null)
             {
@@ -149,7 +169,7 @@ namespace NetworkCommsDotNet.DPSBase
 #endif
                 serializer = constructor.Invoke(null) as DataSerializer;
 
-                instance.SerializersByType[t] = serializer;
+                Instance.SerializersByType[t] = serializer;
             }
 
             return serializer;            
@@ -162,7 +182,7 @@ namespace NetworkCommsDotNet.DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor<T>() where T : DataProcessor
         {
-            if (instance.DataProcessorsByType.ContainsKey(typeof(T).AssemblyQualifiedName))
+            if (Instance.DataProcessorsByType.ContainsKey(typeof(T).AssemblyQualifiedName))
                 return GetDataProcessor(typeof(T).AssemblyQualifiedName);
             else
                 return null;
@@ -175,15 +195,15 @@ namespace NetworkCommsDotNet.DPSBase
         /// <returns>The retrieved singleton instance of the desired <see cref="DataProcessor"/></returns>
         public static DataProcessor GetDataProcessor(byte Id)
         {
-            if (instance.DataProcessorIdToType.ContainsKey(Id))
-                return GetDataProcessor(instance.DataProcessorIdToType[Id]);
+            if (Instance.DataProcessorIdToType.ContainsKey(Id))
+                return GetDataProcessor(Instance.DataProcessorIdToType[Id]);
             else
                 return null;
         }
 
         private static DataProcessor GetDataProcessor(string t)
         {
-            var processor = instance.DataProcessorsByType[t];
+            var processor = Instance.DataProcessorsByType[t];
 
             if (processor == null)
             {
@@ -202,7 +222,7 @@ namespace NetworkCommsDotNet.DPSBase
 #endif
                 processor = constructor.Invoke(null) as DataProcessor;
 
-                instance.DataProcessorsByType[t] = processor;
+                Instance.DataProcessorsByType[t] = processor;
             }
 
             return processor;
@@ -220,14 +240,14 @@ namespace NetworkCommsDotNet.DPSBase
         {
             if (dataProcessor == null) throw new ArgumentNullException("dataProcessor");
 
-            if (instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType().AssemblyQualifiedName))
-                if (instance.DataProcessorsByType[dataProcessor.GetType().AssemblyQualifiedName] != dataProcessor)
+            if (Instance.DataProcessorsByType.ContainsKey(dataProcessor.GetType().AssemblyQualifiedName))
+                if (Instance.DataProcessorsByType[dataProcessor.GetType().AssemblyQualifiedName] != dataProcessor)
                     throw new ArgumentException("A different DataProcessor of the same Type or Id has already been added to DPSManager");
                 else
                     return;
 
-            instance.DataProcessorsByType.Add(dataProcessor.GetType().AssemblyQualifiedName, dataProcessor);
-            instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType().AssemblyQualifiedName);
+            Instance.DataProcessorsByType.Add(dataProcessor.GetType().AssemblyQualifiedName, dataProcessor);
+            Instance.DataProcessorIdToType.Add(dataProcessor.Identifier, dataProcessor.GetType().AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -243,7 +263,7 @@ namespace NetworkCommsDotNet.DPSBase
         {
             Type processorType = typeof(T);
 
-            if (instance.DataProcessorsByType.ContainsKey(processorType.AssemblyQualifiedName))
+            if (Instance.DataProcessorsByType.ContainsKey(processorType.AssemblyQualifiedName))
                 return;
 #if NETFX_CORE
             var constructor = (from ctor in processorType.GetTypeInfo().DeclaredConstructors
@@ -275,14 +295,14 @@ namespace NetworkCommsDotNet.DPSBase
         {
             if (dataSerializer == null) throw new ArgumentNullException("dataSerializer");
 
-            if (instance.SerializersByType.ContainsKey(dataSerializer.GetType().AssemblyQualifiedName))
-                if (instance.SerializersByType[dataSerializer.GetType().AssemblyQualifiedName] != dataSerializer)
+            if (Instance.SerializersByType.ContainsKey(dataSerializer.GetType().AssemblyQualifiedName))
+                if (Instance.SerializersByType[dataSerializer.GetType().AssemblyQualifiedName] != dataSerializer)
                     throw new ArgumentException("A different DataSerializer of the same Type or Id has already been added to DPSManager");
                 else
                     return;
 
-            instance.SerializersByType.Add(dataSerializer.GetType().AssemblyQualifiedName, dataSerializer);
-            instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType().AssemblyQualifiedName);
+            Instance.SerializersByType.Add(dataSerializer.GetType().AssemblyQualifiedName, dataSerializer);
+            Instance.DataSerializerIdToType.Add(dataSerializer.Identifier, dataSerializer.GetType().AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -298,7 +318,7 @@ namespace NetworkCommsDotNet.DPSBase
         {
             Type serializerType = typeof(T);
 
-            if (instance.SerializersByType.ContainsKey(serializerType.AssemblyQualifiedName))
+            if (Instance.SerializersByType.ContainsKey(serializerType.AssemblyQualifiedName))
                 return;
 
 #if NETFX_CORE
@@ -401,105 +421,133 @@ namespace NetworkCommsDotNet.DPSBase
             //phone we cannot get a list of referenced assemblies so we can only do this for already loaded assemblies.  
             //Any others that are used will have to be added manually.  On windows this will be done from a new app domain 
             //so we can unload it afterwards
+            
+            //This action will perform the load in the background on some client dependent "thread" 
+            Action loadAction = new Action(() =>
+                {
 
-            AssemblyLoader loader;
-            ProcessArgument args;
+                    AssemblyLoader loader;
+                    ProcessArgument args;
+
 #if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
 
-            AppDomain tempDomain = null;
+                    AppDomain tempDomain = null;
 
-            try
-            {
-                //Create a new domain with the same settings as the current domain
-                AppDomainSetup setup = AppDomain.CurrentDomain.SetupInformation;
-                tempDomain = AppDomain.CreateDomain("Temp_" + Guid.NewGuid().ToString(), AppDomain.CurrentDomain.Evidence, setup);
-
-                try
-                {
-                    //First try creating the proxy from the assembly using the assembly name
-                    loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
-                }
-                catch (FileNotFoundException)
-                {
-                    //If that fails try with the assembly location.  An exception here 
-                    loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.Location, typeof(AssemblyLoader).FullName);
-                }
-
-                args = new ProcessArgument();
-
-                //If an entry assembly exists just pass that, the rest can be worked out from there.  
-                //On WCF there is no entry assembly. In that case fill the loaded domains list with those already loaded
-                if (Assembly.GetEntryAssembly() != null)
-                    args.loadedDomains = new List<string>() { Assembly.GetEntryAssembly().FullName };
-                else
-                {
-                    List<string> loadedDomains = new List<string>();
-
-                    foreach (var ass in AppDomain.CurrentDomain.GetAssemblies())
-                        loadedDomains.Add(ass.FullName);
-
-                    args.loadedDomains = loadedDomains;
-                }
-
-                loader.ProcessApplicationAssemblies(args);                
-            }
-            catch (FileNotFoundException)
-            {
-                //In mono, using mkbundle, the above load method may not work so we will fall back to our older way of doing the same
-                //The disadvantage of this approach is that all assemblies are loaded and then stay in memory increasing the footprint slightly 
-                loader = new AssemblyLoader();
-                args = new ProcessArgument();
-
-                loader.ProcessApplicationAssemblies(args);
-            }
-            catch (MissingMethodException)
-            {
-                loader = new AssemblyLoader();
-                args = new ProcessArgument();
-
-                loader.ProcessApplicationAssemblies(args);
-            }
-            catch (Exception)
-            {
-                loader = new AssemblyLoader();
-                args = new ProcessArgument();
-
-                loader.ProcessApplicationAssemblies(args);
-            }
-            finally
-            {
-                if (tempDomain != null)
-                {
                     try
                     {
-                        AppDomain.Unload(tempDomain);
+                        //Create a new domain with the same settings as the current domain
+                        AppDomainSetup setup = AppDomain.CurrentDomain.SetupInformation;
+                        tempDomain = AppDomain.CreateDomain("Temp_" + Guid.NewGuid().ToString(), AppDomain.CurrentDomain.Evidence, setup);
+
+                        try
+                        {
+                            //First try creating the proxy from the assembly using the assembly name
+                            loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.FullName, typeof(AssemblyLoader).FullName);
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            //If that fails try with the assembly location.  An exception here 
+                            loader = (AssemblyLoader)tempDomain.CreateInstanceFromAndUnwrap(typeof(AssemblyLoader).Assembly.Location, typeof(AssemblyLoader).FullName);
+                        }
+
+                        args = new ProcessArgument();
+
+                        //If an entry assembly exists just pass that, the rest can be worked out from there.  
+                        //On WCF there is no entry assembly. In that case fill the loaded domains list with those already loaded
+                        if (Assembly.GetEntryAssembly() != null)
+                            args.loadedDomains = new List<string>() { Assembly.GetEntryAssembly().FullName };
+                        else
+                        {
+                            List<string> loadedDomains = new List<string>();
+
+                            foreach (var ass in AppDomain.CurrentDomain.GetAssemblies())
+                                loadedDomains.Add(ass.FullName);
+
+                            args.loadedDomains = loadedDomains;
+                        }
+
+                        loader.ProcessApplicationAssemblies(args);
                     }
-                    catch (Exception) { }
+                    catch (FileNotFoundException)
+                    {
+                        //In mono, using mkbundle, the above load method may not work so we will fall back to our older way of doing the same
+                        //The disadvantage of this approach is that all assemblies are loaded and then stay in memory increasing the footprint slightly 
+                        loader = new AssemblyLoader();
+                        args = new ProcessArgument();
+
+                        loader.ProcessApplicationAssemblies(args);
+                    }
+                    catch (MissingMethodException)
+                    {
+                        loader = new AssemblyLoader();
+                        args = new ProcessArgument();
+
+                        loader.ProcessApplicationAssemblies(args);
+                    }
+                    catch (Exception)
+                    {
+                        loader = new AssemblyLoader();
+                        args = new ProcessArgument();
+
+                        loader.ProcessApplicationAssemblies(args);
+                    }
                     finally
                     {
-                        tempDomain = null;
-                        GC.Collect();
+                        if (tempDomain != null)
+                        {
+                            try
+                            {
+                                AppDomain.Unload(tempDomain);
+                            }
+                            catch (Exception) { }
+                            finally
+                            {
+                                tempDomain = null;
+                                GC.Collect();
+                            }
+                        }
                     }
-                }
-            }
 #else
             loader = new AssemblyLoader();
             args = new ProcessArgument();
 
             loader.ProcessApplicationAssemblies(args);
 #endif
+                    foreach (var serializer in args.serializerTypes)
+                    {
+                        lock (addRemoveObjectLocker)
+                        {
+                            if (!SerializersByType.ContainsKey(serializer.Value))
+                            {
+                                SerializersByType.Add(serializer.Value, null);
+                                DataSerializerIdToType.Add(serializer.Key, serializer.Value);
+                            }
+                        }
+                    }
 
-            foreach (var serializer in args.serializerTypes)
-            {
-                SerializersByType.Add(serializer.Value, null);
-                DataSerializerIdToType.Add(serializer.Key, serializer.Value);
-            }
+                    foreach (var processor in args.processorTypes)
+                    {
+                        lock (addRemoveObjectLocker)
+                        {
+                            if (!DataProcessorsByType.ContainsKey(processor.Value))
+                            {
+                                DataProcessorsByType.Add(processor.Value, null);
+                                DataProcessorIdToType.Add(processor.Key, processor.Value);
+                            }
+                        }
+                    }
 
-            foreach (var processor in args.processorTypes)
-            {
-                DataProcessorsByType.Add(processor.Value, null);
-                DataProcessorIdToType.Add(processor.Key, processor.Value);
-            }
+
+                });
+
+#if NET2
+            Thread loadThread = new Thread(new ThreadStart(loadAction));
+            loadThread.Name = "DPS load thread";
+            loadThread.Start();
+#else
+            Task.Factory.StartNew(loadAction);
+#endif
+
         }
 
         private class ProcessArgument : MarshalByRefObject
