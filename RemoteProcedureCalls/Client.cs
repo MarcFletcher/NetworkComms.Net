@@ -73,6 +73,40 @@ namespace RemoteProcedureCalls
     public static class Client
     {
         /// <summary>
+        /// Struct that helps store the cached RPC objects
+        /// </summary>
+        struct CachedRPCKey
+        {
+            public string InstanceId { get; private set; }
+            public Connection Connection { get; private set; }
+            public Type ImplementedInterface { get; private set; }
+            public CachedRPCKey(string instanceId, Connection connection, Type implementedInterface)
+                : this()
+            {
+                this.InstanceId = instanceId;
+                this.Connection = connection;
+                this.ImplementedInterface = implementedInterface;
+
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj != null && obj is CachedRPCKey)
+                {
+                    var asKey = (CachedRPCKey)obj;
+                    return this.InstanceId == asKey.InstanceId && this.Connection == asKey.Connection && this.ImplementedInterface == asKey.ImplementedInterface;
+                }
+                else
+                    return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return InstanceId.GetHashCode() ^ Connection.GetHashCode() ^ ImplementedInterface.GetHashCode();
+            }
+        }
+        
+        /// <summary>
         /// The default timeout period in ms for new RPC proxies. Default value is 1000ms 
         /// </summary>
         public static int DefaultRPCTimeout { get; set; }
@@ -82,12 +116,17 @@ namespace RemoteProcedureCalls
         /// </summary>
         public static int RPCInitialisationTimeout { get; set; }
 
+        //Object to ensure thread safety on managing the cache of client objects
+        private static object cacheLocker = new object();
+        //client object cache. This is keyed on the instanceId, the connection and the implemented interface
+        private static Dictionary<CachedRPCKey, object> cachedInstances = new Dictionary<CachedRPCKey, object>();
+
         static Client()
         {
             DefaultRPCTimeout = 1000;
             RPCInitialisationTimeout = 1000;
         }
-
+        
         /// <summary>
         /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is private to this client in the sense that no one else can
         /// use the instance on the server unless they have the instanceId returned by this method
@@ -106,13 +145,13 @@ namespace RemoteProcedureCalls
 
             string packetTypeRequest = typeof(I).Name + "-NEW-INSTANCE-RPC-CONNECTION";
             string packetTypeResponse = packetTypeRequest + "-RESPONSE";
-            instanceId = connection.SendReceiveObject<string, string>(packetTypeRequest, packetTypeResponse , RPCInitialisationTimeout, instanceName);
+            instanceId = connection.SendReceiveObject<string, string>(packetTypeRequest, packetTypeResponse, RPCInitialisationTimeout, instanceName);
 
             if (instanceId == String.Empty)
                 throw new RPCException("Server not listening for new instances of type " + typeof(I).ToString());
 
             return Cache<I>.CreateInstance(instanceId, connection, options);
-        }
+        }        
 
         /// <summary>
         /// Creates a remote proxy instance for the desired interface with the specified server and object identifier.  Instance is public in sense that any client can use specified name to make 
@@ -165,7 +204,7 @@ namespace RemoteProcedureCalls
         }
 
         //We use this to get the private method. Should be able to get it dynamically
-        private static string fullyQualifiedClassName = typeof(Client).AssemblyQualifiedName;// "NetworkCommsDotNet.RemoteProcedureCalls+ProxyClassGenerator, NetworkCommsDotNet, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null";
+        private static string fullyQualifiedClassName = typeof(Client).AssemblyQualifiedName;
 
         /// <summary>
         /// Funky class used for dynamically creating the proxy
@@ -174,38 +213,52 @@ namespace RemoteProcedureCalls
         private static class Cache<I> where I : class
         {
             private static readonly Type Type;
-
+            
             public static I CreateInstance(string instanceId, Connection connection, SendReceiveOptions options)
             {
-                //Create the instance
-                var res = (I)Activator.CreateInstance(Type, instanceId, connection, options, typeof(I), Client.DefaultRPCTimeout);
+                lock (cacheLocker)
+                {
+                    var key = new CachedRPCKey(instanceId, connection, typeof(I));
+                    if (cachedInstances.ContainsKey(key))
+                        return (I)cachedInstances[key];
 
-                Dictionary<string, FieldInfo> eventFields = new Dictionary<string, FieldInfo>();
+                    //Create the instance
+                    var res = (I)Activator.CreateInstance(Type, instanceId, connection, options, typeof(I), Client.DefaultRPCTimeout);
 
-                foreach (var ev in typeof(I).GetEvents())
-                    eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
+                    Dictionary<string, FieldInfo> eventFields = new Dictionary<string, FieldInfo>();
 
-                //Add the packet handler to deal with incoming event firing
-                connection.AppendIncomingPacketHandler<RemoteCallWrapper>(typeof(I).Name + "-RPC-LISTENER-" + instanceId, (header, internalConnection, eventCallWrapper) =>
-                    {
-                        try
+                    foreach (var ev in typeof(I).GetEvents())
+                        eventFields.Add(ev.Name, Type.GetField(ev.Name, BindingFlags.NonPublic | BindingFlags.Instance));
+
+                    //Add the packet handler to deal with incoming event firing
+                    connection.AppendIncomingPacketHandler<RemoteCallWrapper>(typeof(I).Name + "-RPC-LISTENER-" + instanceId, (header, internalConnection, eventCallWrapper) =>
                         {
-                            //Let's do some basic checks on the data we've been sent
-                            if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
-                                return;
+                            try
+                            {
+                                //Let's do some basic checks on the data we've been sent
+                                if (eventCallWrapper == null || !eventFields.ContainsKey(eventCallWrapper.name))
+                                    return;
 
-                            var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
+                                var del = eventFields[eventCallWrapper.name].GetValue(res) as Delegate;
 
-                            var sender = eventCallWrapper.args[0].UntypedValue;
-                            var args = eventCallWrapper.args[1].UntypedValue;
+                                var sender = eventCallWrapper.args[0].UntypedValue;
+                                var args = eventCallWrapper.args[1].UntypedValue;
 
-                            del.DynamicInvoke(sender, args);
-                        }
-                        catch (Exception) { }
+                                del.DynamicInvoke(sender, args);
+                            }
+                            catch (Exception) { }
 
-                    });
+                        });
 
-                return res;
+                    connection.AppendIncomingPacketHandler<string>(typeof(I).Name + "-RPC-DISPOSE-" + instanceId, (header, internalConnection, eventCallWrapper) =>
+                        {
+                            (res as IRPCProxy).Dispose();
+                        });
+
+                    cachedInstances[key] = res;
+
+                    return res;
+                }
             }
             
             static Cache()
@@ -760,11 +813,13 @@ namespace RemoteProcedureCalls
                 string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + wrapper.instanceId;
                 string packetTypeResponse = packetTypeRequest + "-RESPONSE";
 
-                if (clientObject.SendRecieveOptions != null)
-                    wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, clientObject.SendRecieveOptions, clientObject.SendRecieveOptions);
+                SendReceiveOptions options = clientObject.SendRecieveOptions;
+
+                if (options != null)
+                    wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, options, options);
                 else
                     wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper);
-
+                
                 if (wrapper.Exception != null)
                     throw new RPCException(wrapper.Exception);
 
@@ -796,8 +851,27 @@ namespace RemoteProcedureCalls
                 wrapper.name = null;
                 wrapper.instanceId = clientObject.ServerInstanceID;
 
-                connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper);
-                connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-LISTENER-" + clientObject.ServerInstanceID);
+                //Tell the server that we are no longer listenning
+                try { connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper); }
+                catch (Exception) { }
+
+                //Next remove the event packet handler
+                try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-LISTENER-" + clientObject.ServerInstanceID); }
+                catch (Exception) { }
+
+                //Next remove the server side dispose handler
+                try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-DISPOSE-" + clientObject.ServerInstanceID); }
+                catch (Exception) { }
+
+                //Finally remove the object from the cache. This guarentees that if we try to get the instance again at some time in the future
+                //we won't end up with a disposed RPC object
+                lock (cacheLocker)
+                {
+                    var cacheKey = new CachedRPCKey(clientObject.ServerInstanceID, clientObject.ServerConnection, clientObject.ImplementedInterface);
+
+                    try { cachedInstances.Remove(cacheKey); }
+                    catch (Exception) { }
+                }
             }
         }
     }

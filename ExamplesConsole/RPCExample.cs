@@ -360,7 +360,7 @@ namespace Examples.ExamplesConsole
                 //As an alternative we could also use
                 //RemoteProcedureCalls.Server.RemovePublicRPCObject(object instanceName);
                 //RemoteProcedureCalls.Server.RemovePrivateRPCObjectType<T, I>();
-
+                RemoteProcedureCalls.Server.ShutdownAllRPC();
                 NetworkComms.Shutdown();
             }
 
@@ -410,7 +410,7 @@ namespace Examples.ExamplesConsole
                 {
                     case 1:
                         Console.WriteLine("\nYou selected private client object instances.");
-                        RemoteProcedureCalls.Server.RegisterTypeForPrivateRemoteCall<MathClass, IMath>();
+                        RemoteProcedureCalls.Server.RegisterTypeForPrivateRemoteCall<MathClass, IMath>(10000);
                         Console.WriteLine("\nA type of {0} has been successfully registered for RPC usage.\n",typeof(IMath));
                         break;
                     case 2:
