@@ -368,6 +368,9 @@ namespace NetworkCommsDotNet
             byte[] longItemsLengthData = new byte[sizeof(int)]; inputStream.Read(longItemsLengthData, 0, sizeof(int));
             int longItemsLength = BitConverter.ToInt32(longItemsLengthData, 0);
 
+            if (longItemsLength * (sizeof(int) + sizeof(long)) > inputStream.Length)
+                throw new SerialisationException("Error deserializing packet header. Number of long items was too large to be present in the input stream");
+
             for(int i = 0; i < longItemsLength; i++)
             {
                 byte[] keyData = new byte[sizeof(int)]; inputStream.Read(keyData, 0, sizeof(int));
@@ -382,6 +385,9 @@ namespace NetworkCommsDotNet
             byte[] stringItemsLengthData = new byte[sizeof(int)]; inputStream.Read(stringItemsLengthData, 0, sizeof(int));
             int stringItemsLength = BitConverter.ToInt32(stringItemsLengthData, 0);
 
+            if (stringItemsLength * (2 * sizeof(int)) > inputStream.Length)
+                throw new SerialisationException("Error deserializing packet header. Number of string items was too large to be present in the input stream");
+            
             for (int i = 0; i < stringItemsLength; i++)
             {
                 byte[] keyData = new byte[sizeof(int)]; inputStream.Read(keyData, 0, sizeof(int));
@@ -389,6 +395,9 @@ namespace NetworkCommsDotNet
 
                 byte[] valLengthData = new byte[sizeof(int)]; inputStream.Read(valLengthData, 0, sizeof(int));
                 int valLength = BitConverter.ToInt32(valLengthData, 0);
+
+                if (valLength > inputStream.Length)
+                    throw new SerialisationException("Error deserializing packet header. Length string item was too large to be present in the input stream");
 
                 byte[] valData = new byte[valLength]; inputStream.Read(valData, 0, valData.Length);
                 string val = new String(Encoding.UTF8.GetChars(valData));
