@@ -285,7 +285,7 @@ namespace NetworkCommsDotNet.Connections
             RemoveShutdownHandler(SendReceiveShutDownDelegate);
 
             if (remotePeerDisconnectedDuringWait)
-                throw new ExpectedReturnTimeoutException("Remote end closed connection before data was successfully returned.");
+                throw new ConnectionShutdownException("Remote end closed connection before data was successfully returned.");
             else
                 return returnObject;
         }

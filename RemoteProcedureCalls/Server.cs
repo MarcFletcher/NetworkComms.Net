@@ -124,6 +124,8 @@ namespace RemoteProcedureCalls
                 connection.AppendIncomingPacketHandler<RemoteCallWrapper>(InterfaceType.Name + "-RPC-CALL-" + InstanceId, callFunctionDelegate);
                 connection.AppendIncomingPacketHandler<RemoteCallWrapper>(InterfaceType.Name + "-REMOVE-REFERENCE-" + InstanceId, removeDelegate);
 
+                LastAccess = DateTime.Now;
+
                 //If the connection is closed make sure we remove all event handlers associated with that connection so that we don't get exceptions on the event fire
                 //Note we don't want to remove the client object itself
                 connection.AppendShutdownHandler((clientConnection) =>
@@ -134,7 +136,7 @@ namespace RemoteProcedureCalls
 
             public void RemoveClientSubscription(Connection connection)
             {
-                if(SubscribedClients.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
+                if (SubscribedClients.ContainsKey(connection.ConnectionInfo.NetworkIdentifier))
                 {
                     var client = SubscribedClients[connection.ConnectionInfo.NetworkIdentifier];
 
@@ -144,16 +146,27 @@ namespace RemoteProcedureCalls
                         removeMethod.Invoke(obj, new object[] { evPair.Value });
                     }
 
-                    SubscribedClients.Remove(connection.ConnectionInfo.NetworkIdentifier);
-                    connection.RemoveIncomingPacketHandler(InterfaceType.Name + "-RPC-CALL-" + InstanceId, client.CallFunctionDelegate);
-                    connection.RemoveIncomingPacketHandler(InterfaceType.Name + "-REMOVE-REFERENCE-" + InstanceId, client.RemoveDelegate);
+                    try
+                    {
+                        client.Connection.SendObject<string>(InterfaceType.Name + "-RPC-DISPOSE-" + InstanceId, "");
+                    }
+                    catch (Exception) { }
+                    finally
+                    {
+                        LastAccess = DateTime.Now;
+                        SubscribedClients.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                        connection.RemoveIncomingPacketHandler(InterfaceType.Name + "-RPC-CALL-" + InstanceId, client.CallFunctionDelegate);
+                        connection.RemoveIncomingPacketHandler(InterfaceType.Name + "-REMOVE-REFERENCE-" + InstanceId, client.RemoveDelegate);
+                    }
                 }
             }
 
             public void RemoveAllClientSubscriptions()
             {
-                foreach (var client in SubscribedClients)
-                    RemoveClientSubscription(client.Value.Connection);
+                var toRemove = SubscribedClients.Values.Select(client => client.Connection).ToArray();
+                
+                foreach (var clientConnection in toRemove)
+                    RemoveClientSubscription(clientConnection);
             }
 
             private static EventHandler<A> GenerateEvent<A>(Connection clientConnection, string instanceId, Type interfaceType, string eventName) where A : EventArgs
@@ -173,7 +186,7 @@ namespace RemoteProcedureCalls
                 
         private static object locker = new object();
 
-        static readonly int salt;
+        static readonly byte[] salt;
         static readonly System.Security.Cryptography.HashAlgorithm hash;
 
         private static Dictionary<string, RPCRemoteObject> RPCObjectsById = new Dictionary<string, RPCRemoteObject>();
@@ -186,9 +199,8 @@ namespace RemoteProcedureCalls
         static Server()
         {
             var r = System.Security.Cryptography.RandomNumberGenerator.Create();
-            byte[] bytes = new byte[4];
-            r.GetBytes(bytes);
-            salt = BitConverter.ToInt32(bytes, 0);
+            salt = new byte[32];
+            r.GetBytes(salt);
 
             hash = System.Security.Cryptography.HMACSHA256.Create();
 
@@ -221,10 +233,20 @@ namespace RemoteProcedureCalls
             }, TaskCreationOptions.LongRunning);
 
             NetworkComms.OnCommsShutdown += new EventHandler<EventArgs>((sender, args) =>
-            {
+            {                
                 watcherWaitEvent.Set();
                 watcher.Wait();
             });
+        }
+
+        /// <summary>
+        /// Helper method for calculating instance ids
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private static string GetInstanceId(string input)
+        {
+            return System.Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes((input)).Union(salt).ToArray()));
         }
 
         #region Register Methods
@@ -274,7 +296,7 @@ namespace RemoteProcedureCalls
                     throw new InvalidOperationException(typeof(I).Name
                         + " is not an interface");
 
-                string instanceId = System.Convert.ToBase64String(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
+                string instanceId = GetInstanceId(typeof(T).Name + instanceName);
                 
                 if (!RPCObjectsById.ContainsKey(instanceId))
                 {
@@ -413,7 +435,7 @@ namespace RemoteProcedureCalls
         {
             lock (locker)
             {
-                var instanceId = System.Convert.ToBase64String(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName + connection.ConnectionInfo.NetworkIdentifier.ToString()).GetHashCode() ^ salt))));
+                string instanceId = GetInstanceId(typeof(T).Name + instanceName + connection.ConnectionInfo.NetworkIdentifier.ToString());
 
                 if (!RPCObjectsById.ContainsKey(instanceId))
                 {
@@ -441,7 +463,7 @@ namespace RemoteProcedureCalls
         {
             lock (locker)
             {
-                string instanceId = System.Convert.ToBase64String(hash.ComputeHash(BitConverter.GetBytes(((typeof(T).Name + instanceName).GetHashCode() ^ salt))));
+                string instanceId = GetInstanceId(typeof(T).Name + instanceName);
 
                 if (!RPCObjectsById.ContainsKey(instanceId))
                     instanceId = String.Empty;
