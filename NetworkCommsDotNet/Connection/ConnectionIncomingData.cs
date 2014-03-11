@@ -51,6 +51,16 @@ namespace NetworkCommsDotNet.Connections
         protected Thread incomingDataListenThread = null;
 #endif
         /// <summary>
+        /// True if async listen has started
+        /// </summary>
+        protected bool asyncListenStarted = false;
+
+        /// <summary>
+        /// True if the async listen method is in a beginRead
+        /// </summary>
+        protected volatile bool asyncListenerInRead = false;
+
+        /// <summary>
         /// A connection specific method which triggers any requisites for accepting incoming data
         /// </summary>
         protected abstract void StartIncomingDataListen();

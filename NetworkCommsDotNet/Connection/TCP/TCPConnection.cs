@@ -281,8 +281,12 @@ namespace NetworkCommsDotNet.Connections.TCP
                 }
                 else
                 {
+                    if (asyncListenStarted) throw new ConnectionSetupException("Async listen already started. Why has this been called twice?.");
+
+                    asyncListenerInRead = true;
                     connectionStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), connectionStream);
-                    connectionStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), connectionStream);
+
+                    asyncListenStarted = true;
                 }
             }
 #endif
@@ -327,7 +331,9 @@ namespace NetworkCommsDotNet.Connections.TCP
                 if (!stream.CanRead)
                     throw new ObjectDisposedException("Unable to read from stream.");
 
+                if (!asyncListenerInRead) throw new InvalidDataException("The asyncListenerInRead flag should be true. 1");
                 totalBytesRead = stream.EndRead(ar) + totalBytesRead;
+                asyncListenerInRead = false;
 
                 if (SSLOptions.SSLEnabled)
                     //SSLstream does not have a DataAvailable property. We will just assume false.
@@ -438,6 +444,8 @@ namespace NetworkCommsDotNet.Connections.TCP
                     IBuffer newBuffer = Windows.Security.Cryptography.CryptographicBuffer.CreateFromByteArray(dataBuffer);
                     var task = IncomingTCPPacketHandler(await socket.InputStream.ReadAsync(newBuffer, newBuffer.Capacity - (uint)totalBytesRead, InputStreamOptions.Partial));
 #else
+                    if (asyncListenerInRead) throw new InvalidDataException("The asyncListenerInRead flag should be false. 2");
+                    asyncListenerInRead = true;
                     stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
 #endif
                 }

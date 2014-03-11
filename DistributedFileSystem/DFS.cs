@@ -1334,11 +1334,11 @@ namespace DistributedFileSystem
                 //This happens if we dispose the DFS item during this method execution
                 if (loggingEnabled) Logger.Warn("Prevented ObjectDisposedException in IncomingChunkInterestRequest");
             }
-            catch (CommsException)
+            catch (CommsException e)
             {
                 //Something fucked happened.
                 //Console.WriteLine("IncomingChunkInterestRequestError. Error logged.");
-                //LogTools.LogException(ex, "CommsError_IncomingChunkInterestRequest");
+                LogTools.LogException(e, "CommsError_IncomingChunkInterestRequest");
             }
             catch (Exception e)
             {

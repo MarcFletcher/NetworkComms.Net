@@ -351,7 +351,13 @@ namespace NetworkCommsDotNet.Connections.UDP
                 }
             }
             else
+            {
+                if (asyncListenStarted) throw new ConnectionSetupException("Async listen already started. Why has this been called twice?.");
+
                 udpClient.BeginReceive(new AsyncCallback(IncomingUDPPacketHandler), udpClient);
+
+                asyncListenStarted = true;
+            }
 #endif
         }
 

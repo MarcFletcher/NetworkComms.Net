@@ -1132,7 +1132,7 @@ namespace DistributedFileSystem
             if (LocalItemComplete())
                 return new StreamTools.StreamSendWrapper(ItemDataStream, 0, ItemBytesLength);
             else
-                throw new Exception("Attempted to acces DFS item data stream when item was not complete.");
+                throw new Exception("Attempted to access DFS item data stream when item was not complete.");
         }
 
         /// <summary>
