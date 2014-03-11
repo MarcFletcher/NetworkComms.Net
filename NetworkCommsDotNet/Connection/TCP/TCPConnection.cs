@@ -443,6 +443,8 @@ namespace NetworkCommsDotNet.Connections.TCP
 #if NETFX_CORE
                     IBuffer newBuffer = Windows.Security.Cryptography.CryptographicBuffer.CreateFromByteArray(dataBuffer);
                     var task = IncomingTCPPacketHandler(await socket.InputStream.ReadAsync(newBuffer, newBuffer.Capacity - (uint)totalBytesRead, InputStreamOptions.Partial));
+#elif WINDOWS_PHONE
+                    stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
 #else
                     if (asyncListenerInRead) throw new InvalidDataException("The asyncListenerInRead flag should be false. 2");
                     asyncListenerInRead = true;

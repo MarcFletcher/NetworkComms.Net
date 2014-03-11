@@ -45,6 +45,11 @@ namespace Examples.ExamplesChat.WP8
 
             //Refresh the network configuration to ensure we are ready to send messages
             (App.Current as App).ChatApplication.RefreshNetworkCommsConfiguration();
+
+#if DEBUG
+            //Set debug timeouts
+            SetDebugTimeouts();
+#endif
         }
 
         /// <summary>
@@ -67,6 +72,16 @@ namespace Examples.ExamplesChat.WP8
             TextBox textBox = sender as TextBox;
             if (e.Key == System.Windows.Input.Key.Enter)
                 (App.Current as App).ChatApplication.SendMessage(textBox.Text);
-        }        
+        }
+
+        /// <summary>
+        /// Increase default timeouts so that we can easily step through code when running the examples in debug mode.
+        /// </summary>
+        private static void SetDebugTimeouts()
+        {
+            NetworkComms.ConnectionEstablishTimeoutMS = int.MaxValue;
+            NetworkComms.PacketConfirmationTimeoutMS = int.MaxValue;
+            NetworkComms.ConnectionAliveTestTimeoutMS = int.MaxValue;
+        }
     }
 }
