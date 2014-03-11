@@ -56,7 +56,15 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, bool establishIfRequired = true)
         {
-            return GetConnection(connectionInfo, null, null, establishIfRequired);
+            //Added conditional compilation so that GetConnection method usage is not ambiguous. 
+            SendReceiveOptions options = null;
+#if WINDOWS_PHONE || NETFX_CORE
+            StreamSocket socket = null;
+            return GetConnection(connectionInfo, options, socket, establishIfRequired);
+#else
+            TcpClient tcpClient = null;
+            return GetConnection(connectionInfo, options, tcpClient, establishIfRequired);
+#endif 
         }
 
         /// <summary>
@@ -69,7 +77,14 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// <returns>Returns a <see cref="TCPConnection"/></returns>
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
-            return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired);
+            //Added conditional compilation so that GetConnection method usage is not ambiguous. 
+#if WINDOWS_PHONE || NETFX_CORE
+            StreamSocket socket = null;
+            return GetConnection(connectionInfo, defaultSendReceiveOptions, socket, establishIfRequired);
+#else
+            TcpClient tcpClient = null;
+            return GetConnection(connectionInfo, defaultSendReceiveOptions, tcpClient, establishIfRequired);
+#endif
         }
 
 #if !WINDOWS_PHONE && !NETFX_CORE
