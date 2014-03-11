@@ -174,7 +174,8 @@ namespace NetworkCommsDotNet.DPSBase
                     {
                         try
                         {
-                            Assembly protoAss = Assembly.Load("ProtobufSerializer");
+                            AssemblyName assName = new AssemblyName("ProtobufSerializer");
+                            Assembly protoAss = Assembly.Load(assName);
                             t = protoAss.GetType("NetworkCommsDotNet.DPSBase.ProtobufSerializer");
                         }
                         catch (Exception) { }
