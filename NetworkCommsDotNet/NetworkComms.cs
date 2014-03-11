@@ -976,8 +976,10 @@ namespace NetworkCommsDotNet
             commsShutdown = true;
 
             CommsThreadPool.BeginShutdown();
+
             Connection.Shutdown(threadShutdownTimeoutMS);
             HostInfo.IP.ShutdownThreads(threadShutdownTimeoutMS);
+            CloseAllConnections();
 
             try
             {
@@ -1895,7 +1897,11 @@ namespace NetworkCommsDotNet
                         if (allConnectionsByEndPoint[connection.ConnectionInfo.ConnectionType].ContainsKey(remoteEndPointToUse))
                         {
                             if (allConnectionsByEndPoint[connection.ConnectionInfo.ConnectionType][remoteEndPointToUse].ContainsKey(localEndPointToUse))
-                                throw new Exception("Idiot check fail. The method ConnectionExists should have prevented execution getting here!!");
+                            {
+                                throw new Exception("Idiot check fail. The method GetExistingConnection should have prevented execution getting here! Existing dictionary entry ["+
+                                    connection.ConnectionInfo.ConnectionType.ToString() + "][" + remoteEndPointToUse.ToString() + "][" + localEndPointToUse.ToString() + "] is " +
+                                (allConnectionsByEndPoint[connection.ConnectionInfo.ConnectionType][remoteEndPointToUse][localEndPointToUse] == null ? "null." : allConnectionsByEndPoint[connection.ConnectionInfo.ConnectionType][remoteEndPointToUse][localEndPointToUse].ToString()));
+                            }
                             else
                                 allConnectionsByEndPoint[connection.ConnectionInfo.ConnectionType][remoteEndPointToUse].Add(localEndPointToUse, connection);
                         }

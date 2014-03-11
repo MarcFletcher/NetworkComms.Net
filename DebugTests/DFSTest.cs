@@ -75,7 +75,7 @@ namespace DebugTests
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Initialise the DFS before creating the test object to ensure the correct port and IP are used as the seed
-                DFS.InitialiseDFS(10000);
+                DFS.Initialise(10000);
 
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
@@ -201,7 +201,7 @@ namespace DebugTests
                     ConnectionInfo serverConnectionInfo = new ConnectionInfo("192.168.0.105", 10000);
                     //ExampleHelper.GetServerDetails(out serverConnectionInfo);
 
-                    DFS.InitialiseDFS(10000);
+                    DFS.Initialise(10000);
                     Console.WriteLine(" ... DFS has been initialised.");
 
                     bool shutDown = false;
@@ -275,7 +275,7 @@ namespace DebugTests
                     else if (shutDown)
                     {
                         shutDown = true;
-                        DFS.ShutdownDFS();
+                        DFS.Shutdown();
                         //break;
                     }
 
@@ -307,7 +307,7 @@ namespace DebugTests
                 #endregion
             }
 
-            DFS.ShutdownDFS();
+            DFS.Shutdown();
             NetworkComms.Shutdown();
         }
     }
