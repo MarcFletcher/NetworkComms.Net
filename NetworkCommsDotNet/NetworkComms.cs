@@ -131,17 +131,17 @@ namespace NetworkCommsDotNet
 #endif
 
             //Initialise the core extensions
-            DPSManager.AddDataSerializer<ExplicitSerializer>();
-            DPSManager.AddDataSerializer<NullSerializer>();
+            DPSManager.GetDataSerializer<ExplicitSerializer>();
+            DPSManager.GetDataSerializer<NullSerializer>();
             DPSManager.GetDataProcessor<DataPadder>();
 
 #if !FREETRIAL
             //Only the full version includes the encrypter
-            DPSManager.AddDataProcessor<RijndaelPSKEncrypter>();
+            DPSManager.GetDataProcessor<RijndaelPSKEncrypter>();
 #endif
 
 #if !WINDOWS_PHONE && !NETFX_CORE
-            DPSManager.AddDataSerializer<BinaryFormaterSerializer>();
+            DPSManager.GetDataSerializer<BinaryFormaterSerializer>();
 #endif
 
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
