@@ -64,9 +64,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{628a23b2-8018-460f-b6c0-a3ecb4a51a7d}</Project>
-      <Name>DPSBase %28Xamarin.Android\Core\DPSBase%29</Name>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{5f1b4e95-f8dc-4363-8b83-d5fa4b38aa9e}</Project>
+      <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />

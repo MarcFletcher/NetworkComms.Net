@@ -11,7 +11,6 @@ using MonoTouch.Foundation;
 using MonoTouch.UIKit;
 
 using NetworkCommsDotNet;
-using DPSBase;
 
 namespace ExamplesChat.iOS
 {
@@ -65,7 +64,8 @@ namespace ExamplesChat.iOS
             string logFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NetworkCommsLog.txt");
             ChatApplication.AppendLineToChatHistory("Logging enabled to " + logFileName);
 
-            NetworkComms.EnableLogging(logFileName);
+            NetworkCommsDotNet.Tools.ILogger logger = new NetworkCommsDotNet.Tools.LiteLogger(NetworkCommsDotNet.Tools.LiteLogger.LogMode.LogFileOnly, logFileName);
+            NetworkComms.EnableLogging(logger);
         }
 
         #region Event Handlers

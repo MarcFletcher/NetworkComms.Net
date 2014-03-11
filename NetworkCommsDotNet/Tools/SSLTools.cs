@@ -150,6 +150,7 @@ namespace NetworkCommsDotNet.Tools
         }
     }
 
+#if !iOS
     /// <summary>
     /// Tools used in conjunction with SSL encrypted connections.
     /// </summary>
@@ -540,5 +541,6 @@ namespace NetworkCommsDotNet.Tools
         }
         #endregion
     }
+#endif
 }
 #endif

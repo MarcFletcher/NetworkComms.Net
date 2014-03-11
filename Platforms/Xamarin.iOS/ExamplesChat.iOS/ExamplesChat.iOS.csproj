@@ -117,17 +117,9 @@
     <InterfaceDefinition Include="MainStoryboard.storyboard" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DPSBase\DPSBase.csproj">
-      <Project>{e39fe066-05e0-49b6-b626-e465c93625f1}</Project>
-      <Name>DPSBase %28Xamarin.iOS\Core\DPSBase%29</Name>
-    </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{ffea5e37-ad37-49d6-bcd6-944c95d45282}</Project>
-      <Name>NetworkCommsDotNet %28Xamarin.iOS\Core\NetworkCommsDotNet%29</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SevenZipLZMACompressor\SevenZipLZMACompressor.csproj">
-      <Project>{2ac29a31-2574-420e-8247-50e5749f172a}</Project>
-      <Name>SevenZipLZMACompressor %28Xamarin.iOS\Core\SevenZipLZMACompressor%29</Name>
+      <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@ using MonoTouch.Foundation;
 using MonoTouch.UIKit;
 
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.Connections;
 
 namespace ExamplesChat.iOS
 {

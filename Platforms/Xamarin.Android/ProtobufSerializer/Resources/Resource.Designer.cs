@@ -9,9 +9,9 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: global::Android.Runtime.ResourceDesignerAttribute("DPSBase.Resource", IsApplication=false)]
+[assembly: global::Android.Runtime.ResourceDesignerAttribute("ProtobufSerializer.Resource", IsApplication=false)]
 
-namespace DPSBase
+namespace ProtobufSerializer
 {
 	
 	

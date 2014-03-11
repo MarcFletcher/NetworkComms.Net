@@ -31,7 +31,7 @@ using Newtonsoft.Json;
 namespace Examples.ExamplesChat.WPF
 {
     /// <summary>
-    /// A wrapper class for the messages that we intend to send and recieve. 
+    /// A wrapper class for the messages that we intend to send and receive. 
     /// The [ProtoContract] attribute informs NetworkCommsDotNet that we intend to 
     /// serialise (turn into bytes) this object. At the base level the 
     /// serialisation is performed by protobuf.net.

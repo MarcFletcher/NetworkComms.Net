@@ -226,9 +226,9 @@ namespace NetworkCommsDotNet.Tools
                             {
                                 bool allowed = false;
 
-                                if (AllowedListeningIPRanges != null)
+                                if (RestrictLocalAddressRanges != null)
                                 {
-                                    if (IPTools.Contains(AllowedListeningIPRanges, address))
+                                    if (IPRange.Contains(RestrictLocalAddressRanges, address))
                                         allowed = true;
                                 }
                                 else

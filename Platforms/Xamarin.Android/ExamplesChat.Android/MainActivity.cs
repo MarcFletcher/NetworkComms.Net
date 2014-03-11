@@ -9,6 +9,7 @@ using Android.OS;
 using System.Net;
 using System.Collections.Generic;
 using System.IO;
+using NetworkCommsDotNet.Connections;
 
 namespace ExamplesChat.Android
 {
@@ -106,7 +107,7 @@ namespace ExamplesChat.Android
         }
 
         /// <summary>
-        /// Enable NetworkComms.Net logging. Usefull for debugging.
+        /// Enable NetworkComms.Net logging. Useful for debugging.
         /// </summary>
         void EnableLogging()
         {
@@ -116,7 +117,8 @@ namespace ExamplesChat.Android
 
             chatApplication.AppendLineToChatHistory(System.Environment.NewLine + "Logging enabled to " + logFileName);
 
-            NetworkCommsDotNet.NetworkComms.EnableLogging(logFileName);
+            NetworkCommsDotNet.Tools.ILogger logger = new NetworkCommsDotNet.Tools.LiteLogger(NetworkCommsDotNet.Tools.LiteLogger.LogMode.LogFileOnly, logFileName);
+            NetworkCommsDotNet.NetworkComms.EnableLogging(logger);
         }
 
         #region Event Handlers
@@ -144,7 +146,7 @@ namespace ExamplesChat.Android
             {
                 IPAddress newMasterIPAddress;
                 if (IPAddress.TryParse(ipTextBox.Text, out newMasterIPAddress))
-                    //If the parse was succesfull we can update the chat application
+                    //If the parse was successful we can update the chat application
                     chatApplication.ServerIPAddress = newMasterIPAddress.ToString();
                 else
                     //If the parse failed set the ipTextBox back to the the previous good value
@@ -182,9 +184,9 @@ namespace ExamplesChat.Android
             //Parse the connection type
             string selectedItem = connectionTypeSelector.SelectedItem.ToString();
             if (selectedItem == "TCP")
-                chatApplication.ConnectionType = NetworkCommsDotNet.ConnectionType.TCP;
+                chatApplication.ConnectionType = ConnectionType.TCP;
             else if (selectedItem == "UDP")
-                chatApplication.ConnectionType = NetworkCommsDotNet.ConnectionType.UDP;
+                chatApplication.ConnectionType = ConnectionType.UDP;
 
             //Update the NetworkComms.Net configuration
             chatApplication.RefreshNetworkCommsConfiguration();

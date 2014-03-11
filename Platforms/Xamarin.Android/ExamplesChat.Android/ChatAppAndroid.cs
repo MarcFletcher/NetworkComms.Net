@@ -9,6 +9,7 @@ using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Android.Widget;
+using NetworkCommsDotNet.Connections;
 
 namespace ExamplesChat.Android
 {
@@ -45,7 +46,7 @@ namespace ExamplesChat.Android
         /// Constructor for the Android chat app.
         /// </summary>
         public ChatAppAndroid(Context parentContext, TextView chatHistory, AutoCompleteTextView input)
-            : base("Android", NetworkCommsDotNet.ConnectionType.TCP)
+            : base("Android", ConnectionType.TCP)
         {
             this.ParentContext = parentContext;
             this.ChatHistory = chatHistory;

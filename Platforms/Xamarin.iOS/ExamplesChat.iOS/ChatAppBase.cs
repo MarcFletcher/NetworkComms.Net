@@ -1,10 +1,33 @@
+//  Copyright 2009-2014 Marc Fletcher, Matthew Dean
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//  Non-GPL versions of this software can also be purchased. 
+//  Please see <http://www.networkcomms.net> for details.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 using NetworkCommsDotNet;
-using DPSBase;
+using NetworkCommsDotNet.DPSBase;
+using System.Net;
+using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.Tools;
+using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 
 namespace ExamplesChat.iOS
 {
@@ -39,16 +62,21 @@ namespace ExamplesChat.iOS
         /// <summary>
         /// An optional encryption key to use should one be required.
         /// This can be changed freely but must obviously be the same
-        /// for both sender and reciever.
+        /// for both sender and receiver.
         /// </summary>
         string _encryptionKey = "ljlhjf8uyfln23490jf;m21-=scm20--iflmk;";
         #endregion
 
         #region Public Fields
         /// <summary>
-        /// The type of connection currently used to send and recieve messages. Default is TCP.
+        /// The type of connection currently used to send and receive messages. Default is TCP.
         /// </summary>
         public ConnectionType ConnectionType { get; set; }
+
+        /// <summary>
+        /// The serializer to use
+        /// </summary>
+        public DataSerializer Serializer { get; set; }
 
         /// <summary>
         /// The IP address of the server 
@@ -99,14 +127,14 @@ namespace ExamplesChat.iOS
         public void RefreshNetworkCommsConfiguration()
         {
             #region First Initialisation
-            //On first initilisation we need to configure NetworkComms.Net to handle our incoming packet types
+            //On first initialisation we need to configure NetworkComms.Net to handle our incoming packet types
             //We only need to add the packet handlers once. If we call NetworkComms.Shutdown() at some future point these are not removed.
             if (FirstInitialisation)
             {
                 FirstInitialisation = false;
 
                 //Configure NetworkComms.Net to handle any incoming packet of type 'ChatMessage'
-                //e.g. If we recieve a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
+                //e.g. If we receive a packet of type 'ChatMessage' execute the method 'HandleIncomingChatMessage'
                 NetworkComms.AppendGlobalIncomingPacketHandler<ChatMessage>("ChatMessage", HandleIncomingChatMessage);
 
                 //Configure NetworkComms.Net to perform some action when a connection is closed
@@ -115,30 +143,35 @@ namespace ExamplesChat.iOS
             }
             #endregion
 
+            #region Set serializer
+            //Set the default send receive options to use the specified serializer. Keep the DataProcessors and Options from the previous defaults
+            NetworkComms.DefaultSendReceiveOptions = new SendReceiveOptions(Serializer, NetworkComms.DefaultSendReceiveOptions.DataProcessors, NetworkComms.DefaultSendReceiveOptions.Options);
+            #endregion
+
             #region Optional Encryption
             //Configure encryption if requested
-            if (EncryptionEnabled && !NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSBase.DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>()))
+            if (EncryptionEnabled && !NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>()))
             {
                 //Encryption is currently implemented using a pre-shared key (PSK) system
                 //NetworkComms.Net supports multiple data processors which can be used with any level of granularity
                 //To enable encryption globally (i.e. for all connections) we first add the encryption password as an option
-                DPSBase.RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, _encryptionKey);
+                RijndaelPSKEncrypter.AddPasswordToOptions(NetworkComms.DefaultSendReceiveOptions.Options, _encryptionKey);
                 //Finally we add the RijndaelPSKEncrypter data processor to the sendReceiveOptions
-                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSBase.DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>());
+                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Add(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }
-            else if (!EncryptionEnabled && NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSBase.DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>()))
+            else if (!EncryptionEnabled && NetworkComms.DefaultSendReceiveOptions.DataProcessors.Contains(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>()))
             {
                 //If encryption has been disabled but is currently enabled
                 //To disable encryption we just remove the RijndaelPSKEncrypter data processor from the sendReceiveOptions
-                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSBase.DPSManager.GetDataProcessor<DPSBase.RijndaelPSKEncrypter>());
+                NetworkComms.DefaultSendReceiveOptions.DataProcessors.Remove(DPSManager.GetDataProcessor<RijndaelPSKEncrypter>());
             }
             #endregion
 
             #region Local Server Mode and Connection Type Changes
-            if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !TCPConnection.Listening())
+            if (LocalServerEnabled && ConnectionType == ConnectionType.TCP && !Connection.Listening(ConnectionType.TCP))
             {
-                //If we were previously listening for UDP we first shutdown comms.
-                if (UDPConnection.Listening())
+                //If we were previously listening for UDP we first shutdown NetworkComms.Net.
+                if (Connection.Listening(ConnectionType.UDP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
@@ -150,21 +183,22 @@ namespace ExamplesChat.iOS
                 }
 
                 //Start listening for new incoming TCP connections
-                //Parameter is true so that we listen on a random port if the default is not available
-                TCPConnection.StartListening(true);
+                //We want to select a random port on all available adaptors so provide 
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 0));
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming TCP connections on:");
-                foreach (var listenEndPoint in TCPConnection.ExistingLocalListenEndPoints())
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
                 AppendLineToChatHistory(System.Environment.NewLine);
             }
-            else if (LocalServerEnabled && ConnectionType == ConnectionType.UDP && !UDPConnection.Listening())
+            else if (LocalServerEnabled && ConnectionType == ConnectionType.UDP && !Connection.Listening(ConnectionType.UDP))
             {
-                //If we were previously listening for TCP we first shutdown comms.
-                if (TCPConnection.Listening())
+                //If we were previously listening for TCP we first shutdown NetworkComms.Net.
+                if (Connection.Listening(ConnectionType.TCP))
                 {
                     AppendLineToChatHistory("Connection mode has been changed. Any existing connections will be closed.");
                     NetworkComms.Shutdown();
@@ -176,18 +210,19 @@ namespace ExamplesChat.iOS
                 }
 
                 //Start listening for new incoming UDP connections
-                //Parameter is true so that we listen on a random port if the default is not available
-                UDPConnection.StartListening(true);
+                //We want to select a random port on all available adaptors so provide
+                //an IPEndPoint using IPAddress.Any and port 0.
+                Connection.StartListening(ConnectionType.UDP, new IPEndPoint(IPAddress.Any, 0));
 
                 //Write the IP addresses and ports that we are listening on to the chatBox
                 AppendLineToChatHistory("Listening for incoming UDP connections on:");
-                foreach (var listenEndPoint in UDPConnection.ExistingLocalListenEndPoints())
+                foreach (IPEndPoint listenEndPoint in Connection.ExistingLocalListenEndPoints(ConnectionType.UDP))
                     AppendLineToChatHistory(listenEndPoint.Address + ":" + listenEndPoint.Port);
 
                 //Add a blank line after the initialisation output
                 AppendLineToChatHistory(System.Environment.NewLine);
             }
-            else if (!LocalServerEnabled && (TCPConnection.Listening() || UDPConnection.Listening()))
+            else if (!LocalServerEnabled && (Connection.Listening(ConnectionType.TCP) || Connection.Listening(ConnectionType.UDP)))
             {
                 //If the local server mode has been disabled but we are still listening we need to stop accepting incoming connections
                 NetworkComms.Shutdown();
@@ -208,15 +243,15 @@ namespace ExamplesChat.iOS
         }
 
         /// <summary>
-        /// Performs whatever functions we might so desire when we recieve an incoming ChatMessage
+        /// Performs whatever functions we might so desire when we receive an incoming ChatMessage
         /// </summary>
-        /// <param name="header">The PacketHeader corresponding with the recieved object</param>
-        /// <param name="connection">The Connection from which this object was recieved</param>
+        /// <param name="header">The PacketHeader corresponding with the received object</param>
+        /// <param name="connection">The Connection from which this object was received</param>
         /// <param name="incomingMessage">The incoming ChatMessage we are after</param>
         protected virtual void HandleIncomingChatMessage(PacketHeader header, Connection connection, ChatMessage incomingMessage)
         {
             //We only want to write a message once to the chat window
-            //Because we support relaying and may recieve the same message twice from multiple sources
+            //Because we support relaying and may receive the same message twice from multiple sources
             //we use our history and message indexes to ensure we have a new message
             //We perform this action within a lock as HandleIncomingChatMessage could be called in parallel
             lock (lastPeerMessageDict)
@@ -229,14 +264,14 @@ namespace ExamplesChat.iOS
                         //write the message to the ChatBox
                         AppendLineToChatHistory(incomingMessage.SourceName + " - " + incomingMessage.Message);
 
-                        //We now replace the last recieved message with the current one
+                        //We now replace the last received message with the current one
                         lastPeerMessageDict[incomingMessage.SourceIdentifier] = incomingMessage;
                     }
                 }
                 else
                 {
                     //If we have never had a message from this source before then it has to be new
-                    //by defintion
+                    //by definition
                     lastPeerMessageDict.Add(incomingMessage.SourceIdentifier, incomingMessage);
                     AppendLineToChatHistory(incomingMessage.SourceName + " - " + incomingMessage.Message);
                 }
@@ -260,7 +295,7 @@ namespace ExamplesChat.iOS
                     //To ensure a single failed send will not prevent the
                     //relay to all working connections.
                     try { relayConnection.SendObject("ChatMessage", incomingMessage); }
-                    catch (CommsException) { /* Catch the comms exception, ignore and continue */ }
+                    catch (CommsException) { /* Catch the general comms exception, ignore and continue */ }
                 }
             }
         }
@@ -272,14 +307,14 @@ namespace ExamplesChat.iOS
         private void HandleConnectionClosed(Connection connection)
         {
             //We are going to write a message to the chat history when a connection disconnects
-            //We perform the following within a lock incase mutliple connections disconnect simultaneously  
+            //We perform the following within a lock in case multiple connections disconnect simultaneously  
             lock (lastPeerMessageDict)
             {
                 //Get the remoteIdentifier from the closed connection
                 //This a unique GUID which can be used to identify peers
                 ShortGuid remoteIdentifier = connection.ConnectionInfo.NetworkIdentifier;
 
-                //If at any point we recieved a message with a matching identifier we can
+                //If at any point we received a message with a matching identifier we can
                 //include the peer name in the disconnection message.
                 if (lastPeerMessageDict.ContainsKey(remoteIdentifier))
                     AppendLineToChatHistory("Connection with '" + lastPeerMessageDict[remoteIdentifier].SourceName + "' has been closed.");
@@ -314,7 +349,7 @@ namespace ExamplesChat.iOS
             //We wrap everything we want to send in the ChatMessage class we created
             ChatMessage chatMessage = new ChatMessage(NetworkComms.NetworkIdentifier, LocalName, stringToSend, messageSendIndex++);
 
-            //We add our own message to the message history incase it gets relayed back to us
+            //We add our own message to the message history in case it gets relayed back to us
             lock (lastPeerMessageDict) lastPeerMessageDict[NetworkComms.NetworkIdentifier] = chatMessage;
 
             //We write our own message to the chatBox
@@ -336,8 +371,8 @@ namespace ExamplesChat.iOS
                     else
                         throw new Exception("An invalid connectionType is set.");
                 }
-                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
-                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
+                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occurred while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
+                catch (Exception) { AppendLineToChatHistory("Error: A general error occurred while trying to send message to " + serverConnectionInfo + ". Please check settings and try again."); }
             }
 
             //If we have any other connections we now send the message to those as well
@@ -361,8 +396,8 @@ namespace ExamplesChat.iOS
                     else
                         throw new Exception("An invalid connectionType is set.");
                 }
-                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occured while trying to send message to " + info + ". Please check settings and try again."); }
-                catch (Exception) { AppendLineToChatHistory("Error: A general error occured while trying to send message to " + info + ". Please check settings and try again."); }
+                catch (CommsException) { AppendLineToChatHistory("Error: A communication error occurred while trying to send message to " + info + ". Please check settings and try again."); }
+                catch (Exception) { AppendLineToChatHistory("Error: A general error occurred while trying to send message to " + info + ". Please check settings and try again."); }
             }
 
             return;
@@ -378,7 +413,7 @@ namespace ExamplesChat.iOS
             AppendLineToChatHistory("");
             AppendLineToChatHistory("Chat usage instructions:");
             AppendLineToChatHistory("");
-            AppendLineToChatHistory("Step 1. Open atleast two chat applications. You can choose from Android, Windows Phone, iOS or native Windows versions.");
+            AppendLineToChatHistory("Step 1. Open at least two chat applications. You can choose from Android, Windows Phone, iOS or native Windows versions.");
             AppendLineToChatHistory("Step 2. Enable local server mode in a single application, see settings.");
             AppendLineToChatHistory("Step 3. Provide remote server IP and port information in settings on remaining application.");
             AppendLineToChatHistory("Step 4. Start chatting.");
