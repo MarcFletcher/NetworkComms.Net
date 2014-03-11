@@ -55,7 +55,7 @@ namespace DebugTests
                 DistributedFileSystem.DFS.EnableLogging(logger);
             }
 
-            DebugTest.RunExample();
+            //DebugTest.RunExample();
             //DebugTest.Test();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
@@ -70,12 +70,10 @@ namespace DebugTests
             //PeerDiscoveryTest.RunExample();
             //SelfConnectTest.RunExample();
 
-            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Documents\Visual Studio 2010\Projects\networkcomms.net\DebugTests\bin\Debug\DebugTests_9GvNYKHC1E-cDqu8qTneew.txt");
-            //log.LinesWithMatch(new string[] { "Completed adding connection reference by endPoint" }, "matchLog.txt");
-            //log.LinesWithMatch(new string[] { "Completed ChunkAvailabilityReply using data", "Added ChunkAvailabilityReply to chunkDataCache"}, "matchLog.txt");
-            //log.LinesWithMatch(new string[] { "written to TCP netstream at" }, "matchLog.txt");
-            //log.ThreadPoolInfo("threadPool.csv");
-            //log.DataSendReceive(10, "sendReceiveStats.csv");
+            LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\GPAClientLog_FilledPacketQueue.txt");
+            log.LinesWithMatch(new string[] { "Received packet of type" }, "matchLog.txt");
+            log.ThreadPoolInfo("threadPool.csv");
+            log.DataSendReceive(10, "sendReceiveStats.csv");
         }
     }
 }

@@ -431,7 +431,7 @@ namespace DistributedFileSystem
         {
             if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Started DFS item assemble - "+ItemIdentifier+" (" + this.ItemCheckSum + ").");
 
-            AddBuildLogLine("Started DFS item assemble - " + ItemIdentifier + " (" + this.ItemCheckSum + ").");
+            AddBuildLogLine("Started DFS item assemble - " + ItemIdentifier + " (" + this.ItemCheckSum + "), allowing "+assembleTimeoutSecs+" seconds to build.");
 
             //Used to load balance
             Random randGen = new Random();

@@ -45,6 +45,11 @@ namespace Examples.ExamplesConsole
             //Ask user if they want to enable comms logging
             SelectLogging();
 
+#if DEBUG
+            //Set debug timeouts
+            SetDebugTimeouts();
+#endif
+
             //All we do here is let the user choice a specific example
             Console.WriteLine("Please selected an example:\n");
 
@@ -126,6 +131,16 @@ namespace Examples.ExamplesConsole
             //When we are done we give the user a chance to see all output
             Console.WriteLine("\n\nExample has completed. Please press any key to close.");
             Console.ReadKey(true);
+        }
+
+        /// <summary>
+        /// Increase default timeouts so that we can easily step through code when running the examples in debug mode.
+        /// </summary>
+        private static void SetDebugTimeouts()
+        {
+            NetworkComms.ConnectionEstablishTimeoutMS = int.MaxValue;
+            NetworkComms.PacketConfirmationTimeoutMS = int.MaxValue;
+            NetworkComms.ConnectionAliveTestTimeoutMS = int.MaxValue;
         }
 
         private static void SelectLogging()

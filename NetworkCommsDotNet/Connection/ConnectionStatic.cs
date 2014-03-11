@@ -72,7 +72,7 @@ namespace NetworkCommsDotNet.Connections
         }
 
         /// <summary>
-        /// The minimum number of milliseconds to allow per KB before a write timeout may occur. Default is 10.0.
+        /// The minimum number of milliseconds to allow per KB before a write timeout may occur. Default is 20.0.
         /// </summary>
         public static double MinimumMSPerKBSendTimeout { get; set; }
 
@@ -82,7 +82,7 @@ namespace NetworkCommsDotNet.Connections
         public static int MaxNumSendTimes { get; set; }
 
         /// <summary>
-        /// The minimum number of writes before the connection specific write timeouts will be used. Default is 3.
+        /// The minimum number of writes before the connection specific write timeouts will be used. Default is 4.
         /// </summary>
         public static int MinNumSendsBeforeConnectionSpecificSendTimeout { get; set; }
 
@@ -92,7 +92,7 @@ namespace NetworkCommsDotNet.Connections
         public static int DefaultMSPerKBSendTimeout { get; set; }
 
         /// <summary>
-        /// The minimum timeout for any sized send in milliseconds. Prevents timeouts when sending less than 1KB. Default is 500.
+        /// The minimum timeout for any sized send in milliseconds. Prevents timeouts when sending less than 1KB. Default is 2000.
         /// </summary>
         public static int MinSendTimeoutMS { get; set; }
 
@@ -102,7 +102,7 @@ namespace NetworkCommsDotNet.Connections
         public static int ConnectionKeepAlivePollIntervalSecs { get; set; }
 
         /// <summary>
-        /// The number of standard deviations from the mean to use for write timeouts. Default is 4.0.
+        /// The number of standard deviations from the mean to use for write timeouts. Default is 3.0.
         /// </summary>
         public static double NumberOfStDeviationsForWriteTimeout { get; set; }
 

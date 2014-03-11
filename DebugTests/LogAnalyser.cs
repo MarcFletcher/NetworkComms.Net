@@ -45,21 +45,37 @@ namespace DebugTests
         /// <returns>True if the parse is succesfull</returns>
         private static bool ParseLineTime(string line, out DateTime result)
         {
+            char timeSep = '.';
             try
             {
                 string timeStr = line.Substring(0, line.IndexOf(" ["));
 
-                if (timeStr.Count(f => f == ':') == 3)
-                    result = DateTime.ParseExact(timeStr, "HH:mm:ss:fff", CultureInfo.InvariantCulture);
+                if (timeStr.Count(f => f == '.') == 3)
+                    result = DateTime.ParseExact(timeStr, "HH.mm.ss.fff", CultureInfo.InvariantCulture);
                 else
-                    result = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
+                    result = DateTime.ParseExact(timeStr, "HH.mm.ss", CultureInfo.InvariantCulture);
 
                 return true;
             }
             catch (Exception)
             {
-                result = DateTime.Now;
-                return false;
+                try
+                {
+                    timeSep = ':';
+                    string timeStr = line.Substring(0, line.IndexOf(" ["));
+
+                    if (timeStr.Count(f => f == '.') == 3)
+                        result = DateTime.ParseExact(timeStr, "HH.mm.ss.fff", CultureInfo.InvariantCulture);
+                    else
+                        result = DateTime.ParseExact(timeStr, "HH.mm.ss", CultureInfo.InvariantCulture);
+
+                    return true;
+                }
+                catch (Exception)
+                {
+                    result = DateTime.Now;
+                    return false;
+                }
             }
         }
 

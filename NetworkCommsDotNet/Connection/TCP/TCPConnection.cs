@@ -280,7 +280,10 @@ namespace NetworkCommsDotNet.Connections.TCP
                     }
                 }
                 else
+                {
                     connectionStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), connectionStream);
+                    connectionStream.BeginRead(dataBuffer, 0, dataBuffer.Length, new AsyncCallback(IncomingTCPPacketHandler), connectionStream);
+                }
             }
 #endif
 
