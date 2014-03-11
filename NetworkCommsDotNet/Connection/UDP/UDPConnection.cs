@@ -107,7 +107,9 @@ namespace NetworkCommsDotNet.Connections.UDP
                     isIsolatedUDPConnection = true;
 
 #if WINDOWS_PHONE || NETFX_CORE
-                    if (ConnectionInfo.LocalEndPoint == null)
+                    if (ConnectionInfo.LocalEndPoint == null || 
+                        (ConnectionInfo.LocalIPEndPoint.Address == IPAddress.Any && connectionInfo.LocalIPEndPoint.Port == 0) ||
+                        (ConnectionInfo.LocalIPEndPoint.Address == IPAddress.IPv6Any && connectionInfo.LocalIPEndPoint.Port == 0))
                     {
                         socket = new DatagramSocket();
 

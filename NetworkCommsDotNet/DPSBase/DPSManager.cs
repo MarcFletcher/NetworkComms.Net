@@ -164,7 +164,6 @@ namespace NetworkCommsDotNet.DPSBase
             else
             {
                 //if we're after protobuf we'll try and load it manually
-#if !NETFX_CORE
                 if (Id == 1 && !Instance.loadCompleted.WaitOne(0))
                 {
                     Type t = null;
@@ -175,7 +174,8 @@ namespace NetworkCommsDotNet.DPSBase
                     {
                         try
                         {
-                            Assembly protoAss = Assembly.Load("ProtobufSerializer");
+                            AssemblyName assName = new AssemblyName("ProtobufSerializer");
+                            Assembly protoAss = Assembly.Load(assName);
                             t = protoAss.GetType("NetworkCommsDotNet.DPSBase.ProtobufSerializer");
                         }
                         catch (Exception) { }
@@ -199,7 +199,6 @@ namespace NetworkCommsDotNet.DPSBase
                         }
                     }
                 }
-#endif
 
                 //if the id is not present we're going to have to wait for the dynamic load to finish
                 Instance.loadCompleted.WaitOne();
