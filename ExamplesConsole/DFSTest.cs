@@ -73,7 +73,7 @@ namespace Examples.ExamplesConsole
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
                 //Initialise the DFS before creating the test object to ensure the correct port and IP are used as the seed
-                DFS.InitialiseDFS(10000);
+                DFS.Initialise(10000);
 
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
@@ -196,7 +196,7 @@ namespace Examples.ExamplesConsole
 
                 ConnectionInfo serverConnectionInfo = ExampleHelper.GetServerDetails();
 
-                DFS.InitialiseDFS(10000);
+                DFS.Initialise(10000);
                 Console.WriteLine(" ... DFS has been initialised.");
 
                 bool shutDown = false;
@@ -267,7 +267,7 @@ namespace Examples.ExamplesConsole
                     else if (shutDown)
                     {
                         shutDown = true;
-                        DFS.ShutdownDFS();
+                        DFS.Shutdown();
                         break;
                     }
 
@@ -287,7 +287,7 @@ namespace Examples.ExamplesConsole
                 #endregion
             }
 
-            DFS.ShutdownDFS();
+            DFS.Shutdown();
             NetworkComms.Shutdown();
         }
     }

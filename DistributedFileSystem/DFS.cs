@@ -207,7 +207,7 @@ namespace DistributedFileSystem
         /// </summary>
         /// <param name="initialPort">The local listen port to use</param>
         /// <param name="rangeRandomPortFailover">True if a random port should be select if the initialPort is unavailable</param>
-        public static void InitialiseDFS(int initialPort, bool rangeRandomPortFailover = true)
+        public static void Initialise(int initialPort, bool rangeRandomPortFailover = true)
         {
             try
             {
@@ -230,6 +230,7 @@ namespace DistributedFileSystem
                 NetworkComms.IgnoreUnknownPacketTypes = true;
 
                 #region Add Packet Handlers
+                //TCP
                 NetworkComms.AppendGlobalIncomingPacketHandler<ItemAssemblyConfig>("DFS_IncomingLocalItemBuild", IncomingLocalItemBuild);
                 NetworkComms.AppendGlobalIncomingPacketHandler<string[]>("DFS_RequestLocalItemBuild", RequestLocalItemBuilds);
 
@@ -455,13 +456,26 @@ namespace DistributedFileSystem
         /// <summary>
         /// Shutdown the DFS. All local DFS items are deleted.
         /// </summary>
-        public static void ShutdownDFS()
+        public static void Shutdown()
         {
             if (DFSShutdownEvent!=null)
                 DFSShutdownEvent.Set();
 
             RemoveAllItemsFromLocalOnly();
-            NetworkComms.Shutdown();
+
+            //Remove all packethandlers
+            NetworkComms.RemoveGlobalIncomingPacketHandler<ItemAssemblyConfig>("DFS_IncomingLocalItemBuild", IncomingLocalItemBuild);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<string[]>("DFS_RequestLocalItemBuild", RequestLocalItemBuilds);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<ChunkAvailabilityRequest>("DFS_ChunkAvailabilityInterestRequest", IncomingChunkInterestRequest);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<byte[]>("DFS_ChunkAvailabilityInterestReplyData", IncomingChunkInterestReplyData);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<ChunkAvailabilityReply>("DFS_ChunkAvailabilityInterestReplyInfo", IncomingChunkInterestReplyInfo);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<string>("DFS_ChunkAvailabilityRequest", IncomingChunkAvailabilityRequest);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<PeerChunkAvailabilityUpdate>("DFS_PeerChunkAvailabilityUpdate", IncomingPeerChunkAvailabilityUpdate);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<ItemRemovalUpdate>("DFS_ItemRemovalUpdate", IncomingItemRemovalUpdate);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<KnownPeerEndPoints>("DFS_KnownPeersUpdate", KnownPeersUpdate);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<string>("DFS_KnownPeersRequest", KnownPeersRequest);
+            NetworkComms.RemoveGlobalIncomingPacketHandler<DFSLinkRequest>("DFS_ItemLinkRequest", IncomingRemoteItemLinkRequest);
+            NetworkComms.RemoveGlobalConnectionCloseHandler(DFSConnectionShutdown);
 
             DFSInitialised = false;
 
@@ -1368,7 +1382,8 @@ namespace DistributedFileSystem
                             if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][packetIdentifier] == null)
                                 throw new Exception("An entry existed for the desired dataSequenceNumber but the entry was null.");
                             else if (chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][packetIdentifier].ChunkAvailabilityReply == null)
-                                throw new Exception("An entry existed for the desired ChunkAvailabilityReply but the entry was null.");
+                                throw new Exception("An entry existed for the desired ChunkAvailabilityReply but the entry was null."+
+                                    " This exception can be thrown if the 'IncomingChunkInterestReplyData' packet handler has been added more than once.");
 
                             //The info beat the data so we handle it here
                             existingChunkAvailabilityReply = chunkDataCache[connection.ConnectionInfo.NetworkIdentifier][packetIdentifier].ChunkAvailabilityReply;
@@ -1429,7 +1444,7 @@ namespace DistributedFileSystem
                 ConnectionInfo incomingConnectionInfo = new ConnectionInfo(connection.ConnectionInfo.ConnectionType, incomingReply.SourceNetworkIdentifier, connection.ConnectionInfo.RemoteEndPoint, true);
                 if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingChunkInterestReplyInfo from " + connection + " for item " + incomingReply.ItemCheckSum + ", chunkIndex " + incomingReply.ChunkIndex + ".");
 
-                if (incomingReply.PacketIdentifier == null)
+                if (incomingReply.ReplyState == ChunkReplyState.DataIncluded && incomingReply.PacketIdentifier == null)
                     throw new ArgumentNullException("The specified packet identifier cannot be null.");
 
                 DistributedItem item = null;
@@ -1447,7 +1462,9 @@ namespace DistributedFileSystem
                     {
                         //We generally expect the data to arrive first, but we handle both situations anyway
                         //Realistic testing across a 100MB connection shows that we already have the data 90.1% of the time
-                        if (chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier) && chunkDataCache[incomingReply.SourceNetworkIdentifier].ContainsKey(incomingReply.PacketIdentifier))
+                        if (incomingReply.ReplyState == ChunkReplyState.DataIncluded && 
+                            chunkDataCache.ContainsKey(incomingReply.SourceNetworkIdentifier) && 
+                            chunkDataCache[incomingReply.SourceNetworkIdentifier].ContainsKey(incomingReply.PacketIdentifier))
                         {
                             incomingReply.SetChunkData(chunkDataCache[incomingReply.SourceNetworkIdentifier][incomingReply.PacketIdentifier].Data);
                             chunkDataCache[incomingReply.SourceNetworkIdentifier].Remove(incomingReply.PacketIdentifier);
