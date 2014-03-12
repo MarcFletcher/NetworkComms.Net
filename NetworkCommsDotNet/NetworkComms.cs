@@ -40,7 +40,6 @@ using NetworkCommsDotNet.Tools.XPlatformHelper;
 
 //Assembly marked as CLSCompliant
 [assembly: CLSCompliant(true)]
-
 namespace NetworkCommsDotNet
 {
     /// <summary>
