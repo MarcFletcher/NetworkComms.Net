@@ -10,6 +10,7 @@ using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using NetworkCommsDotNet.Connections;
+using NetworkCommsDotNet.DPSBase;
 
 namespace ExamplesChat.Android
 {
@@ -51,6 +52,7 @@ namespace ExamplesChat.Android
             this.ParentContext = parentContext;
             this.ChatHistory = chatHistory;
             this.Input = input;
+            Serializer = DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
         }
 
         #region GUI Interface Overrides
