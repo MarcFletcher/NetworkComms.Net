@@ -10,7 +10,21 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>ExamplesChat.iOS</RootNamespace>
     <IPhoneResourcePrefix>Resources</IPhoneResourcePrefix>
-    <AssemblyName>ExamplesChatiOS</AssemblyName>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhoneSimulator' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,8 +59,11 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <MtouchDebug>true</MtouchDebug>
-    <CodesignKey>iPhone Developer</CodesignKey>
+    <CodesignKey>iPhone Developer: Marc Fletcher %2892PUF74A7N%29</CodesignKey>
     <AssemblyName>ExamplesChatiOS</AssemblyName>
+    <CodesignProvision>77A393D1-A853-4DB5-8945-B33D3E883F74</CodesignProvision>
+    <CodesignExtraArgs>
+    </CodesignExtraArgs>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|iPhone' ">
     <DebugType>none</DebugType>
@@ -107,22 +124,21 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
     <Reference Include="monotouch" />
-    <Reference Include="protobuf-net">
-      <HintPath>..\..\..\DLL\Xamarin.iOS\protobuf-net.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.MonoTouch.CSharp.targets" />
   <ItemGroup>
     <InterfaceDefinition Include="MainStoryboard.storyboard" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
-      <Name>NetworkCommsDotNet</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
-      <Name>ProtobufSerializer</Name>
-    </ProjectReference>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
   </ItemGroup>
 </Project>
