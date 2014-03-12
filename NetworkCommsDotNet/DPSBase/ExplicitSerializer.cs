@@ -110,8 +110,12 @@ namespace NetworkCommsDotNet.DPSBase
                              select ctor).FirstOrDefault();
 
             if (constructor == null || !explicitlySerializableType.GetTypeInfo().IsAssignableFrom(resultType.GetTypeInfo()))
-#else
-            var constructor = resultType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+#else           
+
+            var constructor = resultType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
+
+            if (constructor == null)
+                constructor = resultType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
 
             if (constructor == null || !explicitlySerializableType.IsAssignableFrom(resultType))
 #endif

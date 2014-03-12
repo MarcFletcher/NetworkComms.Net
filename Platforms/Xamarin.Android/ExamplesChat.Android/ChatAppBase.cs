@@ -118,6 +118,8 @@ namespace ExamplesChat.Android
             LocalServerEnabled = false;
             EncryptionEnabled = false;
             FirstInitialisation = true;
+
+            Serializer = DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
         }
 
         #region NetworkComms.Net Methods

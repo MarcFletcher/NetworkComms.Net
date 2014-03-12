@@ -27,6 +27,8 @@ using ProtoBuf;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.DPSBase;
 
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+
 namespace ExamplesChat.Android
 {
     /// <summary>
@@ -83,7 +85,8 @@ namespace ExamplesChat.Android
         /// <summary>
         /// We must include a private constructor to be used by the deserialisation step.
         /// </summary>
-        private ChatMessage() { }
+        //[Preserve]
+        public ChatMessage() { }
 
         /// <summary>
         /// Create a new ChatMessage

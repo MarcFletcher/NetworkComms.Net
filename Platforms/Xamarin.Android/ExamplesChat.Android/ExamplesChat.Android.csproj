@@ -45,7 +45,8 @@
   <ItemGroup>
     <Reference Include="Mono.Android" />
     <Reference Include="mscorlib" />
-    <Reference Include="protobuf-net">
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\protobuf-net.2.0.0.668\lib\portable-sl4+net40+wp7+windows8\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -79,13 +80,13 @@
     <Content Include="Properties\AndroidManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
-      <Name>ProtobufSerializer</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{5f1b4e95-f8dc-4363-8b83-d5fa4b38aa9e}</Project>
       <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{fe6b929a-81a9-4524-a69b-b3b32d2dd1cc}</Project>
+      <Name>ProtobufSerializer</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />

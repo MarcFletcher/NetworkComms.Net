@@ -36,6 +36,12 @@ using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 #endif
 
+#if ANDROID
+using PreserveAttribute = Android.Runtime.PreserveAttribute;
+#elif iOS
+using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+#endif
+
 namespace NetworkCommsDotNet
 {
     /// <summary>
@@ -245,11 +251,10 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Private constructor required for deserialisation.
         /// </summary>
-#if iOS || ANDROID
-        public ConnectionInfo() { }
-#else
-        private ConnectionInfo() { }
+#if ANDROID || iOS
+        [Preserve]
 #endif
+        private ConnectionInfo() { }
 
         /// <summary>
         /// Create a new ConnectionInfo object pointing at the provided remote <see cref="IPEndPoint"/>.
