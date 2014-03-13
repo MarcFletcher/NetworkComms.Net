@@ -34,6 +34,8 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>__IOS__;__MOBILE__;iOS</DefineConstants>
+    <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
