@@ -57,13 +57,12 @@
     <AssemblyOriginatorKeyFile>networkcomms.net.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Dlls\ICSharpCode.SharpZipLib.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>Dlls\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SharpZipLibGzipCompressor.cs" />
@@ -98,8 +97,8 @@
     <None Include="networkcomms.net.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
+    <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>

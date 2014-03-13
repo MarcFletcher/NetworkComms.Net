@@ -25,7 +25,6 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <ReleaseVersion>3.0.0.0</ReleaseVersion>
     <AssemblyName>ExamplesChatiOS</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhoneSimulator' ">
@@ -147,13 +146,13 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.iOS.csproj">
       <Project>{D2F79BCE-C037-469E-9D1A-34AEC7546153}</Project>
-      <Name>NetworkCommsDotNet</Name>
+      <Name>NetworkCommsDotNet.iOS</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.csproj">
+    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.iOS.csproj">
       <Project>{55091DF9-993E-4632-AE01-DCB4657A875E}</Project>
-      <Name>ProtobufSerializer</Name>
+      <Name>ProtobufSerializer.iOS</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>

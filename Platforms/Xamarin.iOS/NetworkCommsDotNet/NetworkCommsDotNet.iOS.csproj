@@ -11,7 +11,6 @@
     <RootNamespace>NetworkCommsDotNet</RootNamespace>
     <IPhoneResourcePrefix>Resources</IPhoneResourcePrefix>
     <AssemblyName>NetworkCommsDotNet</AssemblyName>
-    <ReleaseVersion>3.0.0.0</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -12,6 +12,8 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
+    <ProductVersion>12.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,10 +38,6 @@
     <Reference Include="ILMerge">
       <HintPath>..\..\..\packages\ilmerge.2.13.0307\ILMerge.exe</HintPath>
     </Reference>
-    <Reference Include="InTheHand.Net.Personal, Version=3.5.605.0, Culture=neutral, PublicKeyToken=ea38caa273134499, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\32feet.NET.3.5.0.0\lib\net\InTheHand.Net.Personal.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -47,26 +45,29 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="InTheHand.Net.Personal">
+      <HintPath>..\..\..\packages\32feet.NET.3.5.0.0\lib\net\InTheHand.Net.Personal.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{220024a8-7abf-42a6-a476-0684c1e65110}</Project>
+    <ProjectReference Include="..\..\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{976612e0-8013-45e1-a85d-170653523938}</Project>
+    <ProjectReference Include="..\..\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
       <Name>ProtobufSerializer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\QuickLZCompressor\QuickLZCompressor.csproj">
-      <Project>{d61ea64f-c690-4f1c-a39f-cadb5f469715}</Project>
+    <ProjectReference Include="..\..\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
+      <Project>{847B756A-5952-4E07-9CA9-33EDA38F6020}</Project>
       <Name>QuickLZCompressor</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
-      <Project>{775281eb-1028-4cb7-b2f0-a013ce6fa1ed}</Project>
+    <ProjectReference Include="..\..\Net40\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
+      <Project>{F27F6581-D3FF-4EF1-8DC6-8DF8E53E4132}</Project>
       <Name>SharpZipLibCompressor</Name>
     </ProjectReference>
   </ItemGroup>

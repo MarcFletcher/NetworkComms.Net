@@ -552,7 +552,7 @@ namespace NetworkCommsDotNet.Connections
             List<ConnectionListenerBase> result = new List<ConnectionListenerBase>();
             lock (staticConnectionLocker)
             {
-                Dictionary<ConnectionType, List<EndPoint>> endPoints = AllExistingLocalListenEndPoints();
+				//Dictionary<ConnectionType, List<EndPoint>> endPoints = AllExistingLocalListenEndPoints();
                 
                 foreach (var byConnectionType in listenersDict)
                     foreach (var byEndPoint in byConnectionType.Value)

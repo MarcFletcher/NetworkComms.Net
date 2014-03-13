@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{A33EA8B0-EB46-493B-BE84-2CC325E66137}</ProjectGuid>
@@ -36,6 +36,7 @@
     <DocumentationFile>bin\Debug\DebugTests.XML</DocumentationFile>
     <WarningLevel>1</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -43,6 +44,7 @@
     <DocumentationFile>bin\Release\DebugTests.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <WarningLevel>1</WarningLevel>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="InTheHand.Net.Personal">
@@ -103,23 +105,23 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DistributedFileSystem\DistributedFileSystem.csproj">
-      <Project>{5cb68f8c-6002-45d2-9c5f-ae7cf455eb6e}</Project>
+      <Project>{5CB68F8C-6002-45D2-9C5F-AE7CF455EB6E}</Project>
       <Name>DistributedFileSystem</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
+      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{62977be8-428b-4683-a098-4e3f588b3f7e}</Project>
+      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
       <Name>ProtobufSerializer</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
-      <Project>{847b756a-5952-4e07-9ca9-33eda38f6020}</Project>
+      <Project>{847B756A-5952-4E07-9CA9-33EDA38F6020}</Project>
       <Name>QuickLZCompressor</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
-      <Project>{f27f6581-d3ff-4ef1-8dc6-8df8e53e4132}</Project>
+      <Project>{F27F6581-D3FF-4EF1-8DC6-8DF8E53E4132}</Project>
       <Name>SharpZipLibCompressor</Name>
     </ProjectReference>
   </ItemGroup>

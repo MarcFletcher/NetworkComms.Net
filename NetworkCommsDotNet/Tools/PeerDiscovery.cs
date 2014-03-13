@@ -785,8 +785,8 @@ namespace NetworkCommsDotNet.Tools
                         {
                             try
                             {
-                                conn.EstablishConnection();
-                                conn.SendPacket<byte[]>(sendPacket);
+								innerConnection.EstablishConnection();
+								innerConnection.SendPacket<byte[]>(sendPacket);
                             }
                             catch (CommsException)
                             {

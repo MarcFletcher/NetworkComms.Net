@@ -108,11 +108,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{b0fd9f50-a375-44dd-aaae-ccc2f94a99d1}</Project>
+      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
     <ProjectReference Include="..\Platforms\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{62977be8-428b-4683-a098-4e3f588b3f7e}</Project>
+      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
       <Name>ProtobufSerializer</Name>
     </ProjectReference>
   </ItemGroup>

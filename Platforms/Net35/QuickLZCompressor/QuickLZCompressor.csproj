@@ -64,8 +64,8 @@
     <None Include="networkcomms.net.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{220024a8-7abf-42a6-a476-0684c1e65110}</Project>
+    <ProjectReference Include="..\..\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>

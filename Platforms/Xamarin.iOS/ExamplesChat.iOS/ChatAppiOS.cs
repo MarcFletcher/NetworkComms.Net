@@ -19,7 +19,7 @@ namespace ExamplesChat.iOS
         /// <summary>
         /// Size of the chat history view when the keyboard is hidden
         /// </summary>
-        public readonly RectangleF OriginalViewSize = new RectangleF(0, 0, 320, 416);
+		public RectangleF OriginalViewSize { get; set; }
 
         /// <summary>
         /// Reference to the chatHistory text view.
@@ -48,8 +48,7 @@ namespace ExamplesChat.iOS
             ChatHistoryBox.InvokeOnMainThread(new NSAction(() =>
             {
                 ChatHistoryBox.Text += message + Environment.NewLine;
-                PointF bottomOffset = new PointF(0, ChatHistoryBox.ContentSize.Height - ChatHistoryBox.Bounds.Size.Height);
-                ChatHistoryBox.SetContentOffset(bottomOffset, true);
+				ChatHistoryBox.ScrollRangeToVisible(new NSRange(ChatHistoryBox.Text.Length, 1));
             }));
         }
 
@@ -73,6 +72,7 @@ namespace ExamplesChat.iOS
 
         public override void ShowMessage(string message)
         {
+			//This method is not used by iOS so no need to implement it
             throw new NotImplementedException();
         }
         #endregion

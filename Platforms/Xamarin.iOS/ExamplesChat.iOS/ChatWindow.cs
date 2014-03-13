@@ -53,6 +53,9 @@ namespace ExamplesChat.iOS
             //Set the default serializer to Protobuf
             ChatApplication.Serializer = DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
 
+			//Get the initial size of the chat view
+			ChatApplication.OriginalViewSize = ChatView.Frame;
+
             //Print out the application usage instructions
             ChatApplication.PrintUsageInstructions();
 

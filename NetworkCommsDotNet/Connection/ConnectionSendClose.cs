@@ -477,7 +477,7 @@ namespace NetworkCommsDotNet.Connections
                     try
                     {
                         timer.Start();
-                        byte[] returnValue = SendReceiveObject<byte[], byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Request", Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Reply", aliveRespondTimeoutMS, new byte[0], NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
+                        SendReceiveObject<byte[], byte[]>(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Request", Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Reply", aliveRespondTimeoutMS, new byte[0], NetworkComms.InternalFixedSendReceiveOptions, NetworkComms.InternalFixedSendReceiveOptions);
                         timer.Stop();
 
                         responseTimeMS = timer.ElapsedMilliseconds;
