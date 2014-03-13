@@ -11,6 +11,8 @@ using MonoTouch.Foundation;
 using MonoTouch.UIKit;
 
 using NetworkCommsDotNet;
+using NetworkCommsDotNet.DPSBase;
+using NetworkCommsDotNet.Tools;
 
 namespace ExamplesChat.iOS
 {
@@ -48,15 +50,18 @@ namespace ExamplesChat.iOS
             //Uncomment this line to enable logging
             //EnableLogging();
 
+            //Set the default serializer to Protobuf
+            ChatApplication.Serializer = DPSManager.GetDataSerializer<NetworkCommsDotNet.DPSBase.ProtobufSerializer>();
+
             //Print out the application usage instructions
             ChatApplication.PrintUsageInstructions();
 
-            //Initialise comms to add the neccessary packet handlers
+            //Initialise comms to add the necessary packet handlers
             ChatApplication.RefreshNetworkCommsConfiguration();
         }
 
         /// <summary>
-        /// Enable logging, usefull for debugging applications.
+        /// Enable logging, useful for debugging applications.
         /// </summary>
         private void EnableLogging()
         {
@@ -64,7 +69,7 @@ namespace ExamplesChat.iOS
             string logFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NetworkCommsLog.txt");
             ChatApplication.AppendLineToChatHistory("Logging enabled to " + logFileName);
 
-            NetworkCommsDotNet.Tools.ILogger logger = new NetworkCommsDotNet.Tools.LiteLogger(NetworkCommsDotNet.Tools.LiteLogger.LogMode.LogFileOnly, logFileName);
+            ILogger logger = new LiteLogger(LiteLogger.LogMode.LogFileOnly, logFileName);
             NetworkComms.EnableLogging(logger);
         }
 
