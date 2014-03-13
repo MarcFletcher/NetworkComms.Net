@@ -69,6 +69,7 @@ namespace NetworkCommsDotNet
         /// on deserialisation until we have the nested packet header.
         /// </summary>
         internal byte[] _payloadObjectBytes;
+        internal int _payloadSize;
 
         StreamTools.StreamSendWrapper payloadStream;
 
@@ -170,12 +171,15 @@ namespace NetworkCommsDotNet
                 //We do not use any data processors at this stage as the object will be processed again one level higher.
 #if NETFX_CORE
                  _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(payloadObject).ThreadSafeStream.ToArray();
+                _payloadSize = _payloadObjectBytes.Length;
 #else
-                _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(objectToSerialise).ThreadSafeStream.GetBuffer();
+                NetworkCommsDotNet.Tools.StreamTools.ThreadSafeStream tempStream = options.DataSerializer.SerialiseDataObject(objectToSerialise).ThreadSafeStream;
+                _payloadObjectBytes = tempStream.GetBuffer();
+                _payloadSize = (int)tempStream.Length;
 #endif
                 //Set the packet header
                 //THe nulls represent internal SendReceiveOptions and no checksum
-                this._packetHeader = new PacketHeader(sendingPacketTypeStr, _payloadObjectBytes.Length, null, requestReturnPacketTypeStr, null);
+                this._packetHeader = new PacketHeader(sendingPacketTypeStr, _payloadSize, null, requestReturnPacketTypeStr, null);
 
                 //Set the deserialiser information in the nested packet header, excluding data processors
                 this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, null));
@@ -277,8 +281,8 @@ namespace NetworkCommsDotNet
         public void Serialize(Stream outputStream)
         {
             _packetHeader.Serialize(outputStream);
-            outputStream.Write(BitConverter.GetBytes(_payloadObjectBytes.Length), 0, sizeof(int));
-            outputStream.Write(_payloadObjectBytes, 0, _payloadObjectBytes.Length);
+            outputStream.Write(BitConverter.GetBytes(_payloadSize), 0, sizeof(int));
+            outputStream.Write(_payloadObjectBytes, 0, _payloadSize);
         }
 
         /// <inheritdoc />
@@ -289,8 +293,9 @@ namespace NetworkCommsDotNet
             byte[] payloadLengthData = new byte[sizeof(int)];
             inputStream.Read(payloadLengthData, 0, sizeof(int));
 
-            _payloadObjectBytes = new byte[BitConverter.ToInt32(payloadLengthData, 0)];
-            inputStream.Read(_payloadObjectBytes, 0, _payloadObjectBytes.Length);
+            _payloadSize = BitConverter.ToInt32(payloadLengthData, 0);
+            _payloadObjectBytes = new byte[_payloadSize];
+            inputStream.Read(_payloadObjectBytes, 0, _payloadSize);
         }
 
         #endregion
