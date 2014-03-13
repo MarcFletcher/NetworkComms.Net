@@ -167,11 +167,11 @@ namespace NetworkCommsDotNet
                 if (headerSendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
 
                 if (packetHeaderStream.Length == 0)
-                    throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
+                    throw new SerialisationException("Attempted to create packetHeader using byte[0].");
 
                 PacketHeader tempObject = headerSendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetHeaderStream, headerSendReceiveOptions.DataProcessors, headerSendReceiveOptions.Options);
                 if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.TotalPayloadSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
-                    throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
+                    throw new SerialisationException("Failed to deserialize a valid packet header. Packet header was null or did not contain the compulsory fields, TotalPayloadSize and PacketType.");
                 else
                 {
                     stringItems = new Dictionary<PacketHeaderStringItems, string>();
@@ -186,7 +186,7 @@ namespace NetworkCommsDotNet
             catch (Exception ex)
             {
                 NetworkCommsDotNet.Tools.LogTools.LogException(ex, "PacketHeaderDeserialisationError", "The header data follows:" + BitConverter.ToString(packetHeaderStream.ToArray())); 
-                throw new SerialisationException("Error deserialising packetHeader. " + ex.ToString());
+                throw new SerialisationException("Error deserializing packetHeader. " + ex.ToString());
             }
         }
 
