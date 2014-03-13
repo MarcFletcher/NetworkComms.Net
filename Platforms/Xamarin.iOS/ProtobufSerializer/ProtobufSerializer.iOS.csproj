@@ -11,6 +11,8 @@
     <RootNamespace>ProtobufSerializer</RootNamespace>
     <IPhoneResourcePrefix>Resources</IPhoneResourcePrefix>
     <AssemblyName>ProtobufSerializer</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>networkcomms.net.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -47,11 +49,15 @@
     <Compile Include="..\..\..\ProtobufSerializer\ProtobufSerializer.cs">
       <Link>ProtobufSerializer.cs</Link>
     </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.iOS.csproj">
       <Project>{D2F79BCE-C037-469E-9D1A-34AEC7546153}</Project>
       <Name>NetworkCommsDotNet.iOS</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="networkcomms.net.snk" />
   </ItemGroup>
 </Project>

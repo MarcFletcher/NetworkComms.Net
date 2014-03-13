@@ -56,8 +56,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Platforms\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
       <Name>NetworkCommsDotNet</Name>
     </ProjectReference>
   </ItemGroup>
