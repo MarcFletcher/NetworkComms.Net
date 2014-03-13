@@ -274,7 +274,7 @@ namespace NetworkCommsDotNet
 #if NETFX_CORE
                     MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadObjectBytes.Length, false);
 #else
-                    MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadObjectBytes.Length, false, true);
+                    MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadSize, false, true);
 #endif
 
                     item = new PriorityQueueItem(itemPriority, item.Connection, nestedPacket.PacketHeader, wrappedDataStream, incomingPacketSendReceiveOptions);
