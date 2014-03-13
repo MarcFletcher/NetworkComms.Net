@@ -59,8 +59,15 @@
     <Compile Include="ChatMessage.cs" />
     <Compile Include="ChatAppBase.cs" />
     <Compile Include="ChatAppAndroid.cs" />
+    <Compile Include="NetworkCommsSettings.cs" />
+    <AndroidResource Include="Resources\Menu\settings.xml">
+      <SubType>Designer</SubType>
+    </AndroidResource>
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <AndroidResource Include="Resources\Values\arrays.xml">
+      <SubType>Designer</SubType>
+    </AndroidResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
