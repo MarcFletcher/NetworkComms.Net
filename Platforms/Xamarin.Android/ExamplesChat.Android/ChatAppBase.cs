@@ -116,7 +116,7 @@ namespace ExamplesChat.Android
             ServerIPAddress = "";
             ServerPort = 10000;
             LocalServerEnabled = false;
-            EncryptionEnabled = false;
+            EncryptionEnabled = true;
             FirstInitialisation = true;
         }
 

@@ -36,7 +36,10 @@ namespace ExamplesChat.Android
 		{
 			
 			// aapt resource value: 0x7f050000
-			public const int ConnectionTypes = 2131034112;
+			public const int connectionType = 2131034112;
+			
+			// aapt resource value: 0x7f050001
+			public const int serializerType = 2131034113;
 			
 			static Array()
 			{
@@ -83,41 +86,20 @@ namespace ExamplesChat.Android
 		public partial class Id
 		{
 			
-			// aapt resource value: 0x7f070005
-			public const int connectionTypeSpinner = 2131165189;
+			// aapt resource value: 0x7f080003
+			public const int mainText = 2131230723;
 			
-			// aapt resource value: 0x7f070007
-			public const int enableLocalServer = 2131165191;
+			// aapt resource value: 0x7f080001
+			public const int mainTextScroll = 2131230721;
 			
-			// aapt resource value: 0x7f070006
-			public const int enableServerLabel = 2131165190;
+			// aapt resource value: 0x7f080002
+			public const int messageTextInput = 2131230722;
 			
-			// aapt resource value: 0x7f070004
-			public const int encryptionLabel = 2131165188;
+			// aapt resource value: 0x7f080004
+			public const int sendButton = 2131230724;
 			
-			// aapt resource value: 0x7f070000
-			public const int ipPortLabel = 2131165184;
-			
-			// aapt resource value: 0x7f070001
-			public const int ipTextInput = 2131165185;
-			
-			// aapt resource value: 0x7f07000a
-			public const int mainText = 2131165194;
-			
-			// aapt resource value: 0x7f070008
-			public const int mainTextScroll = 2131165192;
-			
-			// aapt resource value: 0x7f070009
-			public const int messageTextInput = 2131165193;
-			
-			// aapt resource value: 0x7f070002
-			public const int portSeperatorLabel = 2131165186;
-			
-			// aapt resource value: 0x7f070003
-			public const int portTextInput = 2131165187;
-			
-			// aapt resource value: 0x7f07000b
-			public const int sendButton = 2131165195;
+			// aapt resource value: 0x7f080000
+			public const int settingsButton = 2131230720;
 			
 			static Id()
 			{
@@ -141,6 +123,22 @@ namespace ExamplesChat.Android
 			}
 			
 			private Layout()
+			{
+			}
+		}
+		
+		public partial class Menu
+		{
+			
+			// aapt resource value: 0x7f070000
+			public const int settings = 2131165184;
+			
+			static Menu()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
+			
+			private Menu()
 			{
 			}
 		}
