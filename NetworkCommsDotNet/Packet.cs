@@ -179,7 +179,7 @@ namespace NetworkCommsDotNet
 #endif
                 //Set the packet header
                 //THe nulls represent internal SendReceiveOptions and no checksum
-                this._packetHeader = new PacketHeader(sendingPacketTypeStr, tempStream.Length, null, requestReturnPacketTypeStr, null);
+                this._packetHeader = new PacketHeader(sendingPacketTypeStr, _payloadSize, null, requestReturnPacketTypeStr, null);
 
                 //Set the deserialiser information in the nested packet header, excluding data processors
                 this._packetHeader.SetOption(PacketHeaderLongItems.SerializerProcessors, DPSManager.CreateSerializerDataProcessorIdentifier(options.DataSerializer, null));
