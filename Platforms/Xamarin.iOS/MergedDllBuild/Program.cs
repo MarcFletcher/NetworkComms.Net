@@ -38,7 +38,7 @@ namespace MergedDllBuild
                     ToDictionary(s => s.Split('=')[0].Trim(), s => s.Split('=')[1].Trim())["Version"]);
 
             string targetPlatform = "v2";
-            string msCoreLibDirectory = @"C:\Windows\Microsoft.NET\Framework\v2.0.50727";
+            string msCoreLibDirectory = @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\MonoTouch\v1.0";
 
             bool coreBuildEnabled = false;
             bool completeBuildEnabled = true;
