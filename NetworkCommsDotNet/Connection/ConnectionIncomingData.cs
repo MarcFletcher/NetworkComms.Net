@@ -72,6 +72,7 @@ namespace NetworkCommsDotNet.Connections
         /// <param name="packetBuilder">The <see cref="PacketBuilder"/> containing incoming cached data</param>
         protected void IncomingPacketHandleHandOff(PacketBuilder packetBuilder)
         {
+            int loopCounter = 0;
             try
             {
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... checking for completed packet with " + packetBuilder.TotalBytesCached.ToString() + " bytes read.");
@@ -80,7 +81,6 @@ namespace NetworkCommsDotNet.Connections
                     throw new Exception("Executing IncomingPacketHandleHandOff when no packets exist in packetbuilder.");
 
                 //Loop until we are finished with this packetBuilder
-                int loopCounter = 0;
                 while (true)
                 {
                     //If we have ended up with a null packet at the front, probably due to some form of concatenation we can pull it off here
@@ -224,7 +224,7 @@ namespace NetworkCommsDotNet.Connections
                         IPConnection.DOSProtection.LogMalformedData(ConnectionInfo.RemoteIPEndPoint.Address);
                 }
 
-                LogTools.LogException(ex, "CommsError", "A fatal exception occurred in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed.");
+                LogTools.LogException(ex, "CommsError", "A fatal exception occurred in IncomingPacketHandleHandOff(), connection with " + ConnectionInfo + " be closed. Loop counter " + loopCounter.ToString() + ". Packet builder contained " + packetBuilder.TotalBytesCached + " total cached bytes.");
                 CloseConnection(true, 45);
             }
         }

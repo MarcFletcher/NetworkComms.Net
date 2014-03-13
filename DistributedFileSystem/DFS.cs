@@ -1278,6 +1278,11 @@ namespace DistributedFileSystem
                 }
                 else
                 {
+                    //A little request validation
+                    if (incomingRequest.ChunkIndex > selectedItem.TotalNumChunks)
+                        throw new InvalidDataException("The incoming request wanted chunk #" + incomingRequest.ChunkIndex + 
+                            " when the selected item only has " + selectedItem.TotalNumChunks + "chunks.");
+
                     if (!selectedItem.ChunkAvailableLocally(incomingRequest.ChunkIndex))
                     {
                         //First reply and say the peer can't have the requested data. This prevents a request timing out

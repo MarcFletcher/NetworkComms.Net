@@ -1828,7 +1828,11 @@ namespace NetworkCommsDotNet
             }
             #endregion
 
-            if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established || connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+            //Validate the connection state
+            if (connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
+                throw new ConnectionSetupException("Connection reference by endPoint cannot be added once a connection has been shutdown.");
+
+            if (connection.ConnectionInfo.ConnectionState == ConnectionState.Established)
                 throw new ConnectionSetupException("Connection reference by endPoint should only be added before a connection is established. This is to prevent duplicate connections.");
 
             if (remoteEndPointToUse == null) remoteEndPointToUse = connection.ConnectionInfo.RemoteEndPoint;
@@ -1852,7 +1856,7 @@ namespace NetworkCommsDotNet
             //How do we prevent multiple threads from trying to create a duplicate connection??
             lock (globalDictAndDelegateLocker)
             {
-                existingConnection = GetExistingConnection(remoteEndPointToUse, connection.ConnectionInfo.LocalEndPoint, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
+                existingConnection = GetExistingConnection(remoteEndPointToUse, localEndPointToUse, connection.ConnectionInfo.ConnectionType, ApplicationLayerProtocolStatus.Undefined);
                 //We now check for an existing connection again from within the lock
                 if (existingConnection.Count > 0)
                 {

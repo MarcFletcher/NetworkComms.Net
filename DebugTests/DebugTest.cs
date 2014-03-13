@@ -44,7 +44,7 @@ namespace DebugTests
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
                 {
                     Console.WriteLine("Server received - " + message);
-                    connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
+                    //connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
                 });
 
             Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));

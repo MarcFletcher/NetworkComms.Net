@@ -222,7 +222,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                 TcpClient newTCPClient = listenerInstance.EndAcceptTcpClient(ar);
                 ConnectionInfo newConnectionInfo = new ConnectionInfo(ConnectionType.TCP, (IPEndPoint)newTCPClient.Client.RemoteEndPoint, (IPEndPoint)newTCPClient.Client.LocalEndPoint, ApplicationLayerProtocol, this);
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New TCP connection from " + newConnectionInfo);
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New incoming TCP connection from " + newConnectionInfo);
 
                 ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {

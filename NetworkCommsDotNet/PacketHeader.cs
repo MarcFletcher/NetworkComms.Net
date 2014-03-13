@@ -158,18 +158,18 @@ namespace NetworkCommsDotNet
         /// Constructor used for deserialisation
         /// </summary>
         /// <param name="packetHeaderStream"></param>
-        /// <param name="headedSendReceiveOptions"></param>
-        internal PacketHeader(MemoryStream packetHeaderStream, SendReceiveOptions headedSendReceiveOptions)
+        /// <param name="headerSendReceiveOptions"></param>
+        internal PacketHeader(MemoryStream packetHeaderStream, SendReceiveOptions headerSendReceiveOptions)
         {
             try
             {
                 if (packetHeaderStream == null) throw new ArgumentNullException("packetData", "Provided MemoryStream parameter cannot be null.");
-                if (headedSendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
+                if (headerSendReceiveOptions == null) throw new ArgumentNullException("sendReceiveOptions", "Provided SendReceiveOptions parameter cannot be null.");
 
                 if (packetHeaderStream.Length == 0)
                     throw new SerialisationException("Attempted to create packetHeader using 0 packetData bytes.");
 
-                PacketHeader tempObject = headedSendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetHeaderStream, headedSendReceiveOptions.DataProcessors, headedSendReceiveOptions.Options);
+                PacketHeader tempObject = headerSendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetHeaderStream, headerSendReceiveOptions.DataProcessors, headerSendReceiveOptions.Options);
                 if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.TotalPayloadSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
                     throw new SerialisationException("Something went wrong when trying to deserialise the packet header object");
                 else
@@ -374,7 +374,8 @@ namespace NetworkCommsDotNet
             int longItemsLength = BitConverter.ToInt32(longItemsLengthData, 0);
 
             if (longItemsLength * (sizeof(int) + sizeof(long)) > inputStream.Length)
-                throw new SerialisationException("Error deserializing packet header. Number of long items was too large to be present in the input stream");
+                throw new SerialisationException("Error deserializing packet header. Number of long items was too large to be present in the input stream."+
+                    " This error is typically thrown because a non NetworkComms.Net peer attempted to communicate. If this is desirable please consider using an unmanaged connection.");
 
             for(int i = 0; i < longItemsLength; i++)
             {
@@ -391,7 +392,8 @@ namespace NetworkCommsDotNet
             int stringItemsLength = BitConverter.ToInt32(stringItemsLengthData, 0);
 
             if (stringItemsLength * (2 * sizeof(int)) > inputStream.Length)
-                throw new SerialisationException("Error deserializing packet header. Number of string items was too large to be present in the input stream");
+                throw new SerialisationException("Error deserializing packet header. Number of string items was too large to be present in the input stream."+
+                    " This error is typically thrown because a non NetworkComms.Net peer attempted to communicate. If this is desirable please consider using an unmanaged connection.");
             
             for (int i = 0; i < stringItemsLength; i++)
             {
@@ -402,7 +404,8 @@ namespace NetworkCommsDotNet
                 int valLength = BitConverter.ToInt32(valLengthData, 0);
 
                 if (valLength > inputStream.Length)
-                    throw new SerialisationException("Error deserializing packet header. Length string item was too large to be present in the input stream");
+                    throw new SerialisationException("Error deserializing packet header. Length string item was too large to be present in the input stream."+
+                        " This error is typically thrown because a non NetworkComms.Net peer attempted to communicate. If this is desirable please consider using an unmanaged connection.");
 
                 byte[] valData = new byte[valLength]; inputStream.Read(valData, 0, valData.Length);
                 string val = new String(Encoding.UTF8.GetChars(valData));
