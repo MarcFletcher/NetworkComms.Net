@@ -1194,7 +1194,7 @@ namespace DistributedFileSystem
                     {
                         PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem == null ? 0 : newItem.ItemBytesLength);
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
-                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" : newItem.ItemCheckSum);
+                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" :  newItem.ItemTypeStr + "|" + newItem.ItemIdentifier + "|" + newItem.ItemCheckSum);
 
                         //Trigger connection specific handlers
                         bool connectionSpecificHandlersTriggered = connection.TriggerSpecificPacketHandlers(itemPacketHeader, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
@@ -1280,7 +1280,7 @@ namespace DistributedFileSystem
                 {
                     //A little request validation
                     if (incomingRequest.ChunkIndex > selectedItem.TotalNumChunks)
-                        throw new InvalidDataException("The incoming request wanted chunk #" + incomingRequest.ChunkIndex + 
+                        throw new InvalidDataException("The incoming request wanted chunk #" + incomingRequest.ChunkIndex +
                             " when the selected item only has " + selectedItem.TotalNumChunks + "chunks.");
 
                     if (!selectedItem.ChunkAvailableLocally(incomingRequest.ChunkIndex))
@@ -1312,7 +1312,7 @@ namespace DistributedFileSystem
                             //We identify the data using the itemchecksum, the requested chunk index, and to unique identify this request from possible duplicates
                             //we append the requesting peer request index.
                             string packetIdentifier = selectedItem.ItemCheckSum + "-" + incomingRequest.ChunkIndex + "-" + incomingRequest.RequestNumIndex;
-                            
+
                             //This is received via UDP but we want to reply using TCP to ensure delivery of the data
                             var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
 
@@ -1338,6 +1338,18 @@ namespace DistributedFileSystem
             {
                 //This happens if we dispose the DFS item during this method execution
                 if (loggingEnabled) Logger.Warn("Prevented ObjectDisposedException in IncomingChunkInterestRequest");
+            }
+            catch (ConnectionSetupException)
+            {
+                //Ignore, the peer is offline
+            }
+            catch (CommunicationException)
+            {
+                //Ignore, connection is probably closed
+            }
+            catch (ConnectionSendTimeoutException)
+            {
+                //Ignore, the peer is suspended
             }
             catch (CommsException e)
             {
