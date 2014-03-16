@@ -548,18 +548,18 @@ namespace NetworkCommsDotNet.Tools
             }
 
             /// <summary>
-            /// Writes all provided data to the internal stream starting at the provided position with the stream
+            /// Writes the provided buffer to the internal stream starting at the provided position within the internal stream
             /// </summary>
-            /// <param name="data"></param>
+            /// <param name="buffer"></param>
             /// <param name="startPosition"></param>
-            public void Write(byte[] data, long startPosition)
+            public void Write(byte[] buffer, long startPosition)
             {
-                if (data == null) throw new ArgumentNullException("data");
+                if (buffer == null) throw new ArgumentNullException("data");
 
                 lock (streamLocker)
                 {
                     _innerStream.Seek(startPosition, SeekOrigin.Begin);
-                    _innerStream.Write(data, 0, data.Length);
+                    _innerStream.Write(buffer, 0, buffer.Length);
                     _innerStream.Flush();
                 }
             }
@@ -567,6 +567,8 @@ namespace NetworkCommsDotNet.Tools
             /// <inheritdoc />
             public override void Write(byte[] buffer, int offset, int count)
             {
+                if (buffer == null) throw new ArgumentNullException("buffer");
+
                 lock (streamLocker) _innerStream.Write(buffer, offset, count);
             }
 
