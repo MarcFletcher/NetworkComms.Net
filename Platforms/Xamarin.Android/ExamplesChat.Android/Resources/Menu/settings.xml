@@ -12,14 +12,14 @@
             android:title="IP Address"
             android:summary="Set server IP address"
             android:key="prefIPAddress"
-            android:defaultValue="131.111.73.213"/>
+            android:defaultValue=""/>
 
     <EditTextPreference
             android:title="Port"
             android:summary="Set server port"
             android:key="prefPort"
             android:inputType="number"
-            android:defaultValue="10000"/>
+            android:defaultValue=""/>
 
     <ListPreference
         android:key="prefConnectionType"

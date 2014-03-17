@@ -44,25 +44,6 @@ namespace ExamplesChat.Android
         /// </summary>
         AutoCompleteTextView input;
 
-        ///// <summary>
-        ///// The texbox containing the master ip address (server)
-        ///// </summary>
-        //AutoCompleteTextView ipTextBox;
-
-        ///// <summary>
-        ///// The texbox containing the master port number (server)
-        ///// </summary>
-        //AutoCompleteTextView portTextBox;
-
-        ///// <summary>
-        ///// The spinner (drop down) menu for selecting the connection type to use
-        ///// </summary>
-        //Spinner connectionTypeSelector;
-
-        ///// <summary>
-        ///// The checkbox which can be used to enable local server mode
-        ///// </summary>
-        //CheckBox enableLocalServerCheckBox;
         #endregion
 
         /// <summary>
@@ -75,6 +56,11 @@ namespace ExamplesChat.Android
 
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
+
+            ISharedPreferences preferences = PreferenceManager.GetDefaultSharedPreferences(ApplicationContext);
+            ISharedPreferencesEditor editor = preferences.Edit();
+            editor.Clear();
+            editor.Commit();
 
             //Get references to user interface controls
             chatHistory = FindViewById<TextView>(Resource.Id.mainText);
@@ -144,8 +130,12 @@ namespace ExamplesChat.Android
             {
                 ISharedPreferences sharedPrefs = PreferenceManager.GetDefaultSharedPreferences(ApplicationContext);
                 chatApplication.LocalName = sharedPrefs.GetString("prefName", "Android");
-                chatApplication.ServerIPAddress = sharedPrefs.GetString("prefIPAddress", "192.168.1.1");
-                chatApplication.ServerPort = int.Parse(sharedPrefs.GetString("prefPort", "10000"));
+                chatApplication.ServerIPAddress = sharedPrefs.GetString("prefIPAddress", "");
+
+                string portString = sharedPrefs.GetString("prefPort", "");
+                if (portString != String.Empty)
+                    chatApplication.ServerPort = int.Parse(portString);
+
                 chatApplication.ConnectionType = (ConnectionType)Enum.Parse(typeof(ConnectionType), sharedPrefs.GetString("prefConnectionType", "TCP"));
 
                 string serializerPref = sharedPrefs.GetString("prefSerializerType", "Protobuf");

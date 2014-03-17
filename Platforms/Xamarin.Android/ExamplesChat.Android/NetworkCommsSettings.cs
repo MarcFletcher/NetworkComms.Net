@@ -27,7 +27,7 @@ namespace ExamplesChat.Android
                     bool result = true;
                     System.Net.IPAddress address;
 
-                    if (!System.Net.IPAddress.TryParse((string)args.NewValue, out address))
+                    if ((string)args.NewValue != String.Empty && !System.Net.IPAddress.TryParse((string)args.NewValue, out address))
                     {
                         AlertDialog.Builder builder = new AlertDialog.Builder(ApplicationContext);
                         builder.SetTitle("Invalid IP Address");
@@ -47,7 +47,7 @@ namespace ExamplesChat.Android
                     bool result = true;
                     ushort port;
 
-                    if (!ushort.TryParse((string)args.NewValue, out port) )
+                    if ((string)args.NewValue != String.Empty  && !ushort.TryParse((string)args.NewValue, out port))
                     {
                         AlertDialog.Builder builder = new AlertDialog.Builder(ApplicationContext);
                         builder.SetTitle("Invalid Port");
