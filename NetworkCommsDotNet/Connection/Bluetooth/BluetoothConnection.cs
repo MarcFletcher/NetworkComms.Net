@@ -63,7 +63,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             if (btClient != null)
                 this.btClient = btClient;
 
-            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
         }
 
         /// <inheritdoc />
@@ -234,7 +234,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                             //Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                             {
                                 long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                             }
 
                             totalBytesRead = netStream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
@@ -284,12 +284,12 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         //If we have nothing to reuse we allocate a new buffer
                         //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
                         if (packetBuilder.TotalBytesExpected == 0)
-                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
                         else
                         //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                         }
 
                         totalBytesRead = 0;
@@ -355,12 +355,12 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         //If we have nothing to reuse we allocate a new buffer
                         //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
                         if (packetBuilder.TotalBytesExpected == 0)
-                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
                         else
                         //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                         }
                     }
 

@@ -120,7 +120,7 @@ namespace NetworkCommsDotNet
             }            
 #endif
             //Set the initial size of a read buffer for a packet to 512 bytes
-            InitialRecieveBufferSizeBytes = 512;
+            InitialReceiveBufferSizeBytes = 512;
 
             //We want to instantiate our own thread pool here
 #if NETFX_CORE
@@ -226,7 +226,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Initial receive data buffer size for reading data. Keeping this small reduces the static size of connection objects which each have an internal buffer. Default is 512 bytes. CAUTION: Changing the default value can lead to performance degradation.
         /// </summary>
-        public static int InitialRecieveBufferSizeBytes { get; set; }
+        public static int InitialReceiveBufferSizeBytes { get; set; }
 
         /// <summary>
         /// Send data buffer size. Default is 80KB. CAUTION: Changing the default value can lead to performance degradation.

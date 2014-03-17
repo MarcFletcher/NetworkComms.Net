@@ -52,9 +52,9 @@ namespace RemoteProcedureCalls
         Connection ServerConnection { get; }
 
         /// <summary>
-        /// The send recieve options used when communicating with the server
+        /// The send receive options used when communicating with the server
         /// </summary>
-        SendReceiveOptions SendRecieveOptions { get; set; }
+        SendReceiveOptions SendReceiveOptions { get; set; }
                            
         /// <summary>
         /// The timeout for all RPC calls made with this proxy in ms
@@ -288,7 +288,7 @@ namespace RemoteProcedureCalls
                 //Define private fields for the IRPCClient interface
                 var serverInstanceId = type.DefineField("serverInstanceID", typeof(string), FieldAttributes.Private);
                 var networkConnection = type.DefineField("serverConnection", typeof(Connection), FieldAttributes.Private);
-                var sendRecieveOptions = type.DefineField("sendRecieveOptions", typeof(SendReceiveOptions), FieldAttributes.Private);
+                var sendReceiveOptions = type.DefineField("sendReceiveOptions", typeof(SendReceiveOptions), FieldAttributes.Private);
                 var rpcTimeout = type.DefineField("rpcTimeout", typeof(int), FieldAttributes.Private);
                 var implementedInterface = type.DefineField("implementedInterface", typeof(Type), FieldAttributes.Private);
                 var isDisposed = type.DefineField("isDisposed", typeof(bool), FieldAttributes.Private);
@@ -307,7 +307,7 @@ namespace RemoteProcedureCalls
                 il.Emit(OpCodes.Stfld, networkConnection);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_3);
-                il.Emit(OpCodes.Stfld, sendRecieveOptions);
+                il.Emit(OpCodes.Stfld, sendReceiveOptions);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_S, 4);
                 il.Emit(OpCodes.Stfld, implementedInterface);
@@ -348,8 +348,8 @@ namespace RemoteProcedureCalls
                         case "ImplementedInterface":
                             underlyingField = implementedInterface;
                             break;
-                        case "SendRecieveOptions":
-                            underlyingField = sendRecieveOptions;
+                        case "SendReceiveOptions":
+                            underlyingField = sendReceiveOptions;
                             break;
                         case "IsDisposed":
                             underlyingField = isDisposed;
@@ -813,7 +813,7 @@ namespace RemoteProcedureCalls
                 string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + wrapper.instanceId;
                 string packetTypeResponse = packetTypeRequest + "-RESPONSE";
 
-                SendReceiveOptions options = clientObject.SendRecieveOptions;
+                SendReceiveOptions options = clientObject.SendReceiveOptions;
 
                 if (options != null)
                     wrapper = connection.SendReceiveObject<RemoteCallWrapper, RemoteCallWrapper>(packetTypeRequest, packetTypeResponse, clientObject.RPCTimeout, wrapper, options, options);

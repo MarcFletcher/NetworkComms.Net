@@ -89,7 +89,7 @@ namespace NetworkCommsDotNet.Connections.TCP
             if (connectionInfo.ConnectionType != ConnectionType.TCP)
                 throw new ArgumentException("Provided connectionType must be TCP.", "connectionInfo");
 
-            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
 
             //We don't guarantee that the tcpClient has been created yet
 #if WINDOWS_PHONE || NETFX_CORE
@@ -374,7 +374,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                             //Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                             {
                                 long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                                dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                             }
 
                             totalBytesRead = stream.Read(dataBuffer, bufferOffset, dataBuffer.Length - bufferOffset) + bufferOffset;
@@ -429,12 +429,12 @@ namespace NetworkCommsDotNet.Connections.TCP
                         //If we have nothing to reuse we allocate a new buffer
                         //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
                         if (packetBuilder.TotalBytesExpected == 0)
-                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
                         else
                         //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                         }
 
                         totalBytesRead = 0;
@@ -506,12 +506,12 @@ namespace NetworkCommsDotNet.Connections.TCP
                         //If we have nothing to reuse we allocate a new buffer
                         //If packetBuilder.TotalBytesExpected is 0 we know we're going to start waiting for a fresh packet. Therefore use the initial buffer size
                         if (packetBuilder.TotalBytesExpected == 0)
-                            dataBuffer = new byte[NetworkComms.InitialRecieveBufferSizeBytes];
+                            dataBuffer = new byte[NetworkComms.InitialReceiveBufferSizeBytes];
                         else
                         //Otherwise this can only be a supplementary buffer for THIS packet. Therefore we choose a buffer size between the initial amount and the maximum amount based on the expected size
                         {
                             long additionalBytesNeeded = packetBuilder.TotalBytesExpected - packetBuilder.TotalBytesCached;
-                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialRecieveBufferSizeBytes)];
+                            dataBuffer = new byte[Math.Max(Math.Min(additionalBytesNeeded, NetworkComms.MaxReceiveBufferSizeBytes), NetworkComms.InitialReceiveBufferSizeBytes)];
                         }
                     }
 
