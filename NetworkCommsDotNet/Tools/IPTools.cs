@@ -59,45 +59,7 @@ namespace NetworkCommsDotNet.Tools
 
             return new IPEndPoint(ipAddress, serverPort);
         }
-
-        /// <summary>
-        /// Returns true if the provided address exists within the provided subnet.
-        /// </summary>
-        /// <param name="address">The address to check, i.e. 192.168.0.10</param>
-        /// <param name="subnet">The subnet, i.e. 192.168.0.0</param>
-        /// <param name="mask">The subnet mask, i.e. 255.255.255.0</param>
-        /// <returns>True if address is in the provided subnet</returns>
-        public static bool IsAddressInSubnet(IPAddress address, IPAddress subnet, IPAddress mask)
-        {
-            if (address == null) throw new ArgumentNullException("address", "Provided IPAddress cannot be null.");
-            if (subnet == null) throw new ArgumentNullException("subnet", "Provided IPAddress cannot be null.");
-            if (mask == null) throw new ArgumentNullException("mask", "Provided IPAddress cannot be null.");
-
-            //Catch for IPv6
-            if (subnet.AddressFamily == AddressFamily.InterNetworkV6 ||
-                mask.AddressFamily == AddressFamily.InterNetworkV6)
-                throw new NotImplementedException("This method does not yet support IPv6. Please contact NetworkComms.Net support if you would like this functionality.");
-            //If we have provided IPV4 subnets and masks and we have an ipv6 address then return false
-            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
-                return false;
-
-            byte[] addrBytes = address.GetAddressBytes();
-            byte[] maskBytes = mask.GetAddressBytes();
-            byte[] maskedAddressBytes = new byte[addrBytes.Length];
-
-            //Catch for IPv6
-            if (maskBytes.Length < maskedAddressBytes.Length)
-                return false;
-
-            for (int i = 0; i < maskedAddressBytes.Length; ++i)
-                maskedAddressBytes[i] = (byte)(addrBytes[i] & maskBytes[i]);
-
-            IPAddress maskedAddress = new IPAddress(maskedAddressBytes);
-            bool equal = subnet.Equals(maskedAddress);
-
-            return equal;
-        }
-
+        
         /// <summary>
         /// Determines the most appropriate local end point to contact the provided remote end point. 
         /// Testing shows this method takes on average 1.6ms to return.
@@ -221,6 +183,31 @@ namespace NetworkCommsDotNet.Tools
         /// IPAddress as bytes
         /// </summary>
         private byte[] addressBytes;
+
+        /// <summary>
+        /// IPRanges associated with auto assigned addresses
+        /// </summary>
+        static List<IPRange> AutoAssignRanges { get; set; }
+        
+        static IPRange()
+        {
+            //We want to ignore IP's that have been auto assigned                    
+            //169.254.0.0
+            IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
+            //255.255.0.0
+            IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
+
+            IPRange autoAssignRangev4 = new IPRange(autoAssignSubnetv4, autoAssignSubnetMaskv4);
+
+            //IPv6 equivalent of 169.254.x.x is fe80: /64
+            IPAddress autoAssignSubnetv6 = new IPAddress(new byte[] { 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            //mask for above
+            IPAddress autoAssignSubnetMaskv6 = new IPAddress(new byte[] { 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+
+            IPRange autoAssignRangev6 = new IPRange(autoAssignSubnetv6, autoAssignSubnetMaskv6);
+
+            AutoAssignRanges = new List<IPRange>() { autoAssignRangev4, autoAssignRangev6 };
+        }
 
         /// <summary>
         /// Initialise an IPRange using the provided CIDR notation.
@@ -475,6 +462,16 @@ namespace NetworkCommsDotNet.Tools
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Returns true if the provided IPAddress is within one of the autoassigned ip ranges, otherwise false
+        /// </summary>
+        /// <param name="ipAddress">The IPAddress to find in ranges</param>
+        /// <returns></returns>
+        public static bool IsAutoAssignedAddress(IPAddress ipAddress)
+        {
+            return Contains(AutoAssignRanges, ipAddress);
         }
 
         /// <summary>
