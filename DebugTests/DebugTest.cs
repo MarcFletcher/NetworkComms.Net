@@ -44,17 +44,27 @@ namespace DebugTests
             NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
                 {
                     Console.WriteLine("Server received - " + message);
-                    connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
+                    //connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
                 });
 
             Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
 
-            Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
-            bool result = conn.ConnectionAlive();
+            Thread thread1 = new Thread(() => {
+                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
+                conn.SendObject("Data", "test1");
+                Thread.Sleep(int.MaxValue);
+            });
 
-            //var reply = conn.SendReceiveObject<string, string>("Data", "Data-Response", 1000, "hello server");
+            Thread thread2 = new Thread(() => {
+                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
+                conn.SendObject("Data", "test2");
+                Thread.Sleep(int.MaxValue);
+            });
 
-            Console.WriteLine("Client done! {0}", result);
+            thread1.Start();
+            thread2.Start();
+
+            Console.WriteLine("Client done!");
             Console.ReadKey();
         }
     }

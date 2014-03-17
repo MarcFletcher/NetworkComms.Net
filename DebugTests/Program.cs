@@ -55,8 +55,9 @@ namespace DebugTests
                 DistributedFileSystem.DFS.EnableLogging(logger);
             }
 
-            //DebugTest.RunExample();
-            //DebugTest.Test();
+            NetworkComms.EnablePacketCheckSumValidation = true;
+
+            DebugTest.RunExample();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();
@@ -70,10 +71,10 @@ namespace DebugTests
             //PeerDiscoveryTest.RunExample();
             //SelfConnectTest.RunExample();
 
-            LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\GPAClientLog_FilledPacketQueue.txt");
-            log.LinesWithMatch(new string[] { "Received packet of type" }, "matchLog.txt");
-            log.ThreadPoolInfo("threadPool.csv");
-            log.DataSendReceive(10, "sendReceiveStats.csv");
+            //LogAnalyser log = new LogAnalyser(@"log.txt");
+            //log.LinesWithMatch(new string[] { "Waiting for client connnectionInfo " }, "matchLog.txt");
+            //log.ThreadPoolInfo("threadPool.csv");
+            //log.DataSendReceive(10, "sendReceiveStats.csv");
         }
     }
 }

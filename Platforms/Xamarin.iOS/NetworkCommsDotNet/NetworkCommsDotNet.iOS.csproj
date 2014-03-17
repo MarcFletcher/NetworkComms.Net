@@ -11,6 +11,8 @@
     <RootNamespace>NetworkCommsDotNet</RootNamespace>
     <IPhoneResourcePrefix>Resources</IPhoneResourcePrefix>
     <AssemblyName>NetworkCommsDotNet</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>networkcomms.net.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>bin\Debug\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -31,6 +34,8 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>__IOS__;__MOBILE__;iOS</DefineConstants>
+    <DocumentationFile>bin\Release\NetworkCommsDotNet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -40,15 +45,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
-    <Folder Include="Connection\" />
-    <Folder Include="DPSBase\" />
-    <Folder Include="Connection\TCP\" />
-    <Folder Include="Connection\UDP\" />
-    <Folder Include="Tools\" />
-    <Folder Include="DPSBase\SevenZipLZMACompressor\" />
-    <Folder Include="DPSBase\SevenZipLZMACompressor\LZ\" />
-    <Folder Include="DPSBase\SevenZipLZMACompressor\Common\" />
-    <Folder Include="DPSBase\SevenZipLZMACompressor\RangeCoder\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.MonoTouch.CSharp.targets" />
   <ItemGroup>
@@ -259,5 +255,9 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs">
       <Link>DPSBase\SevenZipLZMACompressor\RangeCoder\RangeCoderBitTree.cs</Link>
     </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="networkcomms.net.snk" />
   </ItemGroup>
 </Project>
