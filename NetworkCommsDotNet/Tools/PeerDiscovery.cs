@@ -681,12 +681,6 @@ namespace NetworkCommsDotNet.Tools
             //This requires the network and peer portion of current IP addresses
             List<IPEndPoint> allIPEndPointsToConnect = new List<IPEndPoint>();
 
-            //We want to ignore IP's that have been auto assigned
-            //169.254.0.0
-            IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
-            //255.255.0.0
-            IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
-
             //Look at all possible addresses
             foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -717,7 +711,7 @@ namespace NetworkCommsDotNet.Tools
                 {
                     //We are only interested in IPV4 ranges. A TCPPortScan on an IPV6 range may take a while
                     if (address.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
-                        !IPTools.IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                        !IPRange.IsAutoAssignedAddress(address.Address))
                     {
                         //Check if we have restricted the addresses
                         bool addressAllowed = true;

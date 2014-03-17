@@ -43,7 +43,8 @@ namespace NetworkCommsDotNet.Tools
     /// A static class which provides information about the local host.
     /// </summary>
     public static class HostInfo
-    {
+    {       
+
         static HostInfo()
         {
             IP.NetworkLoadUpdateWindowMS = 2000;
@@ -177,14 +178,7 @@ namespace NetworkCommsDotNet.Tools
             }
 
             return allowedIPs;
-#else
-
-                    //We want to ignore IP's that have been auto assigned
-                    //169.254.0.0
-                    IPAddress autoAssignSubnetv4 = new IPAddress(new byte[] { 169, 254, 0, 0 });
-                    //255.255.0.0
-                    IPAddress autoAssignSubnetMaskv4 = new IPAddress(new byte[] { 255, 255, 0, 0 });
-
+#else                    
                     List<IPAddress> validIPAddresses = new List<IPAddress>();
 
 #if ANDROID
@@ -222,7 +216,7 @@ namespace NetworkCommsDotNet.Tools
                     {
                         if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
                         {
-                            if (!IPTools.IsAddressInSubnet(address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                            if (!IPRange.IsAutoAssignedAddress(address))
                             {
                                 bool allowed = false;
 
@@ -276,7 +270,7 @@ namespace NetworkCommsDotNet.Tools
                         {
                             if (address.Address.AddressFamily == AddressFamily.InterNetwork || address.Address.AddressFamily == AddressFamily.InterNetworkV6)
                             {
-                                if (!IPTools.IsAddressInSubnet(address.Address, autoAssignSubnetv4, autoAssignSubnetMaskv4))
+                                if (!IPRange.IsAutoAssignedAddress(address.Address))
                                 {
                                     bool allowed = false;
 
@@ -299,7 +293,7 @@ namespace NetworkCommsDotNet.Tools
                     }
 #endif
 
-                    //Sort the results to be returned
+            //Sort the results to be returned
                     if (RestrictLocalAddressRanges != null)
                     {
                         validIPAddresses.Sort((a, b) =>
