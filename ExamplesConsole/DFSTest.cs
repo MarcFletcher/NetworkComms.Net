@@ -68,6 +68,7 @@ namespace Examples.ExamplesConsole
                 randGen.NextBytes(someRandomData);
 
                 Console.WriteLine("\n ... successfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
+                Console.WriteLine(" ... data MD5 - {0}", NetworkCommsDotNet.Tools.StreamTools.MD5(someRandomData));
 
                 object listLocker = new object();
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
@@ -78,7 +79,8 @@ namespace Examples.ExamplesConsole
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
-                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildTarget.Disk);
+                MemoryStream itemData = new MemoryStream(someRandomData, 0, someRandomData.Length, false, false);
+                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", itemData, seedConnectionInfoList, ItemBuildMode.Disk_Blocks);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {
