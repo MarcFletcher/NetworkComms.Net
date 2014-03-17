@@ -232,7 +232,13 @@ namespace NetworkCommsDotNet
                 ((!containsSecurityCritialDataProcessors && !options.Options.ContainsKey("UseNestedPacketType")) || isNested))
                 this._packetHeader.SetOption(PacketHeaderStringItems.NullDataSection, "");
 
-            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... created packet of type " + sendingPacketTypeStr + ". PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
+            if (NetworkComms.LoggingEnabled)
+            {
+                if (isNested)
+                    NetworkComms.Logger.Trace(" ... created nested packet of type " + sendingPacketTypeStr);
+                else
+                    NetworkComms.Logger.Trace(" ... created packet of type " + sendingPacketTypeStr + ". PacketObject data size is " + payloadStream.Length.ToString() + " bytes");
+            }
         }
 
         /// <inheritdoc />
