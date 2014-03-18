@@ -36,6 +36,8 @@ namespace MergedDllBuild
             if (coreBuildEnabled)
             {
                 Directory.CreateDirectory("MergedCore");
+                File.Delete(@"MergedCore\MergeLog.txt");
+
                 ILMerge coreMerge = new ILMerge();
 
                 List<string> coreAssembles = new List<string>();
@@ -65,6 +67,8 @@ namespace MergedDllBuild
             if (completeBuildEnabled)
             {
                 Directory.CreateDirectory("MergedComplete");
+                File.Delete(@"MergedComplete\MergeLog.txt");
+
                 ILMerge completeMerge = new ILMerge();
 
                 List<string> completeAssembles = new List<string>();
@@ -73,8 +77,10 @@ namespace MergedDllBuild
                 completeAssembles.Add("ProtobufSerializer.dll");
                 completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
                 completeAssembles.Add("SharpZipLibCompressor.dll");
-                completeAssembles.Add("QuickLZCompressor.dll");
+                //completeAssembles.Add("QuickLZCompressor.dll");
                 completeAssembles.Add("InTheHand.Net.Personal.dll");
+                completeAssembles.Add("JSONSerializer.dll");
+                completeAssembles.Add("Newtonsoft.Json.dll");
 
                 completeAssembles.Add("DistributedFileSystem.dll");
                 completeAssembles.Add("RemoteProcedureCalls.dll");

@@ -11,8 +11,8 @@
             <RowDefinition Height="31" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Height="38" Width="430" HorizontalAlignment="Center" Margin="0,6,0,0" x:Name="textBlock1" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" ><Run Text="Note: NetworkComms.Net is "/><Run Language="en-gb" Text="freely available under the terms of the GPLv3"/><Run Text=". Please see http://www.networkcomms.net/licensing/ for more information."/></TextBlock>
-        
+        <TextBlock Grid.Row="0" Height="38" Width="430" HorizontalAlignment="Center" Margin="0,6,0,0" x:Name="textBlock1" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" TextAlignment="Center" ><Run Language="en-gb" Text="If you have any problems with this example you can find support at"/><LineBreak/><Run Language="en-gb" Text="http://www.networkcomms.net/support"/></TextBlock>
+
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

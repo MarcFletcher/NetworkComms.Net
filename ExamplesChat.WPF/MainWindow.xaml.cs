@@ -202,7 +202,7 @@ namespace Examples.ExamplesChat.WPF
                 this.UseJSON.IsChecked = true;
                 chatApplication.Serializer = DPSManager.GetDataSerializer<JSONSerializer>();
                 chatApplication.RefreshNetworkCommsConfiguration();
-                chatApplication.AppendLineToChatHistory("Serializer changed to explicit serializer.");
+                chatApplication.AppendLineToChatHistory("Serializer changed to JSON serializer.");
             }
         }
 

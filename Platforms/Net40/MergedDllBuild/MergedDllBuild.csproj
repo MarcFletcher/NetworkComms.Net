@@ -37,6 +37,10 @@
     <Reference Include="ILMerge">
       <HintPath>..\..\..\packages\ilmerge.2.13.0307\ILMerge.exe</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\Newtonsoft.Json.6.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -60,6 +64,10 @@
     <ProjectReference Include="..\..\..\RemoteProcedureCalls\RemoteProcedureCalls.csproj">
       <Project>{BFB67E36-9DF1-473D-B5DC-D94C5199C624}</Project>
       <Name>RemoteProcedureCalls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\JSONSerializer\JSONSerializer.csproj">
+      <Project>{70a3f4d5-38de-4a18-9f28-a7d67755bfdc}</Project>
+      <Name>JSONSerializer</Name>
     </ProjectReference>
     <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
       <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
