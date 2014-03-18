@@ -36,6 +36,7 @@ namespace MergedDllBuild
             if (coreBuildEnabled)
             {
                 Directory.CreateDirectory("MergedCore");
+                File.Delete(@"MergedCore\MergeLog.txt");
                 ILMerge coreMerge = new ILMerge();
 
                 List<string> coreAssembles = new List<string>();
@@ -65,6 +66,7 @@ namespace MergedDllBuild
             if (completeBuildEnabled)
             {
                 Directory.CreateDirectory("MergedComplete");
+                File.Delete(@"MergedComplete\MergeLog.txt");
                 ILMerge completeMerge = new ILMerge();
 
                 List<string> completeAssembles = new List<string>();

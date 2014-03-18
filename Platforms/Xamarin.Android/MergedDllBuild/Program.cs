@@ -30,12 +30,13 @@ namespace MergedDllBuild
             string msCoreLibDirectory = @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\MonoAndroid\v4.4";
 
             bool coreBuildEnabled = false;
-            bool completeBuildEnabled = true;
+            bool completeBuildEnabled = false;
 
             #region Merge Core
             if (coreBuildEnabled)
             {
                 Directory.CreateDirectory("MergedCore");
+                File.Delete(@"MergedCore\MergeLog.txt");
                 ILMerge coreMerge = new ILMerge();
 
                 List<string> coreAssembles = new List<string>();
@@ -65,6 +66,7 @@ namespace MergedDllBuild
             if (completeBuildEnabled)
             {
                 Directory.CreateDirectory("MergedComplete");
+                File.Delete(@"MergedComplete\MergeLog.txt");
                 ILMerge completeMerge = new ILMerge();
 
                 List<string> completeAssembles = new List<string>();

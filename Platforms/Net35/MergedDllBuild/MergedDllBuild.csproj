@@ -54,30 +54,30 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Net40\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
-      <Project>{B0FD9F50-A375-44DD-AAAE-CCC2F94A99D1}</Project>
-      <Name>NetworkCommsDotNet</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Net40\ProtobufSerializer\ProtobufSerializer.csproj">
-      <Project>{62977BE8-428B-4683-A098-4E3F588B3F7E}</Project>
-      <Name>ProtobufSerializer</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Net40\QuickLZCompressor\QuickLZCompressor.csproj">
-      <Project>{847B756A-5952-4E07-9CA9-33EDA38F6020}</Project>
-      <Name>QuickLZCompressor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Net40\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
-      <Project>{F27F6581-D3FF-4EF1-8DC6-8DF8E53E4132}</Project>
-      <Name>SharpZipLibCompressor</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\..\..\networkcomms.net.snk">
       <Link>networkcomms.net.snk</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\NetworkCommsDotNet\NetworkCommsDotNet.csproj">
+      <Project>{7db00305-f5ed-4545-9d83-542132c8177e}</Project>
+      <Name>NetworkCommsDotNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ProtobufSerializer\ProtobufSerializer.csproj">
+      <Project>{f27e4076-1ddc-485f-9a75-915a74d7958d}</Project>
+      <Name>ProtobufSerializer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\QuickLZCompressor\QuickLZCompressor.csproj">
+      <Project>{b659339d-a958-4f33-96e6-3a0ccfcbc5c1}</Project>
+      <Name>QuickLZCompressor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SharpZipLibCompressor\SharpZipLibCompressor.csproj">
+      <Project>{e10b41f4-696d-465c-963d-086488e2b6aa}</Project>
+      <Name>SharpZipLibCompressor</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
