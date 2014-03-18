@@ -748,6 +748,7 @@ namespace DistributedFileSystem
                 if (peerConnection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
                     throw new Exception("Only able to push DFS item when the request is made via TCP.");
 
+                ItemAssemblyConfig assemblyConfig;
                 lock (globalDFSLocker)
                 {
                     //First double check to see if it's already in the swarm
@@ -759,12 +760,13 @@ namespace DistributedFileSystem
                     //We add the requester to the item swarm at this point
                     itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection.ConnectionInfo, new ChunkFlags(0));
                     itemToDistribute.IncrementPushCount();
+
+                    //Create the assembly config within the locker to ensure it is not changed when we leave the lock
+                    assemblyConfig = new ItemAssemblyConfig(itemToDistribute, completedPacketType);
                 }
 
-                //We could contact other known super peers to see if they also have this file
-
                 //Send the config information to the client that wanted the file
-                peerConnection.SendObject("DFS_IncomingLocalItemBuild", new ItemAssemblyConfig(itemToDistribute, completedPacketType), nullCompressionSRO);
+                peerConnection.SendObject("DFS_IncomingLocalItemBuild", assemblyConfig, nullCompressionSRO);
 
                 if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + peerConnection + ".");
             }
@@ -1116,22 +1118,7 @@ namespace DistributedFileSystem
                         //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
                         if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
                         {
-                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildTarget + ".");
-
-                            //Copy the result to the disk if required by the build target
-                            if (assemblyConfig.ItemBuildTarget == ItemBuildTarget.Both)
-                            {
-                                //All disk files go in a local temp directory
-                                string tempFolderLocation = "DFS_" + NetworkComms.NetworkIdentifier;
-                                lock (globalDFSLocker)
-                                {
-                                    if (!Directory.Exists(tempFolderLocation))
-                                        Directory.CreateDirectory(tempFolderLocation);
-                                }
-
-                                using (FileStream sw = new FileStream(Path.Combine(tempFolderLocation, assemblyConfig.ItemIdentifier), FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
-                                    newItem.CopyItemDataStream(sw);
-                            }
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildMode + ".");
 
                             itemBytes = newItem.AccessItemBytes();
                         }
@@ -1147,6 +1134,11 @@ namespace DistributedFileSystem
                             else
                                 LogTools.LogException(exceptionToLogWith, fileName, "newItem==null so no build log was available.");
                         }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        //The item was closed during assemble, no need to log an errors here
+                        RemoveItem(assemblyConfig.ItemCheckSum);
                     }
                     catch (CommsException e)
                     {

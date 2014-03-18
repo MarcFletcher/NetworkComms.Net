@@ -72,8 +72,9 @@
     <Compile Include="ChunkAvailabilityRequest.cs" />
     <Compile Include="DFS.cs" />
     <Compile Include="DistributedItem.cs" />
+    <Compile Include="DistributedItemData.cs" />
     <Compile Include="ItemAssemblyConfig.cs" />
-    <Compile Include="ItemBuildTarget.cs" />
+    <Compile Include="ItemBuildMode.cs" />
     <Compile Include="ItemLinkRequest.cs" />
     <Compile Include="ItemRemovalUpdate.cs" />
     <Compile Include="LimitedParallelismTaskScheduler.cs" />

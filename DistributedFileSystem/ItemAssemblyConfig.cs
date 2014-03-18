@@ -42,7 +42,7 @@ namespace DistributedFileSystem
         /// Total item size in bytes
         /// </summary>
         [ProtoMember(4)]
-        public int TotalItemSizeInBytes { get; private set; }
+        public long TotalItemSizeInBytes { get; private set; }
 
         /// <summary>
         /// MD5 checksum of assembled item. Used for validating a completed build
@@ -75,10 +75,10 @@ namespace DistributedFileSystem
         public string ItemTypeStr { get; private set; }
 
         /// <summary>
-        /// The target to where the item should be built, i.e. memory or disk
+        /// Build mode determines how the item should be built, i.e. memory or disk as a single stream or multiple blocks
         /// </summary>
         [ProtoMember(9)]
-        public ItemBuildTarget ItemBuildTarget {get; private set;}
+        public ItemBuildMode ItemBuildMode {get; private set;}
 
         /// <summary>
         /// A unique identifier for this item, usually a file name
@@ -108,7 +108,7 @@ namespace DistributedFileSystem
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
             this.ItemTypeStr = itemToDistribute.ItemTypeStr;
             this.ItemIdentifier = itemToDistribute.ItemIdentifier;
-            this.ItemBuildTarget = itemToDistribute.ItemBuildTarget;
+            this.ItemBuildMode = itemToDistribute.ItemBuildMode;
         }
     }
 }

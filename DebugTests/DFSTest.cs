@@ -69,7 +69,7 @@ namespace DebugTests
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
-                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildTarget.Memory);
+                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildMode.Memory_Single);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {
