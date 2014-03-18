@@ -1,21 +1,24 @@
-Version 3.0 - Final Release TBC
+Version 3.0 - Released 18/03/14
 
 - Bluetooth connections (only for .net 3.5 upwards, excluding Windows Phone 8 and WinRT).
 - Unmanaged connections -  Interface with other network libraries, embedded controllers, legacy hardware devices, etc.
 - Support for WinRT - Use NetworkComms.Net in your windows store applications.
 - Peer discovery - Easily discover NetworkComms.Net peers in the local network.
 - SSL connections  - Introduces asymmetric encryption (excluding Windows Phone 8 and WinRT).
+- Significantly improved support for Remote Procedure Calls (RPC), including remote events.
 - Other security features:
 	\ Ability to restrict incoming IP ranges based on CIDR matches.
 	\ Automatically pad encrypted data preventing traffic analysis side channel attacks.
 	\ Nested packets that allow headers to be encrypted.
 	\ DOS protection which can ban remote clients based on set criteria, such as malformed data.
 - Strong named assemblies.
+- Generalised logging interface.
 - All features are now granular allowing configuration at the global, connection or listener specific level.
 - Protobuf serializer moved in to extension. Allows for more generalised serializer support.
-- Significant API changes. See updated examples before upgrading from v2.x.
+- Explicit serializer interface can now be used to achieve maximum serialization/deserialization throughput.
 - Large number of tools which can be used to simplify adding network related functionality to your applications.
-- Several minor usage and performance improvements.
+- Many performance improvements throughout.
+- Significant API changes. See updated examples before upgrading from v2.x.
 
 Version 2.3 - Released 11/06/13
 
@@ -26,7 +29,7 @@ Version 2.3 - Released 11/06/13
 - Bug fixes when using streams over 2GB, NAT configurations.
 - Inline XML documentation for merged DLLs.
 - Corrected gendarme high severity notifications.
-- DFS improvments when using disk build targets.
+- DFS improvements when using disk build targets.
 - Added light logging optional alternative to NLOG.
 - Updated to protobuf r638.
 
@@ -38,7 +41,7 @@ Version 2.2 - Released 16/03/13
 - Fixes for Unity3D.
 - Updated documentation.
 - Obsoleted methods from v1.x removed.
-- Performance improvments to distributed file system.
+- Performance improvements to distributed file system.
 
 Version 2.1 - Released 29/01/13
 
@@ -51,7 +54,7 @@ Version 2.0 - Released 20/12/12
 
 - UDP support.
 - Encryption support.
-- IPv6 suppport.
+- IPv6 support.
 - Significant API changes.
 - Automatic serialisation and compression detection.
 - Packet prioritisation.
@@ -84,7 +87,7 @@ Version 1.2 - Released 14/3/12
 Version 1.1 - Released 17/2/12
 
 - Bug fixes which occur very rarely (<0.1%) during VERY high loads (1000+ connections)
-- All logging is now performed via the Common.Logging 2.0 interface to offer a little more versatility. Fatal errors will still output independant error files as well
+- All logging is now performed via the Common.Logging 2.0 interface to offer a little more versatility. Fatal errors will still output independent error files as well
 - Spelling correction to SendReceive<> methods
 - Added public access to NetworkComms.CloseConnection(ConnectionId)
 - Added local listen port selection to AdvancedSend example
