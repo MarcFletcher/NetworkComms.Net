@@ -77,7 +77,7 @@ namespace MergedDllBuild
                 completeAssembles.Add("ProtobufSerializer.dll");
                 completeAssembles.Add("ICSharpCode.SharpZipLib.dll");
                 completeAssembles.Add("SharpZipLibCompressor.dll");
-                //completeAssembles.Add("QuickLZCompressor.dll");
+                completeAssembles.Add("QuickLZCompressor.dll");
                 completeAssembles.Add("InTheHand.Net.Personal.dll");
                 completeAssembles.Add("JSONSerializer.dll");
                 completeAssembles.Add("Newtonsoft.Json.dll");

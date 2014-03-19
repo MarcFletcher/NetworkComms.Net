@@ -69,7 +69,7 @@ namespace DebugTests
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
-                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfoList, ItemBuildMode.Memory_Single);
+                DistributedItem newItem = new DistributedItem("exampleItem", "example1", new MemoryStream(someRandomData), seedConnectionInfoList, DataBuildMode.Memory_Single);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {
@@ -249,7 +249,7 @@ namespace DebugTests
                         DistributedItem item = DFS.MostRecentlyCompletedItem();
                         if (item != null)
                         {
-                            DFS.RemoveItem(item.ItemCheckSum);
+                            DFS.RemoveItem(item.Data.CompleteDataCheckSum);
                             Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
                             startTime = DateTime.Now;
                         }

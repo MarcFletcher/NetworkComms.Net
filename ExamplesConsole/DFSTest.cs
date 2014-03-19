@@ -57,7 +57,6 @@ namespace Examples.ExamplesConsole
                 randGen.NextBytes(someRandomData);
 
                 Console.WriteLine("\n ... successfully created a {0}MB test packet.", ((double)someRandomData.Length / (1024.0 * 1024.0)).ToString("0.###"));
-                Console.WriteLine(" ... data MD5 - {0}", NetworkCommsDotNet.Tools.StreamTools.MD5(someRandomData));
 
                 object listLocker = new object();
                 List<IPEndPoint> connectedClients = new List<IPEndPoint>();
@@ -68,8 +67,8 @@ namespace Examples.ExamplesConsole
                 //Create the item to be distributed
                 List<ConnectionInfo> seedConnectionInfoList = (from current in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP) select new ConnectionInfo(ConnectionType.TCP, NetworkComms.NetworkIdentifier, current, true)).ToList();
 
-                MemoryStream itemData = new MemoryStream(someRandomData, 0, someRandomData.Length, false, false);
-                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", itemData, seedConnectionInfoList, ItemBuildMode.Disk_Blocks);
+                MemoryStream itemData = new MemoryStream(someRandomData, 0, someRandomData.Length, false, true);
+                DistributedItem newItem = new DistributedItem("exampleItem", "exampleItem", itemData, seedConnectionInfoList, DataBuildMode.Disk_Blocks);
 
                 NetworkComms.ConnectionEstablishShutdownDelegate clientEstablishDelegate = (connection) =>
                 {
@@ -202,7 +201,12 @@ namespace Examples.ExamplesConsole
                     {
                         buildCount++;
                         DistributedItem item = DFS.MostRecentlyCompletedItem();
-                        Console.WriteLine(" ... full item build " + buildCount + " took {0} secs ({1} MB/s) using {2} total peers. {3} builds completed.", (DateTime.Now - startTime).TotalSeconds.ToString("0.00"), (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.0"), item.SwarmChunkAvailability.NumPeersInSwarm(), buildCount);
+                        Console.WriteLine(" ... full item build " + buildCount + " took {0} secs ({1} MB/s), using {2} total peers and {4} build mode. {3} builds completed.", 
+                            (DateTime.Now - startTime).TotalSeconds.ToString("0.00"), 
+                            (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds).ToString("0.0"), 
+                            item.SwarmChunkAvailability.NumPeersInSwarm(), 
+                            buildCount, 
+                            item.Data.DataBuildMode);
 
                         double speed = (((double)dataBytes.Length / 1048576.0) / (DateTime.Now - startTime).TotalSeconds);
                         connection.SendObject("ClientInfo", " ... build " + buildCount + " took " + (DateTime.Now - startTime).TotalSeconds.ToString("0.00") + " secs (" + speed.ToString("0.0") + " MB/s) using " + item.SwarmChunkAvailability.NumPeersInSwarm() + " peers. " + buildCount + " builds completed.");
@@ -243,7 +247,7 @@ namespace Examples.ExamplesConsole
                             DistributedItem item = DFS.MostRecentlyCompletedItem();
                             if (item != null)
                             {
-                                DFS.RemoveItem(item.ItemCheckSum);
+                                DFS.RemoveItem(item.Data.CompleteDataCheckSum);
                                 Console.WriteLine("\n ... item removed from local and rebuilding at {0}.", DateTime.Now.ToString("HH:mm:ss.fff"));
                                 startTime = DateTime.Now;
                             }

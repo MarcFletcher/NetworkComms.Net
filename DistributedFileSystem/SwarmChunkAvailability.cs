@@ -1146,7 +1146,7 @@ namespace DistributedFileSystem
                     {
                         peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key]; 
                     }
-                    catch (KeyNotFoundException ex)
+                    catch (KeyNotFoundException)
                     {
                         //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                         //but it has been removed since we accessed the peerKeys at the start of this method
@@ -1197,7 +1197,7 @@ namespace DistributedFileSystem
                 {
                     peerInfo = peerAvailabilityByNetworkIdentifierDict[peer.Key];
                 }
-                catch (KeyNotFoundException ex)
+                catch (KeyNotFoundException)
                 {
                     //This exception will get thrown if we try to access a peers connecitonInfo from peerNetworkIdentifierToConnectionInfo 
                     //but it has been removed since we accessed the peerKeys at the start of this method

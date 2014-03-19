@@ -234,7 +234,7 @@ namespace NetworkCommsDotNet
 
         /// <summary>
         /// The network identifier of the packets source peer. If no source network identifier is set returns null. 
-        /// Also see <see cref="Connection.ConnectionInfo.NetworkIdentifier"/>.
+        /// Also see <see cref="ConnectionInfo.NetworkIdentifier"/>.
         /// </summary>
         public string SourceNetworkIdentifier
         {

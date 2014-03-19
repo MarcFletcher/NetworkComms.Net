@@ -30,28 +30,14 @@ namespace DebugTests
         public static void RunExample()
         {
             //Get the serializer and data processors
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
-                {
-                    Console.WriteLine("Server received - " + message);
-                    //connection.SendObject(header.RequestedReturnPacketType, "replyMessage");
-                });
+            Random randGen = new Random();
+            int[] someRandomData = new int[29 * 1024 * 1024 / 4];
+            for(int i=0; i<someRandomData.Length; i++)
+                someRandomData[i] = randGen.Next(int.MaxValue);
 
-            Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
+            byte[] compressedHandRankData = DPSManager.GetDataSerializer<NullSerializer>().SerialiseDataObject<int[]>(someRandomData, new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() }, new Dictionary<string, string>()).ThreadSafeStream.ToArray();
 
-            Thread thread1 = new Thread(() => {
-                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
-                conn.SendObject("Data", "test1");
-                Thread.Sleep(int.MaxValue);
-            });
-
-            Thread thread2 = new Thread(() => {
-                Connection conn = TCPConnection.GetConnection(new ConnectionInfo(IPTools.ParseEndPointFromString("::1:10000")));
-                conn.SendObject("Data", "test2");
-                Thread.Sleep(int.MaxValue);
-            });
-
-            thread1.Start();
-            thread2.Start();
+            int[] someRadomData2 = DPSManager.GetDataSerializer<NullSerializer>().DeserialiseDataObject<int[]>(compressedHandRankData, new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() }, new Dictionary<string, string>());
 
             Console.WriteLine("Client done!");
             Console.ReadKey();

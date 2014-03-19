@@ -15,7 +15,7 @@ namespace DistributedFileSystem
     /// <summary>
     /// Describes where a distributed item should be stored during and after being assembled
     /// </summary>
-    public enum ItemBuildMode
+    public enum DataBuildMode
     {
         /// <summary>
         /// Build the item to a single continuous memory stream. Requires sufficient memory during build.

@@ -566,9 +566,9 @@ namespace DistributedFileSystem
         {
             lock (globalDFSLocker)
             {
-                if (swarmedItemsDict.ContainsKey(item.ItemCheckSum))
+                if (swarmedItemsDict.ContainsKey(item.Data.CompleteDataCheckSum))
                 {
-                    if (swarmedItemsDict[item.ItemCheckSum].ItemBytesLength == item.ItemBytesLength)
+                    if (swarmedItemsDict[item.Data.CompleteDataCheckSum].Data.ItemBytesLength == item.Data.ItemBytesLength)
                         return true;
                     else
                         throw new Exception("Potential Md5 conflict detected in DFS.");
@@ -710,7 +710,7 @@ namespace DistributedFileSystem
             lock (globalDFSLocker)
             {
                 foreach(var item in swarmedItemsDict.Values)
-                    item.SwarmChunkAvailability.CloseConnectionsToCompletedPeers(item.TotalNumChunks);
+                    item.SwarmChunkAvailability.CloseConnectionsToCompletedPeers(item.Data.TotalNumChunks);
             }
         }
 
@@ -727,7 +727,7 @@ namespace DistributedFileSystem
                 foreach (DistributedItem item in swarmedItemsDict.Values)
                 {
                     if (item.ItemTypeStr == ItemTypeStr)
-                        keysToRemove.Add(item.ItemCheckSum);
+                        keysToRemove.Add(item.Data.CompleteDataCheckSum);
                 }
             }
 
@@ -753,9 +753,9 @@ namespace DistributedFileSystem
                 {
                     //First double check to see if it's already in the swarm
                     if (!ItemAlreadyInLocalCache(itemToDistribute))
-                        swarmedItemsDict.Add(itemToDistribute.ItemCheckSum, itemToDistribute);
+                        swarmedItemsDict.Add(itemToDistribute.Data.CompleteDataCheckSum, itemToDistribute);
                     else
-                        itemToDistribute = swarmedItemsDict[itemToDistribute.ItemCheckSum];
+                        itemToDistribute = swarmedItemsDict[itemToDistribute.Data.CompleteDataCheckSum];
 
                     //We add the requester to the item swarm at this point
                     itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection.ConnectionInfo, new ChunkFlags(0));
@@ -768,7 +768,7 @@ namespace DistributedFileSystem
                 //Send the config information to the client that wanted the file
                 peerConnection.SendObject("DFS_IncomingLocalItemBuild", assemblyConfig, nullCompressionSRO);
 
-                if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Pushed DFS item " + itemToDistribute.ItemCheckSum + " to peer " + peerConnection + ".");
+                if (DFS.loggingEnabled) DFS._DFSLogger.Debug("Pushed DFS item " + itemToDistribute.Data.CompleteDataCheckSum + " to peer " + peerConnection + ".");
             }
             catch (CommsException)
             {
@@ -798,19 +798,19 @@ namespace DistributedFileSystem
                     //First double check to see if it's already in the swarm
                     if (!ItemAlreadyInLocalCache(itemToAdd))
                     {
-                        swarmedItemsDict.Add(itemToAdd.ItemCheckSum, itemToAdd);
-                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added existing item to DFS (" + itemToAdd.ItemCheckSum + ").");
+                        swarmedItemsDict.Add(itemToAdd.Data.CompleteDataCheckSum, itemToAdd);
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added existing item to DFS (" + itemToAdd.Data.CompleteDataCheckSum + ").");
                     }
                     else
                     {
-                        itemToAdd = swarmedItemsDict[itemToAdd.ItemCheckSum];
-                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added new item to DFS (" + itemToAdd.ItemCheckSum + ").");
+                        itemToAdd = swarmedItemsDict[itemToAdd.Data.CompleteDataCheckSum];
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("... added new item to DFS (" + itemToAdd.Data.CompleteDataCheckSum + ").");
                     }
                 }
 
                 //Send the config information to the client that wanted the file
                 //NetworkComms.SendObject("DFS_IncomingLocalItemBuild, requestOriginConnectionId, false, new ItemAssemblyConfig(itemToDistribute, completedPacketType));
-                itemToAdd.SwarmChunkAvailability.BroadcastLocalAvailability(itemToAdd.ItemCheckSum);
+                itemToAdd.SwarmChunkAvailability.BroadcastLocalAvailability(itemToAdd.Data.CompleteDataCheckSum);
             }
             catch (CommsException)
             {
@@ -991,7 +991,7 @@ namespace DistributedFileSystem
                     //Inform peer that we don't actually have the requested item so that it won't bother us again
                     UDPConnection.SendObject("DFS_ItemRemovalUpdate", new ItemRemovalUpdate(NetworkComms.NetworkIdentifier, itemCheckSum, false), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO);
                 else
-                    UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.ItemCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
+                    UDPConnection.SendObject("DFS_KnownPeersUpdate", new KnownPeerEndPoints(selectedItem.Data.CompleteDataCheckSum, selectedItem.SwarmChunkAvailability.AllPeerEndPoints()), (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, nullCompressionSRO); 
             }
             catch (CommsException)
             {
@@ -1086,22 +1086,22 @@ namespace DistributedFileSystem
                         if (assemblyConfig == null)
                             throw new NullReferenceException("AssemblyConfig should not be null.");
 
-                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.ItemCheckSum + ".");
+                        if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild from " + connection + " for item " + assemblyConfig.CompleteDataCheckSum + ".");
 
                         //We check to see if we already have the necessary file locally
                         lock (globalDFSLocker)
                         {
-                            if (swarmedItemsDict.ContainsKey(assemblyConfig.ItemCheckSum))
+                            if (swarmedItemsDict.ContainsKey(assemblyConfig.CompleteDataCheckSum))
                             {
-                                if (swarmedItemsDict[assemblyConfig.ItemCheckSum].ItemBytesLength != assemblyConfig.TotalItemSizeInBytes)
+                                if (swarmedItemsDict[assemblyConfig.CompleteDataCheckSum].Data.ItemBytesLength != assemblyConfig.TotalItemSizeInBytes)
                                     throw new Exception("Possible MD5 conflict detected.");
                                 else
-                                    newItem = swarmedItemsDict[assemblyConfig.ItemCheckSum];
+                                    newItem = swarmedItemsDict[assemblyConfig.CompleteDataCheckSum];
                             }
                             else
                             {
                                 newItem = new DistributedItem(assemblyConfig);
-                                swarmedItemsDict.Add(assemblyConfig.ItemCheckSum, newItem);
+                                swarmedItemsDict.Add(assemblyConfig.CompleteDataCheckSum, newItem);
                             }
                         }
 
@@ -1118,12 +1118,12 @@ namespace DistributedFileSystem
                         //If an exception is thrown we will probably not call this method, timeouts in other areas should then handle and can restart the build.
                         if (newItem.LocalItemComplete() && assemblyConfig.CompletedPacketType != "")
                         {
-                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.ItemCheckSum + ". Item build target is " + assemblyConfig.ItemBuildMode + ".");
+                            if (DFS.loggingEnabled) DFS._DFSLogger.Debug("IncomingLocalItemBuild completed for item with MD5 " + assemblyConfig.CompleteDataCheckSum + ". Item build target is " + assemblyConfig.ItemBuildMode + ".");
 
-                            itemBytes = newItem.AccessItemBytes();
+                            itemBytes = newItem.GetCompletedItemBytes();
                         }
                         else if (assemblyConfig.CompletedPacketType != "")
-                            RemoveItem(assemblyConfig.ItemCheckSum);
+                            RemoveItem(assemblyConfig.CompleteDataCheckSum);
 
                         if (DFS.loggingEnabled)
                         {
@@ -1138,12 +1138,12 @@ namespace DistributedFileSystem
                     catch (ObjectDisposedException)
                     {
                         //The item was closed during assemble, no need to log an errors here
-                        RemoveItem(assemblyConfig.ItemCheckSum);
+                        RemoveItem(assemblyConfig.CompleteDataCheckSum);
                     }
                     catch (CommsException e)
                     {
                         //Crap an error has happened, let people know we probably don't have a good file
-                        RemoveItem(assemblyConfig.ItemCheckSum);
+                        RemoveItem(assemblyConfig.CompleteDataCheckSum);
                         //connection.CloseConnection(true, 30);
                         //LogTools.LogException(e, "CommsError_IncomingLocalItemBuild");
 
@@ -1155,7 +1155,7 @@ namespace DistributedFileSystem
                     catch (Exception e)
                     {
                         //Crap an error has happened, let people know we probably don't have a good file
-                        RemoveItem(assemblyConfig.ItemCheckSum);
+                        RemoveItem(assemblyConfig.CompleteDataCheckSum);
                         //connection.CloseConnection(true, 31);
 
                         if (newItem != null)
@@ -1173,9 +1173,9 @@ namespace DistributedFileSystem
                     //If there was a build error we just pass null data to the handlers so that the errors can get called up the relevant stack traces.
                     try
                     {
-                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem == null ? 0 : newItem.ItemBytesLength);
+                        PacketHeader itemPacketHeader = new PacketHeader(assemblyConfig.CompletedPacketType, newItem == null ? 0 : newItem.Data.ItemBytesLength);
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
-                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" :  newItem.ItemTypeStr + "|" + newItem.ItemIdentifier + "|" + newItem.ItemCheckSum);
+                        itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" :  newItem.ItemTypeStr + "|" + newItem.ItemIdentifier + "|" + newItem.Data.CompleteDataCheckSum);
 
                         //Trigger connection specific handlers
                         bool connectionSpecificHandlersTriggered = connection.TriggerSpecificPacketHandlers(itemPacketHeader, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
@@ -1260,9 +1260,9 @@ namespace DistributedFileSystem
                 else
                 {
                     //A little request validation
-                    if (incomingRequest.ChunkIndex > selectedItem.TotalNumChunks)
+                    if (incomingRequest.ChunkIndex > selectedItem.Data.TotalNumChunks)
                         throw new InvalidDataException("The incoming request wanted chunk #" + incomingRequest.ChunkIndex +
-                            " when the selected item only has " + selectedItem.TotalNumChunks + "chunks.");
+                            " when the selected item only has " + selectedItem.Data.TotalNumChunks + "chunks.");
 
                     if (!selectedItem.ChunkAvailableLocally(incomingRequest.ChunkIndex))
                     {
@@ -1286,13 +1286,13 @@ namespace DistributedFileSystem
                         }
                         else
                         {
-                            StreamTools.StreamSendWrapper chunkData = selectedItem.GetChunkStream(incomingRequest.ChunkIndex);
+                            StreamTools.StreamSendWrapper chunkData = selectedItem.GetChunkDataStream(incomingRequest.ChunkIndex);
 
                             if (DFS.loggingEnabled) DFS._DFSLogger.Trace("Pushing chunkData to " + connection + " for item:" + incomingRequest.ItemCheckSum + ", chunkIndex:" + incomingRequest.ChunkIndex + ".");
 
                             //We identify the data using the itemchecksum, the requested chunk index, and to unique identify this request from possible duplicates
                             //we append the requesting peer request index.
-                            string packetIdentifier = selectedItem.ItemCheckSum + "-" + incomingRequest.ChunkIndex + "-" + incomingRequest.RequestNumIndex;
+                            string packetIdentifier = selectedItem.Data.CompleteDataCheckSum + "-" + incomingRequest.ChunkIndex + "-" + incomingRequest.RequestNumIndex;
 
                             //This is received via UDP but we want to reply using TCP to ensure delivery of the data
                             var clientTCPConnection = TCPConnection.GetConnection(new ConnectionInfo(connection.ConnectionInfo.RemoteEndPoint));
@@ -1654,7 +1654,7 @@ namespace DistributedFileSystem
                         {
                             //If we still have the item then we add the remote end as a new super peer
                             if (swarmedItemsDict.ContainsKey(itemsToLink[i]))
-                                swarmedItemsDict[itemsToLink[i]].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection.ConnectionInfo, new ChunkFlags(swarmedItemsDict[itemsToLink[i]].TotalNumChunks), true);
+                                swarmedItemsDict[itemsToLink[i]].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection.ConnectionInfo, new ChunkFlags(swarmedItemsDict[itemsToLink[i]].Data.TotalNumChunks), true);
                         }
                     }
                 }

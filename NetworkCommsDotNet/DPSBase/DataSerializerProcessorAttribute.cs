@@ -46,7 +46,7 @@ namespace NetworkCommsDotNet.DPSBase
         /// <summary>
         /// Create a new instance of this attribute
         /// </summary>
-        /// <param name="identifier"></param>
+        /// <param name="isSecurityCritical"></param>
         public SecurityCriticalDataProcessorAttribute(bool isSecurityCritical)
         {
             this.IsSecurityCritical = isSecurityCritical;

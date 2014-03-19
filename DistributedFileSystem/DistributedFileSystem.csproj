@@ -74,7 +74,7 @@
     <Compile Include="DistributedItem.cs" />
     <Compile Include="DistributedItemData.cs" />
     <Compile Include="ItemAssemblyConfig.cs" />
-    <Compile Include="ItemBuildMode.cs" />
+    <Compile Include="DataBuildMode.cs" />
     <Compile Include="ItemLinkRequest.cs" />
     <Compile Include="ItemRemovalUpdate.cs" />
     <Compile Include="LimitedParallelismTaskScheduler.cs" />

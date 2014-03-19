@@ -48,7 +48,7 @@ namespace DistributedFileSystem
         /// MD5 checksum of assembled item. Used for validating a completed build
         /// </summary>
         [ProtoMember(5)]
-        public string ItemCheckSum { get; private set; }
+        public string CompleteDataCheckSum { get; private set; }
 
         /// <summary>
         /// Optional MD5 checksums for individual chunks.
@@ -78,7 +78,7 @@ namespace DistributedFileSystem
         /// Build mode determines how the item should be built, i.e. memory or disk as a single stream or multiple blocks
         /// </summary>
         [ProtoMember(9)]
-        public ItemBuildMode ItemBuildMode {get; private set;}
+        public DataBuildMode ItemBuildMode {get; private set;}
 
         /// <summary>
         /// A unique identifier for this item, usually a file name
@@ -98,17 +98,17 @@ namespace DistributedFileSystem
         /// <param name="completedPacketType">The packet type to use once the item has been fully assembled</param>
         public ItemAssemblyConfig(DistributedItem itemToDistribute, string completedPacketType)
         {
-            this.ItemCheckSum = itemToDistribute.ItemCheckSum;
-            this.ChunkCheckSums = itemToDistribute.ChunkCheckSums;
-            this.TotalNumChunks = itemToDistribute.TotalNumChunks;
-            this.ChunkSizeInBytes = itemToDistribute.ChunkSizeInBytes;
-            this.TotalItemSizeInBytes = itemToDistribute.ItemBytesLength;
+            this.CompleteDataCheckSum = itemToDistribute.Data.CompleteDataCheckSum;
+            this.ChunkCheckSums = itemToDistribute.Data.ChunkCheckSums;
+            this.TotalNumChunks = itemToDistribute.Data.TotalNumChunks;
+            this.ChunkSizeInBytes = itemToDistribute.Data.ChunkSizeInBytes;
+            this.TotalItemSizeInBytes = itemToDistribute.Data.ItemBytesLength;
             this.SwarmChunkAvailabilityBytes = itemToDistribute.SwarmChunkAvailability.ThreadSafeSerialise();
             this.CompletedPacketType = completedPacketType;
             this.ItemBuildCascadeDepth = itemToDistribute.ItemBuildCascadeDepth;
             this.ItemTypeStr = itemToDistribute.ItemTypeStr;
             this.ItemIdentifier = itemToDistribute.ItemIdentifier;
-            this.ItemBuildMode = itemToDistribute.ItemBuildMode;
+            this.ItemBuildMode = itemToDistribute.Data.DataBuildMode;
         }
     }
 }
