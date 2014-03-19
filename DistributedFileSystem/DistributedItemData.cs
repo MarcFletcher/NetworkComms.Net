@@ -94,6 +94,8 @@ namespace DistributedFileSystem
         /// </summary>
         StreamTools.ThreadSafeStream[] ChunkDataStreams { get; set; }
 
+        object dataLocker = new object();
+
         /// <summary>
         /// Private constructor for deserialisation
         /// </summary>
@@ -314,84 +316,87 @@ namespace DistributedFileSystem
         /// <param name="itemDataStream"></param>
         public void SetData(string itemIdentifier, Stream itemDataStream)
         {
-            if (itemIdentifier == null) throw new ArgumentNullException("itemIdentifier");
-            if (itemDataStream == null) throw new ArgumentNullException("itemDataStream");
-
-            #region Build Internal Data Structure
-            if (DataBuildMode == DataBuildMode.Disk_Single ||
-                //ItemBuildMode == ItemBuildMode.Both_Single ||
-                DataBuildMode == DataBuildMode.Memory_Single)
+            lock (dataLocker)
             {
-                CompleteDataStream = new StreamTools.ThreadSafeStream(itemDataStream);
-            }
-            else
-            {
-                //Break the itemDataStream into blocks
-                ChunkDataStreams = new StreamTools.ThreadSafeStream[ChunkPositionLengthDict.Count];
+                if (itemIdentifier == null) throw new ArgumentNullException("itemIdentifier");
+                if (itemDataStream == null) throw new ArgumentNullException("itemDataStream");
 
-                //If the itemDataStream is a memory stream we can try to access the buffer as it makes creating the streams more efficient
-                byte[] itemDataStreamBuffer = null;
-                if (itemDataStream is MemoryStream)
+                #region Build Internal Data Structure
+                if (DataBuildMode == DataBuildMode.Disk_Single ||
+                    //ItemBuildMode == ItemBuildMode.Both_Single ||
+                    DataBuildMode == DataBuildMode.Memory_Single)
                 {
-                    try
-                    {
-                        itemDataStreamBuffer = ((MemoryStream)itemDataStream).GetBuffer();
-                    }
-                    catch (UnauthorizedAccessException) { /* Ignore */ }
+                    CompleteDataStream = new StreamTools.ThreadSafeStream(itemDataStream);
                 }
-
-                for (int i = 0; i < ChunkPositionLengthDict.Count; i++)
+                else
                 {
-                    if (itemDataStreamBuffer != null)
-                        //This is the fastest way to create a block of data streams
-                        ChunkDataStreams[i] = new StreamTools.ThreadSafeStream(new MemoryStream(itemDataStreamBuffer, ChunkPositionLengthDict[i].Position, ChunkPositionLengthDict[i].Length));
-                    else
-                    {
-                        //We now need to available the respective data into blocks
-                        Stream destinationStream = null;
-                        if (DataBuildMode == DataBuildMode.Disk_Blocks)
-                        {
-                            string folderLocation = "DFS_" + NetworkComms.NetworkIdentifier;
-                            string fileName = Path.Combine(folderLocation, itemIdentifier + ".DFSItemData_" + i.ToString());
+                    //Break the itemDataStream into blocks
+                    ChunkDataStreams = new StreamTools.ThreadSafeStream[ChunkPositionLengthDict.Count];
 
-                            if (File.Exists(fileName))
+                    //If the itemDataStream is a memory stream we can try to access the buffer as it makes creating the streams more efficient
+                    byte[] itemDataStreamBuffer = null;
+                    if (itemDataStream is MemoryStream)
+                    {
+                        try
+                        {
+                            itemDataStreamBuffer = ((MemoryStream)itemDataStream).GetBuffer();
+                        }
+                        catch (UnauthorizedAccessException) { /* Ignore */ }
+                    }
+
+                    for (int i = 0; i < ChunkPositionLengthDict.Count; i++)
+                    {
+                        if (itemDataStreamBuffer != null)
+                            //This is the fastest way to create a block of data streams
+                            ChunkDataStreams[i] = new StreamTools.ThreadSafeStream(new MemoryStream(itemDataStreamBuffer, ChunkPositionLengthDict[i].Position, ChunkPositionLengthDict[i].Length));
+                        else
+                        {
+                            //We now need to available the respective data into blocks
+                            Stream destinationStream = null;
+                            if (DataBuildMode == DataBuildMode.Disk_Blocks)
                             {
-                                destinationStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                                //if (StreamTools.MD5(destinationStream) != checksum)
-                                //    throw new Exception("Wrong place, wrong time, wrong file!");
-                            }
-                            else
-                            {
-                                //Create the folder if it does not exist yet
-                                lock (DFS.globalDFSLocker)
+                                string folderLocation = "DFS_" + NetworkComms.NetworkIdentifier;
+                                string fileName = Path.Combine(folderLocation, itemIdentifier + ".DFSItemData_" + i.ToString());
+
+                                if (File.Exists(fileName))
                                 {
-                                    if (!Directory.Exists(folderLocation))
-                                        Directory.CreateDirectory(folderLocation);
+                                    destinationStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                                    //if (StreamTools.MD5(destinationStream) != checksum)
+                                    //    throw new Exception("Wrong place, wrong time, wrong file!");
+                                }
+                                else
+                                {
+                                    //Create the folder if it does not exist yet
+                                    lock (DFS.globalDFSLocker)
+                                    {
+                                        if (!Directory.Exists(folderLocation))
+                                            Directory.CreateDirectory(folderLocation);
+                                    }
+
+                                    destinationStream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 8192, FileOptions.DeleteOnClose);
+                                    destinationStream.SetLength(ChunkPositionLengthDict[i].Length);
+                                    destinationStream.Flush();
                                 }
 
-                                destinationStream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 8192, FileOptions.DeleteOnClose);
-                                destinationStream.SetLength(ChunkPositionLengthDict[i].Length);
-                                destinationStream.Flush();
+                                if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
                             }
+                            else
+                                //If we are not exclusively building to the disk we just use a memory stream at this stage
+                                destinationStream = new MemoryStream(ChunkPositionLengthDict[i].Length);
 
-                            if (!File.Exists(fileName)) throw new Exception("At this point the item data file should have been created. This exception should not really be possible.");
+                            //Ensure we start at the beginning of the stream
+                            destinationStream.Seek(0, SeekOrigin.Begin);
+
+                            //Copy over the correct part of the itemDataStream to the chunks
+                            StreamTools.Write(itemDataStream, ChunkPositionLengthDict[i].Position, ChunkPositionLengthDict[i].Length, destinationStream, 8192, double.MaxValue, int.MaxValue);
+                            ChunkDataStreams[i] = new StreamTools.ThreadSafeStream(destinationStream);
                         }
-                        else
-                            //If we are not exclusively building to the disk we just use a memory stream at this stage
-                            destinationStream = new MemoryStream(ChunkPositionLengthDict[i].Length);
-
-                        //Ensure we start at the beginning of the stream
-                        destinationStream.Seek(0, SeekOrigin.Begin);
-
-                        //Copy over the correct part of the itemDataStream to the chunks
-                        StreamTools.Write(itemDataStream, ChunkPositionLengthDict[i].Position, ChunkPositionLengthDict[i].Length, destinationStream, 8192, double.MaxValue, int.MaxValue);
-                        ChunkDataStreams[i] = new StreamTools.ThreadSafeStream(destinationStream);
                     }
                 }
-            }
-            #endregion
+                #endregion
 
-            this.CompleteDataCheckSum = StreamTools.MD5(itemDataStream);
+                this.CompleteDataCheckSum = StreamTools.MD5(itemDataStream);
+            }
         }
 
         /// <summary>
@@ -438,20 +443,23 @@ namespace DistributedFileSystem
                 return CompleteDataStream.MD5();
             else
             {
-                using (System.Security.Cryptography.HashAlgorithm md5 = System.Security.Cryptography.MD5.Create())
+                lock (dataLocker)
                 {
-                    byte[] chunkBytes;
-                    for (int i = 0; i < ChunkDataStreams.Length; i++)
+                    using (System.Security.Cryptography.HashAlgorithm md5 = System.Security.Cryptography.MD5.Create())
                     {
-                        chunkBytes = ChunkDataStreams[i].ToArray();
+                        byte[] chunkBytes;
+                        for (int i = 0; i < ChunkDataStreams.Length; i++)
+                        {
+                            chunkBytes = ChunkDataStreams[i].ToArray();
 
-                        if (i < ChunkDataStreams.Length - 1)
-                            md5.TransformBlock(chunkBytes, 0, chunkBytes.Length, chunkBytes, 0);
-                        else
-                            md5.TransformFinalBlock(chunkBytes, 0, chunkBytes.Length);
+                            if (i < ChunkDataStreams.Length - 1)
+                                md5.TransformBlock(chunkBytes, 0, chunkBytes.Length, chunkBytes, 0);
+                            else
+                                md5.TransformFinalBlock(chunkBytes, 0, chunkBytes.Length);
+                        }
+
+                        return BitConverter.ToString(md5.Hash).Replace("-", "");
                     }
-
-                    return BitConverter.ToString(md5.Hash).Replace("-", "");
                 }
             }
         }
@@ -503,12 +511,15 @@ namespace DistributedFileSystem
         /// <param name="destinationStream">The destination stream for the item data</param>
         public void CopyTo(Stream destinationStream)
         {
-            if (CompleteDataStream != null)
-                CompleteDataStream.CopyTo(destinationStream);
-            else
+            lock (dataLocker)
             {
-                for (int i = 0; i < ChunkDataStreams.Length; i++)
-                    ChunkDataStreams[i].CopyTo(destinationStream);
+                if (CompleteDataStream != null)
+                    CompleteDataStream.CopyTo(destinationStream, 0, CompleteDataStream.Length, 8192, double.MaxValue, int.MaxValue);
+                else
+                {
+                    for (int i = 0; i < ChunkDataStreams.Length; i++)
+                        ChunkDataStreams[i].CopyTo(destinationStream, 0, ChunkDataStreams[i].Length, 8192, double.MaxValue, int.MaxValue);
+                }
             }
         }
 
@@ -528,26 +539,7 @@ namespace DistributedFileSystem
             if (CompleteDataStream != null)
                 return new StreamTools.StreamSendWrapper(CompleteDataStream, startPosition, length);
             else
-            {
-                long currentBytesPassed = 0;
-                for (int i = 0; i < ChunkDataStreams.Length; i++)
-                {
-                    if (currentBytesPassed < startPosition)
-                    {
-                        //While we are not in the correct chunk
-                        currentBytesPassed += ChunkDataStreams[i].Length;
-                        continue;
-                    }
-                    else if (currentBytesPassed == startPosition && length == ChunkDataStreams[i].Length)
-                    {
-                        return new StreamTools.StreamSendWrapper(ChunkDataStreams[i]);
-                    }
-                    else
-                        throw new NotImplementedException("Method not implemented when start is mid chunk.");
-                }
-
-                throw new Exception("The requested data is not available.");
-            }            
+                return new StreamTools.StreamSendWrapper(ChunkDataStreams[chunkIndex]);         
         }
 
         /// <summary>
@@ -556,10 +548,13 @@ namespace DistributedFileSystem
         /// <param name="newDataBuildMode">The new DataBuildMode to use</param>
         public void UpdateBuildTarget(DataBuildMode newDataBuildMode)
         {
-            if (DFS.GetDistributedItemByChecksum(CompleteDataCheckSum) == null)
-                this.DataBuildMode = newDataBuildMode;
-            else
-                throw new Exception("Unable to update build target once item has been added to DFS. Future version of the DFS may be more flexible in this regard.");
+            lock (dataLocker)
+            {
+                if (DFS.GetDistributedItemByChecksum(CompleteDataCheckSum) == null)
+                    this.DataBuildMode = newDataBuildMode;
+                else
+                    throw new Exception("Unable to update build target once item has been added to DFS. Future version of the DFS may be more flexible in this regard.");
+            }
         }
 
         /// <summary>
@@ -581,13 +576,16 @@ namespace DistributedFileSystem
                 return CompleteDataStream;
             else
             {
-                Stream destinationStream = new MemoryStream();
-                destinationStream.SetLength(ItemBytesLength);
+                lock (dataLocker)
+                {
+                    Stream destinationStream = new MemoryStream();
+                    destinationStream.SetLength(ItemBytesLength);
 
-                for (int i = 0; i < ChunkDataStreams.Length; i++)
-                    ChunkDataStreams[i].CopyTo(destinationStream, 8192);
+                    for (int i = 0; i < ChunkDataStreams.Length; i++)
+                        ChunkDataStreams[i].CopyTo(destinationStream, 0, ChunkDataStreams[i].Length, 8192, double.MaxValue, int.MaxValue);
 
-                return new StreamTools.ThreadSafeStream(destinationStream);
+                    return new StreamTools.ThreadSafeStream(destinationStream);
+                }
             }    
         }
 
