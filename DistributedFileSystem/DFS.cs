@@ -748,6 +748,10 @@ namespace DistributedFileSystem
                 if (peerConnection.ConnectionInfo.ConnectionType != ConnectionType.TCP)
                     throw new Exception("Only able to push DFS item when the request is made via TCP.");
 
+
+                if (itemToDistribute.ItemClosed)
+                    throw new ArgumentException("Unable to push a closed item.");
+
                 ItemAssemblyConfig assemblyConfig;
                 lock (globalDFSLocker)
                 {

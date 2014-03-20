@@ -313,7 +313,11 @@ namespace DistributedFileSystem
         /// Returns true if this peer has at least one on line ipEndPoint
         /// </summary>
         /// <returns></returns>
-        public bool HasAtleastOneOnlineIPEndPoint() { return (from current in IPEndPointOnlineDict.Values where current select current).Count() > 0; }
+        public bool HasAtleastOneOnlineIPEndPoint() 
+        { 
+            lock (syncRoot)
+                return (from current in IPEndPointOnlineDict.Values where current select current).Count() > 0; 
+        }
 
         /// <summary>
         /// Returns true if the specified peer has the specified IPEndPoint online.

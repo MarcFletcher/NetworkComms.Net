@@ -85,7 +85,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                 else
                 {
                     if (NetworkComms.LoggingEnabled)
-                        NetworkComms.Logger.Trace("Creating new TCPConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
+                        NetworkComms.Logger.Trace("Creating new BluetoothConnection to connectionInfo='" + connectionInfo + "'." + (establishIfRequired ? " Connection will be established." : " Connection will not be established."));
 
                     if (connectionInfo.ConnectionState == ConnectionState.Establishing)
                         throw new ConnectionSetupException("Connection state for connection " + connectionInfo + " is marked as establishing. This should only be the case here due to a bug.");

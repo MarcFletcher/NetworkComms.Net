@@ -160,7 +160,7 @@ namespace NetworkCommsDotNet
 
                 PacketHeader tempObject = headerSendReceiveOptions.DataSerializer.DeserialiseDataObject<PacketHeader>(packetHeaderStream, headerSendReceiveOptions.DataProcessors, headerSendReceiveOptions.Options);
                 if (tempObject == null || !tempObject.longItems.ContainsKey(PacketHeaderLongItems.TotalPayloadSize) || !tempObject.stringItems.ContainsKey(PacketHeaderStringItems.PacketType))
-                    throw new SerialisationException("Failed to deserialize a valid packet header. Packet header was null or did not contain the compulsory fields, TotalPayloadSize and PacketType.");
+                    throw new SerialisationException("Failed to deserialize a valid packet header. Deserialized header result was null or did not contain the compulsory fields, TotalPayloadSize and PacketType.");
                 else
                 {
                     stringItems = new Dictionary<PacketHeaderStringItems, string>();

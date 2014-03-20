@@ -86,7 +86,7 @@ namespace NetworkCommsDotNet.Tools
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Environment.CurrentManagedThreadId.ToString() + "]");
 #else
                 using (Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
-                    entireFileName = fileName + " " + DateTime.Now.ToString("h.mm.ss.fff") + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
+                    entireFileName = fileName + " " + DateTime.Now.ToString("HH.mm.ss.fff") + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
 #endif
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal(entireFileName, ex);

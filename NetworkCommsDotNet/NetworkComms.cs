@@ -1852,8 +1852,17 @@ namespace NetworkCommsDotNet
                     //If a connection still exist we don't assume it is the same as above
                     if (existingConnection[0] != connection)
                     {
-                        throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + remoteEndPointToUse.ToString() + "). This can occur if the connections have different ApplicationProtocolLayer statuses or two peers try to connect to each other simultaneously. New connection is " + (connection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
-                            ". Existing connection is " + (existingConnection[0].ConnectionInfo.ServerSide ? "server side" : "client side") + ", ConnState:" + existingConnection[0].ConnectionInfo.ConnectionState.ToString() + " - " + ((existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Establishing || existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Undefined) ? "CreationTime:" + existingConnection[0].ConnectionInfo.ConnectionCreationTime.ToString() : "EstablishedTime:" + existingConnection[0].ConnectionInfo.ConnectionEstablishedTime.ToString()) + " - " + existingConnection[0].ConnectionInfo);
+                        throw new DuplicateConnectionException("A different connection already exists with the desired endPoint (" + 
+                            remoteEndPointToUse.ToString() + "). This can occur if the connections have different ApplicationProtocolLayer"+
+                            " statuses or two peers try to connect to each other simultaneously. New connection is " + 
+                            (connection.ConnectionInfo.ServerSide ? "server side" : "client side") + " - " + connection.ConnectionInfo +
+                            ". Existing connection is " + (existingConnection[0].ConnectionInfo.ServerSide ? "server side" : "client side") + 
+                            ", ConnState:" + existingConnection[0].ConnectionInfo.ConnectionState.ToString() + " - " + 
+                            ((existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Establishing || 
+                            existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Undefined) ?
+                                "CreationTime:" + existingConnection[0].ConnectionInfo.ConnectionCreationTime.ToString("dd-MM-yyyy h.mm.ss.fff") :
+                                "EstablishedTime:" + existingConnection[0].ConnectionInfo.ConnectionEstablishedTime.ToString("dd-MM-yyyy h.mm.ss.fff")) + 
+                            " - " + existingConnection[0].ConnectionInfo);
                     }
                     else
                     {

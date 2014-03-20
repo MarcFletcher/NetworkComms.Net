@@ -44,7 +44,7 @@ namespace NetworkCommsDotNet
         Undefined,
 
         /// <summary>
-        /// The connection is in the process of being established.
+        /// The connection is in the process of being established/initialised.
         /// </summary>
         Establishing,
 
@@ -706,7 +706,27 @@ namespace NetworkCommsDotNet
         /// <returns>A string containing suitable information about this connection</returns>
         public override string ToString()
         {
-            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + "] ";
+            //Add a useful connection state identifier
+            string connectionStateIdentifier;
+            switch (ConnectionState)
+            {
+                case ConnectionState.Undefined:
+                    connectionStateIdentifier = "U";
+                    break;
+                case ConnectionState.Establishing:
+                    connectionStateIdentifier = "I";
+                    break;
+                case ConnectionState.Established:
+                    connectionStateIdentifier = "E";
+                    break;
+                case ConnectionState.Shutdown:
+                    connectionStateIdentifier = "S";
+                    break;
+                default:
+                    throw new Exception("Unexpected connection state.");
+            }
+
+            string returnString = "[" + ConnectionType.ToString() + "-" + (ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled ? "E" : "D") + "-" + connectionStateIdentifier + "] ";
 
             if (RemoteEndPoint != null && LocalEndPoint != null)
                 returnString += LocalEndPoint.ToString() + " -> " + RemoteEndPoint.ToString();

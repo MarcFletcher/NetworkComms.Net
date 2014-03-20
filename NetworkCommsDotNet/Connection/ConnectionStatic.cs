@@ -223,7 +223,8 @@ namespace NetworkCommsDotNet.Connections
             {
                 if (!allConnectionsComplete.WaitOne(allConnections.Count * 2500))
                     //This timeout should not really happen so we are going to log an error if it does
-                    LogTools.LogException(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
+                    //LogTools.LogException(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock.");
             }
         }
 
