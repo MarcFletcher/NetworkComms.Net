@@ -144,6 +144,8 @@ namespace NetworkCommsDotNet.Tools
                     //This is a really bad place to put a garbage collection as it hammers the CPU
                     //GC.Collect();
                 }
+
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... removed " + numBytesToRemove + " bytes from packetBuilder.");
             }
         }
 
@@ -168,6 +170,8 @@ namespace NetworkCommsDotNet.Tools
                     else if (TotalBytesExpected > 0 && totalBytesCached > totalBytesExpected * 2)
                         NetworkComms.Logger.Warn("Packet builder cache contains " + (totalBytesCached / 1024.0).ToString("0.0") + "KB when only " + (TotalBytesExpected / 1024.0).ToString("0.0") + "KB were expected.");
                 }
+
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... added " + packetBytes + " bytes to packetBuilder.");
             }
         }
 
@@ -192,6 +196,8 @@ namespace NetworkCommsDotNet.Tools
 
                     packets.RemoveAt(lastPacketIndex);
                     packetActualBytes.RemoveAt(lastPacketIndex);
+
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... reusing byte[" + returnArray.Length + "] from packetBuilder which contains " + lastPacketBytesRead + " existing bytes.");
 
                     return returnArray;
                 }

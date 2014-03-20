@@ -102,12 +102,14 @@ namespace NetworkCommsDotNet.Connections
                             //Do we have enough data to build a header?
                             if (packetBuilder.TotalBytesCached < packetHeaderSize)
                             {
-                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet header.");
+                                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("     ... require " + packetHeaderSize + " bytes for packet header, only " + packetBuilder.TotalBytesCached + " bytes cached.");
 
                                 //Set the expected number of bytes and then return
                                 packetBuilder.TotalBytesExpected = packetHeaderSize;
                                 return;
                             }
+
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("     ... deserializing header using " + packetHeaderSize + " bytes, " + packetBuilder.TotalBytesCached + " bytes cached.");
 
                             //We have enough for a header
                             using (MemoryStream headerStream = packetBuilder.ReadDataSection(1, packetHeaderSize - 1))
@@ -125,7 +127,7 @@ namespace NetworkCommsDotNet.Connections
                         //First case is when we have not yet received enough data
                         if (packetBuilder.TotalBytesCached < packetHeaderSize + topPacketHeader.TotalPayloadSize)
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.TotalPayloadSize).ToString() + " total packet bytes.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("     ... more data required for complete packet payload. Expecting " + (packetHeaderSize + topPacketHeader.TotalPayloadSize).ToString() + " total packet bytes.");
 
                             //Set the expected number of bytes and then return
                             packetBuilder.TotalBytesExpected = packetHeaderSize + topPacketHeader.TotalPayloadSize;

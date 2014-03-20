@@ -171,12 +171,14 @@ namespace NetworkCommsDotNet.Connections.UDP
             {
                 lock (connection.packetBuilder.Locker)
                 {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + possibleHandshakeUDPDatagram.DatagramBytes.Length.ToString() + " handshake bytes added to packetBuilder for " + connection.ConnectionInfo + ". Cached " + connection.packetBuilder.TotalBytesCached.ToString() + " bytes, expecting " + connection.packetBuilder.TotalBytesExpected.ToString() + " bytes.");
+
                     connection.packetBuilder.AddPartialPacket(possibleHandshakeUDPDatagram.DatagramBytes.Length, possibleHandshakeUDPDatagram.DatagramBytes);
                     if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
                 }
 
                 if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                    LogTools.LogException(new Exception("Packet builder had remaining packets after a call to IncomingPacketHandleHandOff. Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
+                    LogTools.LogException(new Exception("Packet builder had " + connection.packetBuilder.TotalBytesCached + " bytes remaining after a call to IncomingPacketHandleHandOff with connection " + connection.ConnectionInfo + ". Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
 
                 possibleHandshakeUDPDatagram.DatagramHandled = true;
             }

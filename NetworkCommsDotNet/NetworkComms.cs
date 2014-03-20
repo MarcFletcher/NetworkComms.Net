@@ -1860,8 +1860,8 @@ namespace NetworkCommsDotNet
                             ", ConnState:" + existingConnection[0].ConnectionInfo.ConnectionState.ToString() + " - " + 
                             ((existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Establishing || 
                             existingConnection[0].ConnectionInfo.ConnectionState == ConnectionState.Undefined) ?
-                                "CreationTime:" + existingConnection[0].ConnectionInfo.ConnectionCreationTime.ToString("dd-MM-yyyy h.mm.ss.fff") :
-                                "EstablishedTime:" + existingConnection[0].ConnectionInfo.ConnectionEstablishedTime.ToString("dd-MM-yyyy h.mm.ss.fff")) + 
+                                "CreationTime:" + existingConnection[0].ConnectionInfo.ConnectionCreationTime.ToString("dd-MM-yyyy HH.mm.ss.fff") :
+                                "EstablishedTime:" + existingConnection[0].ConnectionInfo.ConnectionEstablishedTime.ToString("dd-MM-yyyy HH.mm.ss.fff")) + 
                             " - " + existingConnection[0].ConnectionInfo);
                     }
                     else

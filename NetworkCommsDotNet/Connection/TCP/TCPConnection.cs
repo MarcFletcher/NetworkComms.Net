@@ -342,7 +342,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                     }
                     else
                     {
-                        //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder.");
+                        if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + " bytes, expecting " + packetBuilder.TotalBytesExpected.ToString() + " bytes.");
 
                         //If there is more data to get then add it to the packets lists;
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
@@ -380,7 +380,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                                 }
                                 else
                                 {
-                                    //if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
+                                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + " bytes, expecting " + packetBuilder.TotalBytesExpected.ToString() + " bytes.");
                                     packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                                     
                                     if (SSLOptions.SSLEnabled)
@@ -527,7 +527,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                         }
                         else
                         {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for connection with " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + "B, expecting " + packetBuilder.TotalBytesExpected.ToString() + "B.");
+                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... " + totalBytesRead.ToString() + " bytes added to packetBuilder for " + ConnectionInfo + ". Cached " + packetBuilder.TotalBytesCached.ToString() + " bytes, expecting " + packetBuilder.TotalBytesExpected.ToString() + " bytes.");
 
                             packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
                         }
