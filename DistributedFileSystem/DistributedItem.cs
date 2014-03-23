@@ -162,8 +162,8 @@ namespace DistributedFileSystem
             this.chunkDataToIntegrateQueue = new Queue<ChunkAvailabilityReply>();
 
             //Make sure that the original source added this node to the swarm before providing the assemblyConfig
-            if (!SwarmChunkAvailability.PeerExistsInSwarm(NetworkComms.NetworkIdentifier))
-                throw new Exception("The current local node should have been added by the source.");
+            //if (!SwarmChunkAvailability.PeerExistsInSwarm(NetworkComms.NetworkIdentifier))
+            //    throw new Exception("The current local node should have been added by the source.");
 
             //Bug fix incase we have just gotten the same file twice and the super node did not know that we dropped it
             //If the SwarmChunkAvailability thinks we have everything but our local version is not correct then clear our flags which will force rebuild

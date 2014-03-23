@@ -1377,7 +1377,7 @@ namespace DistributedFileSystem
                     {
                         if (peer.Value.PeerChunkFlags.AllFlagsSet(totalNumChunks))
                         {
-                            var connections = NetworkComms.GetExistingConnection(peer.Key, ConnectionType.TCP);
+                            var connections = NetworkComms.GetExistingConnection(peer.Key, ConnectionType.Undefined);
                             if (connections != null) 
                                 foreach (var connection in connections) 
                                     connection.CloseConnection(false);

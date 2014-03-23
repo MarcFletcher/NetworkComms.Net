@@ -585,10 +585,7 @@ namespace DistributedFileSystem
         /// <returns></returns>
         public static bool ItemAlreadyInLocalCache(string itemCheckSum)
         {
-            lock (globalDFSLocker)
-            {
-                return swarmedItemsDict.ContainsKey(itemCheckSum);
-            }
+            return swarmedItemsDict.ContainsKey(itemCheckSum);
         }
 
         /// <summary>
@@ -760,14 +757,16 @@ namespace DistributedFileSystem
                         swarmedItemsDict.Add(itemToDistribute.Data.CompleteDataCheckSum, itemToDistribute);
                     else
                         itemToDistribute = swarmedItemsDict[itemToDistribute.Data.CompleteDataCheckSum];
-
-                    //We add the requester to the item swarm at this point
-                    itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection.ConnectionInfo, new ChunkFlags(0));
-                    itemToDistribute.IncrementPushCount();
-
-                    //Create the assembly config within the locker to ensure it is not changed when we leave the lock
-                    assemblyConfig = new ItemAssemblyConfig(itemToDistribute, completedPacketType);
                 }
+
+                itemToDistribute.IncrementPushCount();
+
+                //We add the requester to the item swarm at this point
+                itemToDistribute.SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(peerConnection.ConnectionInfo, new ChunkFlags(0));
+
+                //There is a possibility when we create this assembly config that the peer has been removed again
+                //We handle this on the peer end
+                assemblyConfig = new ItemAssemblyConfig(itemToDistribute, completedPacketType);
 
                 //Send the config information to the client that wanted the file
                 peerConnection.SendObject("DFS_IncomingLocalItemBuild", assemblyConfig, nullCompressionSRO);
@@ -859,9 +858,7 @@ namespace DistributedFileSystem
             string[] returnArray;
 
             lock (globalDFSLocker)
-            {
                 returnArray = (from current in swarmedItemsDict where (completeItemsOnly ? current.Value.LocalItemComplete() : true) select current.Key).ToArray();
-            }
 
             return returnArray;
         }
@@ -935,40 +932,36 @@ namespace DistributedFileSystem
         /// <param name="connection"></param>
         private static void DFSConnectionShutdown(Connection connection)
         {
-            //We want to run this as a task as we want the shutdown to return ASAP
-            //GeneralTaskFactory.StartNew(new Action(() =>
-            //{
-                try
+            try
+            {
+                //We can only rely on the network identifier if this is a TCP connection shutting down
+                if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
                 {
-                    //We can only rely on the network identifier if this is a TCP connection shutting down
-                    if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP && connection.ConnectionInfo.NetworkIdentifier != ShortGuid.Empty)
-                    {
-                        lock (globalDFSLocker)
-                        {
-                            //Remove peer from any items
-                            foreach (var item in swarmedItemsDict)
-                            {
-                                item.Value.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
-                            }
-                        }
+                    List<DistributedItem> allItems;
+                    lock (globalDFSLocker)
+                        allItems = swarmedItemsDict.Values.ToList();
 
-                        lock (chunkDataCacheLocker)
-                            chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+                    //Remove peer from any items
+                    foreach (var item in allItems)
+                        item.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(connection.ConnectionInfo.NetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
 
-                        if (loggingEnabled) DFS._DFSLogger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
-                    }
-                    else
-                        if (loggingEnabled) DFS._DFSLogger.Trace("DFSConnectionShutdown Global - Disconnection ignored - " + connection + ".");
+                    //Remove any outstanding chunk requests for this peer
+                    lock (chunkDataCacheLocker)
+                        chunkDataCache.Remove(connection.ConnectionInfo.NetworkIdentifier);
+
+                    if (loggingEnabled) DFS._DFSLogger.Debug("DFSConnectionShutdown Global - Removed peer from all items - " + connection + ".");
                 }
-                catch (CommsException e)
-                {
-                    LogTools.LogException(e, "CommsError_DFSConnectionShutdown");
-                }
-                catch (Exception e)
-                {
-                    LogTools.LogException(e, "Error_DFSConnectionShutdown");
-                }
-            //}));
+                else
+                    if (loggingEnabled) DFS._DFSLogger.Trace("DFSConnectionShutdown Global - Disconnection ignored - " + connection + ".");
+            }
+            catch (CommsException e)
+            {
+                LogTools.LogException(e, "CommsError_DFSConnectionShutdown");
+            }
+            catch (Exception e)
+            {
+                LogTools.LogException(e, "Error_DFSConnectionShutdown");
+            }
         }
 
         /// <summary>
@@ -1594,29 +1587,33 @@ namespace DistributedFileSystem
             {
                 if (DFS.loggingEnabled) DFS._DFSLogger.Trace("IncomingItemRemovalUpdate from " + connection + " for " + itemRemovalUpdate.ItemCheckSum + ". " + (itemRemovalUpdate.RemoveSwarmWide ? "SwamWide" : "Local Only") + ".");
 
+                if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
+                if (itemRemovalUpdate.SourceNetworkIdentifier == null || itemRemovalUpdate.SourceNetworkIdentifier == ShortGuid.Empty)
+                    throw new NullReferenceException("itemRemovalUpdate.SourceNetworkIdentifier was null / empty. " + itemRemovalUpdate.SourceNetworkIdentifier != null ? itemRemovalUpdate.SourceNetworkIdentifier : "");
+
+                DistributedItem item = null;
                 lock (globalDFSLocker)
                 {
-                    if (itemRemovalUpdate == null) throw new NullReferenceException("ItemRemovalUpdate was null.");
-                    if (itemRemovalUpdate.SourceNetworkIdentifier == null || itemRemovalUpdate.SourceNetworkIdentifier == ShortGuid.Empty)
-                        throw new NullReferenceException("itemRemovalUpdate.SourceNetworkIdentifier was null / empty. " + itemRemovalUpdate.SourceNetworkIdentifier != null ? itemRemovalUpdate.SourceNetworkIdentifier : "");
-
                     if (swarmedItemsDict.ContainsKey(itemRemovalUpdate.ItemCheckSum))
-                    {
-                        if (itemRemovalUpdate.RemoveSwarmWide)
-                            //If this is a swarmwide removal then we get rid of our local copy as well
-                            RemoveItem(itemRemovalUpdate.ItemCheckSum, false);
-                        else
-                        {
-                            //Delete any old references at the same time
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemoveOldPeerAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
-
-                            //If this is not a swarm wide removal we just remove this peer from our local swarm copy
-                            swarmedItemsDict[itemRemovalUpdate.ItemCheckSum].SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, true);
-                        }
-                    }
-                    else
-                        if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... nothing removed as item not present locally.");
+                        item = swarmedItemsDict[itemRemovalUpdate.ItemCheckSum];
                 }
+
+                if (item != null)
+                {
+                    if (itemRemovalUpdate.RemoveSwarmWide)
+                        //If this is a swarmwide removal then we get rid of our local copy as well
+                        RemoveItem(itemRemovalUpdate.ItemCheckSum, false);
+                    else
+                    {
+                        //Delete any old references at the same time
+                        item.SwarmChunkAvailability.RemoveOldPeerAtEndPoint(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint);
+
+                        //If this is not a swarm wide removal we just remove this peer from our local swarm copy
+                        item.SwarmChunkAvailability.RemovePeerIPEndPointFromSwarm(itemRemovalUpdate.SourceNetworkIdentifier, (IPEndPoint)connection.ConnectionInfo.RemoteEndPoint, true);
+                    }
+                }
+                else
+                    if (DFS.loggingEnabled) DFS._DFSLogger.Trace(" ... nothing removed as item not present locally.");
             }
             catch (CommsException e)
             {
@@ -1626,7 +1623,7 @@ namespace DistributedFileSystem
             {
                 string commentStr = "";
                 if (itemRemovalUpdate != null)
-                    commentStr = "itemCheckSum:" + itemRemovalUpdate.ItemCheckSum + ", swarmWide:"+itemRemovalUpdate.RemoveSwarmWide + ", identifier" + itemRemovalUpdate.SourceNetworkIdentifier;
+                    commentStr = "itemCheckSum:" + itemRemovalUpdate.ItemCheckSum + ", swarmWide:" + itemRemovalUpdate.RemoveSwarmWide + ", identifier" + itemRemovalUpdate.SourceNetworkIdentifier;
 
                 LogTools.LogException(e, "Error_IncomingPeerItemRemovalUpdate", commentStr);
             }
@@ -1648,19 +1645,16 @@ namespace DistributedFileSystem
                 if (linkRequestData.AvailableItems.Count > 0)
                 {
                     //Get the item matches using linq. Could also use localItemKeys.Intersect<long>(linkRequestData.AvailableItemCheckSums);
-                    string[] itemsToLink = (from current in localItemKeys.Keys
-                                          join remote in linkRequestData.AvailableItems.Keys on current equals remote
-                                          select current).ToArray();
+                    DistributedItem[] itemsToLink = null;
 
                     lock (globalDFSLocker)
-                    {
+                        itemsToLink= (from current in localItemKeys.Keys
+                                          join remote in linkRequestData.AvailableItems.Keys on current equals remote
+                                      where swarmedItemsDict.ContainsKey(current)
+                                      select swarmedItemsDict[current]).ToArray();
+
                         for (int i = 0; i < itemsToLink.Length; i++)
-                        {
-                            //If we still have the item then we add the remote end as a new super peer
-                            if (swarmedItemsDict.ContainsKey(itemsToLink[i]))
-                                swarmedItemsDict[itemsToLink[i]].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection.ConnectionInfo, new ChunkFlags(swarmedItemsDict[itemsToLink[i]].Data.TotalNumChunks), true);
-                        }
-                    }
+                            itemsToLink[i].SwarmChunkAvailability.AddOrUpdateCachedPeerChunkFlags(connection.ConnectionInfo, new ChunkFlags(itemsToLink[i].Data.TotalNumChunks), true);
                 }
 
                 //If this link request is from the original requester then we reply with our own items list

@@ -168,7 +168,6 @@ namespace Examples.ExamplesConsole
                     //////////////////////////////////////////////////////////////////////
                     string logFileName = "ExamplesConsoleLog_" + NetworkComms.NetworkIdentifier + ".txt";
                     logger = new LiteLogger(LiteLogger.LogMode.ConsoleAndLogFile, logFileName);
-
                 }
                 else if (selectedLogger == 2)
                 {
