@@ -307,28 +307,32 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
 
             List<UDPConnection> connectionsToUse = null;
-
-            //Initialise best local end point as match all
-            IPEndPoint bestLocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            try
-            {
-                bestLocalEndPoint = IPTools.BestLocalEndPoint(ipEndPoint);
-                //Set the port to 0 to match all.
-                bestLocalEndPoint.Port = 0;
-            }
-            catch (SocketException ex)
-            {
-                throw new ConnectionSetupException("Attempting to determine the best local endPoint to connect to " + ipEndPoint + " resulted in a socket exception.", ex);
-            }
-            catch (Exception ex)
-            {
-                LogTools.LogException(ex, "BestLocalEndPointError", "Error while attempting to determine the best local end point to contact " + ipEndPoint.ToString());
-            }
-
+            
             //If we are already listening on what will be the outgoing adaptor we can send with that client to ensure reply packets are collected
             //The exception here is the broadcasting which goes out all adaptors
             if (ipEndPoint.Address != IPAddress.Broadcast)
             {
+                #region Discover best local endpoint
+
+                //Initialise best local end point as match all
+                IPEndPoint bestLocalEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                try
+                {
+                    bestLocalEndPoint = IPTools.BestLocalEndPoint(ipEndPoint);
+                    //Set the port to 0 to match all.
+                    bestLocalEndPoint.Port = 0;
+                }
+                catch (SocketException ex)
+                {
+                    throw new ConnectionSetupException("Attempting to determine the best local endPoint to connect to " + ipEndPoint + " resulted in a socket exception.", ex);
+                }
+                catch (Exception ex)
+                {
+                    LogTools.LogException(ex, "BestLocalEndPointError", "Error while attempting to determine the best local end point to contact " + ipEndPoint.ToString());
+                }
+
+                #endregion
+
                 #region Check For Existing Local Listener
                 List<UDPConnectionListener> existingListeners = Connection.ExistingLocalListeners<UDPConnectionListener>(bestLocalEndPoint);
 
