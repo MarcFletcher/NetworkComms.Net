@@ -1329,6 +1329,14 @@ namespace DistributedFileSystem
             {
                 //Ignore, the peer is suspended
             }
+            catch (DuplicateConnectionException)
+            {
+                //Ignore, two peers tried to connect simultaneously 
+            }
+            catch (ConnectionShutdownException)
+            {
+                //Ignore, the peer disconnected
+            }
             catch (CommsException e)
             {
                 //Something fucked happened.

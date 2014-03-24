@@ -34,38 +34,66 @@ namespace DebugTests
         /// <returns>True if the parse is succesfull</returns>
         private static bool ParseLineTime(string line, out DateTime result)
         {
-            char timeSep = '.';
+            string timeStr = line.Substring(0, line.IndexOf(" ["));
+
+            char timeSep = timeStr.Contains('.') ? '.' : ':';
+            string[] splitElements = timeStr.Split(timeSep);
+
+            //Determine match string
+            #region Build Expected Time Match String
+            string timeMatchString = "";
+            for (int i = 0; i < splitElements.Length; i++)
+            {
+                switch (i)
+                {
+                    case 0:
+                        timeMatchString += (splitElements[i].Length == 1 ? "H" : "HH") + timeSep;
+                        break;
+                    case 1:
+                        timeMatchString += (splitElements[i].Length == 1 ? "m" : "mm") + timeSep;
+                        break;
+                    case 2:
+                        timeMatchString += (splitElements[i].Length == 1 ? "s" : "ss") + timeSep;
+                        break;
+                    case 3:
+                        {
+                            switch (splitElements[i].Length)
+                            {
+                                case 3:
+                                    timeMatchString += "fff" + timeSep;
+                                    break;
+                                case 2:
+                                    timeMatchString += "ff" + timeSep;
+                                    break;
+                                case 1:
+                                    timeMatchString += "f" + timeSep;
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            break;
+                        }
+                    default:
+                        throw new Exception("Unexpected time format.");
+                }
+            }
+
+            //Remove the final timeSep
+            timeMatchString = timeMatchString.Substring(0, timeMatchString.Length - 1);
+            #endregion
+
             try
             {
-                string timeStr = line.Substring(0, line.IndexOf(" ["));
-
-                if (timeStr.Count(f => f == '.') == 3)
-                    result = DateTime.ParseExact(timeStr, "HH.mm.ss.fff", CultureInfo.InvariantCulture);
-                else
-                    result = DateTime.ParseExact(timeStr, "HH.mm.ss", CultureInfo.InvariantCulture);
-
-                return true;
+                result = DateTime.ParseExact(timeStr, timeMatchString, CultureInfo.InvariantCulture);
             }
             catch (Exception)
             {
-                try
-                {
-                    timeSep = ':';
-                    string timeStr = line.Substring(0, line.IndexOf(" ["));
-
-                    if (timeStr.Count(f => f == '.') == 3)
-                        result = DateTime.ParseExact(timeStr, "HH.mm.ss.fff", CultureInfo.InvariantCulture);
-                    else
-                        result = DateTime.ParseExact(timeStr, "HH.mm.ss", CultureInfo.InvariantCulture);
-
-                    return true;
-                }
-                catch (Exception)
-                {
-                    result = DateTime.Now;
-                    return false;
-                }
+                result = DateTime.Now;
+                return false;
             }
+
+            return true;
         }
 
         /// <summary>
