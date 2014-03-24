@@ -29,5 +29,7 @@
 	</array>
 	<key>NSMainNibFile</key>
 	<string>MainStoryboard</string>
+	<key>UIFileSharingEnabled</key>
+	<string>YES</string>
 </dict>
 </plist>

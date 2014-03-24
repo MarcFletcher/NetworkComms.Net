@@ -46,7 +46,7 @@ namespace DebugTests
 
             //NetworkComms.EnablePacketCheckSumValidation = true;
 
-            //DebugTest.RunExample();
+            DebugTest.RunExample();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();
@@ -60,9 +60,9 @@ namespace DebugTests
             //PeerDiscoveryTest.RunExample();
             //SelfConnectTest.RunExample();
 
-            LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\serverCommsLog.txt");
+            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\serverCommsLog.txt");
             //log.LinesWithMatch(new string[] { "Waiting for client connnectionInfo " }, "matchLog.txt");
-            log.ThreadPoolInfo("threadPool.csv");
+            //log.ThreadPoolInfo("threadPool.csv");
             //log.DataSendReceive(10, "sendReceiveStats.csv");
         }
     }

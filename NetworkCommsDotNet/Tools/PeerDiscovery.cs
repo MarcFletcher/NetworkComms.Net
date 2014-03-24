@@ -290,12 +290,17 @@ namespace NetworkCommsDotNet.Tools
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
 #endif
                 {
-                    List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
-
+                    
+#if iOS || ANDROID
+                    //iOS and Android must include IPAddress.Any in the listening addresses to successfully receive broadcasts
+                    List<IPAddress> localAddresses = new List<IPAddress>() { IPAddress.Any };
+#else
                     //We should select one of the target points across all adaptors, no need for all adaptors to have
-                    //selected a single uniform port.
+                    //selected a single uniform port which is what happens if we just pass IPAddress.Any to the StartListening method
                     List<IPAddress> localAddresses = HostInfo.IP.FilteredLocalAddresses();
+#endif
 
+                    List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                     foreach (IPAddress address in localAddresses)
                     {
                         //Keep trying to listen on an ever increasing port number

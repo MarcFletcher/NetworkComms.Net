@@ -58,10 +58,15 @@ namespace NetworkCommsDotNet.Connections
 
                 //Collect a list of IPEndPoints we want to listen on
                 List<IPEndPoint> localListenIPEndPoints = new List<IPEndPoint>();
+
                 if (desiredLocalIPEndPoint.Address == IPAddress.Any)
                 {
                     foreach(IPAddress address in HostInfo.IP.FilteredLocalAddresses())
                         localListenIPEndPoints.Add(new IPEndPoint(address, desiredLocalIPEndPoint.Port));
+
+                    //We still include the IPAddress.Any address as some platforms 
+                    //require this to receive broadcasts
+                    localListenIPEndPoints.Add(desiredLocalIPEndPoint);
                 }
                 else
                     localListenIPEndPoints.Add(desiredLocalIPEndPoint);
@@ -155,7 +160,10 @@ namespace NetworkCommsDotNet.Connections
             #region Input Validation
             if (listener == null) throw new ArgumentNullException("listener", "Provided listener cannot be null.");
             if (desiredLocalEndPoint == null) throw new ArgumentNullException("desiredLocalEndPoint", "Provided desiredLocalEndPoint cannot be null.");
-            if (desiredLocalEndPoint.GetType() == typeof(IPEndPoint) && ((desiredLocalEndPoint as IPEndPoint).Address == IPAddress.Any || (desiredLocalEndPoint as IPEndPoint).Address == IPAddress.IPv6Any)) throw new ArgumentException("desiredLocalEndPoint must specify a valid local IPAddress.", "desiredLocalEndPoint");
+
+            //Commented out as listening on IPAddress.Any does have specific usage cases, such as receiving UDP broadcast on iOS
+            //if (desiredLocalEndPoint.GetType() == typeof(IPEndPoint) && ((desiredLocalEndPoint as IPEndPoint).Address == IPAddress.Any || (desiredLocalEndPoint as IPEndPoint).Address == IPAddress.IPv6Any)) throw new ArgumentException("desiredLocalEndPoint must specify a valid local IPAddress.", "desiredLocalEndPoint");
+
 #if NET35 || NET4
             if (desiredLocalEndPoint is BluetoothEndPoint && (desiredLocalEndPoint as BluetoothEndPoint).Address == BluetoothAddress.None) throw new ArgumentException("desiredLocalEndPoint must specify a valid local Bluetooth Address.", "desiredLocalEndPoint");
 #endif

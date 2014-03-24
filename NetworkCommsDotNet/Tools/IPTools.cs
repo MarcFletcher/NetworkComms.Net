@@ -27,6 +27,61 @@ namespace NetworkCommsDotNet.Tools
     public static class IPTools
     {
         /// <summary>
+        /// Returns the network broadcast address for the provided local IP address
+        /// </summary>
+        /// <param name="localIPAddress"></param>
+        /// <returns></returns>
+        public static IPAddress GetIPv4NetworkBroadcastAddress(IPAddress localIPAddress)
+        {
+            if (localIPAddress.AddressFamily != AddressFamily.InterNetwork)
+                throw new ArgumentException("The method is for IPv4 addresses only.");
+            
+#if WINDOWS_PHONE || NETFX_CORE
+            throw new NotImplementedException("This method has not yet been implemented for WP8 and WinRT.");
+#else
+            //Determine the correct subnet address
+            //We initialise using a standard class C network subnet mask
+            IPAddress subnetAddress = new IPAddress(new byte[] { 255, 255, 255, 0});
+
+            #region Determine Correct SubnetMask
+            try
+            {
+                //Look at all possible addresses
+                foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
+                    foreach (var address in unicastAddresses)
+                    {
+                        if (address.Address.Equals(localIPAddress))
+                        {
+                            subnetAddress = address.IPv4Mask;
+
+                            //Use a go to to efficiently exist these loops
+                            goto Exit;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                //Ignore the exception and continue assuming a standard class C network
+                subnetAddress = new IPAddress(new byte[] { 255, 255, 255, 0 });
+            }
+
+            Exit:
+            #endregion
+
+            byte[] broadcastBytes = localIPAddress.GetAddressBytes();
+            byte[] subnetBytes = subnetAddress.GetAddressBytes();
+
+            for (int i = 0; i < broadcastBytes.Length; i++)
+                broadcastBytes[i] = (byte)(broadcastBytes[i] | ~subnetBytes[i]);
+
+            return new IPAddress(broadcastBytes);
+#endif
+        }
+
+        /// <summary>
         /// Converts an IPAddress in string form (IPv4 or IPv6) with an appended port number, e.g. 192.168.0.10:10000 or ::1:10000, into an <see cref="System.Net.IPEndPoint"/>.
         /// </summary>
         /// <param name="ipAddressAndPort">The IP and Port to be parsed</param>

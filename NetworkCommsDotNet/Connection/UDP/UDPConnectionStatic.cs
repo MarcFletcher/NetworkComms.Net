@@ -434,7 +434,16 @@ namespace NetworkCommsDotNet.Connections.UDP
             {
                 try
                 {
-                    connection.SendPacketSpecific<packetPayloadObjectType>(packetToSend, ipEndPoint);
+                    //This has been commented out for the time being as it made no difference to the broadcast issue
+                    //we were investigating at the time we had issues
+                    //Use the network broadcast address instead of the global broadcast address where possible
+                    //if (ipEndPoint.Address == IPAddress.Broadcast && connection.ConnectionInfo.LocalIPEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                    //{
+                    //    IPEndPoint ipEndPointToUse = new IPEndPoint(IPTools.GetIPv4NetworkBroadcastAddress(connection.ConnectionInfo.LocalIPEndPoint.Address), ipEndPoint.Port);
+                    //    connection.SendPacketSpecific<packetPayloadObjectType>(packetToSend, ipEndPointToUse);
+                    //}
+                    //else
+                        connection.SendPacketSpecific<packetPayloadObjectType>(packetToSend, ipEndPoint);
                 }
                 catch (SocketException) { /* Ignore any socket exceptions */ }
             }

@@ -30,14 +30,8 @@ namespace DebugTests
         public static void RunExample()
         {
             //Get the serializer and data processors
-            Random randGen = new Random();
-            int[] someRandomData = new int[29 * 1024 * 1024 / 4];
-            for(int i=0; i<someRandomData.Length; i++)
-                someRandomData[i] = randGen.Next(int.MaxValue);
-
-            byte[] compressedHandRankData = DPSManager.GetDataSerializer<NullSerializer>().SerialiseDataObject<int[]>(someRandomData, new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() }, new Dictionary<string, string>()).ThreadSafeStream.ToArray();
-
-            int[] someRadomData2 = DPSManager.GetDataSerializer<NullSerializer>().DeserialiseDataObject<int[]>(compressedHandRankData, new List<DataProcessor>() { DPSManager.GetDataProcessor<SharpZipLibCompressor.SharpZipLibGzipCompressor>() }, new Dictionary<string, string>());
+            TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+            Connection.StartListening(listener, new IPEndPoint(IPAddress.Any, 10000));
 
             Console.WriteLine("Client done!");
             Console.ReadKey();
