@@ -30,8 +30,19 @@ namespace DebugTests
         public static void RunExample()
         {
             //Get the serializer and data processors
-            TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
-            Connection.StartListening(listener, new IPEndPoint(IPAddress.Any, 10000));
+            //TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
+            Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
+
+            Console.WriteLine("Listening on:");
+            foreach (var endpoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
+                Console.WriteLine("\t-> {0}", endpoint.ToString());
+
+            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
+                {
+                    Console.WriteLine("Connection with {0} saying {1}", connection, message);
+                });
+
+            TCPConnection.GetConnection(new ConnectionInfo("192.168.0.117", 10000)).SendObject("Data", "hello");
 
             Console.WriteLine("Client done!");
             Console.ReadKey();

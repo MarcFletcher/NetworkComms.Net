@@ -122,24 +122,33 @@ namespace NetworkCommsDotNet.Tools
 
                     //Reset the totalBytesRead
                     totalBytesCached -= bytesRemoved;
-                    
-                    //Get rid of any null packets
-                    List<byte[]> newPackets = new List<byte[]>(packets.Count);
-                    for (int i = 0; i < packets.Count; i++)
-                    {
-                        if (packets[i] != null)
-                            newPackets.Add(packets[i]);
-                    }
-                    packets = newPackets;
 
-                    //Remove any -1 entries
-                    List<int> newPacketActualBytes = new List<int>(packetActualBytes.Count);
-                    for (int i = 0; i < packetActualBytes.Count; i++)
+                    if (totalBytesCached > 0)
                     {
-                        if (packetActualBytes[i] > -1)
-                            newPacketActualBytes.Add(packetActualBytes[i]);
+                        //Get rid of any null packets
+                        List<byte[]> newPackets = new List<byte[]>(packets.Count);
+                        for (int i = 0; i < packets.Count; i++)
+                        {
+                            if (packets[i] != null)
+                                newPackets.Add(packets[i]);
+                        }
+                        packets = newPackets;
+
+                        //Remove any -1 entries
+                        List<int> newPacketActualBytes = new List<int>(packetActualBytes.Count);
+                        for (int i = 0; i < packetActualBytes.Count; i++)
+                        {
+                            if (packetActualBytes[i] > -1)
+                                newPacketActualBytes.Add(packetActualBytes[i]);
+                        }
+                        packetActualBytes = newPacketActualBytes;
                     }
-                    packetActualBytes = newPacketActualBytes;
+                    else
+                    {
+                        //This is faster if we have removed everything
+                        packets = new List<byte[]>();
+                        packetActualBytes = new List<int>();
+                    }
 
                     //This is a really bad place to put a garbage collection as it hammers the CPU
                     //GC.Collect();
@@ -156,6 +165,11 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="partialPacket">A buffer which may or may not be full with valid bytes</param>
         public void AddPartialPacket(int packetBytes, byte[] partialPacket)
         {
+            if (packetBytes > partialPacket.Length)
+                throw new ArgumentException("packetBytes cannot be greater than the length of the provided partialPacket data.");
+            if (packetBytes < 0)
+                throw new ArgumentException("packetBytes cannot be negative.");
+
             lock (Locker)
             {
                 totalBytesCached += packetBytes;

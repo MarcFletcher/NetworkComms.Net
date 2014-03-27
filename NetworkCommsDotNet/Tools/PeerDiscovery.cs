@@ -290,14 +290,14 @@ namespace NetworkCommsDotNet.Tools
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
 #endif
                 {
-                    
-#if iOS || ANDROID
-                    //iOS and Android must include IPAddress.Any in the listening addresses to successfully receive broadcasts
-                    List<IPAddress> localAddresses = new List<IPAddress>() { IPAddress.Any };
-#else
                     //We should select one of the target points across all adaptors, no need for all adaptors to have
                     //selected a single uniform port which is what happens if we just pass IPAddress.Any to the StartListening method
                     List<IPAddress> localAddresses = HostInfo.IP.FilteredLocalAddresses();
+
+#if iOS || ANDROID
+                    //iOS and Android must also listen on IPAddress.Any to successfully receive UDP broadcasts
+                    if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+                        localAddresses.Add(IPAddress.Any);
 #endif
 
                     List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
@@ -308,10 +308,16 @@ namespace NetworkCommsDotNet.Tools
                         {
                             try
                             {
-                                List<ConnectionListenerBase> newlisteners = Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, new IPEndPoint(address, tryPort), true);
+                                ConnectionListenerBase listener;
+                                if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+                                    listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPOptions.None, true);
+                                else
+                                    listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, true);
+
+                                Connection.StartListening(listener, new IPEndPoint(address, tryPort));
 
                                 //Once we are successfully listening we can break
-                                listeners.AddRange(newlisteners);
+                                listeners.Add(listener);
                                 break;
                             }
                             catch (Exception) { }
@@ -384,10 +390,16 @@ namespace NetworkCommsDotNet.Tools
                         {
                             try
                             {
-                                List<ConnectionListenerBase> newlisteners = Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, new IPEndPoint(address, tryPort), true);
+                                ConnectionListenerBase listener;
+                                if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+                                    listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPOptions.None, true);
+                                else
+                                    listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, true);
+
+                                Connection.StartListening(listener, new IPEndPoint(address, tryPort));
 
                                 //Once we are successfully listening we can break
-                                _discoveryListeners.Add(discoveryMethod, newlisteners);
+                                _discoveryListeners.Add(discoveryMethod, new List<ConnectionListenerBase>() { listener });
                                 break;
                             }
                             catch (Exception) { }
@@ -399,7 +411,16 @@ namespace NetworkCommsDotNet.Tools
                     else
                     {
                         //Based on the connection type select all local endPoints and then enable discoverable
-                        _discoveryListeners.Add(discoveryMethod, Connection.StartListening(discoveryMethod == DiscoveryMethod.UDPBroadcast ? ConnectionType.UDP : ConnectionType.TCP, localDiscoveryEndPoint, true));
+                        ConnectionListenerBase listener;
+                        if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+                            listener = new UDPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, UDPOptions.None, true);
+                        else
+                            listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled, true);
+
+                        Connection.StartListening(listener, localDiscoveryEndPoint);
+
+                        //Once we are successfully listening we can break
+                        _discoveryListeners.Add(discoveryMethod, new List<ConnectionListenerBase>() { listener });
                     }
 
                     //Add the packet handlers if required

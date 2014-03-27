@@ -64,9 +64,8 @@ namespace NetworkCommsDotNet.Connections
                     foreach(IPAddress address in HostInfo.IP.FilteredLocalAddresses())
                         localListenIPEndPoints.Add(new IPEndPoint(address, desiredLocalIPEndPoint.Port));
 
-                    //We still include the IPAddress.Any address as some platforms 
-                    //require this to receive broadcasts
-                    localListenIPEndPoints.Add(desiredLocalIPEndPoint);
+                    //We could also listen on the IPAddress.Any adaptor here
+                    //but it is not supported by all platforms so use the specific start listening override instead
                 }
                 else
                     localListenIPEndPoints.Add(desiredLocalIPEndPoint);
@@ -151,8 +150,8 @@ namespace NetworkCommsDotNet.Connections
         /// when method returns to determine the <see cref="IPEndPoint"/> used.
         /// </summary>
         /// <param name="listener">The listener to use.</param>
-        /// <param name="desiredLocalEndPoint">The desired local <see cref="IPEndPoint"/> to use for listening. Use a port number 
-        /// of 0 to dynamically select a port.</param>
+        /// <param name="desiredLocalEndPoint">The desired local <see cref="IPEndPoint"/> to use for listening. IPAddress.Any corresponds with listening on
+        /// 0.0.0.0. Use a port number of 0 to dynamically select a port.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
         /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening<T>(ConnectionListenerBase listener, T desiredLocalEndPoint, bool useRandomPortFailOver = false) where T : EndPoint
@@ -214,8 +213,8 @@ namespace NetworkCommsDotNet.Connections
         /// when method returns to determine the <see cref="IPEndPoint"/>s used.
         /// </summary>
         /// <param name="listeners">The listeners to use.</param>
-        /// <param name="desiredLocalEndPoints">The desired local <see cref="IPEndPoint"/>s to use for listening. Use a port number 
-        /// of 0 to dynamically select a port.</param>
+        /// <param name="desiredLocalEndPoints">The desired local <see cref="IPEndPoint"/>s to use for listening. IPAddress.Any corresponds with listening on
+        /// 0.0.0.0. Use a port number of 0 to dynamically select a port.</param>
         /// <param name="useRandomPortFailOver">If true and the requested local port is not available will select one at random. 
         /// If false and provided port is unavailable will throw <see cref="CommsSetupShutdownException"/></param>
         public static void StartListening<T>(List<ConnectionListenerBase> listeners, List<T> desiredLocalEndPoints, bool useRandomPortFailOver) where T : EndPoint
@@ -394,7 +393,7 @@ namespace NetworkCommsDotNet.Connections
                 return ExistingLocalListenEndPoints(connectionType, new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.Empty));
 #endif
             else
-                throw new ArgumentException("Method ExistingLocalListenEndPoints is not defined for the conneciton type: " + connectionType.ToString(), "connectionType");
+                throw new ArgumentException("Method ExistingLocalListenEndPoints is not defined for the connection type: " + connectionType.ToString(), "connectionType");
         }
 
         /// <summary>

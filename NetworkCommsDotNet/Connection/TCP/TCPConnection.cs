@@ -209,13 +209,10 @@ namespace NetworkCommsDotNet.Connections.TCP
                 WaitHandle connectionWait = ar.AsyncWaitHandle;
                 try
                 {
-                    if (!ar.AsyncWaitHandle.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
-                    {
-                        tcpClient.Close();
+                    if (!connectionWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
                         connectSuccess = false;
-                    }
-
-                    tcpClient.EndConnect(ar);
+                    else
+                        tcpClient.EndConnect(ar);
                 }
                 finally
                 {
@@ -692,8 +689,15 @@ namespace NetworkCommsDotNet.Connections.TCP
             //Try to close the tcpClient
             try
             {
-                tcpClient.Client.Disconnect(false);
-                tcpClient.Client.Close();
+                if (tcpClient.Client!=null)
+                {
+                    tcpClient.Client.Disconnect(false);
+
+#if !ANDROID
+                    //Throws uncatchable exception in android
+                    tcpClient.Client.Close();
+#endif
+                }
             }
             catch (Exception)
             {
@@ -702,7 +706,10 @@ namespace NetworkCommsDotNet.Connections.TCP
             //Try to close the tcpClient
             try
             {
+#if !ANDROID
+                //Throws uncatchable exception in android
                 tcpClient.Close();
+#endif
             }
             catch (Exception)
             {
