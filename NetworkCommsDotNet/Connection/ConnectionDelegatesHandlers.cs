@@ -103,7 +103,10 @@ namespace NetworkCommsDotNet.Connections
                 //Otherwise we will use options that were specified
                 return new SendReceiveOptions(connectionSpecificOptions.DataSerializer, connectionSpecificOptions.DataProcessors, combinedOptions);
             }
-            else if (connectionSpecificHandlers)
+            //////////////////////////////////////////////
+            //// Changed 20/05/14 to fix bug when encryption options is set on the listener and not the packet handler
+            //////////////////////////////////////////////
+            else //if (connectionSpecificHandlers)
             {
                 //If the header specifies a serializer and data processors we will auto detect those
                 if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
@@ -117,21 +120,21 @@ namespace NetworkCommsDotNet.Connections
 
                 return connectionSpecificOptions;
             }
-            else
-            {
-                //If the header specifies a serializer and data processors we will auto detect those
-                if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
-                {
-                    DataSerializer serializer;
-                    List<DataProcessor> dataProcessors;
+            //else
+            //{
+            //    //If the header specifies a serializer and data processors we will auto detect those
+            //    if (header.ContainsOption(PacketHeaderLongItems.SerializerProcessors))
+            //    {
+            //        DataSerializer serializer;
+            //        List<DataProcessor> dataProcessors;
 
-                    DPSManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
-                    return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
-                }
+            //        DPSManager.GetSerializerDataProcessorsFromIdentifier(header.GetOption(PacketHeaderLongItems.SerializerProcessors), out serializer, out dataProcessors);
+            //        return new SendReceiveOptions(serializer, dataProcessors, globalOptions.Options);
+            //    }
 
-                //If just globalHandlers is set (or indeed no handlers at all we just return the global options
-                return globalOptions;
-            }
+            //    //If just globalHandlers is set (or indeed no handlers at all we just return the global options
+            //    return globalOptions;
+            //}
         }
 
         /// <summary>

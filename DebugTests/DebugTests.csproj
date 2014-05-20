@@ -65,6 +65,7 @@
     <Compile Include="BluetoothTest.cs" />
     <Compile Include="DebugTest.cs" />
     <Compile Include="DFSTest.cs" />
+    <Compile Include="EncryptionTest.cs" />
     <Compile Include="ExampleHelper.cs" />
     <Compile Include="BandwidthLoadTest.cs" />
     <Compile Include="LogAnalyser.cs" />

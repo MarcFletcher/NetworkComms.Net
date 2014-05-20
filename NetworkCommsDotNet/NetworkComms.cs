@@ -245,7 +245,32 @@ namespace NetworkCommsDotNet
                 if (item == null)
                     throw new InvalidCastException("Cast from object to PriorityQueueItem resulted in null reference, unable to continue.");
 
-                //If this is a nested packet we want to unwrap it here before continuing
+                //Packet confirmations requests will always appear at the top level packet
+                //Remote end may have requested packet receive confirmation so we send that now
+                if (item.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
+                {
+                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... sending requested receive confirmation packet.");
+
+                    long packetSequenceNumber;
+                    if (item.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
+                        packetSequenceNumber = item.PacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
+                    else
+                        throw new InvalidOperationException("Attempted to access packet header sequence number when non was set.");
+
+                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
+
+                    //Should an error occur while sending the confirmation it should not prevent the handling of this packet
+                    try
+                    {
+                        item.Connection.SendPacket<long>(returnPacket);
+                    }
+                    catch (CommsException)
+                    {
+                        //Do nothing
+                    }
+                }
+
+                //If this is a nested packet we now want to unwrap it before continuing
                 if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.NestedPacket))
                 {
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Unwrapping a " + ReservedPacketType.NestedPacket + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
@@ -301,30 +326,6 @@ namespace NetworkCommsDotNet
                         }
                         else
                             throw new CheckSumException("Corrupted packet detected from " + item.Connection.ConnectionInfo + ", expected " + packetHeaderHash + " but received " + packetDataSectionMD5 + ".");
-                    }
-                }
-
-                //Remote end may have requested packet receive confirmation so we send that now
-                if (item.PacketHeader.ContainsOption(PacketHeaderStringItems.ReceiveConfirmationRequired))
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... sending requested receive confirmation packet.");
-
-                    long packetSequenceNumber;
-                    if (item.PacketHeader.ContainsOption(PacketHeaderLongItems.PacketSequenceNumber))
-                        packetSequenceNumber = item.PacketHeader.GetOption(PacketHeaderLongItems.PacketSequenceNumber);
-                    else
-                        throw new InvalidOperationException("Attempted to access packet header sequence number when non was set.");
-
-                    Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.Confirmation), packetSequenceNumber, NetworkComms.InternalFixedSendReceiveOptions);
-                    
-                    //Should an error occur while sending the confirmation it should not prevent the handling of this packet
-                    try
-                    {
-                        item.Connection.SendPacket<long>(returnPacket);
-                    }
-                    catch (CommsException) 
-                    { 
-                        //Do nothing
                     }
                 }
 
