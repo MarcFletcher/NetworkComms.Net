@@ -114,6 +114,10 @@ namespace Examples.ExamplesFileTransfer.WPF
                 data.Write(buffer, (int)bufferStart, (int)bufferLength);
 
                 ReceivedBytes += (int)(bufferLength - bufferStart);
+
+                //Ensure the data is correctly flushed if we have received everything
+                if (ReceivedBytes == SizeBytes)
+                    data.Flush();
             }
 
             NotifyPropertyChanged("CompletedPercent");

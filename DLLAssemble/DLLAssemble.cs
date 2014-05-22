@@ -16,7 +16,7 @@ namespace DLLAssemble
         {
             try
             {
-                int minutesAllowedBeforeExceptionForOldDLLs = 5;
+				int minutesAllowedBeforeExceptionForOldDLLs = 60;
                 string assembleMode = "Release";
                 string sourceDir;
                 string destDir;
