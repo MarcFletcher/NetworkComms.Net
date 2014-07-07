@@ -17,6 +17,7 @@ using NetworkCommsDotNet.Connections;
 using ProtoBuf;
 using System.Threading.Tasks;
 using System.Threading;
+using NetworkCommsDotNet.Tools;
 
 namespace RemoteProcedureCalls
 {
@@ -798,9 +799,10 @@ namespace RemoteProcedureCalls
                 wrapper.args = (from arg in args select RPCArgumentBase.CreateDynamic(arg)).ToList();
                 wrapper.name = functionToCall;
                 wrapper.instanceId = clientObject.ServerInstanceID;
+                var guid = ShortGuid.NewGuid();
 
                 string packetTypeRequest = clientObject.ImplementedInterface.Name + "-RPC-CALL-" + wrapper.instanceId;
-                string packetTypeResponse = packetTypeRequest + "-RESPONSE";
+                string packetTypeResponse = packetTypeRequest + "-" + guid;
 
                 SendReceiveOptions options = clientObject.SendReceiveOptions;
 
