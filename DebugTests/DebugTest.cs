@@ -19,6 +19,7 @@ using InTheHand.Net;
 using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.Bluetooth;
 using NetworkCommsDotNet.Connections.TCP;
+using NetworkCommsDotNet.Connections.UDP;
 
 namespace DebugTests
 {
@@ -29,23 +30,29 @@ namespace DebugTests
     {
         public static void RunExample()
         {
-            //Get the serializer and data processors
-            //TCPConnectionListener listener = new TCPConnectionListener(NetworkComms.DefaultSendReceiveOptions, ApplicationLayerProtocolStatus.Enabled);
-            Connection.StartListening(ConnectionType.TCP, new IPEndPoint(IPAddress.Any, 10000));
+            SendReceiveOptions optionsToUseForUDPOutput = new SendReceiveOptions<NullSerializer>();
+            SendReceiveOptions optionsToUseForUDPInput = new SendReceiveOptions<NullSerializer>();
 
-            Console.WriteLine("Listening on:");
-            foreach (var endpoint in Connection.ExistingLocalListenEndPoints(ConnectionType.TCP))
-                Console.WriteLine("\t-> {0}", endpoint.ToString());
+            UDPConnectionListener udpListener = new UDPConnectionListener(optionsToUseForUDPInput, ApplicationLayerProtocolStatus.Disabled, UDPOptions.None);
 
-            NetworkComms.AppendGlobalIncomingPacketHandler<string>("Data", (header, connection, message) =>
-                {
-                    Console.WriteLine("Connection with {0} saying {1}", connection, message);
-                });
+            //Add a packet handler for dealing with incoming unmanaged data
+            udpListener.AppendIncomingUnmanagedPacketHandler(HandleIncomingUDPPacket);
 
-            TCPConnection.GetConnection(new ConnectionInfo("192.168.0.117", 10000)).SendObject("Data", "hello");
+            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 10000));
 
-            Console.WriteLine("Client done!");
-            Console.ReadKey();
+            //Stop listening and attempt to use the same port again
+            Connection.StopListening(udpListener);
+            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 10000));
+
+            //Stop listening and attempt to use a different port 
+            Connection.StopListening(udpListener);
+            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 20000));
+        }
+
+        private static void HandleIncomingUDPPacket(PacketHeader header, Connection connection, byte[] array)
+        {
+            string sz = string.Format("Received {0} bytes from ", array.Length);
+            System.Diagnostics.Trace.WriteLine(sz + connection.ToString());
         }
     }
 }
