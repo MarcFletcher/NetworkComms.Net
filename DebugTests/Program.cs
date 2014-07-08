@@ -46,7 +46,7 @@ namespace DebugTests
 
             //NetworkComms.EnablePacketCheckSumValidation = true;
 
-            //DebugTest.RunExample();
+            DebugTest.RunExample();
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();
@@ -59,7 +59,8 @@ namespace DebugTests
             //NestedPacketTest.RunExample();
             //PeerDiscoveryTest.RunExample();
             //SelfConnectTest.RunExample();
-            SymEncryptionTest.RunExample();
+            //SymEncryptionTest.RunExample();
+            //UnmanagedUDPBroadcast.RunExample();
 
             //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\serverCommsLog.txt");
             //log.LinesWithMatch(new string[] { "Waiting for client connnectionInfo " }, "matchLog.txt");
