@@ -70,7 +70,7 @@ namespace NetworkCommsDotNet
             get
             {
                 if (Options.ContainsKey("ReceiveHandlePriority"))
-                    return (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), "ReceiveHandlePriority");
+                    return (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), Options["ReceiveHandlePriority"]);
                 else
                     return QueueItemPriority.Normal;
             }
@@ -138,7 +138,7 @@ namespace NetworkCommsDotNet
         {
             get { return options; }
         }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class with a specified <see cref="DPSBase.DataSerializer"/>, set of <see cref="DPSBase.DataProcessor"/>s and and other options
         /// </summary>
@@ -158,7 +158,7 @@ namespace NetworkCommsDotNet
             else
                 this.options = new Dictionary<string, string>();
         }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SendReceiveOptions"/> class providing only options for the <see cref="DPSBase.DataSerializer"/> and <see cref="DPSBase.DataProcessor"/>s.  This constructor should only be used when adding packet handlers for incoming connections
         /// </summary>
@@ -172,6 +172,16 @@ namespace NetworkCommsDotNet
                 this.options = options;
             else
                 this.options = new Dictionary<string, string>();
+        }
+
+        /// <summary>
+        /// Initializes an empty instance of the <see cref="SendReceiveOptions"/> class.
+        /// </summary>
+        public SendReceiveOptions()
+        {
+            DataSerializer = null; //This will set the NullSerialiser as a default
+            DataProcessors = null; //This will set an empty options dictionary
+            this.options = new Dictionary<string, string>();
         }
 
         /// <summary>
