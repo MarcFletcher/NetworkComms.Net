@@ -59,6 +59,10 @@ namespace NetworkCommsDotNet
             foreach(string reservedPacketTypeName in Enum.GetNames(typeof(ReservedPacketType)))
                 ReservedPacketTypeNames.Add(reservedPacketTypeName, "");
 
+            //We manually add the two packet types for AliveTestPacket-Request/Reply
+            ReservedPacketTypeNames.Add("AliveTestPacket-Request", "");
+            ReservedPacketTypeNames.Add("AliveTestPacket-Reply", "");
+
 #if NETFX_CORE
             CurrentRuntimeEnvironment = RuntimeEnvironment.Windows_RT;
             SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
