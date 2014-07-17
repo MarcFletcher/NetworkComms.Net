@@ -993,7 +993,7 @@ namespace NetworkCommsDotNet
          
         #region Timeouts
         /// <summary>
-        /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established. Default is 30000.
+        /// Time to wait in milliseconds before throwing an exception when waiting for a connection to be established. Default is 10000.
         /// </summary>
         public static int ConnectionEstablishTimeoutMS { get; set; }
 
