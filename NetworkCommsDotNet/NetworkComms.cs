@@ -118,8 +118,10 @@ namespace NetworkCommsDotNet
             //We want to instantiate our own thread pool here
 #if NETFX_CORE
             CommsThreadPool = new CommsThreadPool();
+            IncomingConnectionEstablishThreadPool = new CommsThreadPool();
 #else
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount*2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
+            IncomingConnectionEstablishThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
 #endif            
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
                 new List<DataProcessor>(),
@@ -207,7 +209,8 @@ namespace NetworkCommsDotNet
         #region Incoming Data and Connection Config
         /// <summary>
         /// Used for switching between async and sync connectionListen modes. Default is false. No noticeable performance difference 
-        /// between the two modes.
+        /// between the two modes when used with a small number of connections. For use cases with a high turnover of connections, i.e. 100/sec, performance is
+        /// considerably better when ConnectionListenModeUseSync is set to true.
         /// </summary>
         public static bool ConnectionListenModeUseSync { get; set; }
 
@@ -227,9 +230,14 @@ namespace NetworkCommsDotNet
         public static int SendBufferSizeBytes { get; set; }
 
         /// <summary>
-        /// The thread pool used by networkComms.Net to execute incoming packet handlers.
+        /// The thread pool used by NetworkComms.Net to execute incoming packet handlers.
         /// </summary>
         public static CommsThreadPool CommsThreadPool { get; set; }
+
+        /// <summary>
+        /// The thread pool used by NetworkComms.Net to handle all incoming connection establishes.
+        /// </summary>
+        internal static CommsThreadPool IncomingConnectionEstablishThreadPool { get; private set; }
         
         /// <summary>
         /// Once we have received all incoming data we handle it further. This is performed at the global level to help support different 

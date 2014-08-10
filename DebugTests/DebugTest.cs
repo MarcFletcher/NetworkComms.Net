@@ -20,6 +20,7 @@ using NetworkCommsDotNet.Connections;
 using NetworkCommsDotNet.Connections.Bluetooth;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
+using System.Threading.Tasks;
 
 namespace DebugTests
 {
@@ -28,31 +29,24 @@ namespace DebugTests
     /// </summary>
     static class DebugTest
     {
-        public static void RunExample()
+        public static void RunExample(string[] args)
         {
-            SendReceiveOptions optionsToUseForUDPOutput = new SendReceiveOptions<NullSerializer>();
-            SendReceiveOptions optionsToUseForUDPInput = new SendReceiveOptions<NullSerializer>();
-
-            UDPConnectionListener udpListener = new UDPConnectionListener(optionsToUseForUDPInput, ApplicationLayerProtocolStatus.Disabled, UDPOptions.None);
-
-            //Add a packet handler for dealing with incoming unmanaged data
-            udpListener.AppendIncomingUnmanagedPacketHandler(HandleIncomingUDPPacket);
-
-            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 10000));
-
-            //Stop listening and attempt to use the same port again
-            Connection.StopListening(udpListener);
-            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 10000));
-
-            //Stop listening and attempt to use a different port 
-            Connection.StopListening(udpListener);
-            Connection.StartListening(udpListener, new IPEndPoint(IPAddress.Any, 20000));
+            if (args.Length == 0 || args[0] == "client")
+                RunClient();
+            else
+                RunServer();
         }
 
-        private static void HandleIncomingUDPPacket(PacketHeader header, Connection connection, byte[] array)
+        private static void RunServer()
         {
-            string sz = string.Format("Received {0} bytes from ", array.Length);
-            System.Diagnostics.Trace.WriteLine(sz + connection.ToString());
+
+            //We have used NetworkComms so we should ensure that we correctly call shutdown
+            NetworkComms.Shutdown();
+        }
+
+        private static void RunClient()
+        {
+  
         }
     }
 }

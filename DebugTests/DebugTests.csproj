@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="BasicSend.cs" />
     <Compile Include="BluetoothTest.cs" />
+    <Compile Include="ClientHammer.cs" />
     <Compile Include="UnmanagedUDPBroadcasts.cs" />
     <Compile Include="DebugTest.cs" />
     <Compile Include="DFSTest.cs" />

@@ -213,7 +213,8 @@ namespace NetworkCommsDotNet.Connections.TCP
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New incoming TCP connection from " + newConnectionInfo);
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
+                //We have to use our own thread pool here as the performance of the .Net one is awful
+                NetworkComms.IncomingConnectionEstablishThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
                 {
                     #region Pickup The New Connection
                     try
@@ -249,7 +250,7 @@ namespace NetworkCommsDotNet.Connections.TCP
                         }
                     }
                     #endregion
-                }));
+                }), null);
             }
             catch (SocketException)
             {

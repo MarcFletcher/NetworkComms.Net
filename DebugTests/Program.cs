@@ -46,7 +46,7 @@ namespace DebugTests
 
             //NetworkComms.EnablePacketCheckSumValidation = true;
 
-            DebugTest.RunExample();
+            DebugTest.RunExample(args);
             //BasicSend.RunExample();
             //AliveTest.RunExample();
             //DebugTest.RunExample();
@@ -62,8 +62,8 @@ namespace DebugTests
             //SymEncryptionTest.RunExample();
             //UnmanagedUDPBroadcast.RunExample();
 
-            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Desktop\serverCommsLog.txt");
-            //log.LinesWithMatch(new string[] { "Waiting for client connnectionInfo " }, "matchLog.txt");
+            //LogAnalyser log = new LogAnalyser(@"C:\Users\Karnifexx\Documents\Visual Studio 2010\Projects\networkcomms.net\DebugTests\bin\Debug\DebugTests_e-P76M-6LkSFyUFFlnU0qA.txt");
+            //log.LinesWithMatch(new string[] { "Received packet of type 'ConnectionSetup'" }, "matchLog4.txt");
             //log.ThreadPoolInfo("threadPool.csv");
             //log.DataSendReceive(10, "sendReceiveStats.csv");
         }

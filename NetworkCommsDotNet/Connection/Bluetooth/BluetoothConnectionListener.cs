@@ -138,7 +138,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Info("New bluetooth connection from " + newConnectionInfo);
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
+                NetworkComms.IncomingConnectionEstablishThreadPool.EnqueueItem(QueueItemPriority.Normal, new WaitCallback((obj) =>
                 {
                     #region Pickup The New Connection
                     try
@@ -174,7 +174,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         }
                     }
                     #endregion
-                }));
+                }), null);
             }
             catch (SocketException)
             {
