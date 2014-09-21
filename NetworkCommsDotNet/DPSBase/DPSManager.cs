@@ -153,7 +153,11 @@ namespace NetworkCommsDotNet.DPSBase
             else
             {
                 //if we're after protobuf we'll try and load it manually
+#if NET2
+                if (Id == 1 && !Instance.loadCompleted.WaitOne(0, false))
+#else
                 if (Id == 1 && !Instance.loadCompleted.WaitOne(0))
+#endif
                 {
                     Type t = null;
 

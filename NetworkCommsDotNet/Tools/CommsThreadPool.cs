@@ -493,7 +493,11 @@ namespace NetworkCommsDotNet.Tools
                 }
 
                 //As soon as the queue is empty we wait until perhaps close time
+#if NET2
+                if (!threadInfo.ThreadSignal.WaitOne(250, false))
+#else
                 if (!threadInfo.ThreadSignal.WaitOne(250))
+#endif
                 {
                     //While we are waiting we check to see if we need to close
                     if (DateTime.Now - threadInfo.LastActiveTime > ThreadIdleTimeoutClose)

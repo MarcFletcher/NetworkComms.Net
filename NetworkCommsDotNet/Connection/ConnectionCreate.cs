@@ -193,7 +193,11 @@ namespace NetworkCommsDotNet.Connections
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Debug("Waiting for client connnectionInfo from " + ConnectionInfo);
 
                 //Wait for the client to send its identification
+#if NET2
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
+#else
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+#endif
                     throw new ConnectionSetupException("Timeout waiting for client connectionInfo with " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 if (connectionSetupException)
@@ -242,7 +246,11 @@ namespace NetworkCommsDotNet.Connections
                     NetworkComms.InternalFixedSendReceiveOptions);
 
                 //Wait here for the server end to return its own identifier
+#if NET2
+                if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS, false))
+#else
                 if (!connectionSetupWait.WaitOne(NetworkComms.ConnectionEstablishTimeoutMS))
+#endif
                     throw new ConnectionSetupException("Timeout waiting for server connnectionInfo from " + ConnectionInfo + ". Connection created at " + ConnectionInfo.ConnectionCreationTime.ToString("HH:mm:ss.fff") + ", its now " + DateTime.Now.ToString("HH:mm:ss.f"));
 
                 //If we are client side we can update the localEndPoint for this connection to reflect what the remote end might see if we are also listening
@@ -301,7 +309,11 @@ namespace NetworkCommsDotNet.Connections
                 if (ConnectionInfo.ConnectionState == ConnectionState.Shutdown)
                     throw new ConnectionShutdownException("Attempted to wait for connection establish on a connection that is already shutdown.");
 
+#if NET2
+                return connectionSetupWait.WaitOne(waitTimeoutMS, false);
+#else
                 return connectionSetupWait.WaitOne(waitTimeoutMS);
+#endif
             }
         }
 

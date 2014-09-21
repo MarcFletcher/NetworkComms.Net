@@ -108,7 +108,11 @@ namespace NetworkCommsDotNet.Tools
                     // input read asynchronously completed
                     int bytesRead = input.EndRead(ar);
 #endif
+#if NET2
+                    if (!readCanStartSignal.WaitOne(writeWaitTimeMS, false))
+#else 
                     if (!readCanStartSignal.WaitOne(writeWaitTimeMS))
+#endif
                         innerException = new TimeoutException("Write timed out after " + writeWaitTimeMS.ToString() + "ms");
 
                     if (bytesRead == 0 || innerException != null)

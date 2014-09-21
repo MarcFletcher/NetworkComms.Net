@@ -264,7 +264,11 @@ namespace NetworkCommsDotNet.Connections
             }
 
             //We wait for the return data here
+#if NET2
+            if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds, false))
+#else
             if (!returnWaitSignal.WaitOne(returnPacketTimeOutMilliSeconds))
+#endif
             {
                 RemoveIncomingPacketHandler(expectedReturnPacketTypeStr, SendReceiveDelegate);
                 throw new ExpectedReturnTimeoutException("Timeout occurred after " + returnPacketTimeOutMilliSeconds.ToString() + "ms waiting for response packet of type '" + expectedReturnPacketTypeStr + "'.");
@@ -609,7 +613,11 @@ namespace NetworkCommsDotNet.Connections
                     {
                         if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... waiting for receive confirmation packet.");
 
+#if NET2
+                        if (!(confirmationWaitSignal.WaitOne(NetworkComms.PacketConfirmationTimeoutMS, false)))
+#else
                         if (!(confirmationWaitSignal.WaitOne(NetworkComms.PacketConfirmationTimeoutMS)))
+#endif
                             throw new ConfirmationTimeoutException("Confirmation packet timeout.");
 
                         if (remotePeerDisconnectedDuringWait)

@@ -132,11 +132,19 @@ namespace NetworkCommsDotNet.Connections
             {
                 try
                 {
+#if NET2
+                    //We have a short sleep here so that we can exit the thread fairly quickly if we need too
+                    if (ConnectionKeepAlivePollIntervalSecs == int.MaxValue)
+                        workedThreadSignal.WaitOne(5000, false);
+                    else
+                        workedThreadSignal.WaitOne(100, false);
+#else
                     //We have a short sleep here so that we can exit the thread fairly quickly if we need too
                     if (ConnectionKeepAlivePollIntervalSecs == int.MaxValue)
                         workedThreadSignal.WaitOne(5000);
                     else
                         workedThreadSignal.WaitOne(100);
+#endif
 
                     //Check for shutdown here
                     if (shutdownWorkerThreads) break;
@@ -221,7 +229,11 @@ namespace NetworkCommsDotNet.Connections
             //Max wait is 1 seconds per connection
             if (!returnImmediately && allConnections.Count > 0)
             {
+#if NET2
+                if (!allConnectionsComplete.WaitOne(allConnections.Count * 2500, false))
+#else
                 if (!allConnectionsComplete.WaitOne(allConnections.Count * 2500))
+#endif
                     //This timeout should not really happen so we are going to log an error if it does
                     //LogTools.LogException(new TimeoutException("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock."), "NullPacketKeepAliveTimeoutError");
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Warn("Timeout after " + allConnections.Count.ToString() + " seconds waiting for null packet sends to finish. " + remainingConnectionCount.ToString() + " connection waits remain. This error indicates very high send load or a possible send deadlock.");

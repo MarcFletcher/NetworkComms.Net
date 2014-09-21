@@ -531,7 +531,11 @@ namespace NetworkCommsDotNet.Tools
                         if (NetworkComms.commsShutdown) return;
 
                         //Thread.Sleep(NetworkLoadUpdateWindowMS);
+#if NET2
+                        NetworkLoadThreadWait.WaitOne(NetworkLoadUpdateWindowMS, false);
+#else
                         NetworkLoadThreadWait.WaitOne(NetworkLoadUpdateWindowMS);
+#endif
 
                         if (NetworkComms.commsShutdown) return;
 

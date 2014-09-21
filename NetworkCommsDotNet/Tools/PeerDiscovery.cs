@@ -658,7 +658,11 @@ namespace NetworkCommsDotNet.Tools
             sendStream.ThreadSafeStream.Dispose(true);
 
             AutoResetEvent sleep = new AutoResetEvent(false);
+#if NET2
+            sleep.WaitOne(discoverTimeMS, false);
+#else
             sleep.WaitOne(discoverTimeMS);
+#endif
 
             Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>> result = new Dictionary<ShortGuid, Dictionary<ConnectionType, List<EndPoint>>>();
             lock (_syncRoot)
@@ -822,7 +826,11 @@ namespace NetworkCommsDotNet.Tools
             AutoResetEvent sleep = new AutoResetEvent(false);
             //We wait at least 1 second so that connected peers can respond
             //If we do not wait and close all connections immediately we may miss some replies
+#if NET2
+            sleep.WaitOne(Math.Max(discoverTimeMS, 500), false);
+#else
             sleep.WaitOne(Math.Max(discoverTimeMS, 500));
+#endif
 
             //Close any connections we may have established
             foreach (Connection conn in allConnections)
