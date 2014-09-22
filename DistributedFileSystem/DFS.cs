@@ -1174,11 +1174,9 @@ namespace DistributedFileSystem
                         //We set the item checksum so that the entire distributed item can be easily retrieved later
                         itemPacketHeader.SetOption(PacketHeaderStringItems.PacketIdentifier, newItem == null ? "" :  newItem.ItemTypeStr + "|" + newItem.ItemIdentifier + "|" + newItem.Data.CompleteDataCheckSum);
 
-                        //Trigger connection specific handlers
-                        bool connectionSpecificHandlersTriggered = connection.TriggerSpecificPacketHandlers(itemPacketHeader, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()));
-
-                        //Trigger global handlers
-                        NetworkComms.TriggerGlobalPacketHandlers(itemPacketHeader, connection, (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true)), new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>()), connectionSpecificHandlersTriggered);
+                        var dataStream = (itemBytes == null ? new MemoryStream(new byte[0], 0, 0, false, true) : new MemoryStream(itemBytes, 0, itemBytes.Length, false, true));
+                        var sendRecieveOptions = new SendReceiveOptions<NullSerializer>(new Dictionary<string, string>());
+                        NetworkComms.TriggerAllPacketHandlers(itemPacketHeader, connection, dataStream, sendRecieveOptions);                            
                     }
                     catch (Exception ex)
                     {

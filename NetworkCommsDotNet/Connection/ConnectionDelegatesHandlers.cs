@@ -138,19 +138,30 @@ namespace NetworkCommsDotNet.Connections
         }
 
         /// <summary>
+        /// Gets packet handler wrappers for a given packet type
+        /// </summary>
+        /// <param name="packetTypeStr">The packet type to get handler wrappers for</param>
+        /// <returns>The packet handler wrappers associated with the packet type supplied</returns>
+        internal List<IPacketTypeHandlerDelegateWrapper> GetPacketHandlerWrappers(string packetTypeStr)
+        {
+            List<IPacketTypeHandlerDelegateWrapper> handlers = null;
+            if (incomingPacketHandlers.TryGetValue(packetTypeStr, out handlers) && handlers != null)
+                return new List<IPacketTypeHandlerDelegateWrapper>(handlers);
+            else
+                return null; 
+        }
+
+        /// <summary>
         /// Trigger connection specific packet delegates with the provided parameters. Returns true if connection specific handlers were executed.
         /// </summary>
         /// <param name="packetHeader">The packetHeader for which all delegates should be triggered with</param>
-        /// <param name="incomingObjectBytes">The serialised and or compressed bytes to be used</param>
-        /// <param name="options">The incoming sendReceiveOptions to use overriding defaults</param>
+        /// <param name="returnObject">The deserialised payload object</param>
         /// <returns>Returns true if connection specific handlers were executed.</returns>
-        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, MemoryStream incomingObjectBytes, SendReceiveOptions options)
+        public bool TriggerSpecificPacketHandlers(PacketHeader packetHeader, object returnObject)
         {
             try
             {
                 if (packetHeader == null) throw new ArgumentNullException("packetHeader", "Provided PacketHeader cannot not be null.");
-                if (incomingObjectBytes == null) throw new ArgumentNullException("incomingObjectBytes", "Provided MemoryStream cannot not be null for packetType " + packetHeader.PacketType);
-                if (options == null) throw new ArgumentNullException("options", "Provided SendReceiveOptions cannot not be null for packetType " + packetHeader.PacketType);
 
                 //We take a copy of the handlers list in case it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
@@ -165,15 +176,6 @@ namespace NetworkCommsDotNet.Connections
                 {
                     //Idiot check
                     if (handlersCopy.Count == 0) throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                    //Deserialise the object only once
-                    object returnObject;
-
-                    //Detect a null send
-                    if (packetHeader.ContainsOption(PacketHeaderStringItems.NullDataSection))
-                        returnObject = null;
-                    else
-                        returnObject= handlersCopy[0].DeSerialize(incomingObjectBytes, options);
 
                     //Pass the data onto the handler and move on.
                     if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace(" ... passing completed data packet to selected connection specific handlers.");

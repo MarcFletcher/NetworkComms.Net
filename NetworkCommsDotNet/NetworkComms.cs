@@ -351,26 +351,12 @@ namespace NetworkCommsDotNet
                 else if (item.PacketHeader.PacketType == Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Request")
                 {
                     //If we have received a ping packet from the originating source we reply with true
-                    using(Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket)+ "-Reply", new byte[0], NetworkComms.InternalFixedSendReceiveOptions))
+                    using (Packet returnPacket = new Packet(Enum.GetName(typeof(ReservedPacketType), ReservedPacketType.AliveTestPacket) + "-Reply", new byte[0], NetworkComms.InternalFixedSendReceiveOptions))
                         item.Connection.SendPacket<byte[]>(returnPacket);
                 }
 
-                //We allow users to add their own custom handlers for reserved packet types here
-                //else
-                if (true)
-                {
-                    if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Triggering handlers for packet of type '" + item.PacketHeader.PacketType + "' from " + item.Connection.ConnectionInfo);
-
-                    //We trigger connection specific handlers first
-                    bool connectionSpecificHandlersTriggered = item.Connection.TriggerSpecificPacketHandlers(item.PacketHeader, item.DataStream, item.SendReceiveOptions);
-
-                    //We trigger global handlers second
-                    NetworkComms.TriggerGlobalPacketHandlers(item.PacketHeader, item.Connection, item.DataStream, item.SendReceiveOptions, connectionSpecificHandlersTriggered);
-
-                    //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
-                    //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
-                    //GC.Collect();
-                }
+                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Triggering handlers for packet of type '" + item.PacketHeader.PacketType + "' from " + item.Connection.ConnectionInfo);
+                TriggerAllPacketHandlers(item.PacketHeader, item.Connection, item.DataStream, item.SendReceiveOptions);
             }
             catch (CommunicationException)
             {
@@ -673,7 +659,7 @@ namespace NetworkCommsDotNet
         /// <param name="connection">The incoming connection</param>
         /// <param name="incomingDataStream">The bytes corresponding to the incoming object</param>
         /// <param name="options">The SendReceiveOptions to be used to convert incomingObjectBytes back to the desired object</param>
-        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingDataStream, SendReceiveOptions options)
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingDataStream, SendReceiveOptions options)        
         {
             TriggerGlobalPacketHandlers(packetHeader, connection, incomingDataStream, options, IgnoreUnknownPacketTypes);
         }
@@ -688,10 +674,39 @@ namespace NetworkCommsDotNet
         /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
         public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream incomingDataStream, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride)
         {
+            var handlersForDeserialise = connection.GetPacketHandlerWrappers(packetHeader.PacketType);
+            if (handlersForDeserialise == null || handlersForDeserialise.Count == 0)
+                globalIncomingPacketHandlers.TryGetValue(packetHeader.PacketType, out handlersForDeserialise);
+
+            if (handlersForDeserialise != null && handlersForDeserialise.Count != 0)
+            {
+                var deserialisedItem = handlersForDeserialise[0].DeSerialize(incomingDataStream, options);
+                TriggerGlobalPacketHandlers(packetHeader, connection, deserialisedItem);
+            }
+        }
+
+        /// <summary>
+        /// Trigger incoming packet delegates for the provided parameters.
+        /// </summary>
+        /// <param name="packetHeader">The packet header</param>
+        /// <param name="connection">The incoming connection</param>
+        /// <param name="returnObject">The deserialised payload object</param>
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, object returnObject)
+        {
+            TriggerGlobalPacketHandlers(packetHeader, connection, returnObject, IgnoreUnknownPacketTypes);
+        }
+
+        /// <summary>
+        /// Trigger incoming packet delegates for the provided parameters.
+        /// </summary>
+        /// <param name="packetHeader">The packet header</param>
+        /// <param name="connection">The incoming connection</param>
+        /// <param name="returnObject">The deserialised payload object</param>
+        /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
+        public static void TriggerGlobalPacketHandlers(PacketHeader packetHeader, Connection connection, object returnObject, bool ignoreUnknownPacketTypeOverride)
+        {
             try
             {
-                if (options == null) throw new PacketHandlerException("Provided sendReceiveOptions should not be null for packetType " + packetHeader.PacketType);
-
                 //We take a copy of the handlers list in case it is modified outside of the lock
                 List<IPacketTypeHandlerDelegateWrapper> handlersCopy = null;
                 lock (globalDictAndDelegateLocker)
@@ -718,15 +733,6 @@ namespace NetworkCommsDotNet
                     //Idiot check
                     if (handlersCopy.Count == 0)
                         throw new PacketHandlerException("An entry exists in the packetHandlers list but it contains no elements. This should not be possible.");
-
-                    //Deserialise the object only once
-                    object returnObject;
-                    
-                    //Detect the null send
-                    if (packetHeader.ContainsOption(PacketHeaderStringItems.NullDataSection))
-                        returnObject = null;
-                    else
-                        returnObject = handlersCopy[0].DeSerialize(incomingDataStream, options);
 
                     //Pass the data onto the handler and move on.
                     if (LoggingEnabled) _logger.Trace(" ... passing completed data packet of type '" + packetHeader.PacketType + "' to " + handlersCopy.Count.ToString() + " selected global handlers.");
@@ -758,6 +764,50 @@ namespace NetworkCommsDotNet
         }
 
         /// <summary>
+        /// Trigger both globally defined and connection specific handlers for a packet type
+        /// </summary>
+        /// <param name="packetHeader">The header of the packet</param>
+        /// <param name="connection">The connection on which the packet was recieved</param>
+        /// <param name="dataStream">The <see cref="Stream"/> containing the payload data of the packet</param>
+        /// <param name="options">Options containing deserialisation parameters</param>
+        /// <remarks>This method is likely to be marked for removal at some point in the future</remarks>
+        public static void TriggerAllPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream dataStream, SendReceiveOptions options)
+        {
+            TriggerAllPacketHandlers(packetHeader, connection, dataStream, options, IgnoreUnknownPacketTypes);
+        }
+
+        /// <summary>
+        /// Trigger both globally defined and connection specific handlers for a packet type
+        /// </summary>
+        /// <param name="packetHeader">The header of the packet</param>
+        /// <param name="connection">The connection on which the packet was recieved</param>
+        /// <param name="dataStream">The <see cref="Stream"/> containing the payload data of the packet</param>
+        /// <param name="options">Options containing deserialisation parameters</param>
+        /// <param name="ignoreUnknownPacketTypeOverride">Used to potentially override NetworkComms.IgnoreUnknownPacketTypes property</param>
+        /// <remarks>This method is likely to be marked for removal at some point in the future</remarks>
+        public static void TriggerAllPacketHandlers(PacketHeader packetHeader, Connection connection, MemoryStream dataStream, SendReceiveOptions options, bool ignoreUnknownPacketTypeOverride)
+        {
+            var handlersForDeserialise = connection.GetPacketHandlerWrappers(packetHeader.PacketType);
+            if (handlersForDeserialise == null || handlersForDeserialise.Count == 0)
+                globalIncomingPacketHandlers.TryGetValue(packetHeader.PacketType, out handlersForDeserialise);
+
+            if (handlersForDeserialise != null && handlersForDeserialise.Count != 0)
+            {
+                var deserialisedItem = handlersForDeserialise[0].DeSerialize(dataStream, options);
+
+                //We trigger connection specific handlers first
+                bool connectionSpecificHandlersTriggered = connection.TriggerSpecificPacketHandlers(packetHeader, deserialisedItem);
+
+                //We trigger global handlers second
+                NetworkComms.TriggerGlobalPacketHandlers(packetHeader, connection, deserialisedItem, connectionSpecificHandlersTriggered);
+
+                //This is a really bad place to put a garbage collection, comment left in so that it doesn't get added again at some later date
+                //We don't want the CPU to JUST be trying to garbage collect the WHOLE TIME
+                //GC.Collect();
+            }
+        }
+
+        /// <summary>
         /// Returns the unwrapper <see cref="SendReceiveOptions"/> for the provided packet type. If no specific options are registered returns null.
         /// </summary>
         /// <param name="packetTypeStr">The packet type for which the <see cref="SendReceiveOptions"/> are required</param>
@@ -775,7 +825,7 @@ namespace NetworkCommsDotNet
 
             return options;
         }
-
+        
         /// <summary>
         /// Returns true if a global packet handler exists for the provided packet type.
         /// </summary>
