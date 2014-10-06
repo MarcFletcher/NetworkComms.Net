@@ -37,6 +37,30 @@ namespace NetworkCommsDotNet.Tools
     public static class PeerDiscovery
     {
         /// <summary>
+        /// Encapsulates the different local listen modes. If the default mode does
+        /// not work please try the others.
+        /// </summary>
+        public enum LocalListenMode
+        {
+            /// <summary>
+            /// Listens independently on each available adaptor for broadcast packets. This
+            /// is the default mode and works on all native .net platforms.
+            /// </summary>
+            EachAdaptorIndependently,
+
+            /// <summary>
+            /// Listens only on 0.0.0.0. This is required by some *nix/mobile systems.
+            /// </summary>
+            OnlyZeroAdaptor,
+
+            /// <summary>
+            /// Listens on all adaptors independently, as well as 0.0.0.0. Included only for ]
+            /// debugging purposes.
+            /// </summary>
+            Both,
+        }
+
+        /// <summary>
         /// Encapsulates the different peer discovery methods available.
         /// </summary>
         public enum DiscoveryMethod
@@ -180,7 +204,14 @@ namespace NetworkCommsDotNet.Tools
         /// The maximum port number that will be used when making this peer discoverable. Default 10020.
         /// </summary>
         public static int MaxTargetLocalIPPort { get; set; }
-        
+
+        /// <summary>
+        /// The mode to use when listening for incoming peer discovery packets. Some systems require
+        /// one mode whilst on others this will throw exceptions. If you have problems please
+        /// use a different mode. Default is LocalListenMode.EachAdaptorIndependently
+        /// </summary>
+        public static LocalListenMode ListenMode { get; set; }
+
         /// <summary>
         /// Backing field for DefaultIPDiscoveryMethod
         /// </summary>
@@ -267,6 +298,13 @@ namespace NetworkCommsDotNet.Tools
             MaxTargetLocalIPPort = 10020;
 
             BluetoothDiscoveryService = new Guid("3a768eea-cbda-4926-a82d-831cb89092ac");
+
+#if iOS || ANDROID
+            //iOS and Android must also listen on IPAddress.Any to successfully receive UDP broadcasts
+            ListenMode = LocalListenMode.Both;
+#else
+            ListenMode = LocalListenMode.EachAdaptorIndependently;
+#endif
         }
 
         #region Local Configuration
@@ -292,13 +330,13 @@ namespace NetworkCommsDotNet.Tools
                 {
                     //We should select one of the target points across all adaptors, no need for all adaptors to have
                     //selected a single uniform port which is what happens if we just pass IPAddress.Any to the StartListening method
-                    List<IPAddress> localAddresses = HostInfo.IP.FilteredLocalAddresses();
+                    List<IPAddress> localAddresses = new List<IPAddress>();
 
-#if iOS || ANDROID
-                    //iOS and Android must also listen on IPAddress.Any to successfully receive UDP broadcasts
-                    if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
+                    if (ListenMode == LocalListenMode.EachAdaptorIndependently || ListenMode == LocalListenMode.Both)
+                        localAddresses.AddRange(HostInfo.IP.FilteredLocalAddresses());
+
+                    if (ListenMode == LocalListenMode.OnlyZeroAdaptor || ListenMode == LocalListenMode.Both)
                         localAddresses.Add(IPAddress.Any);
-#endif
 
                     List<ConnectionListenerBase> listeners = new List<ConnectionListenerBase>();
                     foreach (IPAddress address in localAddresses)

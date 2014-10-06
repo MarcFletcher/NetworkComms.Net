@@ -23,6 +23,8 @@ namespace Examples.ExamplesConsole
     {
         public static void RunExample()
         {
+            PeerDiscovery.ListenMode = PeerDiscovery.LocalListenMode.Both;
+
             Console.WriteLine("Peer Discovery Example ...\n");
 
             Console.WriteLine("Please select mode:");
