@@ -404,11 +404,6 @@ namespace RemoteProcedureCalls
 
                     //Close the reference on the server side
                     il.EmitCall(OpCodes.Call, rpcDestroyMethod, null);
-
-                    //Set the connection to null in order to make this object unusable
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(OpCodes.Stfld, isDisposed);
                                         
                     //return
                     il.Emit(OpCodes.Ret);
@@ -834,6 +829,8 @@ namespace RemoteProcedureCalls
         {
             if (!clientObject.IsDisposed)
             {
+                clientObject.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(clientObject, true);
+
                 var connection = clientObject.ServerConnection;
                 string packetTypeRequest = clientObject.ImplementedInterface.Name + "-REMOVE-REFERENCE-" + clientObject.ServerInstanceID;
 

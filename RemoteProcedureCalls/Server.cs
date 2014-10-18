@@ -423,17 +423,18 @@ namespace RemoteProcedureCalls
         private static void NewInstanceRPCHandler<T, I>(PacketHeader header, Connection connection, string instanceName) where T : I, new()
         {
             lock (locker)
-            {
+            {                   
                 string instanceId = GetInstanceId(typeof(T).Name + instanceName + connection.ConnectionInfo.NetworkIdentifier.ToString());
 
-                if (!RPCObjectsById.ContainsKey(instanceId))
+                RPCRemoteObject wrapper = null;
+                if (!RPCObjectsById.TryGetValue(instanceId, out wrapper))
                 {
                     var instance = new T();
-                    var wrapper = new RPCRemoteObject(instance, typeof(I), RPCRemoteObject.RPCObjectType.Private, instanceId, timeoutByInterfaceType[typeof(I)]);
-                    wrapper.AddClientSubscription<T, I>(connection);
-
+                    wrapper = new RPCRemoteObject(instance, typeof(I), RPCRemoteObject.RPCObjectType.Private, instanceId, timeoutByInterfaceType[typeof(I)]);
                     RPCObjectsById.Add(instanceId, wrapper);
                 }
+
+                wrapper.AddClientSubscription<T, I>(connection);
 
                 if (!newConnectionByIdHandlers.ContainsKey(typeof(I)))
                 {
