@@ -103,7 +103,7 @@ namespace NetworkCommsDotNet.Tools
             //Local IPAddress cache. Provides significant performance improvement if
             //the IPAddresses are enumerated many times in a short period of time
             static List<IPAddress> filteredLocalAddressesCache = null;
-            static DateTime filteredLocalAddressesCacheUpdate = DateTime.Now;
+			static DateTime filteredLocalAddressesCacheUpdate = DateTime.UtcNow;
 
             /// <summary>
             /// Restricts the IPAdddresses that are returned by <see cref="FilteredLocalAddresses()"/>.
@@ -136,7 +136,7 @@ namespace NetworkCommsDotNet.Tools
             public static List<IPAddress> FilteredLocalAddresses(bool forceCacheUpdate)
             {
                 if (filteredLocalAddressesCache != null &&
-                    (DateTime.Now - filteredLocalAddressesCacheUpdate).TotalSeconds < 5)
+					(DateTime.UtcNow - filteredLocalAddressesCacheUpdate).TotalSeconds < 5)
                     return filteredLocalAddressesCache;
                 else
                 {
@@ -305,7 +305,7 @@ namespace NetworkCommsDotNet.Tools
                     }
 
                     filteredLocalAddressesCache = validIPAddresses;
-                    filteredLocalAddressesCacheUpdate = DateTime.Now;
+					filteredLocalAddressesCacheUpdate = DateTime.UtcNow;
 
                     return validIPAddresses;
 #endif
