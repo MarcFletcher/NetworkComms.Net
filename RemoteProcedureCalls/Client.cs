@@ -832,24 +832,28 @@ namespace RemoteProcedureCalls
                 clientObject.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(clientObject, true);
 
                 var connection = clientObject.ServerConnection;
-                string packetTypeRequest = clientObject.ImplementedInterface.Name + "-REMOVE-REFERENCE-" + clientObject.ServerInstanceID;
 
-                RemoteCallWrapper wrapper = new RemoteCallWrapper();
-                wrapper.args = new List<RPCArgumentBase>();
-                wrapper.name = null;
-                wrapper.instanceId = clientObject.ServerInstanceID;
+                if (connection.ConnectionInfo.ConnectionState != ConnectionState.Shutdown)
+                {
+                    string packetTypeRequest = clientObject.ImplementedInterface.Name + "-REMOVE-REFERENCE-" + clientObject.ServerInstanceID;
 
-                //Tell the server that we are no longer listenning
-                try { connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper); }
-                catch (Exception) { }
+                    RemoteCallWrapper wrapper = new RemoteCallWrapper();
+                    wrapper.args = new List<RPCArgumentBase>();
+                    wrapper.name = null;
+                    wrapper.instanceId = clientObject.ServerInstanceID;
 
-                //Next remove the event packet handler
-                try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-LISTENER-" + clientObject.ServerInstanceID); }
-                catch (Exception) { }
+                    //Tell the server that we are no longer listenning
+                    try { connection.SendObject<RemoteCallWrapper>(packetTypeRequest, wrapper); }
+                    catch (Exception) { }
 
-                //Next remove the server side dispose handler
-                try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-DISPOSE-" + clientObject.ServerInstanceID); }
-                catch (Exception) { }
+                    //Next remove the event packet handler
+                    try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-LISTENER-" + clientObject.ServerInstanceID); }
+                    catch (Exception) { }
+
+                    //Next remove the server side dispose handler
+                    try { connection.RemoveIncomingPacketHandler(clientObject.ImplementedInterface.Name + "-RPC-DISPOSE-" + clientObject.ServerInstanceID); }
+                    catch (Exception) { }
+                }
 
                 //Finally remove the object from the cache. This guarentees that if we try to get the instance again at some time in the future
                 //we won't end up with a disposed RPC object
