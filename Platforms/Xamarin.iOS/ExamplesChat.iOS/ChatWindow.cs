@@ -4,11 +4,11 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Collections.Generic;
-using System.Drawing;
+using CoreGraphics;
 using System.IO;
 
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
+using Foundation;
+using UIKit;
 
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.DPSBase;
@@ -95,10 +95,10 @@ namespace ExamplesChat.iOS
             ChatApplication.ClearInputLine();
 
             NSObject value = notification.UserInfo[UIKeyboard.FrameEndUserInfoKey];
-            RectangleF keyboardFrame = ((NSValue)value).RectangleFValue;
+            CGRect keyboardFrame = ((NSValue)value).RectangleFValue;
 
-            ChatView.Frame = new System.Drawing.RectangleF(ChatView.Frame.X, ChatView.Frame.Y, ChatView.Frame.Width, ChatView.Frame.Height - keyboardFrame.Height);
-            PointF bottomOffset = new PointF(0, ChatHistory.ContentSize.Height - ChatHistory.Bounds.Size.Height);
+            ChatView.Frame = new CGRect(ChatView.Frame.X, ChatView.Frame.Y, ChatView.Frame.Width, ChatView.Frame.Height - keyboardFrame.Height);
+            CGPoint bottomOffset = new CGPoint(0, ChatHistory.ContentSize.Height - ChatHistory.Bounds.Size.Height);
             ChatHistory.SetContentOffset(bottomOffset, true);
         }
 

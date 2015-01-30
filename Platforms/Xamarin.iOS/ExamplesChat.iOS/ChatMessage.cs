@@ -1,4 +1,4 @@
-﻿//
+//
 //  Copyright 2009-2014 NetworkComms.Net Ltd.
 //
 //  This source code is made available for reference purposes only.

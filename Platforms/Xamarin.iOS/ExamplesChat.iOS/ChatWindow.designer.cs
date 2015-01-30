@@ -4,7 +4,7 @@
 // actions made in the Xcode designer. If it is removed, they will be lost.
 // Manual changes to this file may not be handled correctly.
 //
-using MonoTouch.Foundation;
+using Foundation;
 
 namespace ExamplesChat.iOS
 {
@@ -12,19 +12,19 @@ namespace ExamplesChat.iOS
 	partial class ChatWindow
 	{
 		[Outlet]
-		MonoTouch.UIKit.UITextView ChatHistory { get; set; }
+		UIKit.UITextView ChatHistory { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UITextField MessageBox { get; set; }
+		UIKit.UITextField MessageBox { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UIView ChatView { get; set; }
+		UIKit.UIView ChatView { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UIButton SendButton { get; set; }
+		UIKit.UIButton SendButton { get; set; }
 
 		[Action ("SendButtonClick:")]
-		partial void SendButtonClick (MonoTouch.Foundation.NSObject sender);
+		partial void SendButtonClick (Foundation.NSObject sender);
 		
 		void ReleaseDesignerOutlets ()
 		{

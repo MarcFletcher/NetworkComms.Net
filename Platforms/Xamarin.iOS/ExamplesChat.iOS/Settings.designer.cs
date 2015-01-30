@@ -4,7 +4,7 @@
 // actions made in the Xcode designer. If it is removed, they will be lost.
 // Manual changes to this file may not be handled correctly.
 //
-using MonoTouch.Foundation;
+using Foundation;
 
 namespace ExamplesChat.iOS
 {
@@ -12,22 +12,22 @@ namespace ExamplesChat.iOS
 	partial class Settings
 	{
 		[Outlet]
-		MonoTouch.UIKit.UITextField MasterIP { get; set; }
+		UIKit.UITextField MasterIP { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UITextField MasterPort { get; set; }
+		UIKit.UITextField MasterPort { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UITextField LocalName { get; set; }
+		UIKit.UITextField LocalName { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UISegmentedControl ConnectionMode { get; set; }
+		UIKit.UISegmentedControl ConnectionMode { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UISwitch EncryptionEnabled { get; set; }
+		UIKit.UISwitch EncryptionEnabled { get; set; }
 
 		[Outlet]
-		MonoTouch.UIKit.UISwitch LocalServerEnabled { get; set; }
+		UIKit.UISwitch LocalServerEnabled { get; set; }
 		
 		void ReleaseDesignerOutlets ()
 		{

@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
+using CoreGraphics;
 using System.Linq;
 using System.Text;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
+using Foundation;
+using UIKit;
 using NetworkCommsDotNet;
 using NetworkCommsDotNet.Connections;
 
@@ -19,7 +19,7 @@ namespace ExamplesChat.iOS
         /// <summary>
         /// Size of the chat history view when the keyboard is hidden
         /// </summary>
-		public RectangleF OriginalViewSize { get; set; }
+		public CGRect OriginalViewSize { get; set; }
 
         /// <summary>
         /// Reference to the chatHistory text view.
@@ -45,7 +45,7 @@ namespace ExamplesChat.iOS
         #region GUI Interface Overrides
         public override void AppendLineToChatHistory(string message)
         {
-            ChatHistoryBox.InvokeOnMainThread(new NSAction(() =>
+            ChatHistoryBox.InvokeOnMainThread(new Action(() =>
             {
                 ChatHistoryBox.Text += message + Environment.NewLine;
 				ChatHistoryBox.ScrollRangeToVisible(new NSRange(ChatHistoryBox.Text.Length, 1));
@@ -54,17 +54,17 @@ namespace ExamplesChat.iOS
 
         public override void ClearChatHistory()
         {
-            ChatHistoryBox.InvokeOnMainThread(new NSAction(() =>
+            ChatHistoryBox.InvokeOnMainThread(new Action(() =>
             {
                 ChatHistoryBox.Text = "";
-                PointF bottomOffset = new PointF(0, ChatHistoryBox.ContentSize.Height - ChatHistoryBox.Bounds.Size.Height);
+                CGPoint bottomOffset = new CGPoint(0, ChatHistoryBox.ContentSize.Height - ChatHistoryBox.Bounds.Size.Height);
                 ChatHistoryBox.SetContentOffset(bottomOffset, true);
             }));
         }
 
         public override void ClearInputLine()
         {
-            MessageBox.InvokeOnMainThread(new NSAction(() =>
+            MessageBox.InvokeOnMainThread(new Action(() =>
             {
                 MessageBox.Text = "";
             }));
