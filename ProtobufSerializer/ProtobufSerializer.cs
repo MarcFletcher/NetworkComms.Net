@@ -16,7 +16,7 @@ using ProtoBuf.Meta;
 #if ANDROID
 using PreserveAttribute = Android.Runtime.PreserveAttribute;
 #elif iOS
-using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
+using PreserveAttribute = Foundation.PreserveAttribute;
 #endif
 
 namespace NetworkCommsDotNet.DPSBase
