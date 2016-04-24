@@ -1,4 +1,4 @@
-# NetworkComms.Net
+# NetworkComms.Net (http://networkcomms.net)
 ## What is it?
 NetworkComms.Net was developed so that high performance network functionality could be effortlessly added to any .net product. We wanted to require little to no knowledge of networking to make things work first time alongside all of the desirable power features for more experienced network developers. Using our C# network library you can quickly and easily create an unlimited range of products taking advantage of:
 
@@ -19,5 +19,5 @@ We welcome contributions to setup NetworkComms.Net as a NuGet package.
 ## GETTING STARTED
 Everything you need to know about getting started with NetworkComms.Net, including a short introduction video can be found here http://www.networkcomms.net/getting-started/
 
-### SUPPORT & TUTORIALS
+## SUPPORT & TUTORIALS
 For support and tutorials please start here http://www.networkcomms.net/network-library-support/
