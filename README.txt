@@ -20,8 +20,7 @@ that we can fix it.
 
 Please read the following brief, but important sections:
 
-LICENSING: This source code is made available for reference purposes only. It may not be distributed and 
-it may not be made publicly available. Please see the included Licence.txt for more information.
+LICENSING: This project is made available under the Apache License v2. Please see the included LICENSE for more information.
 
 GETTING STARTED: Everything you need to know about getting started with NetworkComms.Net, including a 
 short introduction video can be found here http://www.networkcomms.net/getting-started/
