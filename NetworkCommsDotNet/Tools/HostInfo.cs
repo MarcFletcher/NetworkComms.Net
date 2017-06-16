@@ -248,7 +248,8 @@ namespace NetworkCommsDotNet.Tools
                         var unicastAddresses = iFace.GetIPProperties().UnicastAddresses;
 
                         //Check if this adaptor is allowed
-                        if (RestrictLocalAdaptorNames != null)
+                        if (RestrictLocalAdaptorNames != null
+                            && iFace.OperationalStatus == OperationalStatus.Up)
                         {
                             foreach (var currentName in RestrictLocalAdaptorNames)
                             {
@@ -259,7 +260,7 @@ namespace NetworkCommsDotNet.Tools
                                 }
                             }
                         }
-                        else
+                        else if(iFace.OperationalStatus == OperationalStatus.Up)
                             interfaceValid = true;
 
                         //If the interface is not allowed move to the next adaptor
