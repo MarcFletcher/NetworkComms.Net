@@ -1427,7 +1427,7 @@ namespace LZMA
 					{
 						const int kDicLogSizeMaxCompress = 30;
 						if (!(prop is Int32))
-							throw new InvalidParamException(); ;
+							throw new InvalidParamException();
 						Int32 dictionarySize = (Int32)prop;
 						if (dictionarySize < (UInt32)(1 << Base.kDicLogSizeMin) ||
 							dictionarySize > (UInt32)(1 << kDicLogSizeMaxCompress))
@@ -1467,7 +1467,7 @@ namespace LZMA
 							throw new InvalidParamException();
 						Int32 v = (Int32)prop;
 						if (v < 0 || v > (UInt32)Base.kNumLitContextBitsMax)
-							throw new InvalidParamException(); ;
+							throw new InvalidParamException();
 						_numLiteralContextBits = (int)v;
 						break;
 					}
