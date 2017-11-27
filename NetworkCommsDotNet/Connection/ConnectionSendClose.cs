@@ -469,7 +469,7 @@ namespace NetworkCommsDotNet.Connections
                 //We wait for TCP connections to be established
                 if (ConnectionInfo.ConnectionType == ConnectionType.TCP && ConnectionInfo.ConnectionState != ConnectionState.Established)
                 {
-                    if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).Milliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
+                    if ((DateTime.Now - ConnectionInfo.ConnectionCreationTime).TotalMilliseconds > NetworkComms.ConnectionEstablishTimeoutMS)
                     {
                         CloseConnection(false, -11);
                         return false;
