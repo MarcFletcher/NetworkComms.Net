@@ -199,7 +199,7 @@ namespace NetworkCommsDotNet.DPSBase
                     return new String(Encoding.UTF8.GetChars(objData));
                 }
                 else
-                    throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a parameterless constructor or does not implement IExplicitlySerialize", "resultType");
+                    throw new ArgumentException("Provided type " + resultType.ToString() + " either does not have a private parameterless constructor or does not implement IExplicitlySerialize", "resultType");
             }
 
             var result = constructor.Invoke(new object[] { }) as IExplicitlySerialize;
