@@ -89,10 +89,12 @@ namespace NetworkCommsDotNet.Tools
                     entireFileName = fileName + " " + DateTime.Now.ToString("HH.mm.ss.fff") + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + currentProcess.Id.ToString() + "-" + Thread.CurrentContext.ContextID.ToString() + "]");
 #endif
 
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Fatal(entireFileName, ex);
-
-                try
+                if (NetworkComms.LoggingEnabled)
                 {
+                    NetworkComms.Logger.Fatal(entireFileName, ex);
+
+                    try
+                    {
 #if NETFX_CORE
                     Task writeTask = new Task(async () =>
                         {
@@ -125,31 +127,32 @@ namespace NetworkCommsDotNet.Tools
                     writeTask.Start();
                     writeTask.Wait(); 
 #else
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
-                    {
-                        if (optionalCommentStr != "")
+                        using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
                         {
-                            sw.WriteLine("Comment: " + optionalCommentStr);
-                            sw.WriteLine("");
+                            if (optionalCommentStr != "")
+                            {
+                                sw.WriteLine("Comment: " + optionalCommentStr);
+                                sw.WriteLine("");
+                            }
+
+                            if (ex.GetBaseException() != null)
+                                sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
+
+                            if (ex.InnerException != null)
+                                sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
+
+                            if (ex.StackTrace != null)
+                            {
+                                sw.WriteLine("");
+                                sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
+                            }
                         }
-
-                        if (ex.GetBaseException() != null)
-                            sw.WriteLine("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                        if (ex.InnerException != null)
-                            sw.WriteLine("Inner Exception Type: " + ex.InnerException.ToString());
-
-                        if (ex.StackTrace != null)
-                        {
-                            sw.WriteLine("");
-                            sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
-                        }
-                    }
 #endif
-                }
-                catch (Exception)
-                {
-                    //This should never really happen, but just incase.
+                    }
+                    catch (Exception)
+                    {
+                        //This should never really happen, but just incase.
+                    }
                 }
             }
 

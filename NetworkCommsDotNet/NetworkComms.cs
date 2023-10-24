@@ -1087,7 +1087,7 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Returns true if NetworkComms.Net logging has been enabled.
         /// </summary>
-        public static bool LoggingEnabled { get; private set; }
+        public static bool LoggingEnabled { get; private set; } = true;
 
         private static ILogger _logger = null;
 
