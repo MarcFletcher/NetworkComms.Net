@@ -26,3 +26,5 @@ Documentation/Help/*
 SingleDllBuild/SingleDllBuild.log
 *.orig
 packages/**
+*.dtbcache.json
+.vs/*
