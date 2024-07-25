@@ -1,0 +1,1 @@
+Building this documentation project requires the appropriate Sandcastle dependencies. Please see https://github.com/EWSoftware/SHFB/releases 
