@@ -17,7 +17,7 @@
 // under the License.
 // 
 
-#if !NET2
+#if !NET2 && !NET
 
 using System;
 using System.Collections.Generic;

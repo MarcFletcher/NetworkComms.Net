@@ -470,7 +470,7 @@ namespace NetworkCommsDotNet.DPSBase
                     AssemblyLoader loader;
                     ProcessArgument args;
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
+#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE && !NET
 
                     AppDomain tempDomain = null;
 

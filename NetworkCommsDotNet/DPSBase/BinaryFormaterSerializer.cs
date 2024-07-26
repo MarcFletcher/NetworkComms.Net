@@ -66,20 +66,28 @@ namespace NetworkCommsDotNet.DPSBase
         
         /// <inheritdoc />
         protected override void SerialiseDataObjectInt(Stream ouputStream, object objectToSerialise, Dictionary<string, string> options)
-        {            
+        {
+#if !NET
             BinaryFormatter formatter = new BinaryFormatter();
             formatter.Serialize(ouputStream, objectToSerialise);
             ouputStream.Seek(0, 0);
+#else
+            throw new NotImplementedException("Not implemented for .NET (i.e beyond framework 4.8)");
+#endif
         }
 
         /// <inheritdoc />
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
+#if !NET
             BinaryFormatter formatter = new BinaryFormatter();
             return formatter.Deserialize(inputStream);
+#else
+            throw new NotImplementedException("Not implemented for .NET (i.e beyond framework 4.8)");
+#endif
         }
 
-        #endregion
+#endregion
     }
 }
 
