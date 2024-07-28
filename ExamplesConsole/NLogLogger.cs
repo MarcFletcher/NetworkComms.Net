@@ -16,7 +16,7 @@ namespace Examples.ExamplesConsole
     /// Uses a simple configuration that logs to console (DEBUG log level and above) 
     /// and to a file (All log Levels).
     /// </summary>
-    public class NLogLogger : ILogger
+    public class NLogLogger : NetworkCommsDotNet.Tools.ILogger
     {
         private Logger logger;
 
