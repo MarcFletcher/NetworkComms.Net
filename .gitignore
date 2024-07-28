@@ -28,3 +28,4 @@ SingleDllBuild/SingleDllBuild.log
 packages/**
 *.dtbcache.json
 .vs/*
+*.nupkg
