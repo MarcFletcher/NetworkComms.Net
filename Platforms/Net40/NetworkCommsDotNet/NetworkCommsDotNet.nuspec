@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>NetworkCommsDotNet</id>
-    <version>3.0.4-beta</version>
+    <version>3.0.4</version>
     <title>NetworkCommsDotNet</title>
     <authors>MarcF MattD</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,6 +12,7 @@
     <description>NetworkComms.Net is a high performance cross-platform network library written in C#, with the purpose of being used in all .NET Framework compatible languages, C#, VB.Net, F#, J#, C++/CLI etc.</description>
     <releaseNotes>Bug fixes and upstream dependencies upgrade (Newtonsoft.Json and NLOG)</releaseNotes>
     <readme>docs\readme.md</readme>
+    <repository type="git" url="https://github.com/MarcFletcher/NetworkComms.Net" />
     <copyright>Copyright 2014-2024</copyright>
     <tags>dotnet .net net network networking</tags>
   </metadata>
