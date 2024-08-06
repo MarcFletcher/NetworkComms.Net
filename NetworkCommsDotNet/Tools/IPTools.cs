@@ -24,12 +24,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
 using NetworkCommsDotNet.DPSBase;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Tools
 {
@@ -48,9 +43,6 @@ namespace NetworkCommsDotNet.Tools
             if (localIPAddress.AddressFamily != AddressFamily.InterNetwork)
                 throw new ArgumentException("The method is for IPv4 addresses only.");
             
-#if WINDOWS_PHONE || NETFX_CORE
-            throw new NotImplementedException("This method has not yet been implemented for WP8 and WinRT.");
-#else
             //Determine the correct subnet address
             //We initialise using a standard class C network subnet mask
             IPAddress subnetAddress = new IPAddress(new byte[] { 255, 255, 255, 0});
@@ -90,7 +82,6 @@ namespace NetworkCommsDotNet.Tools
                 broadcastBytes[i] = (byte)(broadcastBytes[i] | ~subnetBytes[i]);
 
             return new IPAddress(broadcastBytes);
-#endif
         }
 
         /// <summary>
@@ -126,19 +117,6 @@ namespace NetworkCommsDotNet.Tools
         {
             if (remoteIPEndPoint == null) throw new ArgumentNullException("remoteIPEndPoint", "Provided IPEndPoint cannot be null.");
 
-#if WINDOWS_PHONE || NETFX_CORE
-            var t = Windows.Networking.Sockets.DatagramSocket.GetEndpointPairsAsync(new Windows.Networking.HostName(remoteIPEndPoint.Address.ToString()), remoteIPEndPoint.Port.ToString()).AsTask();
-            if (t.Wait(20) && t.Result.Count > 0)
-            {
-                var enumerator = t.Result.GetEnumerator();
-                enumerator.MoveNext();
-
-                var endpointPair = enumerator.Current;                
-                return new IPEndPoint(IPAddress.Parse(endpointPair.LocalHostName.DisplayName.ToString()), int.Parse(endpointPair.LocalServiceName));
-            }
-            else
-                throw new ConnectionSetupException("Unable to determine correct local end point.");
-#else
             //We use UDP as its connectionless hence faster
             IPEndPoint result;
             using (Socket testSocket = new Socket(remoteIPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
@@ -148,13 +126,10 @@ namespace NetworkCommsDotNet.Tools
             }
 
             return result;
-#endif
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         [DllImport("iphlpapi.dll", CharSet = CharSet.Auto)]
         static extern int GetBestInterface(UInt32 DestAddr, out UInt32 BestIfIndex);
-#endif
 
         /// <summary>
         /// Depreciated - . Attempts to guess the best local <see cref="IPAddress"/> of this machine for accessing 
@@ -169,14 +144,6 @@ namespace NetworkCommsDotNet.Tools
         {
             if (targetIPAddress == null)
                 throw new ArgumentNullException("targetIPAddress", "Provided IPAddress cannot be null.");
-
-#if WINDOWS_PHONE || NETFX_CORE
-            foreach (var name in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
-                if (name.IPInformation.NetworkAdapter == Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().NetworkAdapter)
-                    return IPAddress.Parse(name.DisplayName);
-
-            return null;
-#else
 
             try
             {
@@ -219,7 +186,6 @@ namespace NetworkCommsDotNet.Tools
             }
 
             return null;
-#endif
         }
     }
 

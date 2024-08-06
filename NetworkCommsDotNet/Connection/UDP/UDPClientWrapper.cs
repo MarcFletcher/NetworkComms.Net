@@ -22,18 +22,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using NetworkCommsDotNet.DPSBase;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections.UDP
 {
-#if WINDOWS_PHONE || NETFX_CORE
-    //UdpClientThreadSafe not yet required for WP8
-#else
+
     /// <summary>
     /// Internal wrapper around a udpClient object so that we can easily manage usage.
     /// </summary>
@@ -54,12 +47,10 @@ namespace NetworkCommsDotNet.Connections.UDP
 
             this.udpClient.EnableBroadcast = true;
 
-#if !ANDROID && !iOS
             //By default we ignore ICMP destination unreachable packets so that we can continue to use the udp client even if we send something down a black hole
             //This is unsupported in Mono but also not required as the same behaviour is not observed.
             if (UDPConnection.IgnoreICMPDestinationUnreachable && Type.GetType("Mono.Runtime") == null)
                 this.udpClient.Client.IOControl(SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, new byte[] { 0, 0, 0, 0 });
-#endif
         }
 
         public void Send(byte[] dgram, int bytes, IPEndPoint endPoint)
@@ -165,5 +156,5 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
         }
     }
-#endif
+
 }

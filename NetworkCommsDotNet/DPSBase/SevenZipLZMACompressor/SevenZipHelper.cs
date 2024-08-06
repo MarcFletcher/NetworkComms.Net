@@ -20,10 +20,6 @@
 using System;
 using System.IO;
 
-#if NETFX_CORE
-using ApplicationException = System.Exception;
-#endif
-
 namespace LZMA
 {
     class DataErrorException : ApplicationException
@@ -138,26 +134,9 @@ namespace LZMA
 					eos
 				};
 
-#if iOS
-        //For iOS we create static instances to avoid significant memory usages
-        //This means we can only compress/decompress in serial but that's most likely
-        //acceptable on mobile platforms.
-        static object staticEncoderLocker = new object();
-        static LZMA.Encoder staticEncoder = new LZMA.Encoder();
-
-        static object staticDecoderLocker = new object();
-        static LZMA.Decoder staticDecoder = new LZMA.Decoder();
-#endif
-
         internal static byte[] Compress(byte[] inputBytes)
         {
-#if iOS
-            lock (staticEncoderLocker)
-            {
-                LZMA.Encoder encoder = staticEncoder;
-#else
                 LZMA.Encoder encoder = new LZMA.Encoder();
-#endif
 
                 MemoryStream inStream = new MemoryStream(inputBytes);
                 MemoryStream outStream = new MemoryStream();
@@ -169,20 +148,11 @@ namespace LZMA
                     outStream.WriteByte((Byte)(fileSize >> (8 * i)));
                 encoder.Code(inStream, outStream, -1, -1);
                 return outStream.ToArray();
-#if iOS
-            }
-#endif
         }
 
         internal static void CompressToStream(Stream inStream, Stream outStream)
         {
-#if iOS
-            lock (staticEncoderLocker)
-            {
-                LZMA.Encoder encoder = staticEncoder;
-#else
-                LZMA.Encoder encoder = new LZMA.Encoder();
-#endif
+            LZMA.Encoder encoder = new LZMA.Encoder();
 
             encoder.SetCoderProperties(propIDs, properties);
             encoder.WriteCoderProperties(outStream);
@@ -190,20 +160,11 @@ namespace LZMA
             for (int i = 0; i < 8; i++)
                 outStream.WriteByte((Byte)(fileSize >> (8 * i)));
             encoder.Code(inStream, outStream, -1, -1);
-#if iOS
-            }
-#endif
         }
 
         internal static byte[] Decompress(byte[] inputBytes)
         {
-#if iOS
-            lock (staticEncoderLocker)
-            {
-                LZMA.Decoder decoder = staticDecoder;
-#else
-                LZMA.Decoder decoder = new LZMA.Decoder();
-#endif
+            LZMA.Decoder decoder = new LZMA.Decoder();
 
             MemoryStream newInStream = new MemoryStream(inputBytes);
             newInStream.Seek(0, 0);
@@ -228,21 +189,11 @@ namespace LZMA
             byte[] b = newOutStream.ToArray();
 
             return b;
-
-#if iOS
-            }
-#endif
         }
 
         internal static byte[] DecompressFromStream(Stream newInStream)
         {
-#if iOS
-            lock (staticEncoderLocker)
-            {
-                LZMA.Decoder decoder = staticDecoder;
-#else
-                LZMA.Decoder decoder = new LZMA.Decoder();
-#endif
+            LZMA.Decoder decoder = new LZMA.Decoder();
 
             newInStream.Seek(0, 0);
             MemoryStream newOutStream = new MemoryStream();
@@ -266,21 +217,11 @@ namespace LZMA
             byte[] b = newOutStream.ToArray();
 
             return b;
-
-#if iOS
-            }
-#endif
         }
 
         internal static void DecompressStreamToStream(Stream inStream, Stream outStream)
         {
-#if iOS
-            lock (staticEncoderLocker)
-            {
-                LZMA.Decoder decoder = staticDecoder;
-#else
-                LZMA.Decoder decoder = new LZMA.Decoder();
-#endif
+            LZMA.Decoder decoder = new LZMA.Decoder();
 
             inStream.Seek(0, 0);
 
@@ -300,9 +241,6 @@ namespace LZMA
             long compressedSize = inStream.Length - inStream.Position;
             decoder.Code(inStream, outStream, compressedSize, outSize);
 
-#if iOS
-            }
-#endif
         }
     }
 }

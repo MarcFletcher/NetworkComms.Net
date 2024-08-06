@@ -137,16 +137,6 @@
     <Compile Include="Connection\UDP\UDPConnection.cs" />
     <Compile Include="Tools\SSLTools.cs" />
     <Compile Include="Tools\StreamTools.cs" />
-    <Compile Include="Tools\XPlatformHelper\AddressFamily.cs" />
-    <Compile Include="Tools\XPlatformHelper\DateTimeExtenensions.cs" />
-    <Compile Include="Tools\XPlatformHelper\EndPoint.cs" />
-    <Compile Include="Tools\XPlatformHelper\IPAddress.cs" />
-    <Compile Include="Tools\XPlatformHelper\IPEndPoint.cs" />
-    <Compile Include="Tools\XPlatformHelper\IPv6Address.cs" />
-    <Compile Include="Tools\XPlatformHelper\SocketAddress.cs" />
-    <Compile Include="Tools\XPlatformHelper\SocketError.cs" />
-    <Compile Include="Tools\XPlatformHelper\SocketException.cs" />
-    <Compile Include="Tools\XPlatformHelper\WaitCallback.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

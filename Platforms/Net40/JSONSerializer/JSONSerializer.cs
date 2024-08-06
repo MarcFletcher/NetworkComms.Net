@@ -24,14 +24,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-#if NET4 || WINDOWS_PHONE || NETFX_CORE
+#if NET4
 using Newtonsoft.Json;
-#endif
-
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
 #endif
 
 namespace NetworkCommsDotNet.DPSBase
@@ -40,9 +34,6 @@ namespace NetworkCommsDotNet.DPSBase
     public class JSONSerializer : DataSerializer
     {
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private JSONSerializer() { }
                         
         #region ISerialize Members

@@ -30,11 +30,7 @@ using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections.Bluetooth;
 #endif
 
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections
 {

@@ -17,8 +17,6 @@
 // under the License.
 // 
 
-#if !NETFX_CORE
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -151,7 +149,6 @@ namespace NetworkCommsDotNet.Tools
         }
     }
 
-#if !iOS
     /// <summary>
     /// Tools used in conjunction with SSL encrypted connections.
     /// </summary>
@@ -542,6 +539,5 @@ namespace NetworkCommsDotNet.Tools
         }
         #endregion
     }
-#endif
+
 }
-#endif

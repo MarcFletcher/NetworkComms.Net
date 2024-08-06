@@ -32,11 +32,7 @@ namespace DLLAssemble
                 @"DLLs\Net35\Individual",
                 @"DLLs\Net35\Merged",
                 @"DLLs\Net40\Individual",
-                @"DLLs\Net40\Merged",
-                @"DLLs\WinRT\Individual",
-                @"DLLs\WP8\Individual",
-                @"DLLs\Xamarin.Android\Individual",
-                @"DLLs\Xamarin.iOS\Individual",
+                @"DLLs\Net40\Merged"
             };
 
                 foreach (string directory in newDirectories)
@@ -192,126 +188,6 @@ namespace DLLAssemble
                 File.Copy(Path.Combine(sourceDir, @"MergedComplete\NetworkCommsDotNetComplete.pdb"), Path.Combine(destDir, "Merged", "NetworkCommsDotNetComplete.pdb"));
                 File.Copy(Path.Combine(sourceDir, @"MergedComplete\NetworkCommsDotNetComplete.xml"), Path.Combine(destDir, "Merged", "NetworkCommsDotNetComplete.xml"));
                 File.Copy(Path.Combine(sourceDir, @"MergedComplete\MergeLog.txt"), Path.Combine(destDir, "Merged", "MergeLog.txt"));
-                #endregion
-
-                #region WinRT
-                //Copy individual DLLs
-                sourceDir = Path.Combine(@"..\..\..\Platforms\WinRT\ExamplesChat.WinRT\bin", assembleMode);
-                destDir = Path.Combine(@"DLLs\WinRT");
-
-                string[] winRTIndividualFiles = new string[] 
-                {
-                    "NetworkCommsDotNet",
-                    "ProtobufSerializer",
-                    "JSONSerializer",
-                };
-
-                //Check Dll build time was in the last 5 minutes
-                if ((DateTime.Now - File.GetLastWriteTime(Path.Combine(sourceDir, "NetworkCommsDotNet.dll"))).TotalMinutes > minutesAllowedBeforeExceptionForOldDLLs)
-                    throw new InvalidDataException("dlls must have been created within the last " + minutesAllowedBeforeExceptionForOldDLLs + " minutes. This check ensures we are not using old dlls has been recently");
-
-                //Copy the files over
-                foreach (string file in winRTIndividualFiles)
-                {
-                    //Check filesize
-                    if (new FileInfo(Path.Combine(sourceDir, file + ".dll")).Length == 0)
-                        throw new InvalidDataException("Size of dll should be greater than 0.");
-
-                    File.Copy(Path.Combine(sourceDir, file + ".dll"), Path.Combine(destDir, "Individual", file + ".dll"));
-
-                    if (File.Exists(Path.Combine(sourceDir, file + ".pdb"))) File.Copy(Path.Combine(sourceDir, file + ".pdb"), Path.Combine(destDir, "Individual", file + ".pdb"));
-                    if (File.Exists(Path.Combine(sourceDir, file + ".xml"))) File.Copy(Path.Combine(sourceDir, file + ".xml"), Path.Combine(destDir, "Individual", file + ".xml"));
-                }
-                #endregion
-
-                #region WP8
-                //Copy individual DLLs
-                sourceDir = Path.Combine(@"..\..\..\Platforms\WP8\ExamplesChat.WP8\bin", assembleMode);
-                destDir = Path.Combine(@"DLLs\WP8");
-
-                string[] winP8IndividualFiles = new string[] 
-                {
-                    "NetworkCommsDotNet",
-                    "ProtobufSerializer",
-                    "JSONSerializer",
-                };
-
-                //Check Dll build time was in the last 5 minutes
-                if ((DateTime.Now - File.GetLastWriteTime(Path.Combine(sourceDir, "NetworkCommsDotNet.dll"))).TotalMinutes > minutesAllowedBeforeExceptionForOldDLLs)
-                    throw new InvalidDataException("dlls must have been created within the last " + minutesAllowedBeforeExceptionForOldDLLs + " minutes. This check ensures we are not using old dlls has been recently");
-
-                //Copy the files over
-                foreach (string file in winP8IndividualFiles)
-                {
-                    //Check filesize
-                    if (new FileInfo(Path.Combine(sourceDir, file + ".dll")).Length == 0)
-                        throw new InvalidDataException("Size of dll should be greater than 0.");
-
-                    File.Copy(Path.Combine(sourceDir, file + ".dll"), Path.Combine(destDir, "Individual", file + ".dll"));
-
-                    if (File.Exists(Path.Combine(sourceDir, file + ".pdb"))) File.Copy(Path.Combine(sourceDir, file + ".pdb"), Path.Combine(destDir, "Individual", file + ".pdb"));
-                    if (File.Exists(Path.Combine(sourceDir, file + ".xml"))) File.Copy(Path.Combine(sourceDir, file + ".xml"), Path.Combine(destDir, "Individual", file + ".xml"));
-                }
-                #endregion
-
-                #region Xamarin.Android
-                //Copy individual DLLs
-                sourceDir = Path.Combine(@"..\..\..\Platforms\Xamarin.Android\MergedDllBuild\bin", assembleMode);
-                destDir = Path.Combine(@"DLLs\Xamarin.Android");
-
-                string[] androidIndividualFiles = new string[] 
-                {
-                    "NetworkCommsDotNet",
-                    "ICSharpCode.SharpZipLib",
-                    "ProtobufSerializer",
-                    "SharpZipLibCompressor",
-                };
-
-                //Check Dll build time was in the last 5 minutes
-                if ((DateTime.Now - File.GetLastWriteTime(Path.Combine(sourceDir, "NetworkCommsDotNet.dll"))).TotalMinutes > minutesAllowedBeforeExceptionForOldDLLs)
-                    throw new InvalidDataException("dlls must have been created within the last " + minutesAllowedBeforeExceptionForOldDLLs + " minutes. This check ensures we are not using old dlls has been recently");
-
-                //Copy the files over
-                foreach (string file in androidIndividualFiles)
-                {
-                    //Check filesize
-                    if (new FileInfo(Path.Combine(sourceDir, file + ".dll")).Length == 0)
-                        throw new InvalidDataException("Size of dll should be greater than 0.");
-
-                    File.Copy(Path.Combine(sourceDir, file + ".dll"), Path.Combine(destDir, "Individual", file + ".dll"));
-
-                    if (File.Exists(Path.Combine(sourceDir, file + ".pdb"))) File.Copy(Path.Combine(sourceDir, file + ".pdb"), Path.Combine(destDir, "Individual", file + ".pdb"));
-                    if (File.Exists(Path.Combine(sourceDir, file + ".xml"))) File.Copy(Path.Combine(sourceDir, file + ".xml"), Path.Combine(destDir, "Individual", file + ".xml"));
-                }
-                #endregion
-
-                #region Xamarin.iOS
-                //Copy individual DLLs
-                sourceDir = Path.Combine(@"..\..\..\Platforms\Xamarin.iOS\MergedDllBuild\bin", assembleMode);
-                destDir = Path.Combine(@"DLLs\Xamarin.iOS");
-
-                string[] iOSIndividualFiles = new string[] 
-                {
-                    "NetworkCommsDotNet",
-                    "ProtobufSerializer",
-                };
-
-                //Check Dll build time was in the last 5 minutes
-                if ((DateTime.Now - File.GetLastWriteTime(Path.Combine(sourceDir, "NetworkCommsDotNet.dll"))).TotalMinutes > minutesAllowedBeforeExceptionForOldDLLs)
-                    throw new InvalidDataException("dlls must have been created within the last " + minutesAllowedBeforeExceptionForOldDLLs + " minutes. This check ensures we are not using old dlls has been recently");
-
-                //Copy the files over
-                foreach (string file in iOSIndividualFiles)
-                {
-                    //Check filesize
-                    if (new FileInfo(Path.Combine(sourceDir, file + ".dll")).Length == 0)
-                        throw new InvalidDataException("Size of dll should be greater than 0.");
-
-                    File.Copy(Path.Combine(sourceDir, file + ".dll"), Path.Combine(destDir, "Individual", file + ".dll"));
-
-                    if (File.Exists(Path.Combine(sourceDir, file + ".pdb"))) File.Copy(Path.Combine(sourceDir, file + ".pdb"), Path.Combine(destDir, "Individual", file + ".pdb"));
-                    if (File.Exists(Path.Combine(sourceDir, file + ".xml"))) File.Copy(Path.Combine(sourceDir, file + ".xml"), Path.Combine(destDir, "Individual", file + ".xml"));
-                }
                 #endregion
 
                 using (StreamWriter sw = new StreamWriter("assembleSucceeded.txt", false))

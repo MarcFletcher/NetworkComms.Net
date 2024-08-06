@@ -25,10 +25,6 @@ using System.IO;
 using System.Reflection;
 using NetworkCommsDotNet.Tools;
 
-#if NETFX_CORE
-using System.Linq;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase
 {    
     /// <summary>
@@ -53,15 +49,10 @@ namespace NetworkCommsDotNet.DPSBase
             {
                 //if the instance is null the type was not added as part of composition
                 //create a new instance of T and add it to helper as a serializer
-#if NETFX_CORE
-                var construct = (from constructor in typeof(T).GetTypeInfo().DeclaredConstructors
-                                 where constructor.GetParameters().Length == 0
-                                 select constructor).FirstOrDefault();
-#else
                 var construct = typeof(T).GetConstructor(new Type[] { });
                 if (construct == null)
                     construct = typeof(T).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[0], null);
-#endif
+
                 if (construct == null)
                     throw new Exception();
 
@@ -192,11 +183,8 @@ namespace NetworkCommsDotNet.DPSBase
         public T DeserialiseDataObject<T>(byte[] receivedObjectBytes)
         {
             if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
-#if NETFX_CORE
-            using (var ms = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false))
-#else
+
             using (var ms = new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true))
-#endif
                 return DeserialiseDataObject<T>(ms);
         }
 
@@ -225,11 +213,7 @@ namespace NetworkCommsDotNet.DPSBase
         {
             if (receivedObjectBytes == null) throw new ArgumentNullException("receivedObjectBytes");
             
-#if NETFX_CORE
-            return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false), dataProcessors, options);
-#else
             return DeserialiseDataObject<T>(new MemoryStream(receivedObjectBytes, 0, receivedObjectBytes.Length, false, true), dataProcessors, options);
-#endif
         }
 
         /// <summary>
@@ -343,11 +327,8 @@ namespace NetworkCommsDotNet.DPSBase
 
                     if (!cachedIdentifiers.ContainsKey(typeOfThis))
                     {
-#if NETFX_CORE
-                        var attributes = this.GetType().GetTypeInfo().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false).ToArray();
-#else
                         var attributes = this.GetType().GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
-#endif
+
                         if (attributes.Length == 1)
                             cachedIdentifiers[typeOfThis] = (attributes[0] as DataSerializerProcessorAttribute).Identifier;
                         else
@@ -382,140 +363,7 @@ namespace NetworkCommsDotNet.DPSBase
     /// </summary>
     static class ArraySerializer
     {
-#if WINDOWS_PHONE || iOS || NETFX_CORE
 
-        /// <summary>
-        /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
-        /// to serialize other types
-        /// </summary>        
-        /// <param name="objectToSerialise">Object to serialize</param>
-        /// <param name="dataProcessors">The compression provider to use</param>
-        /// <param name="options">Options to be used during serialization and processing of data</param>
-        /// <returns>The serialized and compressed bytes of objectToSerialize</returns>
-        public static StreamTools.StreamSendWrapper SerialiseArrayObject(object objectToSerialise, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
-        {
-            Type objType = objectToSerialise.GetType();
-
-            if (objType.IsArray)
-            {
-                var elementType = objType.GetElementType();
-
-                //No need to do anything for a byte array
-                if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
-                {
-                    byte[] bytesToSerialise = objectToSerialise as byte[];
-                    //return objectToSerialise as byte[];
-#if NETFX_CORE
-                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false), true));
-#else
-                    return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(new MemoryStream(bytesToSerialise, 0, bytesToSerialise.Length, false, true), true));
-#endif
-                }
-#if NETFX_CORE
-                else if (elementType.GetTypeInfo().IsPrimitive)
-#else
-                else if (elementType.IsPrimitive)
-#endif
-                {
-                    var asArray = objectToSerialise as Array;
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-#else
-                    GCHandle arrayHandle = GCHandle.Alloc(asArray, GCHandleType.Pinned);
-#endif
-
-                    try
-                    {
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-#else
-                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(asArray, 0);
-#endif
-
-                        long writtenBytes = 0;
-
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-                        var byteArray = new byte[asArray.Length * Marshal.SizeOf(elementType)];
-                        Buffer.BlockCopy(asArray, 0, byteArray, 0, byteArray.Length);
-                        MemoryStream tempStream1 = new MemoryStream();
-                        tempStream1.Write(byteArray, 0, byteArray.Length);
-#else
-                        MemoryStream tempStream1 = new System.IO.MemoryStream();
-
-                        using (UnmanagedMemoryStream inputDataStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, asArray.Length * Marshal.SizeOf(elementType)))
-                        {
-                            if (dataProcessors == null || dataProcessors.Count == 0)
-                            {
-                                AsyncStreamCopier.CopyStreamTo(inputDataStream, tempStream1);
-                                //return tempStream1.ToArray();
-                                return new StreamSendWrapper(new ThreadSafeStream(tempStream1, true));
-                            }
-
-                            dataProcessors[0].ForwardProcessDataStream(inputDataStream, tempStream1, options, out writtenBytes);
-                        }
-#endif
-
-                        if (dataProcessors.Count > 1)
-                        {
-                            MemoryStream tempStream2 = new MemoryStream();
-
-                            for (int i = 1; i < dataProcessors.Count; i += 2)
-                            {
-                                tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                tempStream2.Seek(0, 0);
-                                dataProcessors[i].ForwardProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-
-                                if (i + 1 < dataProcessors.Count)
-                                {
-                                    tempStream1.Seek(0, 0);
-                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                                    dataProcessors[i].ForwardProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
-                                }
-                            }
-
-                            if (dataProcessors.Count % 2 == 0)
-                            {
-                                tempStream2.SetLength(writtenBytes + 4);
-                                tempStream2.Seek(writtenBytes, 0);
-                                tempStream2.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                                //return tempStream2.ToArray();
-                                tempStream1.Dispose();
-                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream2, true));
-                            }
-                            else
-                            {
-                                tempStream1.SetLength(writtenBytes + 4);
-                                tempStream1.Seek(writtenBytes, 0);
-                                tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                                //return tempStream1.ToArray();
-                                tempStream2.Dispose();
-                                return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
-                            }
-                        }
-                        else
-                        {
-                            tempStream1.SetLength(writtenBytes + 4);
-                            tempStream1.Seek(writtenBytes, 0);
-                            tempStream1.Write(BitConverter.GetBytes(asArray.Length), 0, sizeof(int));
-                            //return tempStream1.ToArray();
-                            return new StreamTools.StreamSendWrapper(new StreamTools.ThreadSafeStream(tempStream1, true));
-                        }
-                    }
-                    finally
-                    {
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-#else
-                        arrayHandle.Free();
-#endif
-                    }
-                }
-            }
-
-            return null;
-        }
-
-#else
         /// <summary>
         /// Serializes objectToSerialize to a byte array using compression provided by compressor if T is an array of primitives.  Otherwise returns default value for T.  Override 
         /// to serialize other types
@@ -618,171 +466,6 @@ namespace NetworkCommsDotNet.DPSBase
 
             return null;
         }
-#endif
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-        /// <summary>
-        /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
-        /// </summary>        
-        /// <param name="inputStream">Byte array containing serialized and compressed object</param>
-        /// <param name="dataProcessors">Compression provider to use</param>
-        /// <param name="objType">The <see cref="System.Type"/> of the <see cref="object"/> to be returned</param>
-        /// <param name="options">Options to be used during deserialization and processing of data</param>
-        /// <returns>The deserialized object if it is an array, otherwise null</returns>
-        public static object DeserialiseArrayObject(MemoryStream inputStream, Type objType, List<DataProcessor> dataProcessors, Dictionary<string, string> options)
-        {
-            if (objType.IsArray)
-            {
-                var elementType = objType.GetElementType();
-
-                //No need to do anything for a byte array
-                if (elementType == typeof(byte) && (dataProcessors == null || dataProcessors.Count == 0))
-                {
-                    try
-                    {
-#if NETFX_CORE
-                        return (object)inputStream.ToArray();
-#else
-                        return (object)inputStream.GetBuffer();
-#endif
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        return (object)inputStream.ToArray();
-                    }
-                }
-
-#if NETFX_CORE
-                if (elementType.GetTypeInfo().IsPrimitive)
-#else
-                if (elementType.IsPrimitive)
-#endif
-                {
-                    int numElements;
-
-                    if (dataProcessors == null || dataProcessors.Count == 0)
-                        numElements = (int)(inputStream.Length / Marshal.SizeOf(elementType));
-                    else
-                    {
-                        byte[] temp = new byte[sizeof(int)];                        
-                        inputStream.Seek(inputStream.Length - sizeof(int), SeekOrigin.Begin);
-                        inputStream.Read(temp, 0, sizeof(int));
-                        numElements = (int)(BitConverter.ToUInt32(temp, 0));
-                    }
-
-                    Array resultArray = Array.CreateInstance(elementType, numElements);
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-                    byte[] resultBytes = null;
-#else
-                    GCHandle arrayHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
-#endif
-
-                    try
-                    {
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-#else
-                        IntPtr safePtr = Marshal.UnsafeAddrOfPinnedArrayElement(resultArray, 0);
-#endif
-
-                        long writtenBytes = 0;
-
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-                        resultBytes = new byte[numElements * Marshal.SizeOf(elementType)];
-                        using (System.IO.MemoryStream finalOutputStream = new MemoryStream(resultBytes))
-                        {
-
-#else
-                        using (System.IO.UnmanagedMemoryStream finalOutputStream = new System.IO.UnmanagedMemoryStream((byte*)safePtr, resultArray.Length * Marshal.SizeOf(elementType), resultArray.Length * Marshal.SizeOf(elementType), System.IO.FileAccess.ReadWrite))
-                        {
-#endif
-                            MemoryStream inputBytesStream = null;
-                            try
-                            {
-#if NETFX_CORE
-                                inputBytesStream = new MemoryStream(inputStream.ToArray(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
-#else
-                                //We hope that the buffer is publicly accessible as otherwise it defeats the point of having a special serializer for arrays
-                                inputBytesStream = new MemoryStream(inputStream.GetBuffer(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));                                
-#endif
-                            }
-                            catch (UnauthorizedAccessException)
-                            {
-                                inputBytesStream = new MemoryStream(inputStream.ToArray(), 0, (int)(inputStream.Length - ((dataProcessors == null || dataProcessors.Count == 0) ? 0 : sizeof(int))));
-                            }
-
-                            using (inputBytesStream)
-                            {
-                                if (dataProcessors != null && dataProcessors.Count > 1)
-                                {
-                                    using (MemoryStream tempStream1 = new MemoryStream())
-                                    {
-                                        dataProcessors[dataProcessors.Count - 1].ReverseProcessDataStream(inputBytesStream, tempStream1, options, out writtenBytes);
-
-                                        if (dataProcessors.Count > 2)
-                                        {
-                                            using (MemoryStream tempStream2 = new MemoryStream())
-                                            {
-                                                for (int i = dataProcessors.Count - 2; i > 0; i -= 2)
-                                                {
-                                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                                    tempStream2.Seek(0, 0);
-                                                    dataProcessors[i].ReverseProcessDataStream(tempStream1, tempStream2, options, out writtenBytes);
-
-                                                    if (i - 1 > 0)
-                                                    {
-                                                        tempStream1.Seek(0, 0);
-                                                        tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                                                        dataProcessors[i - 1].ReverseProcessDataStream(tempStream2, tempStream1, options, out writtenBytes);
-                                                    }
-                                                }
-
-                                                if (dataProcessors.Count % 2 == 0)
-                                                {
-                                                    tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                                    dataProcessors[0].ReverseProcessDataStream(tempStream1, finalOutputStream, options, out writtenBytes);
-                                                }
-                                                else
-                                                {
-                                                    tempStream2.Seek(0, 0); tempStream2.SetLength(writtenBytes);
-                                                    dataProcessors[0].ReverseProcessDataStream(tempStream2, finalOutputStream, options, out writtenBytes);
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            tempStream1.Seek(0, 0); tempStream1.SetLength(writtenBytes);
-                                            dataProcessors[0].ReverseProcessDataStream(tempStream1, finalOutputStream, options, out writtenBytes);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    if (dataProcessors != null && dataProcessors.Count == 1)
-                                        dataProcessors[0].ReverseProcessDataStream(inputBytesStream, finalOutputStream, options, out writtenBytes);
-                                    else
-                                        StreamTools.Write(inputBytesStream, finalOutputStream);
-                                }
-                            }
-                        }
-                    }
-                    finally
-                    {
-#if WINDOWS_PHONE || iOS || NETFX_CORE
-                        Buffer.BlockCopy(resultBytes, 0, resultArray, 0, resultBytes.Length);
-#else
-                        arrayHandle.Free();
-#endif
-                    }
-
-                    return (object)resultArray;
-                }
-            }
-
-            return null;
-        }
-
-#else
 
         /// <summary>
         /// Deserializes data object held as compressed bytes in receivedObjectBytes using compressor if desired type is an array of primitives
@@ -915,7 +598,6 @@ namespace NetworkCommsDotNet.DPSBase
 
             return null;
         }
-#endif
 
     }
     

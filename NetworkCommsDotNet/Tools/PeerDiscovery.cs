@@ -37,8 +37,6 @@ using InTheHand.Net.Bluetooth;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth.AttributeIds;
 using NetworkCommsDotNet.Connections.Bluetooth;
-#elif NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
 
 namespace NetworkCommsDotNet.Tools
@@ -87,14 +85,12 @@ namespace NetworkCommsDotNet.Tools
             /// </summary>
             BluetoothSDP,
 
-#if !NETFX_CORE && !WINDOWS_PHONE
             /// <summary>
             /// Peer discovery using a TCP port scan. Very slow and adversely affects performance on the local network. 
             /// Should only be used with network configurations where UDP broadcast is unsuccessful. Only IPv4 networks
             /// are included in a TCP Port scan.
             /// </summary>
             TCPPortScan,
-#endif
         }
 
         /// <summary>
@@ -239,11 +235,7 @@ namespace NetworkCommsDotNet.Tools
             }
             set
             {
-#if !NETFX_CORE && !WINDOWS_PHONE
                 if (value == DiscoveryMethod.UDPBroadcast || value == DiscoveryMethod.TCPPortScan)
-#else
-                if (value == DiscoveryMethod.UDPBroadcast)
-#endif
                     _defaultIPDiscoveryMethod = value;
                 else
                     throw new ArgumentException("DefaultIPDiscoveryMethod must be either DiscoveryMethod.UDPBroadcast or DiscoveryMethod.TCPPortScan", "DefaultIPDiscoveryMethod");
@@ -294,12 +286,10 @@ namespace NetworkCommsDotNet.Tools
         /// </summary>
         private static Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>> _discoveredPeers = new Dictionary<ShortGuid, Dictionary<ConnectionType, Dictionary<EndPoint, DateTime>>>();
 
-#if !NETFX_CORE && !WINDOWS_PHONE
         /// <summary>
         /// A custom thread pool for performing a TCPPortScan
         /// </summary>
         private static CommsThreadPool _tcpPortScanThreadPool = new CommsThreadPool(0, Environment.ProcessorCount * 60, Environment.ProcessorCount * 60, new TimeSpan(0, 0, 5));
-#endif
         #endregion
 
         static PeerDiscovery()
@@ -311,12 +301,7 @@ namespace NetworkCommsDotNet.Tools
 
             BluetoothDiscoveryService = new Guid("3a768eea-cbda-4926-a82d-831cb89092ac");
 
-#if iOS || ANDROID
-            //iOS and Android must also listen on IPAddress.Any to successfully receive UDP broadcasts
-            ListenMode = LocalListenMode.Both;
-#else
             ListenMode = LocalListenMode.EachAdaptorIndependently;
-#endif
         }
 
         #region Local Configuration
@@ -334,11 +319,7 @@ namespace NetworkCommsDotNet.Tools
                     return;
 
                 //Based on the connection type select all local endPoints and then enable discoverable
-#if !NETFX_CORE && !WINDOWS_PHONE
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
-#else
-                if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
-#endif
                 {
                     //We should select one of the target points across all adaptors, no need for all adaptors to have
                     //selected a single uniform port which is what happens if we just pass IPAddress.Any to the StartListening method
@@ -417,11 +398,8 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="localDiscoveryEndPoint">The local endpoint with which to make this peer discoverable</param>
         public static void EnableDiscoverable(DiscoveryMethod discoveryMethod, EndPoint localDiscoveryEndPoint)
         {
-#if !NETFX_CORE && !WINDOWS_PHONE
+
             if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
-#else
-            if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
-#endif
             {
                 lock (_syncRoot)
                 {
@@ -517,11 +495,8 @@ namespace NetworkCommsDotNet.Tools
         /// <param name="discoveryMethod">The <see cref="DiscoveryMethod"/> to disable discovery for.</param>
         public static void DisableDiscoverable(DiscoveryMethod discoveryMethod)
         {
-#if !NETFX_CORE && !WINDOWS_PHONE
+
             if (discoveryMethod == DiscoveryMethod.UDPBroadcast || discoveryMethod == DiscoveryMethod.TCPPortScan)
-#else
-            if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
-#endif
             {
                 lock (_syncRoot)
                 {
@@ -652,10 +627,8 @@ namespace NetworkCommsDotNet.Tools
 
                 if (discoveryMethod == DiscoveryMethod.UDPBroadcast)
                     result = DiscoverPeersUDP(discoverTimeMS);
-#if !NETFX_CORE && !WINDOWS_PHONE
                 else if (discoveryMethod == DiscoveryMethod.TCPPortScan)
                     result = DiscoverPeersTCP(discoverTimeMS);
-#endif
 #if NET35 || NET4
                 else if (discoveryMethod == DiscoveryMethod.BluetoothSDP)
                     result = DiscoverPeersBT(discoverTimeMS);
@@ -737,7 +710,6 @@ namespace NetworkCommsDotNet.Tools
             return result;
         }
 
-#if !NETFX_CORE && !WINDOWS_PHONE
         /// <summary>
         /// Discover peers using TCP port scan
         /// </summary>
@@ -918,8 +890,6 @@ namespace NetworkCommsDotNet.Tools
             #endregion
         }
 
-#endif
-
 #if NET35 || NET4
         /// <summary>
         /// Discover peers using BT SDP
@@ -995,10 +965,8 @@ namespace NetworkCommsDotNet.Tools
         {            
             DiscoveryMethod discoveryMethod = DiscoveryMethod.UDPBroadcast;
 
-#if !NETFX_CORE && !WINDOWS_PHONE
             if (connection.ConnectionInfo.ConnectionType == ConnectionType.TCP)
                 discoveryMethod = DiscoveryMethod.TCPPortScan;
-#endif
 #if NET35 || NET4
             else if (connection.ConnectionInfo.ConnectionType == ConnectionType.Bluetooth)
                 discoveryMethod = DiscoveryMethod.BluetoothSDP;

@@ -22,10 +22,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#endif
-
 namespace NetworkCommsDotNet.Tools
 {
     /// <summary>

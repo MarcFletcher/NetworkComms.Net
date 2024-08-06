@@ -24,14 +24,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Net.NetworkInformation;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-using System.Threading.Tasks;
-using Windows.Storage;
-#else
 using System.Net.Sockets;
-#endif
 
 #if NET35 || NET4
 using InTheHand.Net;
@@ -59,13 +52,7 @@ namespace NetworkCommsDotNet.Tools
         {
             get
             {
-#if WINDOWS_PHONE || NETFX_CORE
-                return Windows.Networking.Proximity.PeerFinder.DisplayName;
-                //The below appears to returns nonsense
-                //return Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile().ToString();
-#else
                 return Dns.GetHostName();
-#endif
             }
         }
 
@@ -81,11 +68,7 @@ namespace NetworkCommsDotNet.Tools
             get { return _restrictLocalAdaptorNames; }
             set
             {
-                #if WINDOWS_PHONE || NETFX_CORE
-                throw new NotSupportedException("This feature is not supported on the current platform.");
-                #else
                 _restrictLocalAdaptorNames = value;
-                #endif
             }
         }
 
@@ -95,16 +78,12 @@ namespace NetworkCommsDotNet.Tools
         /// <returns></returns>
         public static List<string> AllLocalAdaptorNames()
         {
-#if WINDOWS_PHONE || NETFX_CORE
-            throw new NotSupportedException("This feature is not supported on the current platform.");
-#else
             List<string> result = new List<string>();
 
             foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
                 result.Add(iFace.Name);
 
             return result;
-#endif
         }
 
         /// <summary>
@@ -152,95 +131,8 @@ namespace NetworkCommsDotNet.Tools
                     return filteredLocalAddressesCache;
                 else
                 {
-
-#if WINDOWS_PHONE || NETFX_CORE
-            //On windows phone we simply ignore IP addresses from the auto assigned range as well as those without a valid prefix
-            List<IPAddress> allowedIPs = new List<IPAddress>();
-
-            foreach (var hName in Windows.Networking.Connectivity.NetworkInformation.GetHostNames())
-            {
-                IPAddress temp;
-
-                if (!hName.DisplayName.StartsWith("169.254") && IPAddress.TryParse(hName.DisplayName, out temp))
-                {
-                     if (RestrictLocalAddressRanges != null)
-                    {
-                        bool valid = false;
-
-                        for (int i = 0; i < RestrictLocalAddressRanges.Length; i++)
-                            valid |= RestrictLocalAddressRanges[i].Contains(hName.DisplayName);
-                                
-                        if(valid)
-                            allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
-                    }
-                    else
-                        allowedIPs.Add(IPAddress.Parse(hName.DisplayName));
-                }
-            }
-
-            return allowedIPs;
-#else                    
+                    
                     List<IPAddress> validIPAddresses = new List<IPAddress>();
-
-#if ANDROID
-
-            var iFaces = Java.Net.NetworkInterface.NetworkInterfaces;
-            while (iFaces.HasMoreElements)
-            {
-                bool interfaceValid = false;
-                var iFace = iFaces.NextElement() as Java.Net.NetworkInterface;
-                var javaAddresses = iFace.InetAddresses;
-
-                if (RestrictLocalAdaptorNames != null)
-                {
-                    foreach (var id in RestrictLocalAdaptorNames)
-                    if (id == iFace.Name)
-                    {
-                        interfaceValid = true;
-                        break;
-                    }
-                }
-                else
-                    interfaceValid = true;
-
-                if (!interfaceValid)
-                    continue;
-
-                javaAddresses = iFace.InetAddresses;
-
-                while (javaAddresses.HasMoreElements)
-                {
-                    var javaAddress = javaAddresses.NextElement() as Java.Net.InetAddress;
-                    IPAddress address = default(IPAddress);
-
-                    if (IPAddress.TryParse(javaAddress.HostAddress, out address))
-                    {
-                        if (address.AddressFamily == AddressFamily.InterNetwork || address.AddressFamily == AddressFamily.InterNetworkV6)
-                        {
-                            if (!IPRange.IsAutoAssignedAddress(address))
-                            {
-                                bool allowed = false;
-
-                                if (RestrictLocalAddressRanges != null)
-                                {
-                                    if (IPRange.Contains(RestrictLocalAddressRanges, address))
-                                        allowed = true;
-                                }
-                                else
-                                    allowed = true;
-
-                                if (!allowed)
-                                    continue;
-
-                                if (address != IPAddress.None)
-                                    validIPAddresses.Add(address);
-                            }
-                        }
-                    }
-                }    
-            }
-
-#else
 
                     foreach (var iFace in NetworkInterface.GetAllNetworkInterfaces())
                     {
@@ -292,9 +184,8 @@ namespace NetworkCommsDotNet.Tools
                             }
                         }
                     }
-#endif
 
-            //Sort the results to be returned
+                    //Sort the results to be returned
                     if (RestrictLocalAddressRanges != null)
                     {
                         validIPAddresses.Sort((a, b) =>
@@ -320,7 +211,6 @@ namespace NetworkCommsDotNet.Tools
 					filteredLocalAddressesCacheUpdate = DateTime.UtcNow;
 
                     return validIPAddresses;
-#endif
                 }
             }
 
@@ -333,12 +223,11 @@ namespace NetworkCommsDotNet.Tools
 
             private static double currentNetworkLoadIncoming;
             private static double currentNetworkLoadOutgoing;
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+
             private static Thread NetworkLoadThread = null;
             private static CommsMath currentNetworkLoadValuesIncoming;
             private static CommsMath currentNetworkLoadValuesOutgoing;
             private static ManualResetEvent NetworkLoadThreadWait;
-#endif
 
             /// <summary>
             /// The interface link speed in bits/sec used for network load calculations. Default is 100Mb/sec
@@ -353,7 +242,6 @@ namespace NetworkCommsDotNet.Tools
             {
                 get
                 {
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                     //We start the load thread when we first access the network load
                     //this helps cut down on unnecessary threads if unrequired
                     if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
@@ -374,9 +262,6 @@ namespace NetworkCommsDotNet.Tools
                     }
 
                     return currentNetworkLoadIncoming;
-#else
-                throw new NotSupportedException("This feature is not supported on the current platform.");
-#endif
 
                 }
                 private set { currentNetworkLoadIncoming = value; }
@@ -390,7 +275,7 @@ namespace NetworkCommsDotNet.Tools
             {
                 get
                 {
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+
                     //We start the load thread when we first access the network load
                     //this helps cut down on unnecessary threads if unrequired
                     if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
@@ -411,9 +296,6 @@ namespace NetworkCommsDotNet.Tools
                     }
 
                     return currentNetworkLoadOutgoing;
-#else
-                throw new NotSupportedException("This feature is not supported on the current platform.");
-#endif
                 }
                 private set { currentNetworkLoadOutgoing = value; }
             }
@@ -426,7 +308,6 @@ namespace NetworkCommsDotNet.Tools
             /// <returns>Average network load as a double between 0 and 1</returns>
             public static double AverageNetworkLoadIncoming(byte secondsToAverage)
             {
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
 
                 if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
                 {
@@ -446,9 +327,6 @@ namespace NetworkCommsDotNet.Tools
                 }
 
                 return currentNetworkLoadValuesIncoming.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
-#else
-            throw new NotSupportedException("This feature is not supported on the current platform.");
-#endif
             }
 
             /// <summary>
@@ -459,7 +337,7 @@ namespace NetworkCommsDotNet.Tools
             /// <returns>Average network load as a double between 0 and 1</returns>
             public static double AverageNetworkLoadOutgoing(byte secondsToAverage)
             {
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
+
                 if (!NetworkComms.commsShutdown && NetworkLoadThread == null)
                 {
                     lock (NetworkComms.globalDictAndDelegateLocker)
@@ -478,9 +356,6 @@ namespace NetworkCommsDotNet.Tools
                 }
 
                 return currentNetworkLoadValuesOutgoing.CalculateMean((int)((secondsToAverage * 1000.0) / NetworkLoadUpdateWindowMS));
-#else
-            throw new NotSupportedException("This feature is not supported on the current platform.");
-#endif
             }
 
             /// <summary>
@@ -489,7 +364,6 @@ namespace NetworkCommsDotNet.Tools
             /// <param name="threadShutdownTimeoutMS"></param>
             internal static void ShutdownThreads(int threadShutdownTimeoutMS = 1000)
             {
-#if !WINDOWS_PHONE && !ANDROID && !NETFX_CORE
                 try
                 {
                     if (NetworkLoadThread != null)
@@ -506,10 +380,8 @@ namespace NetworkCommsDotNet.Tools
                 {
                     LogTools.LogException(ex, "CommsShutdownError");
                 }
-#endif
             }
 
-#if !WINDOWS_PHONE && !ANDROID  && !NETFX_CORE
             /// <summary>
             /// Takes a network load snapshot (CurrentNetworkLoad) every NetworkLoadUpdateWindowMS
             /// </summary>
@@ -610,7 +482,6 @@ namespace NetworkCommsDotNet.Tools
                     }
                 }
             }
-#endif
         }
 
 #if NET35 || NET4

@@ -25,18 +25,7 @@ using System.Net;
 using System.IO;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
-
-#if WINDOWS_PHONE || NETFX_CORE
-using Windows.Networking.Sockets;
-using Windows.Storage.Streams;
-using System.Runtime.InteropServices.WindowsRuntime;
-#endif
 
 namespace NetworkCommsDotNet.Connections.TCP
 {
@@ -59,13 +48,9 @@ namespace NetworkCommsDotNet.Connections.TCP
         {
             //Added conditional compilation so that GetConnection method usage is not ambiguous. 
             SendReceiveOptions options = null;
-#if WINDOWS_PHONE || NETFX_CORE
-            StreamSocket socket = null;
-            return GetConnection(connectionInfo, options, socket, establishIfRequired);
-#else
+
             TcpClient tcpClient = null;
             return GetConnection(connectionInfo, options, tcpClient, establishIfRequired);
-#endif 
         }
 
         /// <summary>
@@ -79,16 +64,10 @@ namespace NetworkCommsDotNet.Connections.TCP
         public static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, bool establishIfRequired = true)
         {
             //Added conditional compilation so that GetConnection method usage is not ambiguous. 
-#if WINDOWS_PHONE || NETFX_CORE
-            StreamSocket socket = null;
-            return GetConnection(connectionInfo, defaultSendReceiveOptions, socket, establishIfRequired);
-#else
             TcpClient tcpClient = null;
             return GetConnection(connectionInfo, defaultSendReceiveOptions, tcpClient, establishIfRequired);
-#endif
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Create a TCP connection with the provided connectionInfo and sets the connection default SendReceiveOptions. If there is an existing connection that is returned instead.
         /// If a new connection is created it will be registered with NetworkComms and can be retrieved using <see cref="NetworkComms.GetExistingConnection(ConnectionInfo)"/> and overrides.
@@ -102,19 +81,7 @@ namespace NetworkCommsDotNet.Connections.TCP
         {
             return GetConnection(connectionInfo, defaultSendReceiveOptions, null, establishIfRequired, sslOptions);
         }
-#endif
   
-#if WINDOWS_PHONE || NETFX_CORE
-        /// <summary>
-        /// Internal <see cref="TCPConnection"/> creation which hides the necessary internal calls
-        /// </summary>
-        /// <param name="connectionInfo">ConnectionInfo to be used to create connection</param>
-        /// <param name="defaultSendReceiveOptions">Connection default SendReceiveOptions</param>
-        /// <param name="socket">If this is an incoming connection we will already have access to the socket, otherwise use null</param>
-        /// <param name="establishIfRequired">Establish during create if true</param>
-        /// <returns>An existing connection or a new one</returns>
-        internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, StreamSocket socket, bool establishIfRequired)
-#else
         /// <summary>
         /// Internal <see cref="TCPConnection"/> creation which hides the necessary internal calls
         /// </summary>
@@ -125,17 +92,12 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// <param name="sslOptions">SSL options that will be used with this connection.</param>
         /// <returns>An existing connection or a new one</returns>
         internal static TCPConnection GetConnection(ConnectionInfo connectionInfo, SendReceiveOptions defaultSendReceiveOptions, TcpClient tcpClient, bool establishIfRequired, SSLOptions sslOptions = null)
-#endif
         {
             connectionInfo.ConnectionType = ConnectionType.TCP;
 
             //If we have a tcpClient at this stage we must be server side
-#if WINDOWS_PHONE || NETFX_CORE
-             if (socket != null) connectionInfo.ServerSide = true;
-#else
             if (tcpClient != null) connectionInfo.ServerSide = true;
             if (sslOptions == null) sslOptions = new SSLOptions();
-#endif
 
             //Set default connection options if none have been provided
             if (defaultSendReceiveOptions == null) defaultSendReceiveOptions = NetworkComms.DefaultSendReceiveOptions;
@@ -171,11 +133,8 @@ namespace NetworkCommsDotNet.Connections.TCP
                         connectionInfo.ResetConnectionInfo();
 
                     //We add a reference to networkComms for this connection within the constructor
-#if WINDOWS_PHONE || NETFX_CORE
-                    connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, socket);
-#else
                     connection = new TCPConnection(connectionInfo, defaultSendReceiveOptions, tcpClient, sslOptions);
-#endif
+
                     newConnection = true;
                 }
             }

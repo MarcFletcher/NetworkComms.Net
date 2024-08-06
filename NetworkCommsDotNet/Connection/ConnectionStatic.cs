@@ -26,17 +26,11 @@ using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections.TCP;
 using NetworkCommsDotNet.Connections.UDP;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-using System.Threading.Tasks;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections
 {
-    #if !NET2 && !WINDOWS_PHONE
+    #if !NET2
     /// <summary>
     /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
     /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="NetworkCommsDotNet.Connections.Bluetooth.BluetoothConnection"/>.
@@ -52,11 +46,7 @@ namespace NetworkCommsDotNet.Connections
         static ManualResetEvent workedThreadSignal = new ManualResetEvent(false);
         static volatile bool shutdownWorkerThreads = false;
         static object staticConnectionLocker = new object();
-#if NETFX_CORE
-        static Task connectionKeepAliveWorker;
-#else
         static Thread connectionKeepAliveWorker;
-#endif
 
         /// <summary>
         /// Private static constructor which sets the connection defaults
@@ -114,13 +104,6 @@ namespace NetworkCommsDotNet.Connections
         {
             lock (staticConnectionLocker)
             {
-#if NETFX_CORE
-                if (!shutdownWorkerThreads && (connectionKeepAliveWorker == null || connectionKeepAliveWorker.IsCompleted))
-                {
-                    connectionKeepAliveWorker = new Task(ConnectionKeepAliveWorker, TaskCreationOptions.LongRunning);
-                    connectionKeepAliveWorker.Start();
-                }
-#else
                 if (!shutdownWorkerThreads && (connectionKeepAliveWorker == null || connectionKeepAliveWorker.ThreadState == ThreadState.Stopped))
                 {
                     connectionKeepAliveWorker = new Thread(ConnectionKeepAliveWorker);
@@ -128,7 +111,6 @@ namespace NetworkCommsDotNet.Connections
                     connectionKeepAliveWorker.IsBackground = true;
                     connectionKeepAliveWorker.Start();
                 }
-#endif
             }
         }
 
@@ -270,13 +252,10 @@ namespace NetworkCommsDotNet.Connections
             try
             {
                 shutdownWorkerThreads = true;
-#if NETFX_CORE
-                if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Wait(threadShutdownTimeoutMS))
-                    throw new CommsSetupShutdownException("Connection keep alive worker failed to shutdown");
-#else
+
                 if (connectionKeepAliveWorker != null && !connectionKeepAliveWorker.Join(threadShutdownTimeoutMS))
                     connectionKeepAliveWorker.Abort();
-#endif
+
             }
             catch (Exception ex)
             {

@@ -25,22 +25,11 @@ using System.IO;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 #if NET4 || NET35
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
-#endif
-
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = Foundation.PreserveAttribute;
 #endif
 
 namespace NetworkCommsDotNet
@@ -252,9 +241,6 @@ namespace NetworkCommsDotNet
         /// <summary>
         /// Private constructor required for deserialisation.
         /// </summary>
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private ConnectionInfo() { }
 
         /// <summary>

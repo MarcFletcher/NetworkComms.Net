@@ -4,11 +4,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 
-#if NETFX_CORE
-using System.Threading.Tasks;
-using Windows.Storage;
-#endif
-
 namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
@@ -36,21 +31,8 @@ namespace NetworkCommsDotNet.Tools
 
                 lock (errorLocker)
                 {
-#if NETFX_CORE
-                    Task writeTask = new Task(async () =>
-                        {
-                            StorageFolder folder = ApplicationData.Current.LocalFolder;
-                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
-                            await FileIO.AppendTextAsync(file, logString);
-                        });
-
-                    writeTask.ConfigureAwait(false);
-                    writeTask.Start();
-                    writeTask.Wait(); 
-#else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
                         sw.WriteLine(logString);
-#endif
                 }
             }
             catch (Exception)
@@ -75,14 +57,8 @@ namespace NetworkCommsDotNet.Tools
                 //Catch filenames that are too long
                 if (fileName.Length > 40)
                     fileName = fileName.Substring(0, 40);
-#if iOS
-                //We need to ensure we add the correct document path for iOS
-                entireFileName = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));
-#elif ANDROID
-                entireFileName = System.IO.Path.Combine(global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]"));
-#elif WINDOWS_PHONE
-                entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "]");
-#elif NETFX_CORE || NET
+
+#if NET
                 entireFileName = fileName + " " + DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " " + DateTime.Now.ToString("dd-MM-yyyy" + " [" + Environment.CurrentManagedThreadId.ToString() + "]");
 #else
                 using (Process currentProcess = System.Diagnostics.Process.GetCurrentProcess())
@@ -95,38 +71,7 @@ namespace NetworkCommsDotNet.Tools
 
                     try
                     {
-#if NETFX_CORE
-                    Task writeTask = new Task(async () =>
-                        {
-                            List<string> lines = new List<string>();
 
-                            if (optionalCommentStr != "")
-                            {
-                                lines.Add("Comment: " + optionalCommentStr);
-                                lines.Add("");
-                            }
-
-                            if (ex.GetBaseException() != null)
-                                lines.Add("Base Exception Type: " + ex.GetBaseException().ToString());
-
-                            if (ex.InnerException != null)
-                                lines.Add("Inner Exception Type: " + ex.InnerException.ToString());
-
-                            if (ex.StackTrace != null)
-                            {
-                                lines.Add("");
-                                lines.Add("Stack Trace: " + ex.StackTrace.ToString());
-                            }
-
-                            StorageFolder folder = ApplicationData.Current.LocalFolder;
-                            StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
-                            await FileIO.WriteLinesAsync(file, lines);
-                        });
-
-                    writeTask.ConfigureAwait(false);
-                    writeTask.Start();
-                    writeTask.Wait(); 
-#else
                         using (System.IO.StreamWriter sw = new System.IO.StreamWriter(entireFileName + ".txt", false))
                         {
                             if (optionalCommentStr != "")
@@ -147,7 +92,6 @@ namespace NetworkCommsDotNet.Tools
                                 sw.WriteLine("Stack Trace: " + ex.StackTrace.ToString());
                             }
                         }
-#endif
                     }
                     catch (Exception)
                     {

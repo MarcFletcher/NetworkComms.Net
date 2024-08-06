@@ -24,12 +24,6 @@ using NetworkCommsDotNet.DPSBase;
 using System.IO;
 using LZMA;
 
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = Foundation.PreserveAttribute;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor
 {
     /// <summary>
@@ -55,9 +49,6 @@ namespace NetworkCommsDotNet.DPSBase.SevenZipLZMACompressor
             }
         }
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private LZMACompressor() { }
         
         /// <inheritdoc />

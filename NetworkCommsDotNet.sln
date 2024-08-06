@@ -6,9 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{BA3D7587-33C2-443D-97F9-86C1BB72DED3}"
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
-		Licence.txt = Licence.txt
+		LICENSE = LICENSE
 		networkcomms.net.snk = networkcomms.net.snk
-		README.txt = README.txt
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugTests", "DebugTests\DebugTests.csproj", "{A33EA8B0-EB46-493B-BE84-2CC325E66137}"
@@ -79,7 +79,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetworkCommsDotNet", "Platf
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Net80", "Net80", "{4353F18C-EDA7-41EB-AD8E-1383DF1843FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net80Test", "Platforms\Net80\Net80Test\Net80Test.csproj", "{93C5E07B-C5DF-4138-B231-B5A478D716EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Net80Test", "Platforms\Net80\Net80Test\Net80Test.csproj", "{93C5E07B-C5DF-4138-B231-B5A478D716EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

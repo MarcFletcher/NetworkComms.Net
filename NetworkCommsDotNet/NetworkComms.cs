@@ -35,8 +35,6 @@ using NetworkCommsDotNet.Connections.UDP;
 using InTheHand.Net;
 using NetworkCommsDotNet.Connections.Bluetooth;
 using System.Linq;
-#elif NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
 #endif
 
 //Assembly marked as CLSCompliant
@@ -75,19 +73,7 @@ namespace NetworkCommsDotNet
             ReservedPacketTypeNames.Add("AliveTestPacket-Request", "");
             ReservedPacketTypeNames.Add("AliveTestPacket-Reply", "");
 
-#if NETFX_CORE
-            CurrentRuntimeEnvironment = RuntimeEnvironment.Windows_RT;
-            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
-#elif SILVERLIGHT || WINDOWS_PHONE
-            CurrentRuntimeEnvironment = RuntimeEnvironment.WindowsPhone_Silverlight;
-            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
-#elif iOS
-            CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_iOS;
-            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
-#elif ANDROID
-            CurrentRuntimeEnvironment = RuntimeEnvironment.Xamarin_Android;
-            SendBufferSizeBytes = MaxReceiveBufferSizeBytes = 8000;
-#elif NET2
+#if NET2
             if (Type.GetType("Mono.Runtime") != null)
             {
                 CurrentRuntimeEnvironment = RuntimeEnvironment.Mono_Net2;
@@ -128,13 +114,9 @@ namespace NetworkCommsDotNet
             InitialReceiveBufferSizeBytes = 512;
 
             //We want to instantiate our own thread pool here
-#if NETFX_CORE
-            CommsThreadPool = new CommsThreadPool();
-            IncomingConnectionEstablishThreadPool = new CommsThreadPool();
-#else
             CommsThreadPool = new CommsThreadPool(1, Environment.ProcessorCount*2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
             IncomingConnectionEstablishThreadPool = new CommsThreadPool(1, Environment.ProcessorCount * 2, Environment.ProcessorCount * 20, new TimeSpan(0, 0, 10));
-#endif            
+            
             InternalFixedSendReceiveOptions = new SendReceiveOptions(DPSManager.GetDataSerializer<ExplicitSerializer>(),
                 new List<DataProcessor>(),
                 new Dictionary<string, string>());
@@ -308,20 +290,14 @@ namespace NetworkCommsDotNet
                     SendReceiveOptions incomingPacketSendReceiveOptions = item.Connection.IncomingPacketSendReceiveOptions(nestedPacket.PacketHeader);
                     QueueItemPriority itemPriority = (incomingPacketSendReceiveOptions.Options.ContainsKey("ReceiveHandlePriority") ? (QueueItemPriority)Enum.Parse(typeof(QueueItemPriority), incomingPacketSendReceiveOptions.Options["ReceiveHandlePriority"]) : QueueItemPriority.Normal);
 
-#if NETFX_CORE
-                    MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadObjectBytes.Length, false);
-#else
                     MemoryStream wrappedDataStream = new MemoryStream(nestedPacket._payloadObjectBytes, 0, nestedPacket._payloadSize, false, true);
-#endif
 
                     item = new PriorityQueueItem(itemPriority, item.Connection, nestedPacket.PacketHeader, wrappedDataStream, incomingPacketSendReceiveOptions);
                 }
 
                 if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Handling a " + item.PacketHeader.PacketType + " packet from " + item.Connection.ConnectionInfo + " with a priority of " + item.Priority.ToString() + ".");
 
-#if !WINDOWS_PHONE && !NETFX_CORE
                 if (Thread.CurrentThread.Priority != (ThreadPriority)item.Priority) Thread.CurrentThread.Priority = (ThreadPriority)item.Priority;
-#endif
 
                 //Check for a shutdown connection
                 if (item.Connection.ConnectionInfo.ConnectionState == ConnectionState.Shutdown) return;
@@ -400,21 +376,14 @@ namespace NetworkCommsDotNet
             finally
             {
                 //We need to dispose the data stream correctly
-#if NETFX_CORE
-                if (item != null) item.DataStream.Dispose();
-#else
                 if (item!=null) item.DataStream.Close();
-#endif
 
-#if !WINDOWS_PHONE && !NETFX_CORE
                 //Ensure the thread returns to the pool with a normal priority
                 if (Thread.CurrentThread.Priority != ThreadPriority.Normal) Thread.CurrentThread.Priority = ThreadPriority.Normal;
-#endif
             }
         }
         #endregion
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         #region High CPU Usage Tuning
         /// <summary>
         /// In times of high CPU usage we need to ensure that certain time critical functions, like connection handshaking do not timeout.
@@ -422,7 +391,6 @@ namespace NetworkCommsDotNet
         /// </summary>
         internal static ThreadPriority timeCriticalThreadPriority = ThreadPriority.AboveNormal;
         #endregion
-#endif
 
         #region Checksum Config
         /// <summary>
@@ -1944,11 +1912,6 @@ namespace NetworkCommsDotNet
                 }
                 else
                 {
-#if FREETRIAL
-                    //If this is a free trial we only allow a single connection. We will throw an exception if any connections already exist
-                    if (TotalNumConnections() != 0)
-                        throw new NotSupportedException("Unable to create connection as this version of NetworkComms.Net is limited to only one connection. Please purchase a commerical license from www.networkcomms.net which supports an unlimited number of connections.");
-#endif
 
                     //Add reference to the endPoint dictionary
                     if (allConnectionsByEndPoint.ContainsKey(connection.ConnectionInfo.ConnectionType))

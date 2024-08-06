@@ -23,16 +23,6 @@ using System.IO;
 using System.Text;
 using NetworkCommsDotNet.Tools;
 
-#if NETFX_CORE
-using Windows.Security.Cryptography;
-#endif
-
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = Foundation.PreserveAttribute;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
@@ -60,14 +50,10 @@ namespace NetworkCommsDotNet.DPSBase
         private const string padTypeOptionName = "DataPadder_PADTYPE";
         private const string padExceptionOptionName = "DataPadder_PADEXCEPTION";
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private DataPadder() { }
 
-#if !NETFX_CORE
         System.Security.Cryptography.RandomNumberGenerator rand = new System.Security.Cryptography.RNGCryptoServiceProvider();
-#endif
+
         /// <inheritdoc />
         public override void ForwardProcessDataStream(Stream inStream, Stream outStream, Dictionary<string, string> options, out long writtenBytes)
         {
@@ -97,12 +83,8 @@ namespace NetworkCommsDotNet.DPSBase
 
             if (padType == DataPaddingType.Random)
             {
-#if NETFX_CORE
-                CryptographicBuffer.CopyToByteArray(CryptographicBuffer.GenerateRandom((uint)paddingSize), out padData);                
-#else
                 padData = new byte[paddingSize];
                 rand.GetBytes(padData);
-#endif
             }
             else
                 padData = new byte[paddingSize];

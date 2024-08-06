@@ -160,11 +160,7 @@ namespace NetworkCommsDotNet.Tools
             string threadId = null;
             try
             {
-#if NETFX_CORE
-                threadId = Environment.CurrentManagedThreadId.ToString();
-#else
                 threadId = System.Threading.Thread.CurrentThread.ManagedThreadId.ToString();
-#endif
             }
             catch (Exception) { }
 
@@ -174,10 +170,8 @@ namespace NetworkCommsDotNet.Tools
             else
                 logStringToWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + level + "] - " + message;
 
-#if !NETFX_CORE
             if (_currentLogMode == LogMode.ConsoleAndLogFile || _currentLogMode == LogMode.ConsoleOnly)
                 Console.WriteLine(logStringToWrite);
-#endif
 
             if ((_currentLogMode == LogMode.ConsoleAndLogFile || _currentLogMode == LogMode.LogFileOnly) && LogFileLocationName != null)
             {
@@ -185,30 +179,8 @@ namespace NetworkCommsDotNet.Tools
                 {
                     lock (_locker)
                     {
-
-#if NETFX_CORE
-                        System.Threading.Tasks.Task writeTask = new System.Threading.Tasks.Task(async () =>
-                            {
-                                while (true)
-                                {
-                                    try
-                                    {
-                                        Windows.Storage.StorageFolder folder = Windows.Storage.ApplicationData.Current.LocalFolder;
-                                        Windows.Storage.StorageFile file = await folder.CreateFileAsync(LogFileLocationName, Windows.Storage.CreationCollisionOption.OpenIfExists);
-                                        await Windows.Storage.FileIO.AppendTextAsync(file, logStringToWrite + "\n");
-                                        break;
-                                    }
-                                    catch (Exception) { }
-                                }
-                            });
-
-                        writeTask.ConfigureAwait(false);
-                        writeTask.Start();
-                        writeTask.Wait(); 
-#else
                         using (var sw = new System.IO.StreamWriter(LogFileLocationName, true))
-                            sw.WriteLine(logStringToWrite);
-#endif                        
+                            sw.WriteLine(logStringToWrite);                      
                     }
                 }
                 catch (Exception) { }

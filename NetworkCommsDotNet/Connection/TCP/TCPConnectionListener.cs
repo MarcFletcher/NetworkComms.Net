@@ -24,16 +24,7 @@ using System.Text;
 using System.Threading;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
-
-#if WINDOWS_PHONE || NETFX_CORE
-using Windows.Networking.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections.TCP
 {
@@ -42,12 +33,6 @@ namespace NetworkCommsDotNet.Connections.TCP
     /// </summary>
     public class TCPConnectionListener : ConnectionListenerBase
     {
-#if WINDOWS_PHONE || NETFX_CORE
-        /// <summary>
-        /// The equivalent TCPListener class in windows phone
-        /// </summary>
-        StreamSocketListener listenerInstance;
-#else
         /// <summary>
         /// The .net TCPListener class.
         /// </summary>
@@ -57,7 +42,6 @@ namespace NetworkCommsDotNet.Connections.TCP
         /// SSL options that are associated with this listener
         /// </summary>
         public SSLOptions SSLOptions { get; private set; }
-#endif
 
         /// <summary>
         /// Create a new instance of a TCP listener
@@ -72,12 +56,9 @@ namespace NetworkCommsDotNet.Connections.TCP
             ApplicationLayerProtocolStatus applicationLayerProtocol, bool allowDiscoverable = false)
             :base(ConnectionType.TCP, sendReceiveOptions, applicationLayerProtocol, allowDiscoverable)
         {
-#if !WINDOWS_PHONE && !NETFX_CORE
             SSLOptions = new SSLOptions();
-#endif
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Create a new instance of a TCP listener
         /// </summary>
@@ -94,7 +75,6 @@ namespace NetworkCommsDotNet.Connections.TCP
         {
             this.SSLOptions = sslOptions;
         }
-#endif
 
         /// <inheritdoc />
         internal override void StartListening(EndPoint desiredLocalListenEndPoint, bool useRandomPortFailOver)
@@ -106,15 +86,9 @@ namespace NetworkCommsDotNet.Connections.TCP
 
             try
             {
-#if WINDOWS_PHONE || NETFX_CORE
-                listenerInstance = new StreamSocketListener();
-                listenerInstance.ConnectionReceived += newListenerInstance_ConnectionReceived;
-                listenerInstance.BindEndpointAsync(new Windows.Networking.HostName(desiredLocalListenIPEndPoint.Address.ToString()), desiredLocalListenIPEndPoint.Port.ToString()).AsTask().Wait();
-#else
                 listenerInstance = new TcpListener(desiredLocalListenIPEndPoint);
                 listenerInstance.Start();
                 listenerInstance.BeginAcceptTcpClient(TCPConnectionReceivedAsync, null);
-#endif
             }
             catch (SocketException)
             {
@@ -123,13 +97,9 @@ namespace NetworkCommsDotNet.Connections.TCP
                 {
                     try
                     {
-#if WINDOWS_PHONE || NETFX_CORE
-                        listenerInstance.BindEndpointAsync(new Windows.Networking.HostName(desiredLocalListenIPEndPoint.Address.ToString()), "").AsTask().Wait(); 
-#else
                         listenerInstance = new TcpListener(desiredLocalListenIPEndPoint.Address, 0);
                         listenerInstance.Start();
                         listenerInstance.BeginAcceptTcpClient(TCPConnectionReceivedAsync, null);
-#endif
                     }
                     catch (SocketException)
                     {
@@ -145,11 +115,8 @@ namespace NetworkCommsDotNet.Connections.TCP
                 }
             }
 
-#if WINDOWS_PHONE || NETFX_CORE
-            this.LocalListenEndPoint = new IPEndPoint(desiredLocalListenIPEndPoint.Address, int.Parse(listenerInstance.Information.LocalPort));  
-#else
             this.LocalListenEndPoint = (IPEndPoint)listenerInstance.LocalEndpoint;
-#endif
+
             this.IsListening = true;
         }
 
@@ -160,56 +127,11 @@ namespace NetworkCommsDotNet.Connections.TCP
 
             try
             {
-#if WINDOWS_PHONE || NETFX_CORE
-                listenerInstance.Dispose();
-#else
                 listenerInstance.Stop();
-#endif
             }
             catch (Exception) { }
         }
 
-#if WINDOWS_PHONE || NETFX_CORE
-        private void newListenerInstance_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
-        {
-            try
-            {
-                IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(args.Socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.LocalPort));
-                IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.Socket.Information.RemoteAddress.DisplayName.ToString()), int.Parse(args.Socket.Information.RemotePort));
-
-                ConnectionInfo newConnectionInfo = new ConnectionInfo(ConnectionType.TCP, remoteEndPoint, localEndPoint, ApplicationLayerProtocol, this);
-                TCPConnection.GetConnection(newConnectionInfo, NetworkComms.DefaultSendReceiveOptions, args.Socket, true);
-            }
-            catch (ConfirmationTimeoutException)
-            {
-                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
-            }
-            catch (CommunicationException)
-            {
-                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
-            }
-            catch (ConnectionSetupException)
-            {
-                //If we are the server end and we did not pick the incoming connection up then tooo bad!
-            }
-            catch (SocketException)
-            {
-                //If this exception gets thrown its generally just a client closing a connection almost immediately after creation
-            }
-            catch (Exception ex)
-            {
-                //For some odd reason SocketExceptions don't always get caught above, so another check
-                if (ex.GetBaseException().GetType() != typeof(SocketException))
-                {
-                    //Can we catch the socketException by looking at the string error text?
-                    if (ex.ToString().StartsWith("System.Net.Sockets.SocketException"))
-                        LogTools.LogException(ex, "ConnectionSetupError_SE");
-                    else
-                        LogTools.LogException(ex, "ConnectionSetupError");
-                }
-            }
-        }
-#else
         /// <summary>
         /// Async method for handling up new incoming TCP connections
         /// </summary>
@@ -285,6 +207,5 @@ namespace NetworkCommsDotNet.Connections.TCP
                 listenerInstance.BeginAcceptTcpClient(TCPConnectionReceivedAsync, null);
             }
         }
-#endif
     }
 }

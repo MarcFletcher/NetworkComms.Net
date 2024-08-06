@@ -47,11 +47,8 @@ namespace NetworkCommsDotNet.Connections
         public override string ToString()
         {
             string timeString;
-#if NETFX_CORE
-            timeString = NetworkCommsDotNet.Tools.XPlatformHelper.DateTimeExtensions.ToShortTimeString(SentPacketCreationTime);
-#else
+
             timeString = (SentPacketCreationTime).ToShortTimeString();
-#endif
 
             return "[" + timeString + "] " + Packet.PacketHeader.PacketType + " - " + Packet.PacketData.Length.ToString() + " bytes.";
         }

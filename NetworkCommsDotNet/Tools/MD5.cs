@@ -1,5 +1,3 @@
-#if !NETFX_CORE
-
 //Copyright (c) Microsoft Corporation.  All rights reserved.
 using System;
 using System.Text;
@@ -312,17 +310,10 @@ namespace NetworkCommsDotNet.Tools
         }
     }
 
-#if SILVERLIGHT
-    /// <summary>
-    /// Create a managed MD5 hash calculator
-    /// </summary>
-    public class MD5Managed : HashAlgorithm
-#else
     /// <summary>
     /// Create a managed MD5 hash calculator
     /// </summary>
     public class MD5Managed : System.Security.Cryptography.MD5
-#endif
     {
         private byte[] _data;
         private ABCDStruct _abcd;
@@ -400,5 +391,3 @@ namespace NetworkCommsDotNet.Tools
         }
     }
 }
-
-#endif

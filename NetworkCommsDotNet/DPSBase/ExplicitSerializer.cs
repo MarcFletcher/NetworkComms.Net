@@ -5,10 +5,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
-#if NETFX_CORE
-using System.Linq;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
@@ -102,15 +98,7 @@ namespace NetworkCommsDotNet.DPSBase
         protected override object DeserialiseDataObjectInt(Stream inputStream, Type resultType, Dictionary<string, string> options)
         {
             if (inputStream == null)
-                throw new ArgumentNullException("inputStream");
-
-#if NETFX_CORE
-            var constructor = (from ctor in resultType.GetTypeInfo().DeclaredConstructors
-                             where ctor.GetParameters().Length == 0
-                             select ctor).FirstOrDefault();
-
-            if (constructor == null || !explicitlySerializableType.GetTypeInfo().IsAssignableFrom(resultType.GetTypeInfo()))
-#else           
+                throw new ArgumentNullException("inputStream");           
 
             var constructor = resultType.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
@@ -118,7 +106,6 @@ namespace NetworkCommsDotNet.DPSBase
                 constructor = resultType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
 
             if (constructor == null || !explicitlySerializableType.IsAssignableFrom(resultType))
-#endif
             {
                 byte[] buffer = new byte[8];
 

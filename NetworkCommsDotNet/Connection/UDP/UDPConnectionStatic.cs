@@ -24,12 +24,7 @@ using System.Net;
 using System.Diagnostics;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections.UDP
 {

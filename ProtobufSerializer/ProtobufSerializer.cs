@@ -25,12 +25,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using ProtoBuf.Meta;
 
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = Foundation.PreserveAttribute;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
@@ -41,9 +35,6 @@ namespace NetworkCommsDotNet.DPSBase
     {        
         private static int metaDataTimeoutMS = 150000;
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private ProtobufSerializer() { }
         
         #region Depreciated

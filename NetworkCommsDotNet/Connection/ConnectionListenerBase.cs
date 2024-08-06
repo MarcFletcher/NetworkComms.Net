@@ -24,10 +24,6 @@ using System.Text;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#endif
-
 namespace NetworkCommsDotNet.Connections
 {
     /// <summary>

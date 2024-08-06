@@ -26,11 +26,7 @@ using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
 using System.IO;
 
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections
 {
@@ -356,7 +352,6 @@ namespace NetworkCommsDotNet.Connections
                 //Call any connection specific close requirements
                 CloseConnectionSpecific(closeDueToError, logLocation);
 
-#if !NETFX_CORE
                 try
                 {
                     //If we are calling close from the listen thread we are actually in the same thread
@@ -376,7 +371,7 @@ namespace NetworkCommsDotNet.Connections
                 {
 
                 }
-#endif
+
                 //Close connection my get called multiple times for a given connection depending on the reason for being closed
                 bool firstClose = NetworkComms.RemoveConnectionReference(this);
 
@@ -411,11 +406,10 @@ namespace NetworkCommsDotNet.Connections
             }
             catch (Exception ex)
             {
-#if !NETFX_CORE
+
                 if (ex is ThreadAbortException)
                 { /*Ignore the threadabort exception if we had to nuke a thread*/ }
                 else
-#endif
                     LogTools.LogException(ex, "NCError_CloseConnection", "Error closing connection with " + ConnectionInfo + ". Close called from " + logLocation.ToString() + (closeDueToError ? " due to error." : "."));
 
                 //We try to rethrow where possible but CloseConnection could very likely be called from within networkComms so we just have to be happy with a log here

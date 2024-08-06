@@ -39,11 +39,7 @@ namespace LZMA.Buffer
 		internal void FlushStream() { m_Stream.Flush(); }
 		internal void CloseStream() 
         {
-#if NETFX_CORE
-            m_Stream.Dispose();
-#else
             m_Stream.Close(); 
-#endif
         }
 		internal void ReleaseStream() { m_Stream = null; }
 

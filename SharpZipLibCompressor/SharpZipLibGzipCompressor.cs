@@ -25,12 +25,6 @@ using NetworkCommsDotNet.DPSBase;
 using System.IO;
 using NetworkCommsDotNet.Tools;
 
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = MonoTouch.Foundation.PreserveAttribute;
-#endif
-
 namespace SharpZipLibCompressor
 {
     /// <summary>
@@ -56,9 +50,6 @@ namespace SharpZipLibCompressor
             }
         }
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private SharpZipLibGzipCompressor() { }
         
         /// <inheritdoc />

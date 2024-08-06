@@ -27,9 +27,7 @@ namespace NetworkCommsDotNet
     /// <summary>
     /// Base exception. All connection related exceptions can be caught in a single catch block by using catch(<see cref="CommsException"/>)
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public abstract class CommsException : Exception
     {
         /// <summary>
@@ -60,7 +58,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -70,15 +67,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// A checksum error has occurred. NetworkComms.EnablePacketCheckSumValidation must be set to true for this exception to be thrown.
     /// </summary>
-#if !WINDOWS_PHONE && ! NETFX_CORE
     [Serializable]
-#endif
     public class CheckSumException : CommsException
     {
         /// <summary>
@@ -108,7 +102,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -118,15 +111,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// A timeout has occurred while waiting for a confirmation packet to be received. Check for errors and or consider increasing NetworkComms.PacketConfirmationTimeoutMS
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class ConfirmationTimeoutException : CommsException
     {
         /// <summary>
@@ -156,7 +146,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -166,15 +155,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// A timeout has occurred while waiting for an expected return object. Check for errors and or consider increasing the provided return timeout value.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class ExpectedReturnTimeoutException : CommsException
     {
         /// <summary>
@@ -204,7 +190,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -214,15 +199,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred while trying to serialise/compress or deserialise/uncompress an object.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class SerialisationException : CommsException
     {
         /// <summary>
@@ -252,7 +234,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -262,15 +243,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred while trying to establish a Connection
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class ConnectionSetupException : CommsException
     {
         /// <summary>
@@ -300,7 +278,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -310,15 +287,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred while trying to establish a Connection
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class ConnectionShutdownException : CommsException
     {
         /// <summary>
@@ -348,7 +322,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -358,15 +331,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred while trying to setup or shutdown NetworkComms.Net
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class CommsSetupShutdownException : CommsException
     {
         /// <summary>
@@ -396,7 +366,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -406,15 +375,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred while during communication which does not fall under other exception cases.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class CommunicationException : CommsException
     {
         /// <summary>
@@ -444,7 +410,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -454,15 +419,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An unexpected incoming packetType has been received. Consider setting NetworkComms.IgnoreUnknownPacketTypes to true to prevent this exception.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class UnexpectedPacketTypeException : CommsException
     {
         /// <summary>
@@ -492,7 +454,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -502,15 +463,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An invalid network identifier has been provided.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class InvalidNetworkIdentifierException : CommsException
     {
         /// <summary>
@@ -540,7 +498,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -550,15 +507,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// A possible duplicate connection has been detected.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class DuplicateConnectionException : CommsException
     {
         /// <summary>
@@ -588,7 +542,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -598,15 +551,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// A connection send has timed out.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class ConnectionSendTimeoutException : CommsException
     {
         /// <summary>
@@ -636,7 +586,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -646,15 +595,12 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
     /// An error occurred during a packetType data handler execution.
     /// </summary>
-#if !WINDOWS_PHONE && !NETFX_CORE
     [Serializable]
-#endif
     public class PacketHandlerException : CommsException
     {
         /// <summary>
@@ -684,7 +630,6 @@ namespace NetworkCommsDotNet
         {
         }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
         /// <summary>
         /// Constructor required by the runtime and by .NET programming conventions
         /// </summary>
@@ -694,6 +639,5 @@ namespace NetworkCommsDotNet
             : base(info, context)
         {
         }
-#endif
     }
 }

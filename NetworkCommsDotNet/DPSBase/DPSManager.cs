@@ -28,12 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 #endif
 
-#if WINDOWS_PHONE || NETFX_CORE
-using System.Linq;
-using MarshalByRefObject = System.Object;
-using System.Threading.Tasks;
-#endif
-
 namespace NetworkCommsDotNet.DPSBase
 {
     /// <summary>
@@ -424,18 +418,13 @@ namespace NetworkCommsDotNet.DPSBase
 
         private static object CreateObjectWithParameterlessCtor(string typeName)
         {
-#if NETFX_CORE
-            var constructor = (from ctor in Type.GetType(typeName).GetTypeInfo().DeclaredConstructors
-                                   where ctor.GetParameters().Length == 0
-                                   select ctor).FirstOrDefault();
-#else
             var typeToCreate = Type.GetType(typeName);
 
             var constructor = typeToCreate.GetConstructor(BindingFlags.Instance, null, new Type[] { }, null);
 
             if (constructor == null)
                 constructor = typeToCreate.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { }, null);
-#endif
+
             return constructor.Invoke(null);
         }
 
@@ -458,19 +447,13 @@ namespace NetworkCommsDotNet.DPSBase
                     DPSManager.GetDataSerializer<ExplicitSerializer>();
                     DPSManager.GetDataSerializer<NullSerializer>();
                     DPSManager.GetDataProcessor<DataPadder>();
-#if !FREETRIAL
-                    //Only the full version includes the encrypter
                     DPSManager.GetDataProcessor<RijndaelPSKEncrypter>();
-#endif
-
-#if !WINDOWS_PHONE && !NETFX_CORE
                     DPSManager.GetDataSerializer<BinaryFormaterSerializer>();
-#endif
 
                     AssemblyLoader loader;
                     ProcessArgument args;
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE && !NET
+#if !NET
 
                     AppDomain tempDomain = null;
 
@@ -593,9 +576,8 @@ namespace NetworkCommsDotNet.DPSBase
 
         private class ProcessArgument : MarshalByRefObject
         {
-#if !WINDOWS_PHONE  && !iOS && !ANDROID && !NETFX_CORE
             public List<string> loadedDomains;
-#endif
+
             public Dictionary<byte, string> serializerTypes;// = new Dictionary<byte, string>();
             public Dictionary<byte, string> processorTypes;// = new Dictionary<byte, string>();
         }
@@ -610,7 +592,6 @@ namespace NetworkCommsDotNet.DPSBase
                 try
                 {
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
                     AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += CurrentDomain_ReflectionOnlyAssemblyResolve;
 
                     if (args.loadedDomains != null)
@@ -624,49 +605,18 @@ namespace NetworkCommsDotNet.DPSBase
                             catch (FileNotFoundException) { }
                         }
                     }
-#endif
 
                     //Store the serializer and processor types as we will need then repeatedly
                     var serializerType = typeof(DPSBase.DataSerializer);
                     var processorType = typeof(DPSBase.DataProcessor);
 
                     //We're now going to look through the assemly reference tree to look for more components
-                    //This will be done by first checking whether a relefection only load of each assembly and checking 
+                    //This will be done by first checking whether a reflection only load of each assembly and checking 
                     //for reference to DPSBase.  We will therefore get a reference to DPSBase
-#if NETFX_CORE
-                    var dpsBaseAssembly = typeof(DPSManager).GetTypeInfo().Assembly;
-#else
                     var dpsBaseAssembly = typeof(DPSManager).Assembly;
-#endif
 
-#if NETFX_CORE
-                    var folder = Windows.ApplicationModel.Package.Current.InstalledLocation;
-
-                    List<Assembly> alreadyLoadedAssemblies = new List<Assembly>();
-
-                    Func<Task> getAssemblies = new Func<Task>(async ()=>
-                        {
-                            var t = folder.GetFilesAsync().AsTask();
-                            await t.ConfigureAwait(false);
-                            t.Wait();
-                            var filesInt = t.Result;
-
-                            foreach (Windows.Storage.StorageFile file in filesInt)
-                            {
-                                if (file.FileType == ".dll" || file.FileType == ".exe")
-                                {                                    
-                                    AssemblyName name = new AssemblyName() { Name = file.Name.Substring(0, file.Name.Length - 4) };                                    
-                                    Assembly asm = Assembly.Load(name);
-                                    alreadyLoadedAssemblies.Add(asm);
-                                }
-                            }
-                        });
-
-                    getAssemblies().Wait();
-#else
                     //Loop through all loaded assemblies looking for types that are not abstract and implement DataProcessor or DataSerializer.  They also need to have a paramterless contstructor                
                     var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-#endif
 
                     //We are also going to keep a track of all assemblies with which we have considered types within
                     var dicOfSearchedAssemblies = new Dictionary<string, Assembly>();
@@ -676,37 +626,12 @@ namespace NetworkCommsDotNet.DPSBase
 
                     foreach (var ass in alreadyLoadedAssemblies)
                     {
-#if NETFX_CORE
-                        foreach (var type in ass.DefinedTypes)
-                        {
-                            byte id;
-                            var attributes = type.GetCustomAttributes(typeof(DataSerializerProcessorAttribute), false);
 
-                            if (attributes.Count() == 1)
-                            {
-                                id = (attributes.First() as DataSerializerProcessorAttribute).Identifier;
-                            }
-                            else
-                                continue;
-
-                            var constructor = (from ctor in type.DeclaredConstructors
-                                               where ctor.GetParameters().Length == 0
-                                               select ctor).FirstOrDefault();
-
-                            if (serializerType.GetTypeInfo().IsAssignableFrom(type) && !type.IsAbstract && constructor != null)
-                                serializerTypes.Add(id, type.AssemblyQualifiedName);
-
-                            if (processorType.GetTypeInfo().IsAssignableFrom(type) && !type.IsAbstract && constructor != null)
-                                processorTypes.Add(id, type.AssemblyQualifiedName);
-                        }
-#else
-#if WINDOWS_PHONE || iOS || ANDROID
-#else
                         foreach (var refAss in ass.GetReferencedAssemblies())
                         {
                             if (AssemblyComparer.Instance.Equals(dpsBaseAssembly.GetName(), refAss) || ass == dpsBaseAssembly)
                             {
-#endif
+
                                 foreach (var type in ass.GetTypes())
                                 {
                                     byte id;
@@ -735,18 +660,14 @@ namespace NetworkCommsDotNet.DPSBase
                                         processorTypes.Add(id, type.AssemblyQualifiedName);
                                     }
                                 }
-#endif
-#if WINDOWS_PHONE || iOS || ANDROID || NETFX_CORE
-#else
+
                                 break;
                             }
                         }
-#endif
+
                                 dicOfSearchedAssemblies.Add(ass.FullName, ass);
                     }
 
-#if WINDOWS_PHONE || iOS || ANDROID || NETFX_CORE
-#else
                 //Set an identifier to come back to as we load assemblies
                 AssemblySearchStart:
 
@@ -839,7 +760,7 @@ namespace NetworkCommsDotNet.DPSBase
                             }
                         }
                     }
-#endif
+
                 }
                 catch (Exception)
                 {
@@ -855,12 +776,10 @@ namespace NetworkCommsDotNet.DPSBase
                 }
             }
 
-#if !WINDOWS_PHONE && !iOS && !ANDROID && !NETFX_CORE
             Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
             {
                 return Assembly.ReflectionOnlyLoad(args.Name); 
             }
-#endif
         }
     }
 }

@@ -23,12 +23,6 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-#if NETFX_CORE
-using Windows.Storage.Streams;
-using System.Threading.Tasks;
-using Windows.Storage;
-#endif
-
 namespace NetworkCommsDotNet.Tools
 {
     /// <summary>
@@ -92,20 +86,6 @@ namespace NetworkCommsDotNet.Tools
             AutoResetEvent allDataWritten = new AutoResetEvent(false);
             Exception innerException = null;
 
-#if NETFX_CORE
-            Action readAction = null; Action<int> writeAction = null;
-
-            Stream input = inputStream;
-            Stream output = destinationStream;
-
-            readAction = new Action(async () =>
-            {
-                try
-                {
-                while (true)  {
-
-                int bytesRead = await input.ReadAsync(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize));
-#else
             AsyncCallback readCompleted = null, writeCompleted = null;
 
             readCompleted = new AsyncCallback((IAsyncResult ar) =>
@@ -119,7 +99,7 @@ namespace NetworkCommsDotNet.Tools
 
                     // input read asynchronously completed
                     int bytesRead = input.EndRead(ar);
-#endif
+
 #if NET2
                     if (!readCanStartSignal.WaitOne(writeWaitTimeMS, false))
 #else 
@@ -138,21 +118,13 @@ namespace NetworkCommsDotNet.Tools
                     bufferB = temp;
 
                     // write asynchronously
-#if NETFX_CORE
-                writeAction(bytesRead);
-#else
                     output.BeginWrite(bufferB, 0, bytesRead, writeCompleted, streams);
-#endif
 
                     //start the next read straight away
                     totalBytesCompleted += bytesRead;
                     bytesRemaining = inputLength - totalBytesCompleted;
 
-#if NETFX_CORE
-                }
-#else
                     input.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, streams);
-#endif
                 }
                 catch (Exception ex)
                 {
@@ -162,13 +134,6 @@ namespace NetworkCommsDotNet.Tools
                 }
             });
 
-#if NETFX_CORE
-            writeAction = new Action<int>(async (bytesRead) =>
-            {
-                try
-                {
-                await output.WriteAsync(bufferB, 0, bytesRead);            
-#else
             writeCompleted = new AsyncCallback((IAsyncResult ar) =>
             {
                 try
@@ -185,7 +150,7 @@ namespace NetworkCommsDotNet.Tools
                     {
                         innerException = ex;
                     }
-#endif
+
                     readCanStartSignal.Set();
                 }
                 catch (Exception ex)
@@ -196,11 +161,8 @@ namespace NetworkCommsDotNet.Tools
                 }
             });
 
-#if NETFX_CORE
-            readAction();
-#else
             inputStream.BeginRead(bufferA, 0, (writeBufferSize > bytesRemaining ? (int)bytesRemaining : writeBufferSize), readCompleted, new Stream[] { inputStream, destinationStream });
-#endif
+
             allDataWritten.WaitOne();
 
             timerTotal.Stop();
@@ -242,22 +204,8 @@ namespace NetworkCommsDotNet.Tools
             {
                 lock (errorLocker)
                 {
-
-#if NETFX_CORE
-                    string toWrite = DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + Environment.CurrentManagedThreadId.ToString() + "] " + logString + Environment.NewLine;
-                    
-                    Func<Task> writeTask = new Func<Task>(async () =>
-                    {
-                        StorageFolder folder = ApplicationData.Current.LocalFolder;
-                        StorageFile file = await folder.CreateFileAsync(fileName + ".txt", CreationCollisionOption.OpenIfExists);
-                        await FileIO.AppendTextAsync(file, toWrite);
-                    });
-
-                    writeTask().Wait();
-#else
                     using (System.IO.StreamWriter sw = new System.IO.StreamWriter(fileName + ".txt", true))
                         sw.WriteLine(DateTime.Now.Hour.ToString() + "." + DateTime.Now.Minute.ToString() + "." + DateTime.Now.Second.ToString() + "." + DateTime.Now.Millisecond.ToString() + " [" + Thread.CurrentThread.ManagedThreadId.ToString() + "] " + logString);
-#endif
                 }
             }
             catch (Exception)
@@ -310,24 +258,13 @@ namespace NetworkCommsDotNet.Tools
 
             string resultStr;
 
-#if NETFX_CORE
-            var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
-            var buffer = (new Windows.Storage.Streams.DataReader(streamToMD5.AsInputStream())).ReadBuffer((uint)streamToMD5.Length);
-            var hashedData = alg.HashData(buffer);
-            resultStr = Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
-#else
-            using (System.Security.Cryptography.HashAlgorithm md5 =
-#if WINDOWS_PHONE
-                new Tools.MD5Managed())
-#else
- System.Security.Cryptography.MD5.Create())
-#endif
+            using (System.Security.Cryptography.HashAlgorithm md5 = System.Security.Cryptography.MD5.Create())
             {
                 //If we don't ensure the position is consistent the MD5 changes
                 streamToMD5.Seek(0, SeekOrigin.Begin);
                 resultStr = BitConverter.ToString(md5.ComputeHash(streamToMD5)).Replace("-", "");
             }
-#endif
+
             return resultStr;
         }
         #endregion
@@ -392,22 +329,10 @@ namespace NetworkCommsDotNet.Tools
                 {
                     ThreadSafeStream.CopyTo(ms, Start, Length, 8000);
 
-#if NETFX_CORE
-                var alg = Windows.Security.Cryptography.Core.HashAlgorithmProvider.OpenAlgorithm(Windows.Security.Cryptography.Core.HashAlgorithmNames.Md5);
-                var buffer = (new Windows.Storage.Streams.DataReader(ms.AsInputStream())).ReadBuffer((uint)ms.Length);
-                var hashedData = alg.HashData(buffer);
-                return Windows.Security.Cryptography.CryptographicBuffer.EncodeToHexString(hashedData).Replace("-", "");
-#else
-#if WINDOWS_PHONE
-                using(var md5 = new Tools.MD5Managed())
-                {
-#else
                     using (var md5 = System.Security.Cryptography.MD5.Create())
                     {
-#endif
                         return BitConverter.ToString(md5.ComputeHash(ms)).Replace("-", "");
                     }
-#endif
                 }
             }
 
@@ -601,15 +526,11 @@ namespace NetworkCommsDotNet.Tools
             /// <returns></returns>
             public byte[] GetBuffer()
             {
-#if NETFX_CORE
-            throw new  NotImplementedException("This method has not been implemented for Win RT");
-#else
                 MemoryStream _innerMemoryStream = _innerStream as MemoryStream;
                 if (_innerMemoryStream != null)
                     return _innerMemoryStream.GetBuffer();
                 else
                     throw new InvalidCastException("Unable to return stream buffer as inner stream is not a MemoryStream.");
-#endif
             }
 
             /// <inheritdoc />

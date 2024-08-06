@@ -25,12 +25,7 @@ using System.Threading;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Connections;
 using System.IO;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Tools
 {

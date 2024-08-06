@@ -149,11 +149,8 @@ namespace NetworkCommsDotNet
                 ((!options.Options.ContainsKey("UseNestedPacketType") && 
                 !containsSecurityCritialDataProcessors) || isNested))
             {
-#if NETFX_CORE
-                var emptyStream = new MemoryStream(new byte[0], 0, 0, false);
-#else
                 var emptyStream = new MemoryStream(new byte[0], 0, 0, false, true);
-#endif
+
                 //If the sending object is null we set objectToSerialiseIsNull and create a zero length StreamSendWrapper
                 //The zero length StreamSendWrapper can then be passed to any data serializers
                 objectToSerialiseIsNull = true;
@@ -170,14 +167,10 @@ namespace NetworkCommsDotNet
             {
                 //Serialise the payload object into byte[]
                 //We do not use any data processors at this stage as the object will be processed again one level higher.
-#if NETFX_CORE
-                 _payloadObjectBytes = options.DataSerializer.SerialiseDataObject(payloadObject).ThreadSafeStream.ToArray();
-                _payloadSize = _payloadObjectBytes.Length;
-#else
                 NetworkCommsDotNet.Tools.StreamTools.ThreadSafeStream tempStream = options.DataSerializer.SerialiseDataObject(objectToSerialise).ThreadSafeStream;
                 _payloadObjectBytes = tempStream.GetBuffer();
                 _payloadSize = (int)tempStream.Length;
-#endif
+
                 //Set the packet header
                 //THe nulls represent internal SendReceiveOptions and no checksum
                 this._packetHeader = new PacketHeader(sendingPacketTypeStr, _payloadSize, null, requestReturnPacketTypeStr, null);

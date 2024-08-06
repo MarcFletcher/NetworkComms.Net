@@ -25,18 +25,7 @@ using System.IO;
 using System.Threading;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
-
-#if WINDOWS_PHONE || NETFX_CORE
-using Windows.Networking.Sockets;
-using Windows.Networking;
-using System.Runtime.InteropServices.WindowsRuntime;
-#endif
 
 namespace NetworkCommsDotNet.Connections.UDP
 {
@@ -45,11 +34,7 @@ namespace NetworkCommsDotNet.Connections.UDP
     /// </summary>
     public sealed partial class UDPConnection : IPConnection
     {
-#if WINDOWS_PHONE || NETFX_CORE
-        internal DatagramSocket socket;
-#else
         internal UdpClientWrapper udpClient;
-#endif
 
         /// <summary>
         /// Options associated with this UDPConnection
@@ -89,49 +74,14 @@ namespace NetworkCommsDotNet.Connections.UDP
             {
                 if (connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any) || connectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.IPv6Any))
                 {
-#if WINDOWS_PHONE || NETFX_CORE
-                    //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
-                    socket = new DatagramSocket();
-
-                    if (listenForIncomingPackets)
-                        socket.MessageReceived += socket_MessageReceived;
-
-                    socket.BindEndpointAsync(new HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString()).AsTask().Wait();
-#else
                     //We are creating an unbound endPoint, this is currently the rogue UDP sender and listeners only
                     udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.LocalIPEndPoint));
-#endif
                 }
                 else
                 {
                     //If this is a specific connection we link to a default end point here
                     isIsolatedUDPConnection = true;
 
-#if WINDOWS_PHONE || NETFX_CORE
-                    if (ConnectionInfo.LocalEndPoint == null || 
-                        (ConnectionInfo.LocalIPEndPoint.Address == IPAddress.Any && connectionInfo.LocalIPEndPoint.Port == 0) ||
-                        (ConnectionInfo.LocalIPEndPoint.Address == IPAddress.IPv6Any && connectionInfo.LocalIPEndPoint.Port == 0))
-                    {
-                        socket = new DatagramSocket();
-
-                        if (listenForIncomingPackets)
-                            socket.MessageReceived += socket_MessageReceived;
-
-                        socket.ConnectAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask().Wait();
-                    }
-                    else
-                    {
-                        socket = new DatagramSocket();
-
-                        if (listenForIncomingPackets)
-                            socket.MessageReceived += socket_MessageReceived;
-
-                        EndpointPair pair = new EndpointPair(new HostName(ConnectionInfo.LocalIPEndPoint.Address.ToString()), ConnectionInfo.LocalIPEndPoint.Port.ToString(),
-                            new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString());
-
-                        socket.ConnectAsync(pair).AsTask().Wait();
-                    }
-#else
                     if (ConnectionInfo.LocalEndPoint == null)
                         udpClient = new UdpClientWrapper(new UdpClient(ConnectionInfo.RemoteEndPoint.AddressFamily));
                     else
@@ -139,10 +89,8 @@ namespace NetworkCommsDotNet.Connections.UDP
 
                     //By calling connect we discard packets from anything other then the provided remoteEndPoint on our localEndPoint
                     udpClient.Connect(ConnectionInfo.RemoteIPEndPoint);
-#endif
                 }
 
-#if !WINDOWS_PHONE && !NETFX_CORE
                 //NAT traversal does not work in .net 2.0
                 //Mono does not seem to have implemented AllowNatTraversal method and attempting the below method call will throw an exception
                 //if (Type.GetType("Mono.Runtime") == null)
@@ -151,28 +99,18 @@ namespace NetworkCommsDotNet.Connections.UDP
 
                 if (listenForIncomingPackets)
                     StartIncomingDataListen();
-#endif
             }
             else
             {
                 if (!existingConnection.ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
                     throw new Exception("If an existing udpClient is provided it must be unbound to a specific remoteEndPoint");
 
-#if WINDOWS_PHONE || NETFX_CORE
-                //Using an exiting client allows us to send from the same port as for the provided existing connection
-                this.socket = existingConnection.socket;
-#else
                 //Using an exiting client allows us to send from the same port as for the provided existing connection
                 this.udpClient = existingConnection.udpClient;
-#endif
             }
 
             IPEndPoint localEndPoint;
-#if WINDOWS_PHONE || NETFX_CORE
-            localEndPoint = new IPEndPoint(IPAddress.Parse(socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(socket.Information.LocalPort));
-#else
             localEndPoint = udpClient.LocalIPEndPoint;
-#endif
 
             //We can update the localEndPoint so that it is correct
             if (!ConnectionInfo.LocalEndPoint.Equals(localEndPoint))
@@ -203,15 +141,9 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// <inheritdoc />
         protected override void CloseConnectionSpecific(bool closeDueToError, int logLocation = 0)
         {
-#if WINDOWS_PHONE || NETFX_CORE
-            //We only call close on the udpClient if this is a specific UDP connection or we are calling close from the parent UDP connection
-            if (socket != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
-                socket.Dispose();
-#else
             //We only call close on the udpClient if this is a specific UDP connection or we are calling close from the parent UDP connection
             if (udpClient != null && (isIsolatedUDPConnection || (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))))
                 udpClient.CloseClient();
-#endif
         }
 
         /// <summary>
@@ -221,10 +153,6 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// <param name="ipEndPoint">The target ipEndPoint</param>
         private void SendPacketSpecific<packetObjectType>(IPacket packet, IPEndPoint ipEndPoint)
         {
-#if FREETRIAL
-            if (ipEndPoint.Address == IPAddress.Broadcast)
-                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commercial license from www.networkcomms.net which supports UDP broadcast datagrams.");
-#endif
 
             byte[] headerBytes = new byte[0];
             if (ConnectionInfo.ApplicationLayerProtocol == ApplicationLayerProtocolStatus.Enabled)
@@ -268,17 +196,7 @@ namespace NetworkCommsDotNet.Connections.UDP
             else
                 udpDatagram = packet.PacketData.ThreadSafeStream.ToArray();
 
-#if WINDOWS_PHONE || NETFX_CORE
-            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ipEndPoint.Address.ToString()), ipEndPoint.Port.ToString()).AsTask();
-            getStreamTask.Wait();
-
-            var outputStream = getStreamTask.Result;
-
-            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
-            outputStream.FlushAsync().AsTask().Wait();
-#else
             udpClient.Send(udpDatagram, udpDatagram.Length, ipEndPoint);
-#endif
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Completed send of a UDP packet of type '" + packet.PacketHeader.PacketType + "' from " + ConnectionInfo.LocalIPEndPoint.Address + ":" + ConnectionInfo.LocalIPEndPoint.Port.ToString() + " to " + ipEndPoint.Address + ":" + ipEndPoint.Port.ToString() + ".");
         }
@@ -286,10 +204,6 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// <inheritdoc />
         protected override double[] SendStreams(StreamTools.StreamSendWrapper[] streamsToSend, double maxSendTimePerKB, long totalBytesToSend)
         {
-#if FREETRIAL
-            if (this.ConnectionInfo.RemoteEndPoint.Address == IPAddress.Broadcast)
-                throw new NotSupportedException("Unable to send UDP broadcast datagram using this version of NetworkComms.Net. Please purchase a commercial license from www.networkcomms.net which supports UDP broadcast datagrams.");
-#endif
 
             if (ConnectionInfo.RemoteIPEndPoint.Address.Equals(IPAddress.Any))
                 throw new CommunicationException("Unable to send packet using this method as remoteEndPoint equals IPAddress.Any");
@@ -312,17 +226,8 @@ namespace NetworkCommsDotNet.Connections.UDP
             }
 
             DateTime startTime = DateTime.Now;
-#if WINDOWS_PHONE || NETFX_CORE
-            var getStreamTask = socket.GetOutputStreamAsync(new HostName(ConnectionInfo.RemoteIPEndPoint.Address.ToString()), ConnectionInfo.RemoteIPEndPoint.Port.ToString()).AsTask();
-            getStreamTask.Wait();
 
-            var outputStream = getStreamTask.Result;
-
-            outputStream.WriteAsync(WindowsRuntimeBufferExtensions.AsBuffer(udpDatagram)).AsTask().Wait();
-            outputStream.FlushAsync().AsTask().Wait();
-#else
             udpClient.Send(udpDatagram, udpDatagram.Length, ConnectionInfo.RemoteIPEndPoint);
-#endif
 
             udpDatagramStream.Dispose();
 
@@ -338,9 +243,6 @@ namespace NetworkCommsDotNet.Connections.UDP
         /// <inheritdoc />
         protected override void StartIncomingDataListen()
         {
-#if WINDOWS_PHONE || NETFX_CORE
-            throw new NotImplementedException("Not needed for UDP connections on Windows Phone 8");
-#else
 
             if (NetworkComms.ConnectionListenModeUseSync)
             {
@@ -361,111 +263,8 @@ namespace NetworkCommsDotNet.Connections.UDP
 
                 asyncListenStarted = true;
             }
-#endif
         }
 
-#if WINDOWS_PHONE || NETFX_CORE
-        void socket_MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
-        {
-            try
-            {                
-                var stream = args.GetDataStream().AsStreamForRead();
-                var dataLength = args.GetDataReader().UnconsumedBufferLength;
-                
-                byte[] receivedBytes = new byte[dataLength];
-                using (MemoryStream mem = new MemoryStream(receivedBytes))
-                    stream.CopyTo(mem);
-
-                //Received data after comms shutdown initiated. We should just close the connection
-                if (NetworkComms.commsShutdown) CloseConnection(false, -15);
-
-                stream = null;
-               
-                if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Received " + receivedBytes.Length + " bytes via UDP from " + args.RemoteAddress + ":" + args.RemotePort + ".");
-
-                UDPConnection connection;
-                HandshakeUDPDatagram possibleHandshakeUDPDatagram = new HandshakeUDPDatagram(receivedBytes);
-                if (isIsolatedUDPConnection)
-                    //This connection was created for a specific remoteEndPoint so we can handle the data internally
-                    connection = this;
-                else
-                {
-                    IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(args.RemoteAddress.DisplayName.ToString()), int.Parse(args.RemotePort));
-                    IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(sender.Information.LocalAddress.DisplayName.ToString()), int.Parse(sender.Information.LocalPort));
-
-                    ConnectionInfo desiredConnection = new ConnectionInfo(ConnectionType.UDP, remoteEndPoint, localEndPoint, ConnectionInfo.ApplicationLayerProtocol, ConnectionInfo.ConnectionListener);
-                    try
-                    {
-                        //Look for an existing connection, if one does not exist we will create it
-                        //This ensures that all further processing knows about the correct endPoint
-                        connection = GetConnection(desiredConnection, ConnectionUDPOptions, ConnectionDefaultSendReceiveOptions, false, this, possibleHandshakeUDPDatagram);
-                    }
-                    catch (ConnectionShutdownException)
-                    {
-                        if ((ConnectionUDPOptions & UDPOptions.Handshake) == UDPOptions.Handshake)
-                        {
-                            if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Attempted to get connection " + desiredConnection + " but this caused a ConnectionShutdownException. Exception caught and ignored as should only happen if the connection was closed shortly after being created.");
-                            connection = null;
-                        }
-                        else
-                            throw;
-                    }
-                }
-
-                if (connection != null && !possibleHandshakeUDPDatagram.DatagramHandled)
-                {
-                    //We pass the data off to the specific connection
-                    //Lock on the packetbuilder locker as we may receive UDP packets in parallel from this host
-                    lock (connection.packetBuilder.Locker)
-                    {
-                        connection.packetBuilder.AddPartialPacket(receivedBytes.Length, receivedBytes);
-                        if (connection.packetBuilder.TotalBytesCached > 0) connection.IncomingPacketHandleHandOff(connection.packetBuilder);
-
-                        if (connection.packetBuilder.TotalPartialPacketCount > 0)
-                            LogTools.LogException(new Exception("Packet builder had " + connection.packetBuilder.TotalBytesCached + " bytes remaining after a call to IncomingPacketHandleHandOff with connection " + connection.ConnectionInfo + ". Until sequenced packets are implemented this indicates a possible error."), "UDPConnectionError");
-                    }
-                }
-            }
-            //On any error here we close the connection
-            catch (NullReferenceException)
-            {
-                CloseConnection(true, 25);
-            }
-            catch (ArgumentNullException)
-            {
-                CloseConnection(true, 38);
-            }
-            catch (IOException)
-            {
-                CloseConnection(true, 26);
-            }
-            catch (ObjectDisposedException)
-            {
-                CloseConnection(true, 27);
-            }
-            catch (SocketException)
-            {
-                //Receive may throw a SocketException ErrorCode=10054  after attempting to send a datagram to an unreachable target. 
-                //We will try to get around this by ignoring the ICMP packet causing these problems on client creation
-                CloseConnection(true, 28);
-            }
-            catch (InvalidOperationException)
-            {
-                CloseConnection(true, 29);
-            }
-            catch (ConnectionSetupException)
-            {
-                //Can occur if data is received as comms is being shutdown. 
-                //Method will attempt to create new connection which will throw ConnectionSetupException.
-                CloseConnection(true, 50);
-            }
-            catch (Exception ex)
-            {
-                LogTools.LogException(ex, "Error_UDPConnectionIncomingPacketHandler");
-                CloseConnection(true, 30);
-            }
-        }
-#else
         /// <summary>
         /// Incoming data listen async method
         /// </summary>
@@ -674,6 +473,6 @@ namespace NetworkCommsDotNet.Connections.UDP
 
             if (NetworkComms.LoggingEnabled) NetworkComms.Logger.Trace("Incoming data listen thread ending for " + ConnectionInfo);
         }
-#endif
+
     }
 }

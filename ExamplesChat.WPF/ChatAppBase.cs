@@ -414,7 +414,7 @@ namespace Examples.ExamplesChat.WPF
             AppendLineToChatHistory("");
             AppendLineToChatHistory("Chat usage instructions:");
             AppendLineToChatHistory("");
-            AppendLineToChatHistory("Step 1. Open at least two chat applications. You can choose from Android, Windows Phone, iOS or native Windows versions.");
+            AppendLineToChatHistory("Step 1. Open at least two chat applications.");
             AppendLineToChatHistory("Step 2. Enable local server mode in a single application, see settings.");
             AppendLineToChatHistory("Step 3. Provide remote server IP and port information in settings on remaining application.");
             AppendLineToChatHistory("Step 4. Start chatting.");

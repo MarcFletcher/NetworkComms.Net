@@ -182,26 +182,19 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
             //Initialised with true so that logic still works in WP8
             bool dataAvailable = true;
 
-#if !WINDOWS_PHONE
             //Incoming data always gets handled in a timeCritical fashion at this point
             Thread.CurrentThread.Priority = NetworkComms.timeCriticalThreadPriority;
             //int bytesRead;
-#endif
 
             try
             {
-#if WINDOWS_PHONE
-                var stream = ar.AsyncState as Stream;
-                var count = stream.EndRead(ar);
-                totalBytesRead = count + totalBytesRead;
-#else
                 var netStream = (NetworkStream)ar.AsyncState;
                 if (!netStream.CanRead)
                     throw new ObjectDisposedException("Unable to read from stream.");
 
                 totalBytesRead = netStream.EndRead(ar) + totalBytesRead;
                 dataAvailable = netStream.DataAvailable;
-#endif
+
                 if (totalBytesRead > 0)
                 {
                     ConnectionInfo.UpdateLastTrafficTime();
@@ -219,7 +212,6 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         //If there is more data to get then add it to the packets lists;
                         packetBuilder.AddPartialPacket(totalBytesRead, dataBuffer);
 
-#if !WINDOWS_PHONE
                         //If we have more data we might as well continue reading synchronously
                         //In order to deal with data as soon as we think we have sufficient we will leave this loop
                         while (dataAvailable && packetBuilder.TotalBytesCached < packetBuilder.TotalBytesExpected)
@@ -260,7 +252,6 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                             else
                                 break;
                         }
-#endif
                     }
                 }
 
@@ -296,11 +287,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                         totalBytesRead = 0;
                     }
 
-#if WINDOWS_PHONE
-                    stream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingTCPPacketHandler, stream);
-#else
                     netStream.BeginRead(dataBuffer, totalBytesRead, dataBuffer.Length - totalBytesRead, IncomingBluetoothPacketHandler, netStream);
-#endif
                 }
 
             }
@@ -326,9 +313,7 @@ namespace NetworkCommsDotNet.Connections.Bluetooth
                 CloseConnection(true, 31);
             }
 
-#if !WINDOWS_PHONE
             Thread.CurrentThread.Priority = ThreadPriority.Normal;
-#endif
         }
 
         /// <summary>

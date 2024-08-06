@@ -17,8 +17,6 @@
 // under the License.
 // 
 
-#if !NETFX_CORE
-
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
@@ -120,5 +118,3 @@ namespace NetworkCommsDotNet.Connections.TCP
         }
     }
 }
-
-#endif

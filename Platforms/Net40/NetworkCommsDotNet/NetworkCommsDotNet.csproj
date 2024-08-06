@@ -271,36 +271,6 @@
     <Compile Include="..\..\..\NetworkCommsDotNet\Tools\StreamTools.cs">
       <Link>Tools\StreamTools.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\AddressFamily.cs">
-      <Link>Tools\XPlatformHelper\AddressFamily.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\DateTimeExtenensions.cs">
-      <Link>Tools\XPlatformHelper\DateTimeExtenensions.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\EndPoint.cs">
-      <Link>Tools\XPlatformHelper\EndPoint.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPAddress.cs">
-      <Link>Tools\XPlatformHelper\IPAddress.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPEndPoint.cs">
-      <Link>Tools\XPlatformHelper\IPEndPoint.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\IPv6Address.cs">
-      <Link>Tools\XPlatformHelper\IPv6Address.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketAddress.cs">
-      <Link>Tools\XPlatformHelper\SocketAddress.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketError.cs">
-      <Link>Tools\XPlatformHelper\SocketError.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\SocketException.cs">
-      <Link>Tools\XPlatformHelper\SocketException.cs</Link>
-    </Compile>
-    <Compile Include="..\..\..\NetworkCommsDotNet\Tools\XPlatformHelper\WaitCallback.cs">
-      <Link>Tools\XPlatformHelper\WaitCallback.cs</Link>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -17,20 +17,11 @@
 // under the License.
 // 
 
-#if WINDOWS_PHONE || NETFX_CORE
-#else
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
-
-#if ANDROID
-using PreserveAttribute = Android.Runtime.PreserveAttribute;
-#elif iOS
-using PreserveAttribute = Foundation.PreserveAttribute;
-#endif
 
 namespace NetworkCommsDotNet.DPSBase
 {
@@ -57,9 +48,6 @@ namespace NetworkCommsDotNet.DPSBase
             }
         }
 
-#if ANDROID || iOS
-        [Preserve]
-#endif
         private BinaryFormaterSerializer() { }
 
 #region ISerialize Members
@@ -90,5 +78,3 @@ namespace NetworkCommsDotNet.DPSBase
 #endregion
     }
 }
-
-#endif

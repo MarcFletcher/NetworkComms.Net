@@ -25,14 +25,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Net.NetworkInformation;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-using System.Threading.Tasks;
-using Windows.Storage;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections
 {

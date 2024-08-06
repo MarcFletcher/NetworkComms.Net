@@ -23,25 +23,7 @@ using System.Text;
 
 namespace NetworkCommsDotNet.Tools
 {
-//#if WINDOWS_PHONE || NETFX_CORE
-//    /// <summary>
-//    /// A list of priorities used to handle incoming packets
-//    /// </summary>
-//    public enum QueueItemPriority
-//    {
-//        // Summary:
-//        //     The work item should run at low priority.
-//        Low = -1,
-//        //
-//        // Summary:
-//        //     The work item should run at normal priority. This is the default value.
-//        Normal = 0,
-//        //
-//        // Summary:
-//        //     The work item should run at high priority.
-//        High = 1,
-//    }
-//#else
+
     /// <summary>
     /// A list of priorities used to handle incoming packets
     /// </summary>

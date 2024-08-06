@@ -23,12 +23,7 @@ using System.Net;
 using System.Text;
 using NetworkCommsDotNet.DPSBase;
 using NetworkCommsDotNet.Tools;
-
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#else
 using System.Net.Sockets;
-#endif
 
 namespace NetworkCommsDotNet.Connections.UDP
 {
@@ -102,11 +97,8 @@ namespace NetworkCommsDotNet.Connections.UDP
                 }
             }
 
-#if WINDOWS_PHONE || NETFX_CORE
-            this.LocalListenEndPoint = new IPEndPoint(IPAddress.Parse(UDPConnection.socket.Information.LocalAddress.DisplayName.ToString()), int.Parse(UDPConnection.socket.Information.LocalPort)); 
-#else
             this.LocalListenEndPoint = (IPEndPoint)UDPConnection.udpClient.LocalIPEndPoint;
-#endif
+
             this.IsListening = true;
         }
 

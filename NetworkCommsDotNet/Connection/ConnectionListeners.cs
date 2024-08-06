@@ -33,10 +33,6 @@ using InTheHand.Net.Bluetooth;
 using NetworkCommsDotNet.Connections.Bluetooth;
 #endif
 
-#if NETFX_CORE
-using NetworkCommsDotNet.Tools.XPlatformHelper;
-#endif
-
 namespace NetworkCommsDotNet.Connections
 {
     public abstract partial class Connection
