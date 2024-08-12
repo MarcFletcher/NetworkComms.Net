@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\RemoteProcedureCalls\Client.cs" Link="Client.cs" />
+    <Compile Include="..\..\..\RemoteProcedureCalls\RPCException.cs" Link="RPCException.cs" />
+    <Compile Include="..\..\..\RemoteProcedureCalls\Server.cs" Link="Server.cs" />
+    <Compile Include="..\..\..\RemoteProcedureCalls\Wrappers.cs" Link="Wrappers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="protobuf-net" Version="2.4.8" />
+    <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj" />
+  </ItemGroup>
+
+</Project>

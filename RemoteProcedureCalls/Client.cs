@@ -273,9 +273,14 @@ namespace RemoteProcedureCalls
 
                 //Create a new assembly dynamically
                 AssemblyName an = new AssemblyName("tmp_" + typeof(I).Name);
-                var asm = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndCollect);
+                var asm = AssemblyBuilder.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndCollect);
+
                 string moduleName = Path.ChangeExtension(an.Name, "dll");
+#if !NET
                 var module = asm.DefineDynamicModule(moduleName, false);
+#else
+                var module = asm.DefineDynamicModule(moduleName);
+#endif
 
                 string ns = typeof(I).Namespace;
                 if (!string.IsNullOrEmpty(ns)) ns += ".";

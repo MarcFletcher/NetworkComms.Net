@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\DistributedFileSystem\ChunkAvailabilityRequest.cs" Link="ChunkAvailabilityRequest.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\DataBuildMode.cs" Link="DataBuildMode.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\DFS.cs" Link="DFS.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\DistributedItem.cs" Link="DistributedItem.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\DistributedItemData.cs" Link="DistributedItemData.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\ItemAssemblyConfig.cs" Link="ItemAssemblyConfig.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\ItemLinkRequest.cs" Link="ItemLinkRequest.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\ItemRemovalUpdate.cs" Link="ItemRemovalUpdate.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\LimitedParallelismTaskScheduler.cs" Link="LimitedParallelismTaskScheduler.cs" />
+    <Compile Include="..\..\..\DistributedFileSystem\SwarmChunkAvailability.cs" Link="SwarmChunkAvailability.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\..\DistributedFileSystem\DFSAllowedPeerIPs.txt" Link="DFSAllowedPeerIPs.txt" />
+    <Content Include="..\..\..\DistributedFileSystem\DFSDisallowedPeerIPs.txt" Link="DFSDisallowedPeerIPs.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="protobuf-net" Version="3.2.30" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkCommsDotNet\NetworkCommsDotNet.csproj" />
+    <ProjectReference Include="..\ProtobufSerializer\ProtobufSerializer.csproj" />
+  </ItemGroup>
+
+</Project>
