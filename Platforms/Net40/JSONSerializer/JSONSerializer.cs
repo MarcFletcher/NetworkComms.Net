@@ -24,9 +24,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-#if NET4
 using Newtonsoft.Json;
-#endif
 
 namespace NetworkCommsDotNet.DPSBase
 {

@@ -224,7 +224,7 @@ namespace NetworkCommsDotNet.Connections
                 List<EndPoint> existingLocalListeners = null;
                 if (ConnectionInfo.LocalEndPoint is IPEndPoint)
                     existingLocalListeners = Connection.ExistingLocalListenEndPoints(ConnectionInfo.ConnectionType, new IPEndPoint(ConnectionInfo.LocalIPEndPoint.Address, 0));
-#if NET4 || NET35
+#if NET35 || NET4
                 else if (ConnectionInfo.LocalEndPoint is InTheHand.Net.BluetoothEndPoint)
                     existingLocalListeners = Connection.ExistingLocalListenEndPoints(ConnectionInfo.ConnectionType, new InTheHand.Net.BluetoothEndPoint(ConnectionInfo.LocalBTEndPoint.Address, ConnectionInfo.LocalBTEndPoint.Service));
 #endif

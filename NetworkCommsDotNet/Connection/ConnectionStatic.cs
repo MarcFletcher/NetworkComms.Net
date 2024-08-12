@@ -30,17 +30,17 @@ using System.Net.Sockets;
 
 namespace NetworkCommsDotNet.Connections
 {
-    #if !NET2
-    /// <summary>
-    /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
-    /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="NetworkCommsDotNet.Connections.Bluetooth.BluetoothConnection"/>.
-    /// </summary>
-    #else
+#if NET2
     /// <summary>
     /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
     /// Extended by <see cref="TCPConnection"/> and <see cref="UDPConnection"/>.
     /// </summary>
-    #endif
+#else
+    /// <summary>
+    /// Global connection base class for NetworkComms.Net. Most user interactions happen using a connection object. 
+    /// Extended by <see cref="TCPConnection"/>, <see cref="UDPConnection"/> and <see cref="NetworkCommsDotNet.Connections.Bluetooth.BluetoothConnection"/>.
+    /// </summary>
+#endif
     public abstract partial class Connection
     {
         static ManualResetEvent workedThreadSignal = new ManualResetEvent(false);

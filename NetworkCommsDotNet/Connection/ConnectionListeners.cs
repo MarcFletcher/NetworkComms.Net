@@ -418,7 +418,7 @@ namespace NetworkCommsDotNet.Connections
             if (connectionType == ConnectionType.Undefined) throw new ArgumentException("ConnectionType.Undefined may not be used with this override. Please see others.", "connectionType");
             if (localEndPointToMatch == null) throw new ArgumentNullException("localEndPointToMatch");
 
-#if NET4 || NET35
+#if NET35 || NET4
             if (connectionType == ConnectionType.Bluetooth)
             {
                 InTheHand.Net.BluetoothEndPoint btEndPointToMatch = localEndPointToMatch as InTheHand.Net.BluetoothEndPoint;

@@ -17,7 +17,7 @@
 // under the License.
 // 
 
-#if !NET2 && !NET
+#if NET35 || NET4
 
 using System;
 using System.Collections.Generic;

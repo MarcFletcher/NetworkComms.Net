@@ -27,7 +27,7 @@ using NetworkCommsDotNet.Tools;
 using NetworkCommsDotNet.Connections;
 using System.Net.Sockets;
 
-#if NET4 || NET35
+#if NET35 || NET4
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 #endif
@@ -197,7 +197,7 @@ namespace NetworkCommsDotNet
             }
         }
 
-#if NET4 || NET35
+#if NET35 || NET4
 
         /// <summary>
         /// The localEndPoint cast as <see cref="IPEndPoint"/>.
@@ -260,7 +260,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -294,7 +294,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -329,7 +329,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -370,7 +370,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.LocalEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.LocalEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -405,7 +405,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -448,7 +448,7 @@ namespace NetworkCommsDotNet
                 case AddressFamily.InterNetworkV6:
                     this.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                     break;
-#if NET4 || NET35
+#if NET35 || NET4
                 case (AddressFamily)32:
                     this.RemoteEndPoint = new BluetoothEndPoint(BluetoothAddress.None, BluetoothService.SerialPort);
                     break;
@@ -754,7 +754,7 @@ namespace NetworkCommsDotNet
                     localEndPointPort = LocalIPEndPoint.Port;
                 }
 
-#if NET4 || NET35
+#if NET35 || NET4
                 if (LocalEndPoint as InTheHand.Net.BluetoothEndPoint != null)
                 {
                     localEndPointAddressStr = LocalBTEndPoint.Address.ToString();
@@ -822,8 +822,8 @@ namespace NetworkCommsDotNet
             byte[] AppLayerEnabledData = new byte[sizeof(int)]; inputStream.Read(AppLayerEnabledData, 0, sizeof(int));
 
             ApplicationLayerProtocol = (ApplicationLayerProtocolStatus)BitConverter.ToInt32(AppLayerEnabledData, 0);
-            
-#if NET4 || NET35
+
+#if NET35 || NET4
             if (ConnectionType == ConnectionType.Bluetooth)
             {
                 BluetoothAddress btAddress;
