@@ -203,7 +203,7 @@ namespace RemoteProcedureCalls
             salt = new byte[32];
             r.GetBytes(salt);
 
-            hash = System.Security.Cryptography.HMACSHA256.Create();
+            hash = new System.Security.Cryptography.HMACSHA256();
 
             AutoResetEvent watcherWaitEvent = new AutoResetEvent(false);
             Task watcher = Task.Factory.StartNew(() =>
